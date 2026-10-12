@@ -11,6 +11,24 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /readyz:
+    get:
+      operationId: readinessCheck
+      tags: [health]
+      summary: Database and schema readiness
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessStatus"
+        "503":
+          description: Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessStatus"
   /healthz:
     get:
       operationId: healthCheck
@@ -26,11 +44,21 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
-    HealthStatus:
+    ReadinessStatus:
       type: object
+      additionalProperties: false
+      required: [status]
       properties:
         status:
           type: string
+          enum: [ready, unavailable]
+    HealthStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [ok]
       required:
         - status
 

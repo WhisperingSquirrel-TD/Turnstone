@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+@import './theme.css';
+
+@theme inline {
+  --color-charcoal: var(--charcoal);
+  --color-amber: var(--amber);
+  --color-slate: var(--slate);
+  --color-lightbg: var(--light-bg);
+  --color-line: var(--border);
+  --color-amberlight: var(--amber-light);
+  --font-sans: var(--font-body);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--light-bg);
+  color: var(--slate);
+}
+
+:focus-visible {
+  outline: 3px solid var(--charcoal);
+  outline-offset: 3px;
+}
+.on-dark :focus-visible {
+  outline-color: var(--amber-light);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn {
+    transition: background-color 0.15s ease;
+  }
+}

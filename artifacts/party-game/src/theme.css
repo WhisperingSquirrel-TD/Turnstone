@@ -1,0 +1,10 @@
+:root {
+  --charcoal: #2d2d2d;
+  --amber: #d97706; /* accent only: never body text, never white text on it */
+  --slate: #4a5568; /* body text on light backgrounds */
+  --light-bg: #f7f5f2;
+  --white: #ffffff;
+  --border: #cbd5e0;
+  --amber-light: #fef3c7;
+  --font-body: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+}

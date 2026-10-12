@@ -1,45 +1,35 @@
-# [Project name]
+# APP_NAME — Stackstone Consulting
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Website-only hidden-role party game foundation. The binding `docs/SPEC.md` is being delivered in seven parts: save each verbatim in order and reply only "Part N saved". Do not write other code or start Milestone 1 until all seven parts are saved and the owner approves the plan.
 
-## Run & Operate
+## Source of truth
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `docs/PLAN.md`: milestones, classifications and exit gates.
+- `docs/DECISIONS.md`: deviations, dependency rationale and blockers.
+- `docs/PROGRESS.md`: honest verification status.
+- `lib/api-spec/openapi.yaml`: infrastructure API contract; regenerate with `pnpm --filter @workspace/api-spec run codegen` after changes.
+- `lib/db/src/schema/`: database schema; committed development migrations in `lib/db/migrations/`.
+- `lib/security`: shared nonce/security-header policy.
+- `artifacts/party-game/src/theme.css`: sole brand token definitions.
+- `artifacts/party-game/src/locale/en-GB.ts`: UK English UI strings.
+- `artifacts/party-game/src/config.ts`: APP_NAME config placeholder.
 
-## Stack
+## Layout and commands
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+Existing pnpm workspace retained: `artifacts/api-server` = requested apps/server, `artifacts/party-game` = apps/web, `lib/engine` = packages/engine, `lib/shared` = packages/shared.
 
-## Where things live
+`npm run verify` checks types, lint, formatting, unit/property/database integration tests, four-device Playwright/axe smoke, Lighthouse and high/critical dependency audit. Do not bypass a failing stage. Managed workflows must be running for browser checks.
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+`npm run verify:full` is honestly unavailable until Milestone 2. `npm run db:migrate:dev` explicitly applies committed development migrations; never run it in production. No production startup DDL.
 
-## Architecture decisions
+Run services with their artifact-managed workflows. Node 24 LTS. Database and session secrets remain in workspace Secrets, never read out or stored in files.
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+## Standing scope rules
 
-## Product
+Keep Replit's pnpm workspace template. Use pnpm wherever the spec says npm, with the apps/packages mapping recorded in `docs/DECISIONS.md`.
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Stay on the free tier: do not publish, deploy or enable any paid service, and keep each run focused to save usage.
 
-## User preferences
+Strict TDD; never waive tests or audit findings. UK English. No emojis, TV-show branding, seasonal theme or native app. No game secrets in logs, URLs, titles, storage or notifications. Future game state must be server-only with viewer allow-list projections, a blind playing coordinator, uniform private interactions and press-and-hold privacy shielding.
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+Deployment must be an approved single-instance Reserved VM, not Autoscale. The website's nonce CSP requires a Node response server. No deploy until launch gates pass.

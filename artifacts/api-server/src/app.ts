@@ -1,34 +1,29 @@
-import express, { type Express } from "express";
-import cors from "cors";
-import pinoHttp from "pino-http";
-import router from "./routes";
-import { logger } from "./lib/logger";
+import express, { type Express } from 'express';
+import {
+  HealthCheckResponse,
+  ReadinessCheckResponse,
+} from '@workspace/api-zod';
+import { security } from './middlewares/security';
 
-const app: Express = express();
-
-app.use(
-  pinoHttp({
-    logger,
-    serializers: {
-      req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0],
-        };
-      },
-      res(res) {
-        return {
-          statusCode: res.statusCode,
-        };
-      },
-    },
-  }),
-);
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.use("/api", router);
-
-export default app;
+export function createApp(probeDatabase: () => Promise<void>): Express {
+  const app = express();
+  app.disable('x-powered-by');
+  app.use(security);
+  app.get(['/api/healthz', '/healthz'], (_req, res) => {
+    res.json(HealthCheckResponse.parse({ status: 'ok' }));
+  });
+  app.get(['/api/readyz', '/readyz'], async (_req, res) => {
+    try {
+      await probeDatabase();
+      res.json(ReadinessCheckResponse.parse({ status: 'ready' }));
+    } catch {
+      res
+        .status(503)
+        .json(ReadinessCheckResponse.parse({ status: 'unavailable' }));
+    }
+  });
+  app.use((_req, res) => {
+    res.status(404).json({ error: 'Not found' });
+  });
+  return app;
+}

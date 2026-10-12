@@ -1,0 +1,24 @@
+kind = "web"
+previewPath = "/"
+title = "APP_NAME"
+description = "Website-only hidden-role party game foundation by Stackstone Consulting. Milestone 0: secure infrastructure and minimal responsive pages, no gameplay."
+version = "1.0.0"
+id = "artifacts/party-game"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22814
+
+[services.development]
+run = "pnpm --filter @workspace/party-game run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/party-game", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/party-game", "run", "serve" ]
+
+
+[services.env]
+PORT = "22814"
+BASE_PATH = "/"

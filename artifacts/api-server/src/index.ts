@@ -1,25 +1,32 @@
-import app from "./app";
-import { logger } from "./lib/logger";
+import { createApp } from './app';
+import { parseEnvironment } from './config/env';
+import { logger } from './lib/logger';
 
-const rawPort = process.env["PORT"];
+// Validate before importing the database or opening a listening socket.
+const environment = parseEnvironment(process.env);
+const { db, pool } = await import('@workspace/db');
+const { sql } = await import('drizzle-orm');
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
+const app = createApp(async () => {
+  const result = await db.execute(
+    sql`select version from foundation_meta where id = 1`,
   );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-
-  logger.info({ port }, "Server listening");
+  if (result.rows[0]?.version !== 1)
+    throw new Error('Database schema not ready');
 });
+const server = app.listen(environment.PORT, '0.0.0.0', () => {
+  logger.info({ port: environment.PORT }, 'Server listening');
+});
+server.on('error', () => {
+  logger.error('Server failed to listen');
+  process.exitCode = 1;
+});
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.once(signal, () => {
+    server.close(() => {
+      void pool.end().then(() => {
+        process.exitCode = 0;
+      });
+    });
+  });
+}
