@@ -17,11 +17,22 @@ export default defineConfig({
     video: 'off',
   },
   projects: [
-    { name: 'iPhone', use: { ...devices['iPhone 13'], browserName: 'webkit' } },
+    {
+      name: 'iPhone',
+      use: {
+        ...devices['iPhone 13'],
+        browserName: 'webkit',
+        launchOptions: { executablePath: process.env.WEBKIT_TEST_EXECUTABLE },
+      },
+    },
     { name: 'Pixel', use: { ...devices['Pixel 7'], browserName: 'chromium' } },
     {
       name: 'iPad',
-      use: { ...devices['iPad (gen 7)'], browserName: 'webkit' },
+      use: {
+        ...devices['iPad (gen 7)'],
+        browserName: 'webkit',
+        launchOptions: { executablePath: process.env.WEBKIT_TEST_EXECUTABLE },
+      },
     },
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
   ],

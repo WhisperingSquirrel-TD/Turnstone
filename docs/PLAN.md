@@ -2,11 +2,11 @@
 
 ## Authority, approval and current status
 
-`docs/SPEC.md` now contains all seven supplied parts, with sections 1–19 in numerical order and their text unchanged. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
+`docs/SPEC.md` contains all seven supplied parts, with sections 1–19 in numerical order and their text unchanged, followed by verbatim Amendments 1–3 as sections 20–22. Section 20 overrides conflicting parts of sections 4, 16 and 18; section 21 binds positioning, public pages, shared facts and test-gated claims; section 22 adds optional-per-game Must Traitor tasks and Must hosting portability. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
 
-**Awaiting owner approval. Do not start Milestone 1.** Approval alone does not waive Milestone 0's verification gate or unresolved rule conflicts. No implementation, dependency changes, testing runs or deployment are authorised by this document update.
+**Owner-approved as written.** The owner authorises finishing Milestone 0 to genuinely green verify, then Milestone 1 under strict TDD and stopping for review. Approval does not waive the verification gate. Owner resolutions in DECISIONS supersede the prior pending choices. No publishing, deployment or paid services.
 
-Milestone 0 is implemented in part but **not accepted**: the last recorded type, lint, formatting, unit, property and PostgreSQL integration checks passed; four-device Playwright/axe and Lighthouse execution remain unproven; the last audit had five high advisories and no critical advisories. This update does not rerun or replace that evidence. Resolve the issues and obtain a genuinely green `pnpm run verify` before progression.
+Milestone 0 is implemented in part but **not accepted**: its remaining WebKit page-creation blocker and the latest successful checks are recorded in `PROGRESS.md`. Milestone 1 has not started. These amendments do not restart or expand the current milestone; finish its existing instructions, then Milestone 1 and stop for review. Obtain genuinely green verification before progression.
 
 Stay on the free tier: no publishing, deployment or paid service activation. Runs must stay focused. Release-scale suites are planned, not run now; cost constraints never justify weakening a gate or claiming unrun checks passed.
 
@@ -18,6 +18,29 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 - Keep a requirement-to-test traceability register using section/requirement IDs, planned milestone, failing-test evidence, implementation and acceptance evidence. Include all 40 numbered edge cases from §17.
 - Maintain `PROGRESS.md` at each milestone; maintain decisions and scenario reports without copying authoritative configuration values into multiple sources.
 - No mock authentication, fake provider connections, security bypasses, advisory exclusions, disabled tests or fabricated full-game success outside test code.
+
+## Amendment 1 milestone mapping (SPEC §20)
+
+Thresholds and exact wording stay authoritative in SPEC §20. Add automated size checks to `pnpm run verify` when each real route is introduced, not just at final hardening. The existing minimal foundation placeholders are not evidence of the later static-site/player-route budget gates.
+
+| §20 item                                                                                                              | Implementation milestone                                                           | Verification and evidence                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One domain; static public front door; Start/Join app links; direct join QR links; game-server-only API/socket traffic | 4 routing/server boundary; 5 join paths; 9 static public site                      | Routing tests and game-server request counters prove public page/asset traffic is isolated; no infrastructure activation now                               |
+| Public static prerendered HTML, JavaScript-off content, CDN/static hosting, hashed-asset/HTML cache policies          | 9                                                                                  | Raw HTML/header/cache tests; static deployment output with no per-view Node rendering; production hosting decision remains owner-controlled                |
+| Public page/JavaScript/image budgets, system fonts, image format/lazy loading                                         | 9, as each public route exists                                                     | Build-output size checks in verify, including shared imported assets rather than entry files alone; image/font/script inventory assertions                 |
+| Player first-load JavaScript/total budgets; no game fonts/images/third-party scripts; cached repeat visits            | 5                                                                                  | Build dependency-graph/transfer-size checks in verify and network/cache assertions; preserve no-secret-cache requirements                                  |
+| Coordinator/presenter/wizard/admin lazy chunks                                                                        | First route introduction: 5–6 for player/coordinator/wizard/presenter; 8 for admin | Per-route initial-load size checks in verify; assert these chunks are absent from player initial requests                                                  |
+| Low-end Android/slow-4G usability target                                                                              | 5 baseline, 10 full performance validation                                         | Measured cold/warm browser runs; record emulation conditions and eventual real-device evidence, not size alone                                             |
+| Small typical views; no client polling; heartbeat frequency                                                           | 4 transport contracts; 5 client integration                                        | Payload-size tests, socket settings and no-polling assertions in verify; count requests/reconnect behaviour separately from server deadline polling        |
+| PostgreSQL snapshot/recent events, optimistic command versions, pooled connections, released game memory              | 4                                                                                  | Real database concurrency/restart/version tests; reduced-scale resource measurements in verify                                                             |
+| No-extra-paid-service cross-instance socket adapter; lock-claimed deadlines; instance-independent requests            | 4 design and `[S]` multi-instance capability                                       | Two-process integration tests for cross-instance authorised views and exactly-once deadline effects; Redis requires separate owner approval                |
+| Reduced-scale steady/fan-out/deal-spike/join-storm/static-isolation/soak capacity checks                              | 4 as server capabilities exist; 5–9 as relevant routes/features land               | Bounded local tests in verify; document measured hardware, sample sizes, resource usage and labelled extrapolations in `CAPACITY.md`                       |
+| Full steady load, fan-out, start-of-day spike, join storm, static throughput, long soak; players per CPU core/GB      | 10                                                                                 | Full target suites and measured `CAPACITY.md`; gated on owner's paid production VM/database decision, not run on the free tier or claimed by extrapolation |
+| Admission control based on measured capacity; existing games/joins remain served                                      | 4 server policy; 5–6 user-facing busy response                                     | Verify boundary tests around the measured admission threshold and existing-game priority; do not guess a production capacity value                         |
+| Advance scheduling and admin per-day load forecasts                                                                   | 3 plan data; 6 coordinator scheduling; 8 admin forecasts                           | Verify scheduled-game forecast calculations and UI behaviour; no aggregate report exposes unfinished secrets                                               |
+| Peak-day change freezes; public status page `[S]`                                                                     | 8 admin freeze configuration; 9 status page; 10 release-safety checks              | Freeze enforcement/status tests as implemented; peak-day hosting only on separate approval; the game remains year-round                                    |
+
+React is retained. If the actual route budget cannot be met, record measured options and ask before changing the framework. Reduced-scale checks use existing/free resources only and never claim proof of full production targets. Hosting/paid scale tests are pending owner decisions, not authorised work in this amendment.
 
 ## Task 0 — Finish and accept foundations
 
@@ -34,19 +57,21 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 
 ## Task 1 — Pure game engine and shared parameter model
 
-**References:** §3, §5–6, §8, §9–12, §17–19.
+**References:** §3, §5–6, §8, §9–12, §17–19, §22.
 
 - [ ] Build one typed, validated rule-setting model shared by wizard and tests, with defaults, constraints, recommendations and invalid-combination explanations from §6. Keep reference data editable later without copying it into UI strings.
 - [ ] Implement pure `decide`, `evolve`, injected clock/random source, neutral phases, pause overlay, legal commands/rejections, event replay and schema versioning. No database/network I/O in the engine.
 - [ ] Implement deal/commitment events, acknowledgements and re-deal constraints; voting/ties, shadow choices/decoys, eligibility/protection, eliminations/departures, win/endgame checks and bounded progression. Resolve rule ambiguities first.
 - [ ] Establish `viewFor(viewer, state)` as the single explicit allow-list projection for every viewer type, including announced non-playing host and configured spectator entitlements. Preserve blind coordinator/admin behaviour.
 - [ ] Cover every command's success and rejection with tests; property-test §5 invariants, no-leak, replay equality and a defined termination bound. Add transition contracts for features completed in Task 7 without pretending they are finished.
+- [ ] Include all §22 task settings/defaults/filters in the shared parameter model: optional per game is not optional to build. Establish deterministic per-cycle assignment/report events, next-murder consequence and task lifecycle/projection contracts; clarify unresolved rule details before implementation. Task-off games retain their original rules; library and player/admin experiences are completed in Task 7 and existing Task 8 reference administration.
+- [ ] Property-test task entitlement, replay, eliminated/departed-seat behaviour, recruitment transitions and delivery/reporting decoy contracts. Task state never leaks to blind coordinators/admins or changes private-screen timing/shape.
 
 **Exit:** Property, no-leak and replay tests green plus verify. Engine coverage target at final delivery: ≥95% lines, ≥90% branches.
 
 ## Task 2 — Full-game scenario harness
 
-**References:** §7 example, every §17 edge case, §18.
+**References:** §7 example, every §17 edge case, §18, §22.
 
 - [ ] Implement the seven specified bot behaviours, including an adversarial coordinator; deterministic seeds and minimal reproductions retained as regression tests.
 - [ ] Sweep every supported seat count, every valid Traitor count and all formats. Generate constrained three-way coverage over all rule-affecting settings plus two-way coverage for 30–40 seats; verify coverage independently and record the generator choice.
@@ -54,6 +79,8 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 - [ ] Create readable golden YAML complete-game scenarios: one per each of the 40 §17 cases, plus the §7 acceptance example and each format; at least 40 overall. Clearly mark future server/browser-dependent scenarios as pending until their milestones, never passed.
 - [ ] After every game step check invariants, viewer leakage, private-moment contracts, replay, termination, non-negative pot and schedule exclusions.
 - [ ] Replace the full-verifier placeholder with real reporting: games, combinations covered, timings, failing seeds and implemented-layer status. Expand to server/browser layers as Tasks 4–7 land.
+- [ ] Extend constrained covering arrays and independent coverage checks to every rule-affecting Traitor-task setting/filter. Extend bots and the separate reference model for task completion/misses and consequences; retain task-off coverage.
+- [ ] Add §22 golden scenarios for completion, a missed task cancelling a murder, banishment mid-task and a new recruit receiving a task. Check task delivery/reporting leakage, same-shaped decoys, replay and termination after each step; mark future UI/server layers pending until implemented, not passed.
 
 **Exit:** First genuine `SCENARIO_REPORT.md` with zero failures in implemented suites and transparent pending layers; verify green. Future-layer requirements remain release gates.
 
@@ -70,7 +97,7 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 
 ## Task 4 — Persistent server, deadlines and realtime
 
-**References:** §3–5, §9, §11, §15, §17–18.
+**References:** §3–5, §9, §11, §15, §17–18, §20, §22.
 
 - [ ] Transactional append-only game events with sequence/version checks, snapshots and replay; committed migrations; durable UTC deadlines polled every second or approved pg-boss implementation.
 - [ ] HTTPS POST commands with idempotency and expected-version checks where required; boundary Zod validation; generic errors; no secret-bearing logs.
@@ -78,12 +105,18 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 - [ ] Implement guest invite/code approval, seat identity/PIN lockout/recovery, authorised device migration and presenter pairing with real security, not placeholder sessions. Coordinator sign-in production journeys remain unavailable until Task 8's providers exist; isolated identities belong only in test code.
 - [ ] Add CSRF, origin restrictions, rate limits and route/event authorisation matrix; fake-clock deadline pause/shift/restart checks.
 - [ ] Run complete games through real HTTP/sockets with 5–40 clients; mid-game restart; dropped sockets, duplicate/reordered commands and two-second latency; capture payloads for no-leak.
+- [ ] Design for §20: any instance can serve commands/views from PostgreSQL snapshots/recent events; every command has optimistic version checks; bounded connection pools and released finished-game memory; no authoritative instance-only state.
+- [ ] Claim durable deadlines using `FOR UPDATE SKIP LOCKED` and transactional completion/idempotency; test competing schedulers and crash/reclaim behaviour. Separate database deadline polling from the prohibited client polling loops.
+- [ ] Add a no-extra-paid-service cross-instance Socket.IO adapter (evaluate PostgreSQL), private-room isolation and cross-instance pushes; multi-instance support is `[S]`, no longer out of scope. Redis remains unapproved.
+- [ ] Implement measured-capacity admission control for new games only, preserving join/play traffic for existing games. Add typical-view payload, heartbeat and bounded reduced-scale capacity/resource checks to verify; begin `CAPACITY.md` with measured results and explicit extrapolation limits.
+- [ ] Make the production API/socket/scheduler a portable long-lived Node process, with standard environment configuration/PostgreSQL and no Replit-only runtime dependency. Validate configurable API/socket origins for same-origin or sibling-subdomain operation; include cookie, CSRF, credentialed exact-origin CORS, origin checks and CSP connect-src tests for both topologies. Do not broaden allow-lists or expose secrets.
+- [ ] Test static-host app/API separation, cross-origin reconnect/authentication and independent server startup without a static host. Document always-on startup/migrations/configuration; this portability work authorises no hosting, containers in this workspace, publishing or paid plan.
 
 **Exit:** Full-stack restart/fault games and integration no-leak green; verify green. Final server line coverage ≥85%.
 
 ## Task 5 — Player journeys, privacy shield and website app mode
 
-**References:** §3, §9–10, §12, §16–18.
+**References:** §3, §9–10, §12, §16–18, §20, §22.
 
 - [ ] Joining/lobby/device-check/recovery, paired and pass-and-play seats, departure/late-join paths, voting/shadow/decoys and ghost participation with real server views.
 - [ ] Shield/countdown/acknowledgement/hold pad, fetch-on-hold, deliberate confirmation, immediate DOM/memory clearing on every specified interruption and per-hold timeout. Tap and screen-reader equivalents; all private screens uniform in layout, option count, text band, timing, sounds/vibration.
@@ -91,6 +124,9 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 - [ ] Implement standalone manifest/icons/iOS tags, install guidance, Android full-screen, app back/refresh, iPhone hand-off/rejoin and static-only service-worker caching. No native app.
 - [ ] Test iPhone WebKit, Pixel Chromium and iPad WebKit in browser and installed-display contexts; DOM/storage/URL/title/cache leakage, uniform bounding boxes/colours/element counts and minimum duration; axe on every screen.
 - [ ] Plan opt-in generic Web Push `[S]` with no email/SMS; only activate a service if it meets the free-tier constraint and receives any required approval.
+- [ ] Enforce §20's tighter player first-load/total budgets with build-output checks in verify once the real player route exists; split non-player routes, prohibit game images/fonts/third-party scripts, cache only safe static assets and measure low-end/slow-4G usability.
+- [ ] Verify no client polling, bounded typical view sizes and heartbeat cadence against server contracts; add route-relevant reduced-scale fan-out/admission checks without weakening privacy uniformity.
+- [ ] Build the app shell to portable pure static output, independent of the game server. Use validated configurable API/socket origins rather than hard-coded Replit domains/runtime helpers; test same-origin and sibling-subdomain deployments with secure credentials, CSRF, reconnect, hold-to-reveal and installed-app/rejoin behaviour. Static caches still never contain API responses or secrets.
 
 **Exit:** Device journeys in both modes and uniformity suite green; verify green. Real installed-mode device checks remain required in Task 10.
 
@@ -102,12 +138,13 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 - [ ] Safe undo window only when no private information was released; offline takeover/co-coordinator prompting and majority approval.
 - [ ] Paired `/tv` public view, QR/lobby/timetable/countdowns, private warnings, vote reveals, mission/pot/endgame/reveal displays, text-mirrored narration and sound consent.
 - [ ] Keyboard, large-screen readability, wake-lock fallback and reduced-motion tests; adversarial coordinator/presenter payload and route checks.
+- [ ] Keep coordinator, presenter and wizard separately lazy-loaded, add initial-load size checks when each route exists, and connect advance scheduling/busy messaging to the measured-capacity server policy.
 
 **Exit:** Journeys, takeover and schedule shifts pass; no secret disclosure; verify green.
 
 ## Task 7 — Complete game features and rehearsal
 
-**References:** §5–8, §11–12, §17–18.
+**References:** §5–8, §11–12, §17–18, §22.
 
 - [ ] At least 24 original admin-editable missions with all required fields and accessibility/category coverage; custom missions; result/pot validation and display-only units.
 - [ ] Public/secret shields and permitted allocation paths; recruitment/offer/ultimatum, sleeper `[S]`, endgame voting/results and full fairness reveal. Never enable Could powers automatically.
@@ -115,6 +152,9 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 - [ ] Participant-only recap, first-name share image, no indexing, attribution and consent-aware Stackstone calls to action.
 - [ ] Rehearsal/public demo using real engine rules and bots. Include in-app quiz/poll missions `[S]` unless explicitly deferred to protect a Must.
 - [ ] Complete all golden cases, engine/full-stack scenarios and browser complete games; test votes/recruitment/shield choices only reveal when entitled.
+- [ ] Deliver §22's coordinator task toggle/settings/filters, at least 40 original safe/legal/kind tasks as tagged admin-editable reference data, and offensive-filtered coordinator additions. Cover setting, minimum age, accessibility and difficulty; review every task against all stated safety prohibitions. Integrate task-reference controls into existing Task 8 administration, not a secret-reading admin route.
+- [ ] Deliver tasks at each cycle's first private moment with same-shaped non-Traitor decoys; at the next shadow show the identical “Anything to report?” interaction to every living player. Record done/missed by honour system, share only entitled reports in Traitor chat and apply the resolved missed-task consequence. No automatic social-spotting mechanic.
+- [ ] Reveal task history only at final reveal/recap and award “smoothest operator” for most completed; preserve participant-only recap defaults. Complete all four task golden scenarios, delivery/reporting no-leak/uniformity/browser tests, mid-task elimination and recruitment cases.
 
 **Exit:** All golden scenarios pass; no-leak/uniformity and verify green.
 
@@ -127,64 +167,81 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 - [ ] Account/history/consent preferences, data export, deletion/anonymisation and delayed hard deletion; age confirmation and guest/paired alternatives.
 - [ ] Verify Meta signed deletion callback/status URL; test missing Facebook email and hostile OAuth responses with local **test-only** identity providers.
 - [ ] Admin-email authorisation, audited user/reference-data management, aggregate usage, consent-only lead CSV exports, health view and change-freeze controls; unfinished roles/votes/choices remain inaccessible.
+- [ ] Keep admin code in its own lazy chunk with verify size checks; calculate per-day load forecasts from scheduled games and configure peak-day change freezes without exposing hidden state.
 
 **Exit:** Security/provider/account/admin tests green, Meta deletion callback works, admins cannot see live secrets; verify green. Real provider approvals are required, not assumed.
 
 ## Task 9 — Public website and agent-readable content
 
-**References:** §2, §14–16.
+**References:** §2, §14–16, §20–22.
 
 - [ ] Deliver every §14 public page as meaningful prerendered HTML with JavaScript off; original UK English copy; required legal/accessibility templates marked for solicitor review.
+- [ ] Apply §21's exact lead message and everyone-plays/even-the-host positioning; explain the full original game loop, phones as the private channel and narrated TV. Render the required proof points across sales/agent surfaces only when the claims gate permits them.
+- [ ] Add `/compare`, `/large-groups` and `/no-host`, each opening with a one-paragraph direct answer. Compare only the specified categories and ours, never competitor brands/products; preserve §20 static/JavaScript-off and budget requirements.
+- [ ] Store all eight §21 FAQ questions verbatim in one keyed content source; mirror them on `/faq`, in `llms.txt` and FAQPage structured data. Test exact wording and cross-surface equality.
+- [ ] Add the interactive `/formats` “Plan a game” form with players/start/end/blocked times, a real timetable from the same planner used by the public API, and a pre-filled create-wizard link. Test planner/API/form consistency, validation and human sign-in/confirmation; preserve static content and §20's public JavaScript budget.
+- [ ] Render one shared facts record (players, duration, devices, price, privacy, builder) identically on home, `/faq`, `/llms.txt`, JSON-LD and `/api/public/v1/facts`. Test all five representations against the source and claims eligibility, never maintain separate hand-written copies.
+- [ ] Use §21's ordinary game vocabulary. Scan copy, metadata, alt text, URLs, structured data and configured domain against forbidden TV branding and official/inspired-by claims; exceptions require explicit owner-confirmed legal sign-off.
+- [ ] Bind public capacity/privacy/fairness claims to recorded passing tests. Until evidence exists, publish design intent without numbers; test that unverified or stale evidence cannot silently enable numeric/proven claims on HTML, agent or facts surfaces.
+- [ ] Serve public page output as static files only, isolated from the game server, with same-domain Start/Join/direct-join routing and §20 cache policies. No Node/per-page public rendering.
+- [ ] Produce portable pure static public-site/app-shell artifacts deployable independently to any CDN, including a potential Vercel front end. Test static-only serving and configured same-origin/sibling-subdomain API/socket wiring; preserve §20 traffic isolation/cache/size checks, CSP policy approval and §21 claims gates. No actual hosting activation.
+- [ ] Add public page, JavaScript, image-format/size/lazy-load and system-font budget checks to verify as each route exists. Add a public status page `[S]` and reduced-scale static-throughput/game-server-isolation checks.
 - [ ] Contact/team-building enquiry persistence with consent, honeypot and rate limits; no email sending or personal data in public APIs.
 - [ ] Config-driven crawler policy, robots/sitemap, canonical/social metadata, validated structured data, `llms.txt`/full text, Markdown alternates and content negotiation.
 - [ ] Versioned GET-only public facts/rules/planner/missions API with permitted CORS; OpenAPI links; pre-filled wizard hand-off requiring human sign-in/confirmation, never agent-created live games.
 - [ ] Private game/coordinator/presenter/recap/account routes send noindex/nofollow and stay out of sitemap/caches. Plan aggregate crawler counts and IndexNow `[S]` without deploying or guessing a production domain.
-- [ ] Test raw HTML/content variants/contracts and §14 Lighthouse/performance budgets. Initial game bundle must also meet §16's compressed-size limit.
+- [ ] Test raw HTML/content variants/contracts and §14 Lighthouse/performance budgets, applying §20's stricter client/public size budgets instead of the conflicting §16 initial-bundle limit.
 
-**Exit:** Public-site/Lighthouse budget tests and agent links/hand-offs pass; verify green. MCP remains Could, not part of this task.
+**Exit:** Public-site/Lighthouse budget tests, new sales pages, exact FAQ mirroring, shared facts, real public planner and agent links/hand-offs pass; trademark and evidence-based claims checks green; verify green. MCP remains Could, not part of this task.
 
 ## Task 10 — Hardening, privacy and release evidence
 
-**References:** §15–19.
+**References:** §15–20.
 
 - [ ] ASVS level 2 security review and adversarial authorisation/no-leak checks; DPIA recommendation, lawful-basis/retention inventory and solicitor-review templates; offence controls and children's guest protections.
 - [ ] WCAG 2.2 AA manual audit, VoiceOver/TalkBack and real supported browsers/devices in browser/installed modes; lock/unlock, battery saver, casting and a five-person-or-larger playtest.
-- [ ] Load `[S]`: 50 concurrent 15-seat games, p95 command latency <300 ms. Soak/chaos `[S]`: accelerated day and seven-day games. Mutation `[S]`: Stryker engine score ≥80%.
+- [ ] Capacity `[M]`: implement every full steady/fan-out/deal-spike/join-storm/static-throughput/long-soak target in §20 and report measured players per CPU core/GB in `CAPACITY.md`. §20 replaces the conflicting §18 smaller load target; reduced tests remain in verify. Full-volume execution requires the owner's paid VM/database decision and is not authorised on the free tier.
+- [ ] Retain non-conflicting §18 chaos/clock-change scenarios `[S]` and mutation `[S]` (Stryker engine score ≥80%); distinguish those from §20's required long capacity soak.
+- [ ] Validate measured-capacity admission thresholds, existing-game priority, peak-day forecasts/freezes, client performance and public/game traffic isolation. Label any unrun full capacity target pending, never passed from extrapolation.
 - [ ] Versioned event upgraders and safe-deploy replay of every in-progress game; reject differences, enforce admin change freezes/security-fix exceptions and feature flags. Test safe-deploy without performing a deployment.
 - [ ] Finish README setup/secrets/running-a-game/deployment guidance and LAUNCH checklist. Meet coverage and scenario volumes below; every Must has a test that fails without it.
 - [ ] Record every Should as completed or explicitly deferred with consequence/reason. No high/critical audit findings.
 
-**Exit:** Real `pnpm run verify:full` green, coverage met, all Musts done and Shoulds done or recorded as deferred. Free-tier/no-deployment instruction still applies; release readiness is not permission to publish.
+**Exit:** Real `pnpm run verify:full` green, coverage met, full §20 capacity evidence measured on owner-approved resources, all Musts done and Shoulds done or recorded as deferred. Unrun paid-resource capacity targets block launch. Free-tier/no-deployment instruction still applies; release readiness is not permission to publish.
 
 ## Task 11 — Could-haves only on explicit request
 
-**References:** §8, §14–15, §19.
+**References:** §8, §14–15, §19, §22.
 
 MCP server, in-person murder, seer, double vote and encryption at rest remain off/unbuilt. Each requested feature needs scope, its own failing tests, scenario-model/covering-array updates and security review. Any schedule extension suggesting a Could feature must not enable it without owner approval.
 
+All-Vercel hosting is `[C]`, not the Must split-host portability architecture. Do not build it now; revisit current WebSocket/fan-out/scheduler limits only when generally available and explicitly requested. Hosting/paid plans remain owner decisions.
+
 ## Verification volumes and evidence (SPEC §18)
 
-| Suite | `pnpm run verify` sample | `pnpm run verify:full` |
-| --- | --- | --- |
-| Exhaustive core sweep | 2 complete games per cell | At least 20 per cell |
-| Constrained covering array | 5 complete games per row | At least 50 per row |
-| Fault fuzzing | Real documented sample, not skipped | 100,000 fuzzed games |
-| Real HTTP/socket games | 3 full-stack games | 20 full-stack games |
-| Browser engines | Device smoke tests | Complete games on every profile, browser and installed modes |
+| Suite                      | `pnpm run verify` sample                                     | `pnpm run verify:full`                                          |
+| -------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
+| Exhaustive core sweep      | 2 complete games per cell                                    | At least 20 per cell                                            |
+| Constrained covering array | 5 complete games per row                                     | At least 50 per row                                             |
+| Fault fuzzing              | Real documented sample, not skipped                          | 100,000 fuzzed games                                            |
+| Real HTTP/socket games     | 3 full-stack games                                           | 20 full-stack games                                             |
+| Browser engines            | Device smoke tests                                           | Complete games on every profile, browser and installed modes    |
+| Route sizes (§20)          | Automated checks as each real client/public route exists     | Same hard budgets plus full network/performance evidence        |
+| Capacity (§20)             | Bounded reduced-scale checks as relevant server/routes exist | Full target suites in Task 10, only on owner-approved resources |
 
 Every suite checks its invariants, leakage, replay and termination after each step. Reports include coverage evidence, timings and failing seeds/reproductions. Browser/full-stack scenarios are added at their relevant milestones, not falsely claimed at Task 2. No production deployment before full-volume success and all release criteria; currently no deployment at all.
 
 ## Retained workspace mapping
 
-| Specification location | Actual template location |
-| --- | --- |
-| `packages/engine` | `lib/engine` |
-| `packages/shared` | `lib/shared` |
-| `apps/server` | `artifacts/api-server` |
-| `apps/web` | `artifacts/party-game` |
-| Database/schema/migrations | `lib/db` |
-| API contract/generated types | `lib/api-spec`, `lib/api-zod`, `lib/api-client-react` |
-| Cross-service response security | `lib/security` |
-| Browser tests and documentation | `e2e/`, `docs/` |
+| Specification location          | Actual template location                              |
+| ------------------------------- | ----------------------------------------------------- |
+| `packages/engine`               | `lib/engine`                                          |
+| `packages/shared`               | `lib/shared`                                          |
+| `apps/server`                   | `artifacts/api-server`                                |
+| `apps/web`                      | `artifacts/party-game`                                |
+| Database/schema/migrations      | `lib/db`                                              |
+| API contract/generated types    | `lib/api-spec`, `lib/api-zod`, `lib/api-client-react` |
+| Cross-service response security | `lib/security`                                        |
+| Browser tests and documentation | `e2e/`, `docs/`                                       |
 
 Use pnpm wherever SPEC mentions npm. Keep the existing workspace and artifact-managed services. Resolve the open choices in `DECISIONS.md` before their affected tasks; do not change the verbatim SPEC to resolve them.

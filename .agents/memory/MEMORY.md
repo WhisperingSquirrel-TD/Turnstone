@@ -1,0 +1,1 @@
+- [Nix browser verification](nix-browser-verification.md) — native-library installation and browser launch alone do not prove headless WebKit can render.

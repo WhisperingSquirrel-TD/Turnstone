@@ -1,6 +1,6 @@
 # APP_NAME — Stackstone Consulting
 
-Website-only hidden-role party game foundation. The binding `docs/SPEC.md` is being delivered in seven parts: save each verbatim in order and reply only "Part N saved". Do not write other code or start Milestone 1 until all seven parts are saved and the owner approves the plan.
+Website-only hidden-role party game. All seven SPEC parts are saved and PLAN is owner-approved. Owner resolutions in `docs/DECISIONS.md` supersede conflicting SPEC requirements; do not alter the verbatim SPEC. Finish Milestone 0 to green verify, then Milestone 1 under strict TDD, and stop for review.
 
 ## Source of truth
 
@@ -30,6 +30,6 @@ Keep Replit's pnpm workspace template. Use pnpm wherever the spec says npm, with
 
 Stay on the free tier: do not publish, deploy or enable any paid service, and keep each run focused to save usage.
 
-Strict TDD; never waive tests or audit findings. UK English. No emojis, TV-show branding, seasonal theme or native app. No game secrets in logs, URLs, titles, storage or notifications. Future game state must be server-only with viewer allow-list projections, a blind playing coordinator, uniform private interactions and press-and-hold privacy shielding.
+Strict TDD; never weaken tests. Audit exceptions are permitted only under owner-resolved D3 (development/test-only, exact advisory IDs, 30-day expiry, milestone recheck; never production). UK English. No emojis, TV-show branding, seasonal theme or native app. No game secrets in logs, URLs, titles, storage or notifications. Game state must be server-only with viewer allow-list projections, a blind playing coordinator, uniform private interactions and press-and-hold privacy shielding.
 
 Deployment must be an approved single-instance Reserved VM, not Autoscale. The website's nonce CSP requires a Node response server. No deploy until launch gates pass.

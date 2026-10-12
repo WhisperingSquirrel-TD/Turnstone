@@ -1,30 +1,37 @@
 # Progress
 
-Milestone 0 foundation implemented; acceptance is **NOT GREEN**. Milestone 1 has not started.
+## Owner approval and scope
 
-Confirmed:
+All seven SPEC parts are saved verbatim and numerically ordered. PLAN is approved. D3–D5 and D9–D16 have owner resolutions in DECISIONS. SPEC was not edited during this work. Finish Milestone 0 before starting Milestone 1; stop for review afterwards. No publishing, deployment or paid services.
 
-- Environment and HTTP tests observed red before implementation.
-- PostgreSQL development migration applied; real database integration passed.
-- Application and test type checks passed.
-- Unit tests and the property test (500 generated ports) passed.
-- Frontend SSR route tests passed.
-- Brand contrast checked; the initially invalid amber button pairing was corrected and prevented by a regression check.
+## Milestone 0 — blocked, not accepted
 
-Final verification:
+Completed and verified:
 
-- Lint/format passed. Both services start cleanly.
-- Proxied `/healthz` and `/readyz` returned successful payloads.
-- Web response CSP nonce matches its HTML, with no unresolved nonce placeholder.
-- Narrow-viewport home screenshot renders successfully.
-- Audit remains red: five high advisories, no critical advisories; no exclusions.
+- Real PostgreSQL committed foundation migration, connection and readiness; environment validation and missing-value tests.
+- Type checks for application/tests, ESLint and formatting passed.
+- Existing unit/property/integration tests pass. Added built-production HTTP test observed failing because the build was missing, then passing after the build: both routes use fresh CSP nonces, external-only scripts and the approved no-referrer/security headers.
+- Brand contrast regression retained as approved.
+- Unused component-preview source/dependencies removed after confirming no dependants and an empty component registry. Its managed service was removed using validated artifact metadata; the canvas board metadata remains.
+- Patched brace-expansion; replaced Lighthouse CI CLI with maintained Lighthouse 13.5.0 Node API against Playwright Chromium. The production build receives accessibility scores of **100** on both home and play.
+- Dependency audit reports **zero high and zero critical**, with **no exceptions**. The audit gate checks all dependencies, fails closed on invalid/unavailable reports and rejects every high/critical finding. Its new policy tests were observed failing before policy implementation.
+- Pixel/Chromium and desktop/Chromium smoke tests passed: home/play, reload, axe and 320 px checks.
+- Both managed application services restart and run cleanly.
 
-Not completed:
+Blocking evidence:
 
-- Four-device Playwright smoke and axe browser checks: configured, not executed in this initial build.
-- Lighthouse CI: configured, not executed in this initial build.
-- Full verify cannot be claimed green while the browser checks remain unrun and high dependency advisories remain.
+- iPhone/WebKit and iPad/WebKit could not complete the smoke journey.
+- Initial browser launch failed on native libraries. Installed required native packages and supplied missing ABI-correct Nix runtime outputs.
+- The Ubuntu WebKit launcher overwrites library paths and its ldconfig-cache check does not recognise Nix outputs. A test-only wrapper uses the same official WPE binary and explicit native/loader preflight; no application security checks or browser assertions were disabled.
+- WebKit now launches but fails at page creation: **“Could not create EGL display: no supported platform available. Aborting...”**.
+- Stopped retrying after several distinct native-runtime approaches. Do not count these profiles passed, replace them with Chromium, or start the engine to bypass the gate.
 
-The exact runtime source of truth is the repository, not this summary. Do not advance on partial evidence.
+`pnpm run verify` is therefore **not green**. An independent check chain passed through types/lint/format/unit/property/integration; Lighthouse and audit then passed separately. The entire ordered gate was not successfully completed.
 
-Specification intake: Part 1 of 7 saved verbatim in `SPEC.md`. Await the remaining six parts and explicit plan approval. No further code or Milestone 1 work is authorised during intake.
+## Milestone 1 — not started
+
+No game engine implementation, game schemas, model, phases, votes, murders, projections or gameplay property/replay tests were added. Its implementation remains blocked by Milestone 0 acceptance, not by missing owner plan approval.
+
+## Full-game and release status
+
+`verify:full` remains an honest unavailable placeholder until Milestone 2. No game scenario success, installed-mode compatibility, real-device/assistive-technology coverage or launch readiness is claimed.

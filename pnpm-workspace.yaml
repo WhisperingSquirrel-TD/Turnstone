@@ -43,6 +43,7 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  brace-expansion: '5.0.12'
   # Parent packages still pin vulnerable transitive versions; no advisory exclusions.
   proxy-addr: '2.0.8'
   source-map-js: '1.2.2'

@@ -1,0 +1,2 @@
+# Binding owner text must stay verbatim, not formatter-reflowed.
+docs/SPEC.md
