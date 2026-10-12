@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "fnMDZswcGplK3c2qkaoRA"
+uri = "file://assets/brand/stackstone/stackstone-logo-horizontal.svg"
+type = "image"
+title = "Official Stackstone Consulting logo"
+description = "Original SVG retrieved from the owner’s brand page on 12 October 2026. All six variants and provenance are saved in assets/brand/stackstone/."
+logical_id = "c9731f8a-08bd-48f3-adc2-3c18c556e0a2"
+content_hash = "sha256:67acb48ee61136f445a18e0368808c339d797742417a92d0c87b139709bff288"
+size = 1087
+mtime_ms = 1791836587823
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:4e06c17d-98e7-4362-92dc-8f7452853539/c9731f8a-08bd-48f3-adc2-3c18c556e0a2/3247b244-cb54-486c-81e0-8c69517a2b95"
+storage_version_token = "1791837083871414"
+content_type = "image/svg+xml"

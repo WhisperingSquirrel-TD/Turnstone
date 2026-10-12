@@ -2,7 +2,7 @@
 
 ## Authority, approval and current status
 
-`docs/SPEC.md` contains all seven supplied parts, with sections 1–19 in numerical order and their text unchanged, followed by verbatim Amendments 1–3 as sections 20–22. Section 20 overrides conflicting parts of sections 4, 16 and 18; section 21 binds positioning, public pages, shared facts and test-gated claims; section 22 adds optional-per-game Must Traitor tasks and Must hosting portability. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
+`docs/SPEC.md` contains all seven supplied parts, with sections 1–19 in numerical order, followed by Amendments 1–4 as sections 20–23 and Amendment 5's owner decisions within section 23. Authorised earlier edits are Amendment 4's section 2 attribution expansion and Amendment 5's section 23 logo-link replacement, recorded in DECISIONS. Section 20 overrides conflicting parts of sections 4, 16 and 18; section 21 binds positioning, public pages, shared facts and test-gated claims; section 22 adds optional-per-game Must Traitor tasks and Must hosting portability; section 23 requires uniform branding and rename readiness with confirmed owner identity. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
 
 **Owner-approved as written.** The owner authorises finishing Milestone 0 to genuinely green verify, then Milestone 1 under strict TDD and stopping for review. Approval does not waive the verification gate. Owner resolutions in DECISIONS supersede the prior pending choices. No publishing, deployment or paid services.
 
@@ -116,7 +116,7 @@ React is retained. If the actual route budget cannot be met, record measured opt
 
 ## Task 5 — Player journeys, privacy shield and website app mode
 
-**References:** §3, §9–10, §12, §16–18, §20, §22.
+**References:** §2–3, §9–10, §12, §16–18, §20, §22–23.
 
 - [ ] Joining/lobby/device-check/recovery, paired and pass-and-play seats, departure/late-join paths, voting/shadow/decoys and ghost participation with real server views.
 - [ ] Shield/countdown/acknowledgement/hold pad, fetch-on-hold, deliberate confirmation, immediate DOM/memory clearing on every specified interruption and per-hold timeout. Tap and screen-reader equivalents; all private screens uniform in layout, option count, text band, timing, sounds/vibration.
@@ -127,8 +127,12 @@ React is retained. If the actual route budget cannot be met, record measured opt
 - [ ] Enforce §20's tighter player first-load/total budgets with build-output checks in verify once the real player route exists; split non-player routes, prohibit game images/fonts/third-party scripts, cache only safe static assets and measure low-end/slow-4G usability.
 - [ ] Verify no client polling, bounded typical view sizes and heartbeat cadence against server contracts; add route-relevant reduced-scale fan-out/admission checks without weakening privacy uniformity.
 - [ ] Build the app shell to portable pure static output, independent of the game server. Use validated configurable API/socket origins rather than hard-coded Replit domains/runtime helpers; test same-origin and sibling-subdomain deployments with secure credentials, CSRF, reconnect, hold-to-reveal and installed-app/rejoin behaviour. Static caches still never contain API responses or secrets.
+- [ ] From Milestone 5, build one reusable Stackstone mark/layout for every public/player/coordinator/presenter/admin screen as those routes arrive. Use an inline SVG under §23's size limit with identical role-neutral position, size and colour; respect safe areas and never overlap hold pads, countdowns or controls. Test computed geometry/colour, SVG size, narrow/zoomed/installed layouts and private-moment uniformity.
+- [ ] From Milestone 5, extend the existing confirmed identity config to product logo/domain/social links. Add a failing-on-hard-coded-product-name test and sentinel rename test to verify; cover every later route, metadata, manifests, agent/facts surfaces and links. The owner's Amendment 5 name is already set in that config; further renames need one config change, not scattered edits. No deployment authorised.
+- [ ] Enforce Amendment 5's replacement link policy: every screen's Stackstone logo links to the configured organisation URL. Public pages use the same tab; game/coordinator/presenter screens use a new tab with `rel="noopener noreferrer"`; installed-app mode opens the system browser. Test navigation, game continuity, role-identical geometry/colour and no overlap with holds/countdowns/controls. The former mid-game-link prohibition is superseded.
+- [ ] Use the retrieved official SVG assets/provenance, not a generated imitation. Resolve observed artwork/page font and colour differences with the owner before changing §2 theme tokens or Arial; keep §20's no-web-font/budget constraints and a role-uniform mark.
 
-**Exit:** Device journeys in both modes and uniformity suite green; verify green. Real installed-mode device checks remain required in Task 10.
+**Exit:** Device journeys in both modes, uniformity, brand geometry/link policy and single-source rename tests green; verify green. Real installed-mode device checks remain required in Task 10.
 
 ## Task 6 — Blind coordinator console and public presenter
 
@@ -173,9 +177,12 @@ React is retained. If the actual route budget cannot be met, record measured opt
 
 ## Task 9 — Public website and agent-readable content
 
-**References:** §2, §14–16, §20–22.
+**References:** §2, §14–16, §20–23.
 
 - [ ] Deliver every §14 public page as meaningful prerendered HTML with JavaScript off; original UK English copy; required legal/accessibility templates marked for solicitor review.
+- [ ] Apply Milestone 5's shared Stackstone mark/config/rename checks to every public page. Add §23's exact independence statement to the footer and `/about`, substituting the configured APP_NAME; name no TV programme. Test raw prerendered HTML, renamed output and Amendment 5's context-specific link behaviour.
+- [ ] Use the confirmed tagline/byline and organisation name/site/Abingdon, Oxfordshire details from the shared config in sales copy, structured data and `/about`; do not invent an address, social handles or production domain.
+- [ ] Maintain the existing `docs/NAMING.md` `[S]`: owner-confirmed choice/date, owner-reported preliminary web search, and pending owner trade mark/domain/handle checks. Add dated evidence as supplied, not fabricated clearance or paid registrations.
 - [ ] Apply §21's exact lead message and everyone-plays/even-the-host positioning; explain the full original game loop, phones as the private channel and narrated TV. Render the required proof points across sales/agent surfaces only when the claims gate permits them.
 - [ ] Add `/compare`, `/large-groups` and `/no-host`, each opening with a one-paragraph direct answer. Compare only the specified categories and ours, never competitor brands/products; preserve §20 static/JavaScript-off and budget requirements.
 - [ ] Store all eight §21 FAQ questions verbatim in one keyed content source; mirror them on `/faq`, in `llms.txt` and FAQPage structured data. Test exact wording and cross-surface equality.
@@ -192,7 +199,7 @@ React is retained. If the actual route budget cannot be met, record measured opt
 - [ ] Private game/coordinator/presenter/recap/account routes send noindex/nofollow and stay out of sitemap/caches. Plan aggregate crawler counts and IndexNow `[S]` without deploying or guessing a production domain.
 - [ ] Test raw HTML/content variants/contracts and §14 Lighthouse/performance budgets, applying §20's stricter client/public size budgets instead of the conflicting §16 initial-bundle limit.
 
-**Exit:** Public-site/Lighthouse budget tests, new sales pages, exact FAQ mirroring, shared facts, real public planner and agent links/hand-offs pass; trademark and evidence-based claims checks green; verify green. MCP remains Could, not part of this task.
+**Exit:** Public-site/Lighthouse budget tests, new sales pages, exact FAQ mirroring, shared facts, real public planner and agent links/hand-offs pass; shared branding/rename, exact independence statement, trademark and evidence-based claims checks green; verify green. Naming-record Should completed or explicitly deferred. MCP remains Could, not part of this task.
 
 ## Task 10 — Hardening, privacy and release evidence
 

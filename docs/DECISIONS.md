@@ -1,5 +1,94 @@
 # Decisions and open choices — complete specification
 
+## Amendment 5 — resolved owner identity and logo-link policy
+
+These owner decisions supersede the corresponding D16/D17/D19 placeholders and Amendment 4 link restriction. Section 23 includes all five owner items and its previous mid-game-link prohibition has been replaced. No other SPEC section is changed by this amendment.
+
+### D20 — Confirmed product name, tagline and byline
+
+**Context:** The owner confirms APP_NAME and associated copy.
+
+**Choice:** Set the confirmed name once in the existing application identity config. Derive the tagline from that name and store the owner's byline there. Build page title/social metadata from the same config rather than hard-coded HTML labels. Tests first failed on the placeholder identity and template; implementation follows those tests.
+
+**Consequence:** D16's product-name placeholder is resolved. This is an authorised identity setting, not a framework/theme/gameplay change. The complete hard-coded-name/sentinel rename scan remains scheduled from Milestone 5; passing these foundation identity tests alone does not complete it.
+
+### D21 — Logo always links, with context-specific navigation
+
+**Context:** The owner explicitly replaces Amendment 4's public/end/recap-only outbound-link restriction.
+
+**Choice:** Every screen's logo links to the organisation website. Public pages use the same tab; game, coordinator and presenter screens use a new tab with `rel="noopener noreferrer"`; installed-app mode opens the system browser. Geometry/colour stay identical for all roles, respect safe areas and never overlap holds/countdowns/controls.
+
+**Consequence:** Update the Milestone 5 onward implementation/tests to this owner-authorised policy, not the superseded “never mid-game” rule. Device/browser external-navigation behaviour needs actual tests; no logo UI or universal installed-mode support is falsely claimed by this documentation update. Admin logo destination is specified; its non-installed tab target is not explicitly specified and can be resolved with the admin UX.
+
+### D22 — Retrieved official brand assets; theme change pending approval
+
+**Context:** Playwright Chromium rendered the client-side owner brand page successfully on 12 October 2026. It offers SVG/PNG assets but states no complete palette or typography guide.
+
+**Choice:** Save six original SVG variants under `assets/brand/stackstone/` and keep source URL, exact retrieval timestamp, bytes and observations in `source.json`. All six are below §23's 5 KB limit. Do not change game theme tokens or load web fonts.
+
+**Observed differences:** SVG artwork uses `#C8944A`, `#CA9449`, `#3D3A38`, `#5C5652`, `#6B6B6B`, and dark-background variants `#FAFAF5`/`#D4CDC4`, unlike §2's palette. Wordmark SVGs declare DM Sans; computed page fonts are DM Sans and Playfair Display, not the current Arial token. These are artwork/page observations, not an explicit published replacement token specification.
+
+**Consequence:** Ask the owner before applying colour/font changes. Keep existing §2 tokens/Arial while approval is pending, and retain §20's no-web-font constraint. Saved original assets are not yet applied as UI marks; choose one role-uniform variant at Milestone 5, not role-specific light/dark marks. No logo upload is needed because retrieval succeeded.
+
+### D23 — Confirmed organisation details
+
+**Context:** The owner supplies the organisation identity for structured data and About.
+
+**Choice:** Record Stackstone Consulting, `https://stackstoneconsulting.co.uk/`, and Abingdon, Oxfordshire in the shared identity config for Milestone 9 consumption.
+
+**Consequence:** Do not invent a street address, postcode, social profiles or product production domain. The Stackstone organisation site is not the game's still-unconfirmed production domain.
+
+### D24 — Naming record, owner-reported preliminary search
+
+**Context:** The owner chose the product name on 12 October 2026 and reports a preliminary search with no existing game found.
+
+**Choice:** Create `docs/NAMING.md` with that dated decision/report and trade mark register, domain and handle checks pending with the owner.
+
+**Consequence:** Do not claim independent research or legal clearance. The record is historical documentation, not a second runtime identity config, and requires no paid registration/service.
+
+## Amendment 4 — section 23 and authorised section 2 edit
+
+**Context:** The owner explicitly authorises expanding the earlier attribution requirement and appending §23.
+
+**Options:** Keep the prior footer/end/recap-only requirement or apply the owner's everywhere requirement while retaining role uniformity.
+
+**Choice:** Append §23 verbatim and change only the attribution location clause in §2:
+
+- Before: `"Built by Stackstone Consulting" in the footer, end screen and recap`
+- After: `"Built by Stackstone Consulting" on every screen, plus the footer, end-of-game screen and recap`
+
+**Consequence:** This is an owner-authorised SPEC amendment, not an undocumented deviation. All other text in sections 1–22 is unchanged. Milestone 5 starts the reusable mark and rename tests; Milestone 9 adds the independence statement and naming record. Current milestone work/gates, free-tier restrictions and unresolved WebKit acceptance are unchanged.
+
+### D17 — Uniform mark on every screen
+
+**Context:** The Stackstone mark must never signal a role or interfere with private interactions and accessibility.
+
+**Options:** Separate screen/theme/role branding or one role-neutral component and layout/token contract.
+
+**Choice:** From Milestone 5, use the same shared mark, position, size and colour on every screen; an inline SVG within §23's size budget. Apply the contract as coordinator/presenter/admin/public routes arrive in later milestones.
+
+**Consequence:** Test all role/viewer variants, safe areas, narrow widths, zoom/large text and installed modes; measure clear bounds around holds/countdowns/controls. Do not alter the mark during private moments or use different theme/role colours as a tell. Amendment 5 supersedes the earlier mid-game restriction: every mark links to the organisation site using D21's context-specific navigation.
+
+### D18 — Single-source identity and rename regression
+
+**Context:** §23 expands the existing APP_NAME convention to product logo, domain and social links and requires a test that rejects hard-coded product names elsewhere.
+
+**Options:** Scattered literals and manually coordinated renames or one canonical identity config consumed by all renderers.
+
+**Choice:** Milestone 5 introduces the shared identity source, hard-coded-name regression and a config-driven sentinel rename test; extend coverage to later routes and public/agent surfaces.
+
+**Consequence:** Test authored sources/templates/metadata/config inputs for stray product-name literals and verify that generated output follows the config, including manifests, structured data, links and statements. Expected values come from the same config, not a second list of copied names. Distinguish configuration-derived build output from authored hard-coding; no broad exemptions to excuse duplicate naming. Logo/domain/social placeholders remain until confirmed; a test rename is not permission for a real rename or deploy.
+
+### D19 — Exact independence statement and good-faith record
+
+**Context:** §23 supplies a programme-neutral statement and a Should naming record.
+
+**Options:** Ad hoc statements naming programmes or one locale template using the configured product name and the owner's exact wording.
+
+**Choice:** Milestone 9 renders §23's exact statement in the footer and `/about` with APP_NAME from the canonical config. Maintain `docs/NAMING.md` `[S]` with the chosen name/date and register/domain/web checks actually made.
+
+**Consequence:** Test raw static HTML, statement equality and renamed output. Do not name a programme, imply endorsement, invent checks or treat a good-faith record as legal clearance. No new name, paid domain purchase or legal-sign-off assumption on this instruction; unperformed checks stay pending or the Should is explicitly deferred with reason.
+
 ## Amendment 3 — section 22 accepted and mapped
 
 **Context:** The owner adds Traitor tasks `[M]` (optional per game, default Off), portable static front end/long-lived Node server `[M]`, and all-Vercel hosting `[C]`.
@@ -188,7 +277,7 @@ PLAN is approved as written. The following owner decisions supersede the histori
 | D13  | Steps are rule-progress transitions: deal, each cycle step, each endgame round. Logistics pause/extend/shift/undo are not steps; deadlines eventually fire. Maximum cycles = planner cycle count + 3, then immediate endgame. Every bot strategy with firing deadlines must reach FINISHED within the bound.                                                                                                                                                                                                                                                                                     |
 | D14  | No-leak assertions use each viewer's allow-list, including legitimate Traitor knowledge, announced all-seeing host and spectator ghosts. Blind coordinator/admins never receive unfinished secrets.                                                                                                                                                                                                                                                                                                                                                                                              |
 | D15  | Recovery revokes every prior seat device. A second paired-seat device needs existing-device confirmation plus PIN. Late joiners are always Faithful: random-from-reserve is removed, an explicit deviation from SPEC §6. Missing/abstaining endgame votes count as continue. Collective ghost vote is majority of participating ghosts; tie means no vote. Half-vote round-table ties follow the configured tie rule. Shield expires at the end of the next DAWN even if unused. Recruitment target uses victim rule; timeout means decline.                                                     |
-| D16  | Keep all owner placeholders. Arial and 30-day retention remain defaults until the owner changes them.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| D16  | Amendment 5 resolves APP_NAME, the organisation site/location and supplied logo files; other unconfirmed placeholders remain. Arial and 30-day retention stay defaults; observed brand styling is pending owner approval.                                                                                                                                                                                                                                                                                                                                                                        |
 
 Historical context below is retained for accountability, not as an unresolved request for these owner decisions. Remaining implementation choices delegated to the agent are recorded at their milestones.
 
@@ -372,24 +461,22 @@ Each entry uses context, options, choice and consequence. **Pending** means no a
 
 **Consequence:** Recovery, lockouts, votes and recruitment cannot be implemented with silent fallback rules.
 
-## D16 — Owner placeholders (unconfirmed)
+## D16 — Owner identity partly resolved; remaining placeholders
 
 **Context:** §19 expressly leaves these values open.
 
 **Options:** Keep placeholders; or use values explicitly confirmed by the owner.
 
-**Choice:** Leave unconfirmed:
+**Choice:** Amendment 5 resolves APP_NAME in the single config and supplies official SVGs plus the organisation website/location. Leave unconfirmed:
 
-- `APP_NAME`.
 - Production domain.
 - Font (Arial remains provisional).
 - Retention period (the specification's default is not a separate owner confirmation).
 - Crawler policy (implement the specified configurable default only when authorised).
 - Change-freeze dates.
 - Stackstone social links.
-- Logo files.
 
-**Consequence:** No invented domain, links, logo, policy confirmation or font substitution. Do not block local foundations merely to request release-stage placeholders.
+**Consequence:** The organisation website is confirmed; product domain/social links are not. No invented domain, policy confirmation or font substitution. Brand observation/approval is tracked in D22. Do not block local foundations merely to request release-stage placeholders.
 
 ## Dependency record
 

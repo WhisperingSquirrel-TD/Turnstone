@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { noncePlugin } from './vite.security';
+import { config } from './src/config';
 
 const port = Number(process.env.PORT);
 const basePath = process.env.BASE_PATH;
@@ -13,7 +14,27 @@ if (!basePath?.startsWith('/'))
 
 export default defineConfig({
   base: basePath,
-  plugins: [react(), tailwindcss(), noncePlugin()],
+  plugins: [
+    {
+      name: 'single-source-product-title',
+      transformIndexHtml: {
+        order: 'pre',
+        handler: (html) =>
+          html.replaceAll(
+            '__APP_NAME__',
+            config.appName
+              .replaceAll('&', '&amp;')
+              .replaceAll('<', '&lt;')
+              .replaceAll('>', '&gt;')
+              .replaceAll('"', '&quot;')
+              .replaceAll("'", '&#39;'),
+          ),
+      },
+    },
+    react(),
+    tailwindcss(),
+    noncePlugin(),
+  ],
   html: { cspNonce: '__RESPONSE_NONCE__' },
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, 'src') },

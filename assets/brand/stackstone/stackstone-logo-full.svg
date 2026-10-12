@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 40" width="320" height="40">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur"/>
+      <feFlood flood-color="#C8944A" flood-opacity="0.6" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g transform="translate(0, 7)">
+    <rect x="0" y="17.8" width="24" height="8" rx="4" fill="#3D3A38"/>
+    <rect x="4" y="8.9" width="16" height="8" rx="4" fill="#5C5652"/>
+    <rect x="8" y="0" width="8" height="8" rx="4" fill="#CA9449" filter="url(#glow)"/>
+  </g>
+  <text x="40" y="27" font-family="'DM Sans', sans-serif" font-weight="700" font-size="20" letter-spacing="0.08em" fill="#3D3A38">STACKSTONE</text>
+</svg>

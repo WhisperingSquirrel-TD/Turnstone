@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 90" width="200" height="90">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1" result="blur"/>
+      <feFlood flood-color="#C8944A" flood-opacity="0.6" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g transform="translate(88, 4)">
+    <rect x="0" y="17.8" width="24" height="8" rx="4" fill="#3D3A38"/>
+    <rect x="4" y="8.9" width="16" height="8" rx="4" fill="#5C5652"/>
+    <rect x="8" y="0" width="8" height="8" rx="4" fill="#CA9449" filter="url(#glow)"/>
+  </g>
+  <text x="100" y="54" text-anchor="middle" font-family="'DM Sans', sans-serif" font-weight="700" font-size="18" letter-spacing="0.08em" fill="#3D3A38">STACKSTONE</text>
+  <text x="100" y="70" text-anchor="middle" font-family="'DM Sans', sans-serif" font-weight="400" font-size="9" letter-spacing="0.15em" fill="#6B6B6B">CONSULTING</text>
+</svg>

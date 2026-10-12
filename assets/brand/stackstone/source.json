@@ -1,0 +1,95 @@
+{
+  "sourceUrl": "https://stackstoneconsulting.co.uk/brand/",
+  "retrievedAt": "2026-10-12T20:23:07.928Z",
+  "statedPalette": null,
+  "statedTypography": null,
+  "note": "The rendered brand page states no palette or typography. SVG artwork colours/font declarations and computed page fonts are observations, not permission to replace the game theme.",
+  "observedPageFonts": [
+    "\"DM Sans\", sans-serif",
+    "\"Playfair Display\", serif"
+  ],
+  "assets": [
+    {
+      "file": "stackstone-icon.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-icon.svg",
+      "bytes": 749,
+      "artworkColours": [
+        "#C8944A",
+        "#3D3A38",
+        "#5C5652",
+        "#CA9449"
+      ],
+      "artworkFontDeclarations": []
+    },
+    {
+      "file": "stackstone-icon-dark.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-icon-dark.svg",
+      "bytes": 749,
+      "artworkColours": [
+        "#C8944A",
+        "#FAFAF5",
+        "#D4CDC4",
+        "#CA9449"
+      ],
+      "artworkFontDeclarations": []
+    },
+    {
+      "file": "stackstone-logo-full.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-logo-full.svg",
+      "bytes": 940,
+      "artworkColours": [
+        "#C8944A",
+        "#3D3A38",
+        "#5C5652",
+        "#CA9449"
+      ],
+      "artworkFontDeclarations": [
+        "'DM Sans', sans-serif"
+      ]
+    },
+    {
+      "file": "stackstone-logo-dark.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-logo-dark.svg",
+      "bytes": 940,
+      "artworkColours": [
+        "#C8944A",
+        "#FAFAF5",
+        "#D4CDC4",
+        "#CA9449"
+      ],
+      "artworkFontDeclarations": [
+        "'DM Sans', sans-serif"
+      ]
+    },
+    {
+      "file": "stackstone-logo-horizontal.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-logo-horizontal.svg",
+      "bytes": 1087,
+      "artworkColours": [
+        "#C8944A",
+        "#3D3A38",
+        "#5C5652",
+        "#CA9449",
+        "#6B6B6B"
+      ],
+      "artworkFontDeclarations": [
+        "'DM Sans', sans-serif"
+      ]
+    },
+    {
+      "file": "stackstone-logo-stacked.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-logo-stacked.svg",
+      "bytes": 1132,
+      "artworkColours": [
+        "#C8944A",
+        "#3D3A38",
+        "#5C5652",
+        "#CA9449",
+        "#6B6B6B"
+      ],
+      "artworkFontDeclarations": [
+        "'DM Sans', sans-serif"
+      ]
+    }
+  ]
+}
