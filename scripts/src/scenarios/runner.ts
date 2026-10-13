@@ -20,6 +20,8 @@ import {
 export type ScenarioRunOptions = {
   mode: 'sample' | 'full';
   suite?: ScenarioSuiteName;
+  shardIndex?: number;
+  shardCount?: number;
   limits?: {
     sweepCells?: number;
     coveringRows?: number;
@@ -50,6 +52,59 @@ export type ScenarioSuitePlan = {
   goldenScenarios: ReturnType<typeof loadGoldenScenarios>;
   coverageFailures: string[];
 };
+
+export function partitionScenarioJobs(
+  jobs: ScenarioJob[],
+  shardCount: number,
+): ScenarioJob[][] {
+  if (!Number.isSafeInteger(shardCount) || shardCount < 1) {
+    throw new RangeError('Scenario shard count must be a positive integer');
+  }
+
+  const shardLoads = Array.from({ length: shardCount }, () => 0);
+  const shardCapacity = Array.from(
+    { length: shardCount },
+    (_, index) =>
+      Math.floor(jobs.length / shardCount) +
+      (index < jobs.length % shardCount ? 1 : 0),
+  );
+  const shardJobs = Array.from(
+    { length: shardCount },
+    () => [] as ScenarioJob[],
+  );
+  const orderedJobs = jobs
+    .map((job, originalIndex) => ({
+      job,
+      originalIndex,
+      estimatedCost: job.config.players.count ** 2,
+    }))
+    .sort(
+      (left, right) =>
+        right.estimatedCost - left.estimatedCost ||
+        left.originalIndex - right.originalIndex,
+    );
+
+  for (const entry of orderedJobs) {
+    let selectedShard = -1;
+    for (let index = 0; index < shardCount; index++) {
+      if (shardJobs[index]!.length >= shardCapacity[index]!) continue;
+      if (
+        selectedShard === -1 ||
+        shardLoads[index]! < shardLoads[selectedShard]!
+      ) {
+        selectedShard = index;
+      }
+    }
+    if (selectedShard === -1)
+      throw new Error('Scenario shard partition did not assign every job');
+    shardJobs[selectedShard]!.push(entry.job);
+    shardLoads[selectedShard] += entry.estimatedCost;
+  }
+
+  return shardJobs.map((shard) =>
+    shard.sort((left, right) => left.seed - right.seed),
+  );
+}
 
 export const SAMPLE_SCENARIO_LIMITS = {
   gamesPerSweepCell: 1,
@@ -153,6 +208,19 @@ export function buildScenarioSuitePlan(
   options: ScenarioRunOptions,
 ): ScenarioSuitePlan[] {
   const seed = 20261013;
+  const shardIndex = options.shardIndex ?? 0;
+  const shardCount = options.shardCount ?? 1;
+  if (
+    !Number.isSafeInteger(shardCount) ||
+    shardCount < 1 ||
+    !Number.isSafeInteger(shardIndex) ||
+    shardIndex < 0 ||
+    shardIndex >= shardCount
+  ) {
+    throw new RangeError(
+      'Scenario shard index must be a non-negative integer less than its positive shard count',
+    );
+  }
   const includes = (name: ScenarioSuiteName) =>
     !options.suite || options.suite === name;
   const plan: ScenarioSuitePlan[] = [];
@@ -260,7 +328,7 @@ export function buildScenarioSuitePlan(
     }
     plan.push({
       name: 'high-seat-pairwise',
-      jobs,
+      jobs: partitionScenarioJobs(jobs, shardCount)[shardIndex]!,
       sweepCells: 0,
       coveringRows: 0,
       highSeatCoveringRows: highSeatRowLimit,
@@ -390,10 +458,27 @@ export async function writeScenarioReport(
   );
   const requestedSuite = suiteArgument?.slice('--suite='.length);
   const suite = SCENARIO_SUITE_NAMES.find((name) => name === requestedSuite);
-  if (requestedSuite && !suite)
+  const shardIndexArgument = process.argv.find((argument) =>
+    argument.startsWith('--shard-index='),
+  );
+  const shardCountArgument = process.argv.find((argument) =>
+    argument.startsWith('--shard-count='),
+  );
+  const shardIndex = shardIndexArgument
+    ? Number(shardIndexArgument.slice('--shard-index='.length))
+    : undefined;
+  const shardCount = shardCountArgument
+    ? Number(shardCountArgument.slice('--shard-count='.length))
+    : undefined;
+  if (suiteArgument && !suite)
     throw new Error(`Unknown scenario suite: ${requestedSuite}`);
 
-  const report = await runEngineScenarioSuite({ mode, suite });
+  const report = await runEngineScenarioSuite({
+    mode,
+    suite,
+    shardIndex,
+    shardCount,
+  });
   if (suite) {
     const games =
       report.sweepGames +

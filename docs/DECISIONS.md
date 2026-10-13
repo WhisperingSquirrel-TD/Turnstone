@@ -751,3 +751,13 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 **Choice:** Keep the 15-minute job limit and all sample cases. Run the core sweep, three-way array, high-seat pairwise array, and fuzz/golden scenarios as a four-entry matrix. Each job builds only its requested suite; a regression test checks that the matrix matches the runner's suite list and that the four plans are disjoint and retain the full expected counts and independent coverage checks.
 
 **Consequence:** No scenario is dropped or sampled less often. Local `pnpm run verify` still runs the combined 2,567-game sample and writes the complete report. GitHub Verify run #7 is required to confirm every suite finishes within its own budget before Milestone 2 is accepted or Milestone 4 begins.
+
+## D46 — Further split high-seat scenario workload (resolved)
+
+**Context:** GitHub Actions Verify run #7 for `6251d6baa9afeb6bb41fb48b7d7307bcda6cd1ad` completed on 13 October 2026. Static checks, unit, property, PostgreSQL integration, audit, Lighthouse, all four browser profiles, core sweep, three-way coverage, and fuzz/golden scenarios succeeded. The 792-row high-seat pairwise job was cancelled at its configured 15-minute limit; no subsequent push occurred, so this was not `cancel-in-progress`.
+
+**Options:** Raise the timeout; sample fewer high-seat rows; or subdivide the unchanged pairwise workload into smaller, independently checked jobs.
+
+**Choice:** Keep every generated pairwise row and the 15-minute limit. Split high-seat jobs into four deterministic shards of 198 games. Balance estimated work using each row's player count squared, keep the full pairwise coverage check in each shard, and test exact seed partitioning, row counts, workload balance and CI-matrix parity.
+
+**Consequence:** The full local scenario report remains unchanged. The GitHub workflow has seven scenario matrix entries; Verify run #8 must complete all of them and the required-checks aggregator before Milestone 2 is accepted or Milestone 4 begins.
