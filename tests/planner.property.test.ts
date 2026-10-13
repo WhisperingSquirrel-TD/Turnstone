@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import fc from 'fast-check';
 import { planSchedule } from '../lib/engine/src/index';
 import { gameConfigSchema } from '../lib/shared/src/index';
@@ -13,6 +13,32 @@ const playerSettings = fc.integer({ min: 5, max: 40 }).chain((players) =>
     }),
   }),
 );
+
+it('reuses one timezone formatter for all quiet-hour calculations', () => {
+  const config = gameConfigSchema.parse({
+    players: { count: 15 },
+    traitors: { number: 3 },
+    endgame: { size: 4 },
+    schedule: {
+      format: 'quick',
+      window: {
+        start: '2027-06-12T09:00:00.000Z',
+        end: '2027-06-26T09:00:00.000Z',
+      },
+      quiet: [{ start: '22:00', end: '08:00' }],
+    },
+  });
+  const formatter = vi.spyOn(Intl, 'DateTimeFormat');
+
+  try {
+    const result = planSchedule(config, { timeZone: 'Europe/London' });
+
+    expect(result.ok).toBe(true);
+    expect(formatter).toHaveBeenCalledTimes(1);
+  } finally {
+    formatter.mockRestore();
+  }
+});
 
 it('keeps estimated plans inside windows, clear of blocks and at their target size', () => {
   fc.assert(

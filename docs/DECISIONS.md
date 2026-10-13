@@ -601,7 +601,7 @@ Each entry uses context, options, choice and consequence. **Pending** means no a
 
 **Options:** Rely on local verification alone; or scan and push the exact green milestone commit to `origin/main`, leaving owner Sync as the fallback when credentials do not permit push.
 
-**Choice:** Before every push, inspect the staged file list and confirm that no secrets, tokens, `.env` files or credentials are staged. CI scans full Git history using Gitleaks pinned to a full commit SHA.
+**Choice:** Before every push, inspect the staged file list and confirm that no secrets, tokens, `.env` files or credentials are staged. CI scans full Git history using the checksum-verified pinned Gitleaks CLI described in D38.
 
 **Consequence:** If this Repl cannot push, record that fact in `PROGRESS.md` and ask the owner to press Sync. A push targets `main` only; no release promotion or deployment is authorised in this work.
 
@@ -636,6 +636,26 @@ The Relaxed option lengthens debates and adds one extra mission only when the fu
 **Choice:** A visitor receives only `exists`, `phase`, `lobbyOpen` and `seatCount`; a separate strict schema and allow-list enforce this in the projection. A property test exercises a visitor view after ballots are revealed and proves no names, ballots, pot or commitment are present. Milestone 5 must select decoy instructions randomly from a pool matched to the task library's text-length distribution and compare text-length bands across roles. Its shadow-choice UI must render every other living seat, including fellow Traitors, without hiding, disabling or restyling by role; a rejected friendly-fire choice follows the same confirmation layout before privately showing “choose someone else”.
 
 **Consequence:** Visitors cannot inspect participant data before taking a seat. The text-length, option-list and friendly-fire interaction assertions remain Milestone 5 browser-uniformity acceptance tests; they are not claimed complete before that UI exists.
+
+## D37 — Stackstone talk-slide visual direction (resolved by owner)
+
+**Context:** The owner replaced the candlelit deep-brown visual direction with the look of the Stackstone talk slides. The new direction also specifies Playfair Display and DM Sans, conflicting with the earlier system-font/no-web-font rules.
+
+**Options:** Keep the prior palette and system fonts; or apply the revised §25 tokens and typography while preserving existing foundation-screen aliases until their screen milestones.
+
+**Choice:** Use Charcoal `#3D3A38`, Hearth `#2E2B29`, Stone `#55504B`, Gilt `#C8944A`, Candle `#FAFAF5` and Ash `#D4CDC4`. Use Playfair Display 400 for headlines/subtitles and DM Sans 400/500 for body/buttons/labels. Self-host subsetted Latin WOFF2 files with SIL Open Font Licence files, no Google-hosted fonts, within the separate 80 KB font budget; preload on public pages and before private moments, use immutable caching and size-adjusted swap fallbacks. This §25 decision supersedes §20's no-web-font rule. Existing foundation-screen aliases remain stable until the relevant screen milestones adopt the new direction.
+
+**Consequence:** Contrast tests now cover all primary/secondary text against Charcoal, Hearth and Stone; Gilt is tested at the large-text threshold on Charcoal and excluded from small text there. The theme tokens and design plans are updated; font assets/loading and screen styling remain for their planned milestones.
+
+## D38 — Open-source Gitleaks CLI with a verified release checksum (resolved)
+
+**Context:** The reviewer noted that `gitleaks/gitleaks-action` can require a paid licence for GitHub organisation repositories, while full-history secret scanning is required before every push and in CI.
+
+**Options:** Keep the action and depend on repository account/licence configuration; or download the upstream CLI release directly and verify its published checksum before execution.
+
+**Choice:** Use Gitleaks v8.30.1 on the Ubuntu x64 runner. Download the archive and the release's official `gitleaks_8.30.1_checksums.txt`; require exactly one matching Linux x64 entry, compare it with the pinned SHA-256 `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb`, and run `sha256sum --check --strict` before extracting or executing the binary. Scan all refs and history with `gitleaks git --redact --log-opts="--all" .`. A pipeline regression test requires the pinned version, checksum verification before execution, full-history scan, and absence of the licensed action.
+
+**Consequence:** Secret scanning uses no paid licence or token. Missing, duplicated or mismatched checksum records fail CI before Gitleaks runs; any detected secret fails the scan.
 
 ## Dependency record
 

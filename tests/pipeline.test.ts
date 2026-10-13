@@ -44,12 +44,21 @@ describe('owner-approved delivery policy', () => {
     expect(settings.buildCommand).toContain('--filter @workspace/party-game');
     expect(settings.buildCommand).not.toMatch(/api-server|run start|run dev/);
   });
-  it('scans complete Git history for secrets using a full-SHA pinned action', () => {
+  it('verifies the pinned Gitleaks release checksum before scanning all history', () => {
     const workflow = readFileSync('.github/workflows/verify.yml', 'utf8');
-    expect(workflow).toMatch(
-      /uses:\s+gitleaks\/gitleaks-action@[0-9a-f]{40}\b/,
+    const staticJob = workflow.split('\n  unit:\n')[0] ?? '';
+    expect(staticJob).not.toContain('gitleaks/gitleaks-action');
+    expect(staticJob).toContain('fetch-depth: 0');
+    expect(staticJob).toContain('GITLEAKS_VERSION: 8.30.1');
+    expect(staticJob).toContain(
+      'GITLEAKS_LINUX_X64_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb',
     );
-    expect(workflow).toMatch(/fetch-depth:\s+0\b/);
+    expect(staticJob).toContain('gitleaks_${GITLEAKS_VERSION}_checksums.txt');
+    expect(staticJob).toContain('sha256sum --check --strict');
+    expect(staticJob).toContain('gitleaks git --redact --log-opts="--all" .');
+    expect(staticJob.indexOf('sha256sum --check --strict')).toBeLessThan(
+      staticJob.indexOf('gitleaks git --redact --log-opts="--all" .'),
+    );
   });
   it('runs the sample scenario gate in verify and a real full suite in verify:full', () => {
     const packageManifest = JSON.parse(readFileSync('package.json', 'utf8'));

@@ -84,16 +84,11 @@ type VariantSettings = {
   adjustments: string[];
 };
 
-function partsAt(instant: number, timeZone: string): Record<string, number> {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(new Date(instant));
+function partsAt(
+  instant: number,
+  formatter: Intl.DateTimeFormat,
+): Record<string, number> {
+  const parts = formatter.formatToParts(new Date(instant));
   return Object.fromEntries(
     parts
       .filter((part) => part.type !== 'literal')
@@ -101,8 +96,8 @@ function partsAt(instant: number, timeZone: string): Record<string, number> {
   );
 }
 
-function localDateAt(instant: number, timeZone: string): string {
-  const parts = partsAt(instant, timeZone);
+function localDateAt(instant: number, formatter: Intl.DateTimeFormat): string {
+  const parts = partsAt(instant, formatter);
   return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
 }
 
@@ -112,14 +107,18 @@ function addLocalDate(date: string, days: number): string {
   return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`;
 }
 
-function localTimeToUtc(date: string, time: string, timeZone: string): number {
+function localTimeToUtc(
+  date: string,
+  time: string,
+  formatter: Intl.DateTimeFormat,
+): number {
   const [year, month, day] = date.split('-').map(Number);
   const [hour, minute] = time.split(':').map(Number);
   const target = Date.UTC(year!, month! - 1, day!, hour!, minute!);
   let guess = target;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const actual = partsAt(guess, timeZone);
+    const actual = partsAt(guess, formatter);
     const represented = Date.UTC(
       actual.year!,
       actual.month! - 1,
@@ -154,7 +153,7 @@ function mergeIntervals(intervals: readonly Interval[]): Interval[] {
 
 function quietIntervals(
   quiet: readonly { start: string; end: string }[],
-  timeZone: string,
+  formatter: Intl.DateTimeFormat,
   start: number,
   end: number,
 ): Interval[] {
@@ -164,7 +163,7 @@ function quietIntervals(
     instant <= end + 36 * 60 * MINUTE;
     instant += 6 * 60 * MINUTE
   ) {
-    dates.add(localDateAt(instant, timeZone));
+    dates.add(localDateAt(instant, formatter));
   }
 
   const intervals: Interval[] = [];
@@ -174,9 +173,9 @@ function quietIntervals(
         Number(range.start.slice(0, 2)) * 60 + Number(range.start.slice(3));
       const endMinute =
         Number(range.end.slice(0, 2)) * 60 + Number(range.end.slice(3));
-      const startAt = localTimeToUtc(date, range.start, timeZone);
+      const startAt = localTimeToUtc(date, range.start, formatter);
       const endDate = endMinute <= startMinute ? addLocalDate(date, 1) : date;
-      const endAt = localTimeToUtc(endDate, range.end, timeZone);
+      const endAt = localTimeToUtc(endDate, range.end, formatter);
       intervals.push({ start: startAt, end: endAt });
     }
   }
@@ -551,19 +550,22 @@ export function planSchedule(
   }
 
   const timeZone = options.timeZone ?? 'UTC';
-  const zone = new Intl.DateTimeFormat('en-GB', { timeZone });
+  const zone = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
   zone.format(new Date(start));
   const horizonEnd = windowEnd + MAX_PLAN_HORIZON;
   const blocked = config.schedule.blocked.map((interval) => ({
     start: Date.parse(interval.start),
     end: Date.parse(interval.end),
   }));
-  const quiet = quietIntervals(
-    config.schedule.quiet,
-    timeZone,
-    start,
-    horizonEnd,
-  );
+  const quiet = quietIntervals(config.schedule.quiet, zone, start, horizonEnd);
   const unavailable = mergeIntervals([...blocked, ...quiet]);
   const availableMinutes = Math.max(
     0,
