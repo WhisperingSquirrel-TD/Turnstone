@@ -627,6 +627,16 @@ The Relaxed option lengthens debates and adds one extra mission only when the fu
 
 **Consequence:** Quiet hours cannot be bypassed to force a step into the horizon. A coordinator can shift the schedule through the later console, but this planner itself returns explicit estimates/errors and never reads hidden role state.
 
+## D36 — Visitor projection and private-moment uniformity (review findings)
+
+**Context:** The reviewer found that the existing visitor view exposed seat names and revealed ballots, and identified text-length and target-list differences that could reveal roles during private moments.
+
+**Options:** Reuse the full participant view for visitors and rely on the UI to hide fields; or use a separate strict visitor schema and explicit allow-list. For role-uniformity, use fixed decoy wording and role-filtered targets; or balance decoy text lengths and render target options without role-dependent treatment.
+
+**Choice:** A visitor receives only `exists`, `phase`, `lobbyOpen` and `seatCount`; a separate strict schema and allow-list enforce this in the projection. A property test exercises a visitor view after ballots are revealed and proves no names, ballots, pot or commitment are present. Milestone 5 must select decoy instructions randomly from a pool matched to the task library's text-length distribution and compare text-length bands across roles. Its shadow-choice UI must render every other living seat, including fellow Traitors, without hiding, disabling or restyling by role; a rejected friendly-fire choice follows the same confirmation layout before privately showing “choose someone else”.
+
+**Consequence:** Visitors cannot inspect participant data before taking a seat. The text-length, option-list and friendly-fire interaction assertions remain Milestone 5 browser-uniformity acceptance tests; they are not claimed complete before that UI exists.
+
 ## Dependency record
 
 This is the foundation's previously recorded inventory, **not** a new install/audit or a complete claim of pinning compliance. New product/tooling direct dependencies were pinned; inherited scaffold manifests still require review for §1's exact-pinning requirement. Workspace references use `workspace:*`.

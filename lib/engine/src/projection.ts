@@ -1,18 +1,25 @@
-import { viewSchema, type View } from '../../shared/src/index';
+import {
+  fullViewSchema,
+  visitorViewSchema,
+  type FullView,
+  type VisitorView,
+  type View,
+} from '../../shared/src/index';
 import { alive, type State } from './model';
 
-export type Viewer = {
-  kind:
-    | 'visitor'
-    | 'player'
-    | 'ghost'
-    | 'coordinator'
-    | 'presenter'
-    | 'host'
-    | 'admin';
-  seatId?: string;
-  reveal?: boolean;
-};
+export type Viewer =
+  | { kind: 'visitor'; seatId?: string; reveal?: boolean }
+  | {
+      kind: 'player' | 'ghost' | 'coordinator' | 'presenter' | 'host' | 'admin';
+      seatId?: string;
+      reveal?: boolean;
+    };
+export const VISITOR_VIEW_ALLOW_LIST = [
+  'exists',
+  'phase',
+  'lobbyOpen',
+  'seatCount',
+] as const;
 export const VIEW_ALLOW_LIST = [
   'id',
   'version',
@@ -33,10 +40,26 @@ export const VIEW_ALLOW_LIST = [
 ] as const;
 
 // Never spread state, seats or events: construct every field and nested field.
+export function viewFor(
+  viewer: Extract<Viewer, { kind: 'visitor' }>,
+  state: State,
+): VisitorView;
+export function viewFor(
+  viewer: Exclude<Viewer, { kind: 'visitor' }>,
+  state: State,
+): FullView;
 export function viewFor(viewer: Viewer, state: State): View {
+  if (viewer.kind === 'visitor') {
+    return visitorViewSchema.parse({
+      exists: true,
+      phase: state.phase,
+      lobbyOpen: state.phase === 'LOBBY',
+      seatCount: state.seats.length,
+    });
+  }
+
   const own = state.seats.find((seat) => seat.id === viewer.seatId);
   const ended = state.phase === 'FINISHED';
-  const participant = viewer.kind !== 'visitor';
   const host = viewer.kind === 'host' && !state.config.basics.coordinatorPlays;
   const spectator =
     viewer.kind === 'ghost' &&
@@ -54,7 +77,7 @@ export function viewFor(viewer: Viewer, state: State): View {
             .map((id) => [id, state.votes[id]!]),
         )
       : {};
-  return viewSchema.parse({
+  return fullViewSchema.parse({
     id: state.id,
     version: state.version,
     phase: state.phase,
@@ -66,10 +89,7 @@ export function viewFor(viewer: Viewer, state: State): View {
     unit: state.config.missions.potUnit,
     seats: state.seats.map((seat) => {
       const visible =
-        (ended && participant) ||
-        (host && reveal) ||
-        (spectator && reveal) ||
-        seat.publicRole;
+        ended || (host && reveal) || (spectator && reveal) || seat.publicRole;
       return {
         id: seat.id,
         name: seat.name,
@@ -168,7 +188,7 @@ export function viewFor(viewer: Viewer, state: State): View {
         }
       : null,
     fairness:
-      ended && participant && state.deal
+      ended && state.deal
         ? {
             salt: state.deal.salt,
             roles: state.deal.roles,

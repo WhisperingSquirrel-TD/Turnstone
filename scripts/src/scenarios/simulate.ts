@@ -4,6 +4,7 @@ import {
   evolve,
   replay,
   VIEW_ALLOW_LIST,
+  VISITOR_VIEW_ALLOW_LIST,
   viewFor,
 } from '@workspace/engine';
 import { gameConfigSchema } from '@workspace/shared';
@@ -101,6 +102,7 @@ function makeRandom(seed: number): Context['random'] {
 
 function assertProjectionSafety(state: State): void {
   const allowedKeys = new Set<string>(VIEW_ALLOW_LIST);
+  const visitorAllowedKeys = new Set<string>(VISITOR_VIEW_ALLOW_LIST);
   const players = state.seats.map((seat) => ({
     kind: seat.status === 'alive' ? ('player' as const) : ('ghost' as const),
     seatId: seat.id,
@@ -116,6 +118,17 @@ function assertProjectionSafety(state: State): void {
   ];
 
   for (const viewer of viewers) {
+    if (viewer.kind === 'visitor') {
+      const visitorView = viewFor(viewer, state);
+      if (
+        Object.keys(visitorView).some((key) => !visitorAllowedKeys.has(key)) ||
+        visitorView.seatCount !== state.seats.length ||
+        visitorView.lobbyOpen !== (state.phase === 'LOBBY')
+      )
+        throw new Error('Visitor projection contains non-join data');
+      continue;
+    }
+
     const view = viewFor(viewer, state);
     if (Object.keys(view).some((key) => !allowedKeys.has(key)))
       throw new Error('Projection contains a key outside its allow-list');
@@ -129,7 +142,6 @@ function assertProjectionSafety(state: State): void {
       viewer.kind === 'coordinator' ||
       viewer.kind === 'presenter' ||
       viewer.kind === 'admin' ||
-      viewer.kind === 'visitor' ||
       (viewer.kind === 'host' && !allSeeingHost);
     if (blind && state.phase !== 'FINISHED') {
       if (view.private !== null || view.fairness !== null)

@@ -4,9 +4,10 @@ import {
   replay,
   viewFor,
   VIEW_ALLOW_LIST,
+  VISITOR_VIEW_ALLOW_LIST,
   assertInvariants,
 } from '../lib/engine/src/index';
-import { fixture, command } from './support/engine';
+import { advance, fixture, command } from './support/engine';
 
 it('preserves deal, replay, projection allow-lists and secret isolation across seat/Traitor counts', () => {
   fc.assert(
@@ -23,12 +24,7 @@ it('preserves deal, replay, projection allow-lists and secret isolation across s
         assertInvariants(game.state);
         expect(replay(game.events)).toEqual(game.state);
         const original = JSON.stringify(game.state);
-        for (const kind of [
-          'visitor',
-          'coordinator',
-          'presenter',
-          'admin',
-        ] as const) {
+        for (const kind of ['coordinator', 'presenter', 'admin'] as const) {
           const view = viewFor({ kind, reveal: true }, game.state);
           expect(Object.keys(view).sort()).toEqual([...VIEW_ALLOW_LIST].sort());
           expect(view.private).toBeNull();
@@ -56,6 +52,46 @@ it('preserves deal, replay, projection allow-lists and secret isolation across s
       },
     ),
     { numRuns: 100, seed: 20261012 },
+  );
+});
+
+it('keeps every visitor projection limited to join-screen data, even after ballot reveal', () => {
+  fc.assert(
+    fc.property(fc.integer({ min: 5, max: 20 }), (count) => {
+      const game = fixture(count);
+      command(game, { type: 'StartGame' });
+      advance(game, 'VOTE');
+      for (const seat of game.state.seats) {
+        command(
+          game,
+          {
+            type: 'SubmitVote',
+            target: seat.id === 's0' ? 's1' : 's0',
+          },
+          true,
+          { kind: 'player', seatId: seat.id },
+        );
+      }
+      advance(game, 'VERDICT');
+      command(game, { type: 'AdvancePhase' });
+
+      const visitor = viewFor({ kind: 'visitor', reveal: true }, game.state);
+
+      expect(Object.keys(visitor).sort()).toEqual(
+        [...VISITOR_VIEW_ALLOW_LIST].sort(),
+      );
+      expect(visitor).toEqual({
+        exists: true,
+        phase: 'VERDICT',
+        lobbyOpen: false,
+        seatCount: count,
+      });
+      expect(JSON.stringify(visitor)).not.toContain('Player ');
+      expect(visitor).not.toHaveProperty('ballots');
+      expect(visitor).not.toHaveProperty('pot');
+      expect(visitor).not.toHaveProperty('commitment');
+    }),
+    { numRuns: 20, seed: 20261013 },
   );
 });
 

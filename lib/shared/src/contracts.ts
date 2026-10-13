@@ -146,7 +146,7 @@ export const privateViewSchema = z
     minimumDurationMs: z.number(),
   })
   .strict();
-export const viewSchema = z
+export const fullViewSchema = z
   .object({
     id,
     version: z.number(),
@@ -204,4 +204,15 @@ export const viewSchema = z
       .nullable(),
   })
   .strict();
+export const visitorViewSchema = z
+  .object({
+    exists: z.literal(true),
+    phase: phaseSchema,
+    lobbyOpen: z.boolean(),
+    seatCount: z.number().int().nonnegative(),
+  })
+  .strict();
+export const viewSchema = z.union([visitorViewSchema, fullViewSchema]);
+export type FullView = z.infer<typeof fullViewSchema>;
+export type VisitorView = z.infer<typeof visitorViewSchema>;
 export type View = z.infer<typeof viewSchema>;
