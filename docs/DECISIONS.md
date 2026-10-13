@@ -615,6 +615,18 @@ Each entry uses context, options, choice and consequence. **Pending** means no a
 
 **Consequence:** Add a test for every response class and robots output when the public response/server work is introduced. No preview or production deployment is permitted here.
 
+## D35 — Planner time windows and available extensions (resolved)
+
+**Context:** §7 plans across blocked periods, overnight quiet hours and clock changes, while §11 permits pausing/shifting a timetable and D11 limits extensions to built, enabled features.
+
+**Options:** Treat every time as a fixed UTC wall-clock value; or store absolute UTC instants and interpret recurring quiet hours in the organiser's IANA time zone. For extensions, add every §7 suggestion regardless of whether its rule is available; or offer only extensions that can be represented without changing rules or exposing hidden eligibility.
+
+**Choice:** Plan start/end and blocked-window boundaries as absolute instants; evaluate recurring quiet hours in the supplied organiser time zone for each local date, then convert them to instants so DST changes are respected. A scheduled phase must fit wholly outside blocked and quiet intervals. If no contiguous slot can fit a phase, return `STEP_CANNOT_FIT`; if a complete compressed timetable exceeds the horizon, return `WINDOW_TOO_SHORT` with the required minimum duration. Plans are estimates and do not claim the game will use every scheduled step.
+
+The Relaxed option lengthens debates and adds one extra mission only when the full option fits; otherwise it falls back to the longer-debate option without the extra mission. Compression follows the §7 order, skips adjustments that cannot change the plan, and never raises the final size above eight. Do not schedule a forced-recruitment night because recruitment eligibility depends on hidden game outcomes and the planner must not override the configured trigger. D11 excludes the Seer and all other Could extensions.
+
+**Consequence:** Quiet hours cannot be bypassed to force a step into the horizon. A coordinator can shift the schedule through the later console, but this planner itself returns explicit estimates/errors and never reads hidden role state.
+
 ## Dependency record
 
 This is the foundation's previously recorded inventory, **not** a new install/audit or a complete claim of pinning compliance. New product/tooling direct dependencies were pinned; inherited scaffold manifests still require review for §1's exact-pinning requirement. Workspace references use `workspace:*`.

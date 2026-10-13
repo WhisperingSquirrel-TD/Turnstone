@@ -4,7 +4,7 @@
 
 `docs/SPEC.md` contains all seven supplied parts, with sections 1–19 in numerical order, followed by Amendments 1–7 as sections 20–25. Owner rulings on task timing, sleeper timing and termination are recorded in sections 5 and 22. Section 25 supersedes the previous light-palette decisions and section 2's light-public-site palette. Sections 20–25 add performance, positioning, task, branding, delivery and visual requirements. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
 
-**Owner-approved, amended by §24–25 and all supplied rulings.** Milestone 0 is provisionally accepted; its first fully green GitHub Actions run, including iPhone/iPad WebKit, makes acceptance final. Milestone 1 was approved by the owner's reviewer. Milestone 2 is in progress; once its local verify is green, continue directly through Milestone 3, then stop for review. Local verify skips only WebKit, prints exactly “WebKit profiles run in CI”, and retains Pixel/desktop, axe, Lighthouse and all non-browser gates. CI never skips these four profiles. C5, C6 and D12–D19 are resolved as recorded in `DECISIONS.md`; do not treat those former questions as current blockers.
+**Owner-approved, amended by §24–25 and all supplied rulings.** Milestones 2 and 3 are complete locally; stop for owner review before Milestone 4. Milestone 0 remains provisionally accepted until the first fully green GitHub Actions run, including iPhone/iPad WebKit. Milestone 1 was approved by the owner's reviewer. Local verify skips only WebKit, prints exactly “WebKit profiles run in CI”, and retains Pixel/desktop, axe, Lighthouse and all non-browser gates. CI never skips these four profiles. C5, C6 and D12–D19 are resolved as recorded in `DECISIONS.md`; do not treat those former questions as current blockers.
 
 Section 24 is appended verbatim and supersedes conflicting provider/hosting notes. Canonical site/RP ID and the planned game origin are in the shared identity config; runtime API origin comes from the build-time variable. The owner pushes to the stated GitHub repository. Repository configurations do not mean a CI run has passed or a hosting service has been activated. No Replit publishing or paid services.
 
@@ -91,19 +91,21 @@ React is retained. If the actual route budget cannot be met, record measured opt
 - [ ] Extend constrained covering arrays and independent coverage checks to every rule-affecting Traitor-task setting/filter. Extend bots and the separate reference model for task completion/misses and consequences; retain task-off coverage.
 - [ ] Add §22 golden scenarios for completion, a missed task cancelling a murder, banishment mid-task and a new recruit receiving a task. Check task delivery/reporting leakage, same-shaped decoys, replay and termination after each step; mark future UI/server layers pending until implemented, not passed.
 
-**Exit:** First genuine `SCENARIO_REPORT.md` with zero failures in implemented suites and transparent pending layers; verify green. Future-layer requirements remain release gates.
+**Status:** Milestone acceptance met for the implemented engine scope. The sample report covers 942 core sweep cells, 788 three-way rows, 792 high-seat pairwise rows, 32 fuzz games and 12 current golden games, with zero failures. Server/browser game suites, the remaining §17/§22 golden scenarios and complete pot/reference checks remain explicit release gates until their corresponding features exist.
+
+**Exit:** First genuine `SCENARIO_REPORT.md` with zero failures in implemented suites and transparent pending layers; local verify green. Met.
 
 ## Task 3 — Schedule planner and recommendation validation
 
 **References:** §6–7, §17.
 
-- [ ] Produce editable Relaxed/Standard/Compressed plans with predicted survivors and warnings, observing blocked/quiet windows, leave times and UTC/local-time handling.
-- [ ] Implement elimination arithmetic, odd half-cycle, duration defaults and ordered compression/extension exactly as §7, subject to resolved Could-feature and player-count constraints.
-- [ ] Test the full §7 example; boundary seat counts/window lengths; insufficient/mostly-blocked windows; leave times, clock changes, time zones and early endgame.
-- [ ] Distinguish an estimated timetable from an actual game's earlier win/parity outcome. Report a clear minimum-time error when no valid plan fits.
-- [ ] Before completing this milestone, implement D19's single pre-launch privacy flag on every web/API preview response and `robots.txt`; test that all responses are noindex while the flag is enabled. Do not deploy.
+- [x] Produce Relaxed/Standard/Compressed estimates with predicted survivors and configuration warnings, observing blocked/quiet windows, leave times and the organiser's IANA time zone.
+- [x] Implement elimination arithmetic, the odd banishment-only half-cycle, format durations and ordered compression. Relaxed extends debates and adds one mission only when it fits; no Seer or other Could item is offered. A recruitment-only night is not forced when its configured eligibility trigger is unknown; see D35.
+- [x] Test the full §7 example; boundary seat counts/window lengths; insufficient/mostly-blocked windows; leave times, DST/time zones and early endgame.
+- [x] Distinguish an estimated timetable from an actual game's earlier win/parity outcome. Return a clear error when no contiguous phase slot or full compressed plan fits.
+- [x] Implement and test D19's single pre-launch privacy flag on web/API preview responses and `robots.txt`. No deployment.
 
-**Exit:** Example, Quick and Multi-day planner tests pass; clear too-short error; verify green.
+**Exit:** Example, Quick and Multi-day planner tests pass; clear too-short/step-fit errors; local verify green. Met on 13 October 2026. Milestone 4 has not started.
 
 ## Task 4 — Persistent server, deadlines and realtime
 

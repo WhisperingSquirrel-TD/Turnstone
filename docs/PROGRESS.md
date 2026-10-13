@@ -1,14 +1,14 @@
 # Progress
 
-## Current status — Milestone 2 green locally; GitHub CI pending
+## Current status — Milestone 3 green locally; GitHub CI pending
 
-Specification sections 1–25 and owner rulings are recorded. Milestone 1 has the owner's reviewer approval, recorded in DECISIONS; its engine and C5/C6 lifecycle/termination rules are complete.
+Specification sections 1–25 and owner rulings are recorded. Milestone 1 has the owner's reviewer approval, recorded in DECISIONS; its engine and C5/C6 lifecycle/termination rules are complete. Milestones 2 and 3 are now complete locally; Milestone 4 has not started.
 
 Milestone 0 remains **provisionally accepted** until the first fully green GitHub Actions Verify run executes the iPhone and iPad WebKit profiles. The approved local notice is `WebKit profiles run in CI`; local Replit has not run those profiles.
 
-Milestone 2 now meets its local acceptance criteria: `pnpm run verify` passed on 13 October 2026, and the generated sample report records zero failures across 2,566 games. It covers 942 core sweep cells, 788 three-way rows, 792 high-seat pairwise rows, 32 fuzz games and 12 golden games. The sample took 394.7 seconds. The two fuzz failures from the first full run were reproduced at fixed seeds and traced to the test driver issuing `AdvancePhase` after a bot action had already finished the game; a regression test now guards that terminal state.
+Milestone 2 meets its local acceptance criteria: the generated sample report records zero failures across 2,566 games. It covers 942 core sweep cells, 788 three-way rows, 792 high-seat pairwise rows, 32 fuzz games and 12 golden games. The current sample took 395.4 seconds. The two fuzz failures from the first full run were reproduced at fixed seeds and traced to the test driver issuing `AdvancePhase` after a bot action had already finished the game; a regression test now guards that terminal state.
 
-### CI and hosting findings being addressed
+### CI and hosting findings addressed locally; external validation pending
 
 - Root cause of the GitHub 30-second D13 property timeout: the test replayed the entire growing event log after every phase, repeating work quadratically. The test now advances an event cursor and retains a final full replay check. A strict performance-budget test logged the pre-fix random case at 32.6 s / 664.7 ms per step; after the change it logged 2.9 s / 58.5 ms per step. All seven bot cases passed locally with the 100 ms mean-step and 15 s per-game limits. Independent 40-seat scenario runs measured 0.62–1.07 s per game. These are local-container measurements; GitHub-hosted runner readings remain pending.
 - Verify is split into separate static, unit, property, PostgreSQL integration, scenario, four-profile browser, Lighthouse and audit jobs. Every job has its own timeout and a final required-checks aggregator. `actions/cache` and `pnpm/action-setup` are pinned to Node 24-compatible full SHAs; runners are pinned to `ubuntu-24.04` for review on 19 October 2026.
@@ -16,7 +16,15 @@ Milestone 2 now meets its local acceptance criteria: `pnpm run verify` passed on
 - One `PRE_LAUNCH_NOINDEX` security flag now controls app preview, built web-server and API headers. `vercel.json` contains the static security/cache headers; `robots.txt` blocks crawlers. Tests parse the full Vercel header set and exercise built HTML and API/web responses. Vercel itself has not been deployed or live-tested.
 - Release promotion is guarded by `TURNSTONE_PROMOTION_ENABLED == 'true'`, unset by default, so a `main` push cannot automatically advance `release` or deploy to Vercel.
 
-The final local gate also passed 106 unit tests, 10 property tests, the PostgreSQL integration test, two Pixel/desktop smoke tests, built-page Lighthouse accessibility checks, and `pnpm audit` with zero high or critical findings. The local smoke command printed `WebKit profiles run in CI`. The requested `origin/main` push and first GitHub Actions run are pending. No release promotion, Vercel deployment, Replit publish or paid service has been enabled.
+Milestone 3 adds the pure schedule planner: three estimates, UTC time windows with IANA-zone quiet hours across DST, departures, configuration warnings, odd half-cycles, ordered compression, and clear `STEP_CANNOT_FIT`/`WINDOW_TOO_SHORT` errors. Relaxed plans extend debates and add one extra mission only when it fits; planner options do not expose hidden roles or force recruitment outside its configured trigger. Its tests cover the §7 15-seat example, 5/40 seats, Quick/Day/Multi-day windows, mostly-blocked/too-short windows, departures, DST, recommendations, compression order and deterministic property checks.
+
+The final `pnpm run verify` gate passed: 130 unit tests, 11 property tests, the PostgreSQL integration test, scenario worker smoke, 2,566 engine scenarios with zero failures, Pixel/desktop smoke tests, Lighthouse accessibility checks and audit with zero high or critical findings. The local smoke command printed `WebKit profiles run in CI`; iPhone/iPad WebKit still await GitHub Actions. Client bundle was 80.46 KB gzip. No release promotion, Vercel deployment, Replit publish or paid service has been enabled.
+
+The M2 and M3 changes are committed locally. Before the M3 push, the unpushed paths and diff were checked for secret-bearing files and credential material; none were found. The workflow's `SESSION_SECRET` is generated at runtime from random bytes. `git push origin main` failed with “Invalid username or token. Password authentication is not supported for Git operations”; no remote ref changed. The owner must use Replit Sync/Push after repairing GitHub authentication; no token should be pasted into chat. The first GitHub Actions run is still pending.
+
+### Milestone 3 gate — 13 October 2026
+
+Completed with strict TDD: planner tests were observed failing before implementation for the missing planner, unsupported half-cycle, incomplete schedules, balance warnings and the spare-time mission extension. The local verify gate passed after implementation. The planner remains a pure estimate; actual server scheduling and user-facing timetable UI are later milestones.
 
 ## Historical record before Amendment 6 (superseded acceptance state)
 
