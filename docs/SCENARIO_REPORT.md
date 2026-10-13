@@ -4,8 +4,8 @@ Status: PASS — engine scenarios
 
 Mode: sample
 Seed: 20261013
-Started: 2026-10-13T18:26:27.420Z
-Duration: 472339 ms
+Started: 2026-10-13T19:07:49.647Z
+Duration: 518604 ms
 
 ## Executed
 

@@ -741,3 +741,13 @@ Patched transitive overrides recorded previously: `proxy-addr`, `source-map-js`,
 ## Approval request boundary
 
 Owner approval requested for PLAN, with unresolved choices above kept explicit. Plan approval is not a deployment instruction, acceptance of red verification, approval of Could features, or permission to guess missing rules. No Milestone 1 implementation has started.
+
+## D45 — Scenario CI execution split by suite (resolved)
+
+**Context:** GitHub Actions Verify run #6 for `f6fc040e8f78b89d36ba184c4b1bb65424bc6002` completed on 13 October 2026. Static checks, unit, property, PostgreSQL integration, Lighthouse, audit, Pixel Chromium, desktop Chromium, iPhone WebKit and iPad WebKit all succeeded. The single scenario job was cancelled at its configured 15-minute limit; no push occurred during the run, so `cancel-in-progress` was not responsible. The local complete sample had already measured 2,567 games in 472,339 ms on a multi-worker container.
+
+**Options:** Raise the scenario job timeout; reduce or skip sample coverage; or preserve the sample and divide its independent categories into separately visible CI jobs.
+
+**Choice:** Keep the 15-minute job limit and all sample cases. Run the core sweep, three-way array, high-seat pairwise array, and fuzz/golden scenarios as a four-entry matrix. Each job builds only its requested suite; a regression test checks that the matrix matches the runner's suite list and that the four plans are disjoint and retain the full expected counts and independent coverage checks.
+
+**Consequence:** No scenario is dropped or sampled less often. Local `pnpm run verify` still runs the combined 2,567-game sample and writes the complete report. GitHub Verify run #7 is required to confirm every suite finishes within its own budget before Milestone 2 is accepted or Milestone 4 begins.

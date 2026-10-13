@@ -19,6 +19,7 @@ import {
 
 export type ScenarioRunOptions = {
   mode: 'sample' | 'full';
+  suite?: ScenarioSuiteName;
   limits?: {
     sweepCells?: number;
     coveringRows?: number;
@@ -27,6 +28,27 @@ export type ScenarioRunOptions = {
     gamesPerCoveringRow?: number;
     highSeatRows?: number;
   };
+};
+
+export const SCENARIO_SUITE_NAMES = [
+  'core-sweep',
+  'three-way',
+  'high-seat-pairwise',
+  'fuzz-and-golden',
+] as const;
+
+export type ScenarioSuiteName = (typeof SCENARIO_SUITE_NAMES)[number];
+
+export type ScenarioSuitePlan = {
+  name: ScenarioSuiteName;
+  jobs: ScenarioJob[];
+  sweepCells: number;
+  coveringRows: number;
+  highSeatCoveringRows: number;
+  fuzzSeed: number;
+  fuzzGames: number;
+  goldenScenarios: ReturnType<typeof loadGoldenScenarios>;
+  coverageFailures: string[];
 };
 
 export const SAMPLE_SCENARIO_LIMITS = {
@@ -127,6 +149,153 @@ export function coreConfig(
   });
 }
 
+export function buildScenarioSuitePlan(
+  options: ScenarioRunOptions,
+): ScenarioSuitePlan[] {
+  const seed = 20261013;
+  const includes = (name: ScenarioSuiteName) =>
+    !options.suite || options.suite === name;
+  const plan: ScenarioSuitePlan[] = [];
+
+  if (includes('core-sweep')) {
+    const cells = sweepConfigs();
+    const sweepLimit = Math.min(
+      options.limits?.sweepCells ?? cells.length,
+      cells.length,
+    );
+    const perCell =
+      options.limits?.gamesPerSweepCell ??
+      (options.mode === 'full' ? 20 : SAMPLE_SCENARIO_LIMITS.gamesPerSweepCell);
+    const jobs: ScenarioJob[] = [];
+    for (let cellIndex = 0; cellIndex < sweepLimit; cellIndex++) {
+      const cell = cells[cellIndex]!;
+      const config = coreConfig(cell.players, cell.traitors, cell.format);
+      for (let repeat = 0; repeat < perCell; repeat++) {
+        const caseSeed = seed + cellIndex * 101 + repeat;
+        jobs.push({
+          seed: caseSeed,
+          strategy:
+            BOT_STRATEGIES[(cellIndex + repeat) % BOT_STRATEGIES.length]!,
+          config,
+        });
+      }
+    }
+    plan.push({
+      name: 'core-sweep',
+      jobs,
+      sweepCells: sweepLimit,
+      coveringRows: 0,
+      highSeatCoveringRows: 0,
+      fuzzSeed: 0,
+      fuzzGames: 0,
+      goldenScenarios: [],
+      coverageFailures: [],
+    });
+  }
+
+  if (includes('three-way')) {
+    const covering = generateConstrainedArray(seed);
+    const coverage = verifyThreeWayCoverage(covering);
+    const rowLimit = Math.min(
+      options.limits?.coveringRows ?? covering.length,
+      covering.length,
+    );
+    const perRow =
+      options.limits?.gamesPerCoveringRow ??
+      (options.mode === 'full'
+        ? 50
+        : SAMPLE_SCENARIO_LIMITS.gamesPerCoveringRow);
+    const jobs: ScenarioJob[] = [];
+    for (let rowIndex = 0; rowIndex < rowLimit; rowIndex++) {
+      for (let repeat = 0; repeat < perRow; repeat++) {
+        const caseSeed = seed + 1_000_000 + rowIndex * 101 + repeat;
+        jobs.push({
+          seed: caseSeed,
+          strategy:
+            BOT_STRATEGIES[(rowIndex + repeat) % BOT_STRATEGIES.length]!,
+          config: covering[rowIndex]!,
+        });
+      }
+    }
+    plan.push({
+      name: 'three-way',
+      jobs,
+      sweepCells: 0,
+      coveringRows: rowLimit,
+      highSeatCoveringRows: 0,
+      fuzzSeed: 0,
+      fuzzGames: 0,
+      goldenScenarios: [],
+      coverageFailures: coverage.uncovered.length
+        ? [
+            `Independent three-way checker found ${coverage.uncovered.length} uncovered tuples`,
+          ]
+        : [],
+    });
+  }
+
+  if (includes('high-seat-pairwise')) {
+    const highSeatCovering = generateHighSeatPairwiseArray(seed + 3_000_000);
+    const highSeatCoverage = verifyHighSeatPairwiseCoverage(highSeatCovering);
+    const highSeatRowLimit = Math.min(
+      options.limits?.highSeatRows ?? highSeatCovering.length,
+      highSeatCovering.length,
+    );
+    const perRow =
+      options.limits?.gamesPerCoveringRow ??
+      (options.mode === 'full'
+        ? 50
+        : SAMPLE_SCENARIO_LIMITS.gamesPerCoveringRow);
+    const jobs: ScenarioJob[] = [];
+    for (let rowIndex = 0; rowIndex < highSeatRowLimit; rowIndex++) {
+      for (let repeat = 0; repeat < perRow; repeat++) {
+        const caseSeed = seed + 4_000_000 + rowIndex * 101 + repeat;
+        jobs.push({
+          seed: caseSeed,
+          strategy:
+            BOT_STRATEGIES[(rowIndex + repeat) % BOT_STRATEGIES.length]!,
+          config: highSeatCovering[rowIndex]!,
+        });
+      }
+    }
+    plan.push({
+      name: 'high-seat-pairwise',
+      jobs,
+      sweepCells: 0,
+      coveringRows: 0,
+      highSeatCoveringRows: highSeatRowLimit,
+      fuzzSeed: 0,
+      fuzzGames: 0,
+      goldenScenarios: [],
+      coverageFailures: highSeatCoverage.uncovered.length
+        ? [
+            `Independent high-seat pairwise checker found ${highSeatCoverage.uncovered.length} uncovered pairs`,
+          ]
+        : [],
+    });
+  }
+
+  if (includes('fuzz-and-golden')) {
+    const fuzzGames =
+      options.limits?.fuzzGames ??
+      (options.mode === 'full' ? 100_000 : SAMPLE_SCENARIO_LIMITS.fuzzGames);
+    const goldenScenarios = loadGoldenScenarios();
+    plan.push({
+      name: 'fuzz-and-golden',
+      jobs: [],
+      sweepCells: 0,
+      coveringRows: 0,
+      highSeatCoveringRows: 0,
+      fuzzSeed: seed + 2_000_000,
+      fuzzGames,
+      goldenScenarios,
+      coverageFailures: [],
+    });
+  }
+
+  return plan;
+}
+
 export async function runEngineScenarioSuite(
   options: ScenarioRunOptions,
 ): Promise<ScenarioReport> {
@@ -151,121 +320,60 @@ export async function runEngineScenarioSuite(
     pendingLayers: [...SCENARIO_PENDING_LAYERS],
   };
 
-  const cells = sweepConfigs();
-  const sweepLimit = Math.min(
-    options.limits?.sweepCells ?? cells.length,
-    cells.length,
-  );
-  const perCell =
-    options.limits?.gamesPerSweepCell ??
-    (options.mode === 'full' ? 20 : SAMPLE_SCENARIO_LIMITS.gamesPerSweepCell);
-  const jobs: ScenarioJob[] = [];
-  for (let cellIndex = 0; cellIndex < sweepLimit; cellIndex++) {
-    const cell = cells[cellIndex]!;
-    const config = coreConfig(cell.players, cell.traitors, cell.format);
-    for (let repeat = 0; repeat < perCell; repeat++) {
-      const caseSeed = seed + cellIndex * 101 + repeat;
-      jobs.push({
-        seed: caseSeed,
-        strategy: BOT_STRATEGIES[(cellIndex + repeat) % BOT_STRATEGIES.length]!,
-        config,
+  const plan = buildScenarioSuitePlan(options);
+  for (const suite of plan) {
+    report.sweepCells += suite.sweepCells;
+    report.sweepGames += suite.name === 'core-sweep' ? suite.jobs.length : 0;
+    report.coveringRows += suite.coveringRows;
+    report.coveringGames += suite.name === 'three-way' ? suite.jobs.length : 0;
+    report.highSeatCoveringRows += suite.highSeatCoveringRows;
+    report.highSeatCoveringGames +=
+      suite.name === 'high-seat-pairwise' ? suite.jobs.length : 0;
+    report.failures.push(...suite.coverageFailures);
+
+    const batch = await runScenarioJobs(suite.jobs);
+    report.failures.push(...batch.failures);
+    report.failureSeeds.push(...batch.failureSeeds);
+
+    if (suite.fuzzGames > 0) {
+      const fuzz = runFuzzBatch({
+        seed: suite.fuzzSeed,
+        games: suite.fuzzGames,
       });
+      report.fuzzGames += fuzz.games;
+      report.failureSeeds.push(...fuzz.failureSeeds);
+      report.failures.push(...fuzz.failureReasons);
     }
-  }
-  report.sweepCells = sweepLimit;
-  report.sweepGames = jobs.length;
 
-  const covering = generateConstrainedArray(seed);
-  const coverage = verifyThreeWayCoverage(covering);
-  if (coverage.uncovered.length)
-    report.failures.push(
-      `Independent three-way checker found ${coverage.uncovered.length} uncovered tuples`,
-    );
-  const rowLimit = Math.min(
-    options.limits?.coveringRows ?? covering.length,
-    covering.length,
-  );
-  const perRow =
-    options.limits?.gamesPerCoveringRow ??
-    (options.mode === 'full' ? 50 : SAMPLE_SCENARIO_LIMITS.gamesPerCoveringRow);
-  for (let rowIndex = 0; rowIndex < rowLimit; rowIndex++) {
-    for (let repeat = 0; repeat < perRow; repeat++) {
-      const caseSeed = seed + 1_000_000 + rowIndex * 101 + repeat;
-      jobs.push({
-        seed: caseSeed,
-        strategy: BOT_STRATEGIES[(rowIndex + repeat) % BOT_STRATEGIES.length]!,
-        config: covering[rowIndex]!,
-      });
-    }
-  }
-  report.coveringRows = rowLimit;
-  report.coveringGames = rowLimit * perRow;
-
-  const highSeatCovering = generateHighSeatPairwiseArray(seed + 3_000_000);
-  const highSeatCoverage = verifyHighSeatPairwiseCoverage(highSeatCovering);
-  if (highSeatCoverage.uncovered.length)
-    report.failures.push(
-      `Independent high-seat pairwise checker found ${highSeatCoverage.uncovered.length} uncovered pairs`,
-    );
-  const highSeatRowLimit = Math.min(
-    options.limits?.highSeatRows ?? highSeatCovering.length,
-    highSeatCovering.length,
-  );
-  for (let rowIndex = 0; rowIndex < highSeatRowLimit; rowIndex++) {
-    for (let repeat = 0; repeat < perRow; repeat++) {
-      const caseSeed = seed + 4_000_000 + rowIndex * 101 + repeat;
-      jobs.push({
-        seed: caseSeed,
-        strategy: BOT_STRATEGIES[(rowIndex + repeat) % BOT_STRATEGIES.length]!,
-        config: highSeatCovering[rowIndex]!,
-      });
-    }
-  }
-  report.highSeatCoveringRows = highSeatRowLimit;
-  report.highSeatCoveringGames = highSeatRowLimit * perRow;
-
-  const batch = await runScenarioJobs(jobs);
-  report.failures.push(...batch.failures);
-  report.failureSeeds.push(...batch.failureSeeds);
-
-  const fuzz = runFuzzBatch({
-    seed: seed + 2_000_000,
-    games:
-      options.limits?.fuzzGames ??
-      (options.mode === 'full' ? 100_000 : SAMPLE_SCENARIO_LIMITS.fuzzGames),
-  });
-  report.fuzzGames = fuzz.games;
-  report.failureSeeds.push(...fuzz.failureSeeds);
-  report.failures.push(...fuzz.failureReasons);
-
-  const goldenScenarios = loadGoldenScenarios();
-  for (const scenario of goldenScenarios) {
-    try {
-      const result = runCompleteGame({
-        seed: scenario.seed,
-        strategy: scenario.strategy as BotStrategy,
-        config: scenario.config,
-      });
-      const actual = {
-        phase: result.state.phase,
-        winner: result.state.winner,
-        reason: result.state.reason,
-        alive: result.state.seats.filter((seat) => seat.status === 'alive')
-          .length,
-        eliminated: result.state.seats.filter((seat) => seat.status !== 'alive')
-          .length,
-      };
-      if (JSON.stringify(actual) !== JSON.stringify(scenario.expected)) {
-        report.failures.push(`Golden outcome mismatch: ${scenario.id}`);
+    for (const scenario of suite.goldenScenarios) {
+      try {
+        const result = runCompleteGame({
+          seed: scenario.seed,
+          strategy: scenario.strategy as BotStrategy,
+          config: scenario.config,
+        });
+        const actual = {
+          phase: result.state.phase,
+          winner: result.state.winner,
+          reason: result.state.reason,
+          alive: result.state.seats.filter((seat) => seat.status === 'alive')
+            .length,
+          eliminated: result.state.seats.filter(
+            (seat) => seat.status !== 'alive',
+          ).length,
+        };
+        if (JSON.stringify(actual) !== JSON.stringify(scenario.expected)) {
+          report.failures.push(`Golden outcome mismatch: ${scenario.id}`);
+          report.failureSeeds.push(scenario.seed);
+        }
+      } catch (error) {
+        report.failures.push(
+          `Golden scenario ${scenario.id}: ${error instanceof Error ? error.message : 'Unknown failure'}`,
+        );
         report.failureSeeds.push(scenario.seed);
       }
-    } catch (error) {
-      report.failures.push(
-        `Golden scenario ${scenario.id}: ${error instanceof Error ? error.message : 'Unknown failure'}`,
-      );
-      report.failureSeeds.push(scenario.seed);
+      report.goldenGames++;
     }
-    report.goldenGames++;
   }
 
   report.failureSeeds = [...new Set(report.failureSeeds)].sort((a, b) => a - b);
@@ -277,7 +385,32 @@ export async function writeScenarioReport(
   path = 'docs/SCENARIO_REPORT.md',
 ): Promise<ScenarioReport> {
   const mode = process.argv.includes('--full') ? 'full' : 'sample';
-  const report = await runEngineScenarioSuite({ mode });
+  const suiteArgument = process.argv.find((argument) =>
+    argument.startsWith('--suite='),
+  );
+  const requestedSuite = suiteArgument?.slice('--suite='.length);
+  const suite = SCENARIO_SUITE_NAMES.find((name) => name === requestedSuite);
+  if (requestedSuite && !suite)
+    throw new Error(`Unknown scenario suite: ${requestedSuite}`);
+
+  const report = await runEngineScenarioSuite({ mode, suite });
+  if (suite) {
+    const games =
+      report.sweepGames +
+      report.coveringGames +
+      report.highSeatCoveringGames +
+      report.fuzzGames +
+      report.goldenGames;
+    console.log(
+      `Scenario suite ${suite}: ${report.failures.length} failures across ${games} games.`,
+    );
+    if (report.failures.length) {
+      console.error(report.failures.join('\n'));
+      process.exitCode = 1;
+    }
+    return report;
+  }
+
   const reportPath = resolveScenarioReportPath(path);
   writeFileSync(reportPath, formatScenarioReport(report), 'utf8');
   console.log(
