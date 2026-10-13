@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-base-3.13"]
+modules = ["nodejs-24"]
 
 [deployment]
 router = "application"
@@ -21,4 +21,4 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
-packages = ["glib", "gtk4", "pango", "harfbuzz", "gdk-pixbuf", "cairo", "vulkan-loader", "graphene", "icu74", "libxml2", "sqlite", "libxslt", "lcms2", "libevent", "libopus", "gst_all_1.gstreamer", "gst_all_1.gst-plugins-base", "gst_all_1.gst-plugins-bad", "flite", "libavif", "libwebp", "xorg.libX11", "wayland", "libmanette", "enchant", "mesa", "libdrm", "libsecret", "hyphen", "atk", "at-spi2-atk", "libxkbcommon", "libGL", "x264", "nspr", "nss", "gcc", "harfbuzzFull", "libepoxy", "libjpeg_turbo", "libglvnd", "gst_all_1.gst-libav", "alsa-lib", "cups", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "dbus"]
+packages = ["alsa-lib", "at-spi2-atk", "atk", "cairo", "cups", "dbus", "enchant", "flite", "gcc", "gdk-pixbuf", "glib", "graphene", "gst_all_1.gst-libav", "gst_all_1.gst-plugins-bad", "gst_all_1.gst-plugins-base", "gst_all_1.gstreamer", "gtk4", "harfbuzz", "harfbuzzFull", "hyphen", "icu74", "lcms2", "libGL", "libavif", "libdrm", "libepoxy", "libevent", "libglvnd", "libjpeg_turbo", "libmanette", "libopus", "libsecret", "libwebp", "libxkbcommon", "libxml2", "libxslt", "mesa", "nspr", "nss", "pango", "sqlite", "vulkan-loader", "wayland", "x264", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb"]

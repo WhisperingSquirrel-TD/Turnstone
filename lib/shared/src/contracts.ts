@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { gameConfigSchema, phaseSchema, roleSchema } from './config';
+import {
+  gameConfigSchema,
+  phaseSchema,
+  roleSchema,
+  taskDefinitionSchema,
+} from './config';
 
 const id = z.string().min(1).max(128);
 const envelope = z.object({
@@ -32,6 +37,7 @@ export const commandSchema = z.union([
   command('RequestRedeal'),
   command('SubmitVote', { target: id }),
   command('SubmitShadowChoice', { choice: id }),
+  command('SubmitTaskReport', { answer: z.string().trim().min(2).max(140) }),
   command('MarkDeparted', { seatId: id }),
   command('AllocatePower', { holders: z.array(id).min(1).max(40) }),
   command('PostTraitorMessage', {
@@ -79,6 +85,27 @@ export const eventSchema = z.discriminatedUnion('type', [
     candidates: z.array(id),
   }),
   event('ShadowSubmitted', { seatId: id, choice: id }),
+  event('TaskAssigned', {
+    seatId: id,
+    cycle: z.number().int().positive(),
+    task: taskDefinitionSchema.nullable(),
+    shared: z.boolean(),
+  }),
+  event('TaskReported', {
+    seatId: id,
+    cycle: z.number().int().positive(),
+    report: z.enum(['done', 'missed']),
+  }),
+  event('TaskDecoyAnswered', {
+    seatId: id,
+    cycle: z.number().int().positive(),
+    answer: z.string().min(2).max(140),
+  }),
+  event('TaskMurderCancelled', {
+    cycle: z.number().int().positive(),
+    cancelled: z.boolean(),
+    traitors: z.array(id),
+  }),
   event('SeatRemoved', {
     seatId: id,
     reason: z.enum(['banished', 'murdered', 'departed']),
@@ -107,6 +134,15 @@ export const privateViewSchema = z
     chat: z.array(
       z.object({ seatId: id, text: z.string(), seq: z.number() }).strict(),
     ),
+    task: z
+      .object({
+        kind: z.enum(['task', 'decoy']),
+        instruction: z.string(),
+        report: z.enum(['assigned', 'done', 'missed', 'void']).nullable(),
+        murderLost: z.boolean(),
+      })
+      .strict()
+      .nullable(),
     minimumDurationMs: z.number(),
   })
   .strict();
@@ -141,6 +177,28 @@ export const viewSchema = z
         salt: z.string(),
         roles: z.record(roleSchema),
         sleeper: z.string().nullable(),
+        tasks: z.array(
+          z
+            .object({
+              seatId: id,
+              cycle: z.number().int().positive(),
+              taskId: id.nullable(),
+              text: z.string(),
+              report: z.enum(['assigned', 'done', 'missed', 'void']),
+              shared: z.boolean(),
+              complete: z.boolean(),
+            })
+            .strict(),
+        ),
+        decoys: z.array(
+          z
+            .object({
+              seatId: id,
+              cycle: z.number().int().positive(),
+              answer: z.string(),
+            })
+            .strict(),
+        ),
       })
       .strict()
       .nullable(),

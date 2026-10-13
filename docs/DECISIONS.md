@@ -38,21 +38,19 @@ Section 24 is appended verbatim, including the owner's concluding delivery instr
 
 ### D29 — Engine implementation boundary and cryptographic adapter
 
-**Context:** Milestone 1 may proceed independently of browser compatibility, but C5's task rules remain unresolved.
+**Context:** Milestone 1 may proceed independently of browser compatibility. The owner has since resolved C5/C6 and directed that their rules be implemented and tested.
 
 **Choice:** Implement/test the pure core with injected time/random source, strict shared config/command/event/view schemas, versioned event replay, dealing/commitment, voting/reveal, shadow/protection, pause/departure/sleeper/win checks and explicit projections. Node's deterministic SHA-256 hash needs no extra package. The production random adapter is outside the engine and uses only `randomInt`/`randomBytes`; seeded randomness exists only in test fixtures. No engine database/network/logging or default random fallback.
 
-**Consequence:** This is in-progress, not Milestone 1 acceptance or a playable game. Task settings exist but starting tasks-on games rejects `TASK_RULES_PENDING`; assignment/report/lifecycle/consequence semantics await C5. Remaining full command/configuration and recruitment/ghost/pot/task contracts and exhaustive transition rejection coverage must be completed before accepting Milestone 1. No Milestone 2 started and no full scenario/termination/coverage result claimed.
+**Consequence:** This records the implementation boundary, not Milestone 1 acceptance or a playable game. Owner-resolved task rules are now in scope for the pure engine; remove the earlier `TASK_RULES_PENDING` limitation. Complete the applicable schema, transition, projection and termination tests before acceptance. No later milestone or unrun scenario/coverage result is claimed.
 
-### C6 — Required termination versus endgame no-banishment ties
+### C6 — Owner-resolved termination and endgame ties
 
-**Context:** D13 requires FINISHED under every bot strategy when deadlines fire. With all voters absent, FINAL_VOTE means continue; a tied FINAL_BANISH re-vote followed by configured no banishment changes no survivors, so this can repeat forever after the cycle cap has started endgame.
+**Context:** The owner resolved the otherwise conflicting endgame tie and termination rules.
 
-**Options:** Override final no-banishment ties with a random elimination; use an explicitly owner-defined forced finish; or amend the universal termination requirement. These change binding rules and cannot be invented.
+**Choice:** Abstentions in endgame votes count as a tie among all eligible players. A tied `FINAL_BANISH` always re-votes among the tied players, then uses the injected random source; the cycle's `revote then no banishment` setting does not apply. Every final banishment therefore removes one player and the endgame takes at most `alive - 2` rounds. In cycles, stalls are bounded by the planner cycle count plus three; reaching that limit starts the endgame. Logistics commands are not rule-progress steps. With deadlines firing, prove the bound under every bot strategy.
 
-**Choice:** Pending owner decision; keep the configured tie behaviour and do not claim the universal bound has passed. Record/ask alongside the already-open C5 task-report, stacking, missing-report and mid-cycle role-change rules.
-
-**Consequence:** Engine core tests can be green while Milestone 1 remains incomplete. This is a rules blocker, not a browser gate. Never weaken a termination test or silently change the tie/endgame rule to make verification appear complete.
+**Consequence:** Add explicit property coverage; the choice resolves the former C6 blocker. A passing bounded property result is still required before claiming it.
 
 ## Amendment 5 — resolved owner identity and logo-link policy
 
@@ -74,15 +72,17 @@ These owner decisions supersede the corresponding D16/D17/D19 placeholders and A
 
 **Consequence:** Update the Milestone 5 onward implementation/tests to this owner-authorised policy, not the superseded “never mid-game” rule. Device/browser external-navigation behaviour needs actual tests; no logo UI or universal installed-mode support is falsely claimed by this documentation update. Admin logo destination is specified; its non-installed tab target is not explicitly specified and can be resolved with the admin UX.
 
-### D22 — Retrieved official brand assets; theme change pending approval
+### D22 — Official assets retained; candlelit palette approved
 
-**Context:** Playwright Chromium rendered the client-side owner brand page successfully on 12 October 2026. It offers SVG/PNG assets but states no complete palette or typography guide.
+**Context:** Playwright Chromium rendered the client-side owner brand page successfully on 12 October 2026. The owner subsequently approved the darker candlelit palette in §25; that visual direction supersedes the earlier palette decision in D30.
 
-**Choice:** Save six original SVG variants under `assets/brand/stackstone/` and keep source URL, exact retrieval timestamp, bytes and observations in `source.json`. All six are below §23's 5 KB limit. Do not change game theme tokens or load web fonts.
+**Choice:** Keep all six downloaded source SVGs unchanged. Use the approved §25 colour tokens and system font stacks. The four wordmark variants are outlined as product assets; product screens must use only these font-independent outputs, never the source wordmarks.
 
-**Observed differences:** SVG artwork uses `#C8944A`, `#CA9449`, `#3D3A38`, `#5C5652`, `#6B6B6B`, and dark-background variants `#FAFAF5`/`#D4CDC4`, unlike §2's palette. Wordmark SVGs declare DM Sans; computed page fonts are DM Sans and Playfair Display, not the current Arial token. These are artwork/page observations, not an explicit published replacement token specification.
+**Outline record:** The source lettering was rendered in Playwright Chromium with the DM Sans 400 and 700 static faces linked from the Google Fonts CSS endpoint, then converted to paths and optimized. A side-by-side Playwright screenshot comparison against each original showed matching lettering, spacing, placement and colour. Retrieved/derived 13 October 2026; every outlined wordmark is below 5,000 bytes. The source SVGs remain unchanged.
 
-**Consequence:** Ask the owner before applying colour/font changes. Keep existing §2 tokens/Arial while approval is pending, and retain §20's no-web-font constraint. Saved original assets are not yet applied as UI marks; choose one role-uniform variant at Milestone 5, not role-specific light/dark marks. No logo upload is needed because retrieval succeeded.
+**Observed differences:** The owner-approved token palette is Peat `#16110D`, Walnut `#241C16`, Bark `#3D3A38`, Gilt `#C8944A`, Candle `#FAFAF5`, and Ash `#D4CDC4`. Normal-size Gilt text is permitted only on Peat or Walnut; it is not AA-compliant on Bark or Candle. The SVG wordmarks declare DM Sans, but product screens use system fonts and the wordmark must not rely on installed fonts.
+
+**Consequence:** Theme-token and contrast-test updates precede screen work. Screen sets follow their specified milestones; avoid claims that unbuilt screens use the final presentation. No external runtime font or photo asset is permitted. Use the outlined wordmarks when the Stackstone mark is added in later screen milestones.
 
 ### D23 — Confirmed organisation details
 
@@ -193,17 +193,37 @@ These owner decisions supersede the corresponding D16/D17/D19 placeholders and A
 
 **Consequence:** No provider setup, paid plan, WebSocket workaround, scheduler workaround or extra service is activated. Hosting and any paid plan need an owner decision before launch.
 
-### C5 — Task rule details to resolve before affected engine tests
+### C5 — Owner-resolved Traitor task lifecycle
 
-**Context:** §22 specifies defaults and four golden outcomes but leaves some interactions unspecified.
+**Context:** §22 gave task defaults; the owner has since supplied lifecycle, report, cancellation and reassignment rules.
 
-**Open questions:** For one-each tasks, does any missed report cancel one group murder, and can multiple misses cancel multiple murders or stack across cycles? For one-shared tasks, who submits the authoritative report and how are disagreements handled? What happens to outstanding tasks/penalties on banishment/departure, and when does a mid-cycle recruit (or activated sleeper) receive a task? How are missing reports treated and equal “smoothest operator” scores awarded?
+**Choice:** Assign cycle 1 tasks at each Traitor's DEAL acknowledgement, using the same-shaped decoy for Faithful. Assign next-cycle tasks at DAWN in the uniform private moment. The active period ends at the start of the next SHADOW. At that SHADOW all living players receive the same report screen: Traitors report done/missed; a missing report by deadline is missed; Faithful decoy answers are retained for awards. A shared task counts as done if any living Traitor reports done. If any living Traitor's current task is missed and the consequence is “lose next murder”, cancel all murders scheduled in that same SHADOW; DAWN says only “no one was taken”, indistinguishable from protection. Only Traitors learn privately that the missed task cancelled the murder. With zero murders scheduled there is no penalty and no carry-over. A task is void, with no penalty from it, if its Traitor is banished/departs before reporting. A recruit or activated sleeper first receives a task at the next assignment point. Pauses freeze deadlines. “None” only retains reports for reveal and awards.
 
-**Options:** Invent rules or obtain an owner resolution before implementing those transitions.
+**Consequence:** Do not reveal a task assignment, report or penalty to an unentitled viewer. Preserve the decoy shape for every living role. Record one assignment per seat at each applicable checkpoint and one report/result per living seat at the shadow close, including decoys, so secret task roles do not change public version increments. A shared task's final `complete` value is the OR of its members' successful reports; the independent “any living Traitor missed” penalty still cancels that shadow's murder.
 
-**Choice:** Pending; do not invent semantics or weaken tests. Resolve before affected Milestone 1 work and before the corresponding golden/reference cases, without interrupting the current foundation milestone for task implementation.
+### D12 — Owner-resolved sleeper activation
 
-**Consequence:** The model/defaults, four required golden outcomes and secrecy/uniformity requirements are committed in the plan; ambiguous transition/award details are not silently filled in.
+When the last Traitor is removed, an eligible living, non-departed sleeper activates at the next private moment only if endgame has not begun and more than three players remain. Otherwise the Faithful win immediately. A sleeper never activates in or after endgame. Recheck parity and the two-player win immediately after activation.
+
+### D13 — Owner-resolved termination bound
+
+Rule-progress transitions are deal, cycle steps and endgame rounds. Logistics commands do not increment the count; deadlines eventually fire. Maximum cycles are planned cycles plus three; reaching the cap starts endgame immediately. Every bot strategy must reach FINISHED within the bound while deadlines fire.
+
+### D14 — Projection entitlement ruling
+
+No-leak checks use each viewer's allow-list, including Traitor knowledge, an announced all-seeing host and spectator ghosts. The playing blind coordinator and administrators are never entitled to unfinished-game secrets.
+
+### D15 — Recovery, late entry, endgame vote and shield rulings
+
+PIN recovery revokes all previous devices on that seat. Adding a device needs both the PIN and confirmation from a device already attached. Late entrants are always publicly Faithful; remove random-from-reserve. Endgame abstention/missing votes mean “continue”. A collective ghost vote is a majority of voting ghosts; a ghost tie counts as no vote. Half-votes follow the configured cycle round-table tie rule. A shield expires at the end of the next DAWN whether used or not. Recruitment targets use the victim-selection rule; no response by deadline is a decline.
+
+### D30 — §25 visual direction supersedes prior palette decision
+
+**Context:** The owner explicitly replaces the earlier light public palette and reversible palette decision with candlelit visual direction.
+
+**Choice:** Append §25 verbatim. Update only `theme.css` and contrast tests now; leave screen designs for Milestones 5, 6 and 9. Use the six exact owner tokens, system serif headlines and system sans body. Do not add textures or screen layouts as part of this token update.
+
+**Consequence:** The former pending-palette entry in D22 is superseded. Keep the font-independent logo work and no-web-font requirement. Follow §25's screen-by-screen design-plan and Playwright review gate when those screens are built.
 
 ## Amendment 2 — section 21 accepted; Milestone 9 expanded
 

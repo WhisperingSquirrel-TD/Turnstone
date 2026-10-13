@@ -126,6 +126,42 @@ export function viewFor(viewer: Viewer, state: State): View {
                     seq: item.seq,
                   }))
               : [],
+          task:
+            state.config.tasks.enabled && own
+              ? (() => {
+                  const taskCycle =
+                    state.phase === 'DEAL'
+                      ? 1
+                      : state.phase === 'DAWN'
+                        ? state.cycle + 1
+                        : state.cycle;
+                  const assignment = state.taskAssignments.find(
+                    (task) =>
+                      task.seatId === own.id &&
+                      task.cycle === taskCycle &&
+                      task.status !== 'void',
+                  );
+                  const actual =
+                    own.role === 'traitor' ? assignment : undefined;
+                  const privateTask =
+                    actual?.taskId !== null ? actual : undefined;
+                  return {
+                    kind: privateTask ? 'task' : 'decoy',
+                    instruction:
+                      privateTask?.text ??
+                      'Keep watch today: who is acting oddly?',
+                    report: privateTask?.status ?? null,
+                    murderLost:
+                      isTraitor &&
+                      state.taskMurderCancelledCycles.some(
+                        (resolution) =>
+                          resolution.cycle === state.cycle &&
+                          resolution.cancelled &&
+                          resolution.traitors.includes(own.id),
+                      ),
+                  };
+                })()
+              : null,
           minimumDurationMs:
             state.config.privacy.shieldSeconds * 1000 +
             state.config.privacy.holdMs,
@@ -137,6 +173,30 @@ export function viewFor(viewer: Viewer, state: State): View {
             salt: state.deal.salt,
             roles: state.deal.roles,
             sleeper: state.deal.sleeper,
+            tasks: state.taskAssignments
+              .filter((task) => task.taskId)
+              .map((task) => ({
+                seatId: task.seatId,
+                cycle: task.cycle,
+                taskId: task.taskId!,
+                text: task.text,
+                report: task.status,
+                shared: task.shared,
+                complete: task.shared
+                  ? state.taskAssignments.some(
+                      (other) =>
+                        other.cycle === task.cycle &&
+                        other.taskId === task.taskId &&
+                        other.shared &&
+                        other.status === 'done',
+                    )
+                  : task.status === 'done',
+              })),
+            decoys: state.taskReports.map((response) => ({
+              seatId: response.seatId,
+              cycle: response.cycle,
+              answer: response.answer,
+            })),
           }
         : null,
   });

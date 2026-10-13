@@ -1,4 +1,4 @@
-import type { GameConfig, Event } from '../../shared/src/index';
+import type { GameConfig, Event, TaskDefinition } from '../../shared/src/index';
 export type { Event };
 export type Role = 'traitor' | 'faithful';
 export type Phase =
@@ -27,6 +27,15 @@ export type Context = {
     int: (upperExclusive: number) => number;
     bytes: (length: number) => Uint8Array;
   };
+  taskCatalog?: readonly TaskDefinition[];
+};
+export type TaskAssignment = {
+  seatId: string;
+  cycle: number;
+  taskId: string | null;
+  text: string;
+  shared: boolean;
+  status: 'assigned' | 'done' | 'missed' | 'void';
 };
 export type Seat = {
   id: string;
@@ -72,6 +81,13 @@ export type State = {
   winner: Role | null;
   reason: string | null;
   firstVoteOccurred: boolean;
+  taskAssignments: TaskAssignment[];
+  taskReports: { seatId: string; cycle: number; answer: string }[];
+  taskMurderCancelledCycles: {
+    cycle: number;
+    cancelled: boolean;
+    traitors: string[];
+  }[];
 };
 export type Result =
   { ok: true; events: Event[] } | { ok: false; code: string };

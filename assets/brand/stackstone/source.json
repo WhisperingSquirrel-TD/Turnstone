@@ -91,5 +91,43 @@
         "'DM Sans', sans-serif"
       ]
     }
-  ]
+  ],
+  "derivedAssets": [
+    {
+      "file": "stackstone-logo-full-outlined.svg",
+      "derivedFrom": "stackstone-logo-full.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-logo-full.svg",
+      "retrievedAt": "2026-10-13",
+      "bytes": 2448
+    },
+    {
+      "file": "stackstone-logo-dark-outlined.svg",
+      "derivedFrom": "stackstone-logo-dark.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-logo-dark.svg",
+      "retrievedAt": "2026-10-13",
+      "bytes": 2448
+    },
+    {
+      "file": "stackstone-logo-horizontal-outlined.svg",
+      "derivedFrom": "stackstone-logo-horizontal.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-logo-horizontal.svg",
+      "retrievedAt": "2026-10-13",
+      "bytes": 4622
+    },
+    {
+      "file": "stackstone-logo-stacked-outlined.svg",
+      "derivedFrom": "stackstone-logo-stacked.svg",
+      "sourceUrl": "https://stackstoneconsulting.co.uk/brand/stackstone-logo-stacked.svg",
+      "retrievedAt": "2026-10-13",
+      "bytes": 4684
+    }
+  ],
+  "outlineMethod": {
+    "font": "DM Sans",
+    "weights": [400, 700],
+    "fontSourceUrl": "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700",
+    "fontRetrievedAt": "2026-10-13",
+    "fontLicense": "SIL Open Font License 1.1",
+    "comparison": "Side-by-side Playwright Chromium screenshot against the source SVGs with DM Sans loaded."
+  }
 }

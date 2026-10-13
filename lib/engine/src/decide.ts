@@ -2,6 +2,7 @@ import {
   commandSchema,
   eventSchema,
   recommended,
+  taskDefinitionSchema,
 } from '../../shared/src/index';
 import {
   alive,
@@ -10,6 +11,7 @@ import {
   type Event,
   type Result,
   type Phase,
+  type Seat,
 } from './model';
 import { evolve } from './reducer';
 import { roleDeal } from './deal';
@@ -63,6 +65,54 @@ export function decide(
       throw new Error('Invalid injected random source');
     return choices[index]!;
   };
+  const eligibleTasks = () =>
+    (ctx.taskCatalog ?? [])
+      .flatMap((item) => {
+        const parsed = taskDefinitionSchema.safeParse(item);
+        return parsed.success ? [parsed.data] : [];
+      })
+      .filter((task) => {
+        const filters = state!.config.tasks.filters;
+        return (
+          filters.every((filter) => task.tags.includes(filter)) &&
+          (!filters.includes('family') || task.minimumAge < 13) &&
+          (!filters.includes('adults-only') || task.minimumAge >= 18)
+        );
+      });
+  const assignTasks = (cycleNumber: number, seats: Seat[]) => {
+    if (!state!.config.tasks.enabled || !seats.length) return;
+    const pool = eligibleTasks();
+    const shared = state!.config.tasks.perCycle === 'shared';
+    const previousShared = shared
+      ? state!.taskAssignments.find(
+          (task) =>
+            task.cycle === cycleNumber && task.shared && task.taskId !== null,
+        )
+      : undefined;
+    const oneSharedTask =
+      previousShared && pool.find((task) => task.id === previousShared.taskId!);
+    let sharedTask = oneSharedTask;
+    for (const seat of seats) {
+      if (seat.role !== 'traitor') {
+        emit('TaskAssigned', {
+          seatId: seat.id,
+          cycle: cycleNumber,
+          task: null,
+          shared: false,
+        });
+        continue;
+      }
+      if (!pool.length) throw new Error('No eligible Traitor task exists');
+      sharedTask ??= shared ? choose(pool) : undefined;
+      const task = shared ? sharedTask! : choose(pool);
+      emit('TaskAssigned', {
+        seatId: seat.id,
+        cycle: cycleNumber,
+        task,
+        shared,
+      });
+    }
+  };
   if (cmd.type === 'CreateGame') {
     if (state) return error('GAME_EXISTS');
     if (ctx.actor.kind !== 'coordinator') return error('FORBIDDEN');
@@ -86,6 +136,7 @@ export function decide(
     [
       'SubmitVote',
       'SubmitShadowChoice',
+      'SubmitTaskReport',
       'AcknowledgePrivate',
       'RequestRedeal',
       'PostTraitorMessage',
@@ -246,7 +297,8 @@ export function decide(
         state.config.traitors.number >= alive(state).length
       )
         return error('INVALID_ROLE_COUNT');
-      if (state.config.tasks.enabled) return error('TASK_RULES_PENDING');
+      if (state.config.tasks.enabled && !eligibleTasks().length)
+        return error('TASK_CATALOG_UNAVAILABLE');
       deal(false);
       enter('DEAL');
       break;
@@ -254,7 +306,41 @@ export function decide(
       if (!['DEAL', 'SHADOW'].includes(state.phase))
         return error('WRONG_PHASE');
       emit('PrivateAcknowledged', { seatId: actingSeat!.id });
+      if (
+        state.phase === 'DEAL' &&
+        !state.taskAssignments.some(
+          (task) => task.seatId === actingSeat!.id && task.cycle === 1,
+        )
+      )
+        assignTasks(1, [actingSeat!]);
       break;
+    case 'SubmitTaskReport': {
+      if (state.phase !== 'SHADOW') return error('WRONG_PHASE');
+      if (state.deadline !== null && ctx.now >= state.deadline)
+        return error('DEADLINE_PASSED');
+      const assignment = state.taskAssignments.find(
+        (task) =>
+          task.seatId === actingSeat!.id &&
+          task.cycle === state!.cycle &&
+          task.taskId !== null &&
+          task.status !== 'void',
+      );
+      if (assignment) {
+        if (cmd.answer !== 'done' && cmd.answer !== 'missed')
+          return error('INVALID_TASK_REPORT');
+        emit('TaskReported', {
+          seatId: actingSeat!.id,
+          cycle: state.cycle,
+          report: cmd.answer,
+        });
+      } else
+        emit('TaskDecoyAnswered', {
+          seatId: actingSeat!.id,
+          cycle: state.cycle,
+          answer: cmd.answer,
+        });
+      break;
+    }
     case 'RequestRedeal':
       if (
         !state.deal ||
@@ -286,6 +372,40 @@ export function decide(
       if (state.phase !== 'SHADOW') return error('WRONG_PHASE');
       if (state.deadline !== null && ctx.now >= state.deadline)
         return error('DEADLINE_PASSED');
+      if (
+        state.config.tasks.enabled &&
+        !state.taskReports.some(
+          (report) =>
+            report.seatId === actingSeat!.id && report.cycle === state!.cycle,
+        ) &&
+        !state.taskAssignments.some(
+          (task) =>
+            task.seatId === actingSeat!.id &&
+            task.cycle === state!.cycle &&
+            task.taskId !== null &&
+            task.status !== 'void',
+        )
+      )
+        return error('TASK_REPORT_REQUIRED');
+      if (
+        state.config.tasks.enabled &&
+        state.taskAssignments.some(
+          (task) =>
+            task.seatId === actingSeat!.id &&
+            task.cycle === state!.cycle &&
+            task.taskId !== null &&
+            task.status !== 'void',
+        ) &&
+        !state.taskAssignments.some(
+          (task) =>
+            task.seatId === actingSeat!.id &&
+            task.cycle === state!.cycle &&
+            task.taskId !== null &&
+            task.status !== 'assigned' &&
+            task.status !== 'void',
+        )
+      )
+        return error('TASK_REPORT_REQUIRED');
       if (
         !alive(state).some(
           (seat) =>
@@ -408,7 +528,9 @@ export function decide(
           break;
         }
         const target =
-          tied.length > 1 && state.config.roundTable.tieRule === 'revote-none'
+          tied.length > 1 &&
+          state.phase !== 'FINAL_BANISH' &&
+          state.config.roundTable.tieRule === 'revote-none'
             ? null
             : choose(tied);
         emit('VoteClosed', { target, revote: false, candidates: [] });
@@ -435,6 +557,57 @@ export function decide(
         if (finished()) break;
       }
       if (state.phase === 'SHADOW') {
+        const pendingTaskReports = state.taskAssignments.filter(
+          (task) =>
+            task.cycle === state!.cycle &&
+            task.taskId !== null &&
+            task.status === 'assigned' &&
+            alive(state!).some((seat) => seat.id === task.seatId),
+        );
+        if (
+          pendingTaskReports.length &&
+          state.deadline !== null &&
+          ctx.now < state.deadline
+        )
+          return error('TASK_REPORTS_PENDING');
+        for (const task of pendingTaskReports)
+          emit('TaskReported', {
+            seatId: task.seatId,
+            cycle: task.cycle,
+            report: 'missed',
+          });
+        if (state.config.tasks.enabled) {
+          const missingDecoys = alive(state).filter((seat) => {
+            const assigned = state!.taskAssignments.find(
+              (task) => task.seatId === seat.id && task.cycle === state!.cycle,
+            );
+            return (
+              (!assigned || assigned.taskId === null) &&
+              !state!.taskReports.some(
+                (report) =>
+                  report.seatId === seat.id && report.cycle === state!.cycle,
+              )
+            );
+          });
+          for (const seat of missingDecoys)
+            emit('TaskDecoyAnswered', {
+              seatId: seat.id,
+              cycle: state!.cycle,
+              answer: 'No decoy answer submitted.',
+            });
+        }
+        const taskPenalty =
+          state.config.tasks.enabled &&
+          state.config.tasks.missedConsequence === 'lose-next-murder' &&
+          state.config.traitors.murders > 0 &&
+          state.taskAssignments.some(
+            (task) =>
+              task.cycle === state!.cycle &&
+              task.status === 'missed' &&
+              alive(state!).some(
+                (seat) => seat.id === task.seatId && seat.role === 'traitor',
+              ),
+          );
         const eligible = alive(state)
           .filter((seat) => seat.role === 'faithful')
           .map((seat) => seat.id);
@@ -443,7 +616,11 @@ export function decide(
           .map((seat) => state!.shadow[seat.id])
           .filter((id): id is string => Boolean(id) && eligible.includes(id!));
         const selected: string[] = [];
-        for (let i = 0; i < state.config.traitors.murders; i++) {
+        for (
+          let i = 0;
+          !taskPenalty && i < state.config.traitors.murders;
+          i++
+        ) {
           const available = eligible.filter((id) => !selected.includes(id));
           if (!available.length) break;
           if (!picks.length && state.config.traitors.timeoutChoice === 'none')
@@ -472,12 +649,24 @@ export function decide(
           state!.shields.includes(id),
         );
         const victims = selected.filter((id) => !state!.shields.includes(id));
+        if (state.config.tasks.enabled)
+          emit('TaskMurderCancelled', {
+            cycle: state!.cycle,
+            cancelled: taskPenalty,
+            traitors: taskPenalty
+              ? alive(state!)
+                  .filter((seat) => seat.role === 'traitor')
+                  .map((seat) => seat.id)
+              : [],
+          });
         enter('DAWN');
         emit('DawnResolved', { victims, protected: protectedIds });
         for (const id of victims) {
           remove(id, 'murdered');
           if (finished()) break;
         }
+        if (!finished() && !endgameDue() && state!.cycle < state!.maxCycles)
+          assignTasks(state!.cycle + 1, alive(state!));
         break;
       }
       if (state.phase === 'FINAL_VOTE') {

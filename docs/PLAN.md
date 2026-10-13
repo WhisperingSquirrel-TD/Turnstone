@@ -2,9 +2,9 @@
 
 ## Authority, approval and current status
 
-`docs/SPEC.md` contains all seven supplied parts, with sections 1–19 in numerical order, followed by Amendments 1–4 as sections 20–23 and Amendment 5's owner decisions within section 23. Authorised earlier edits are Amendment 4's section 2 attribution expansion and Amendment 5's section 23 logo-link replacement, recorded in DECISIONS. Section 20 overrides conflicting parts of sections 4, 16 and 18; section 21 binds positioning, public pages, shared facts and test-gated claims; section 22 adds optional-per-game Must Traitor tasks and Must hosting portability; section 23 requires uniform branding and rename readiness with confirmed owner identity. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
+`docs/SPEC.md` contains all seven supplied parts, with sections 1–19 in numerical order, followed by Amendments 1–7 as sections 20–25. Owner rulings on task timing, sleeper timing and termination are recorded in sections 5 and 22. Section 25 supersedes the previous light-palette decisions and section 2's light-public-site palette. Sections 20–25 add performance, positioning, task, branding, delivery and visual requirements. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
 
-**Owner-approved, amended by §24 and its accompanying confirmations.** Milestone 0 is provisionally accepted; its first fully green GitHub Actions run, including iPhone/iPad WebKit, makes acceptance final. The owner explicitly authorises Milestone 1 now because the pure engine needs no browser. Local verify skips only WebKit, prints exactly “WebKit profiles run in CI”, and retains Pixel/desktop, axe, Lighthouse and all non-browser gates. CI never skips these four profiles. Stop for review after Milestone 1; unresolved rule questions still stop affected work.
+**Owner-approved, amended by §24–25 and all supplied rulings.** Milestone 0 is provisionally accepted; its first fully green GitHub Actions run, including iPhone/iPad WebKit, makes acceptance final. The owner explicitly authorises Milestone 1 now because the pure engine needs no browser. Local verify skips only WebKit, prints exactly “WebKit profiles run in CI”, and retains Pixel/desktop, axe, Lighthouse and all non-browser gates. CI never skips these four profiles. C5, C6 and D12–D15 are resolved as recorded in `DECISIONS.md`; do not treat those former questions as current blockers. Stop for review after Milestone 1; do not start Milestones 2 or 3 before review.
 
 Section 24 is appended verbatim and supersedes conflicting provider/hosting notes. Canonical site/RP ID and the planned game origin are in the shared identity config; runtime API origin comes from the build-time variable. The owner pushes to the stated GitHub repository. Repository configurations do not mean a CI run has passed or a hosting service has been activated. No Replit publishing or paid services.
 
@@ -62,21 +62,21 @@ React is retained. If the actual route budget cannot be met, record measured opt
 - [ ] Keep both verify commands honest: foundation verification can pass only its real implemented checks; full verification remains explicitly unavailable until the scenario harness exists.
 - [ ] Review current infrastructure against the completed SPEC; update the documentation skeleton/status and resolve blocking decisions. Do not invent a game schema or rules.
 
-**Exit:** Fully green `pnpm run verify` and owner-approved PLAN, with recorded evidence. Currently blocked, not completed.
+**Exit:** The complete local `pnpm run verify` gate is green, and the owner has provisionally accepted Milestone 0. Final acceptance remains pending the first fully green GitHub Actions run, including iPhone and iPad WebKit.
 
 ## Task 1 — Pure game engine and shared parameter model
 
 **References:** §3, §5–6, §8, §9–12, §17–19, §22.
 
-- [ ] Build one typed, validated rule-setting model shared by wizard and tests, with defaults, constraints, recommendations and invalid-combination explanations from §6. Keep reference data editable later without copying it into UI strings.
-- [ ] Implement pure `decide`, `evolve`, injected clock/random source, neutral phases, pause overlay, legal commands/rejections, event replay and schema versioning. No database/network I/O in the engine.
-- [ ] Implement deal/commitment events, acknowledgements and re-deal constraints; voting/ties, shadow choices/decoys, eligibility/protection, eliminations/departures, win/endgame checks and bounded progression. Resolve rule ambiguities first.
-- [ ] Establish `viewFor(viewer, state)` as the single explicit allow-list projection for every viewer type, including announced non-playing host and configured spectator entitlements. Preserve blind coordinator/admin behaviour.
-- [ ] Cover every command's success and rejection with tests; property-test §5 invariants, no-leak, replay equality and a defined termination bound. Add transition contracts for features completed in Task 7 without pretending they are finished.
-- [ ] Include all §22 task settings/defaults/filters in the shared parameter model: optional per game is not optional to build. Establish deterministic per-cycle assignment/report events, next-murder consequence and task lifecycle/projection contracts; clarify unresolved rule details before implementation. Task-off games retain their original rules; library and player/admin experiences are completed in Task 7 and existing Task 8 reference administration.
-- [ ] Property-test task entitlement, replay, eliminated/departed-seat behaviour, recruitment transitions and delivery/reporting decoy contracts. Task state never leaks to blind coordinators/admins or changes private-screen timing/shape.
+- [x] Build the typed shared rule model, defaults, validation, constraints, recommendations and task settings needed by the pure engine. The later wizard consumes this source; the engine does not duplicate settings in UI copy.
+- [x] Implement pure `decide`/`evolve`, injected clock and random source, neutral phases, pause overlay, engine-owned command outcomes, deterministic event replay and explicit event schemas. No I/O in the engine.
+- [x] Implement role-deal commitment, acknowledgements/redeal, core votes and ties, shadow choices, protection, removals, sleeper precedence, win checks and bounded cycle/endgame transitions. C5/C6/D12/D13 owner rulings are resolved and tested.
+- [x] Use `viewFor(viewer, state)` as the explicit allow-list projection, including legitimate Traitor knowledge and an announced all-seeing host. Tests preserve blind coordinator and unfinished-admin views.
+- [x] Property-test core invariants, projection leakage, replay equality and termination with all seven named bot strategies. Engine command paths are tested; lobby/device recovery, full recruitment/powers, mission administration and account/admin command matrices remain in their assigned later milestones.
+- [x] Include the §22 task parameter model and deterministic task/decoy assignment, deadline reporting, voiding, shared completion, cancellation, no-carry-over, sleeper assignment, and private disclosure contracts. The editable library and player/admin experiences remain in Task 7/8.
+- [x] Test task replay/projection and departed-seat behavior; a uniform assignment/result event is recorded for each living player so hidden task roles do not change public event-version increments. Recruitment transitions and server/browser delivery remain in their later milestones.
 
-**Exit:** Property, no-leak and replay tests green plus verify. Engine coverage target at final delivery: ≥95% lines, ≥90% branches.
+**Exit:** Met locally: `pnpm run verify`, core property/no-leak/replay tests and the D13 termination property are green. Milestone 1 is complete and awaits owner review. Final-delivery coverage targets remain ≥95% engine lines and ≥90% branches.
 
 ## Task 2 — Full-game scenario harness
 

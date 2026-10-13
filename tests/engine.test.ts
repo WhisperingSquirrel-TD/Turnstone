@@ -318,4 +318,528 @@ describe('Milestone 1 deterministic engine', () => {
     expect(game.state.phase).toBe('FINAL_BANISH');
     expect(game.state.winner).toBeNull();
   });
+  it('uses the forced re-vote then random rule in ENDGAME and completes each round', () => {
+    const game = fixture(5, {
+      traitors: { sleeper: false },
+      missions: { enabled: false },
+      roundTable: { tieRule: 'revote-none' },
+      endgame: { trigger: 'time', at: '2020-01-01T00:00:00Z' },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'FINAL_BANISH');
+
+    const minimum =
+      game.state.config.privacy.shieldSeconds * 1000 +
+      game.state.config.privacy.holdMs;
+    const steps = game.state.steps;
+    game.context.now = game.state.phaseStarted + minimum;
+    command(game, { type: 'AdvancePhase' });
+    expect(game.state.revote).toBe(true);
+    expect(game.state.steps).toBe(steps);
+
+    game.context.now = game.state.phaseStarted + minimum;
+    command(game, { type: 'AdvancePhase' });
+    expect(
+      game.state.seats.filter((seat) => seat.status === 'alive'),
+    ).toHaveLength(4);
+    expect(game.state.phase).toBe('FINAL_VOTE');
+    expect(game.state.steps).toBe(steps + 1);
+  });
+  it('fails explicitly when task mode has no validated library', () => {
+    const game = fixture(8, { tasks: { enabled: true } });
+    const result = command(game, { type: 'StartGame' }, false);
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'TASK_CATALOG_UNAVAILABLE',
+    });
+  });
+  it('assigns a shared task on each acknowledged Traitor deal and projects a same-shaped decoy', () => {
+    const game = fixture(8, {
+      tasks: { enabled: true, perCycle: 'shared' },
+    });
+    Reflect.set(game.context, 'taskCatalog', [
+      {
+        id: 'task-alpha',
+        text: 'Move a named object into a different room without drawing attention.',
+        tags: ['family', 'seated'],
+        minimumAge: 8,
+        difficulty: 'easy',
+      },
+    ]);
+    command(game, { type: 'StartGame' });
+
+    const traitors = game.state.seats.filter((seat) => seat.role === 'traitor');
+    const faithful = game.state.seats.find((seat) => seat.role === 'faithful')!;
+    expect(game.state.taskAssignments).toHaveLength(0);
+    command(game, { type: 'AcknowledgePrivate' }, true, {
+      kind: 'player',
+      seatId: traitors[0]!.id,
+    });
+    const first = game.state.taskAssignments[0]!;
+    command(game, { type: 'AcknowledgePrivate' }, true, {
+      kind: 'player',
+      seatId: traitors[1]!.id,
+    });
+    expect(game.state.taskAssignments).toHaveLength(2);
+    expect(game.state.taskAssignments.map((task) => task.taskId)).toEqual([
+      'task-alpha',
+      'task-alpha',
+    ]);
+    for (const seat of game.state.seats.filter(
+      (candidate) => candidate.role === 'faithful',
+    )) {
+      const version = game.state.version;
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+      expect(game.state.version - version).toBe(2);
+    }
+
+    const secret = viewFor(
+      { kind: 'player', seatId: traitors[0]!.id, reveal: true },
+      game.state,
+    );
+    const decoy = viewFor(
+      { kind: 'player', seatId: faithful.id, reveal: true },
+      game.state,
+    );
+    expect(secret.private?.task).toMatchObject({
+      kind: 'task',
+      instruction:
+        'Move a named object into a different room without drawing attention.',
+    });
+    expect(decoy.private?.task?.kind).toBe('decoy');
+    expect(decoy.private?.task?.instruction).not.toBe(first.text);
+    expect(viewFor({ kind: 'coordinator' }, game.state).private).toBeNull();
+    expect(
+      JSON.stringify(viewFor({ kind: 'admin', reveal: true }, game.state)),
+    ).not.toContain(first.text);
+  });
+  it('treats a shared task as complete when any living Traitor reports done', () => {
+    const game = fixture(12, {
+      tasks: { enabled: true, perCycle: 'shared' },
+    });
+    Reflect.set(game.context, 'taskCatalog', [
+      {
+        id: 'task-shared',
+        text: 'Ask two guests to use a chosen word during an ordinary conversation.',
+        tags: ['family', 'seated'],
+        minimumAge: 8,
+        difficulty: 'easy',
+      },
+    ]);
+    command(game, { type: 'StartGame' });
+    for (const seat of game.state.seats)
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    advance(game, 'SHADOW');
+    const living = game.state.seats.filter((seat) => seat.status === 'alive');
+    const traitors = living.filter((seat) => seat.role === 'traitor');
+    const faithful = living.filter((seat) => seat.role === 'faithful');
+    expect(traitors.length).toBeGreaterThan(1);
+
+    for (const [index, seat] of traitors.entries()) {
+      command(
+        game,
+        {
+          type: 'SubmitTaskReport',
+          answer: index === 0 ? 'done' : 'missed',
+        },
+        true,
+        { kind: 'player', seatId: seat.id },
+      );
+      command(
+        game,
+        { type: 'SubmitShadowChoice', choice: faithful[0]!.id },
+        true,
+        { kind: 'player', seatId: seat.id },
+      );
+    }
+    for (const seat of faithful) {
+      command(
+        game,
+        { type: 'SubmitTaskReport', answer: 'I am keeping watch.' },
+        true,
+        { kind: 'player', seatId: seat.id },
+      );
+      command(
+        game,
+        {
+          type: 'SubmitShadowChoice',
+          choice: living.find((candidate) => candidate.id !== seat.id)!.id,
+        },
+        true,
+        { kind: 'player', seatId: seat.id },
+      );
+    }
+    game.context.now = game.state.deadline! + 1;
+    command(game, { type: 'AdvancePhase' });
+    command(game, { type: 'EndGameEarly' });
+
+    const reveal = viewFor(
+      { kind: 'player', seatId: traitors[0]!.id },
+      game.state,
+    ).fairness!;
+    expect(reveal.tasks.filter((task) => task.cycle === 1)).not.toHaveLength(0);
+    expect(
+      reveal.tasks
+        .filter((task) => task.cycle === 1)
+        .every((task) => task.complete),
+    ).toBe(true);
+  });
+  it('blocks a Traitor shadow choice until the task report is recorded', () => {
+    const game = fixture(12, { tasks: { enabled: true } });
+    Reflect.set(game.context, 'taskCatalog', [
+      {
+        id: 'task-beta',
+        text: 'Ask two guests to use a chosen word during an ordinary conversation.',
+        tags: ['family', 'seated'],
+        minimumAge: 8,
+        difficulty: 'easy',
+      },
+    ]);
+    command(game, { type: 'StartGame' });
+    for (const seat of game.state.seats)
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    advance(game, 'SHADOW');
+    const traitor = game.state.seats.find(
+      (seat) => seat.role === 'traitor' && seat.status === 'alive',
+    )!;
+    const target = game.state.seats.find(
+      (seat) => seat.role === 'faithful' && seat.status === 'alive',
+    )!;
+    expect(
+      command(game, { type: 'SubmitShadowChoice', choice: target.id }, false, {
+        kind: 'player',
+        seatId: traitor.id,
+      }),
+    ).toMatchObject({ ok: false, code: 'TASK_REPORT_REQUIRED' });
+  });
+  it('cancels a murder for a missed task without revealing the reason to the coordinator', () => {
+    const game = fixture(12, { tasks: { enabled: true } });
+    Reflect.set(game.context, 'taskCatalog', [
+      {
+        id: 'task-gamma',
+        text: 'Change seats at the next gathering without drawing attention.',
+        tags: ['family', 'seated'],
+        minimumAge: 8,
+        difficulty: 'easy',
+      },
+    ]);
+    command(game, { type: 'StartGame' });
+    for (const seat of game.state.seats)
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    advance(game, 'SHADOW');
+    const living = game.state.seats.filter((seat) => seat.status === 'alive');
+    const traitors = living.filter((seat) => seat.role === 'traitor');
+    const faithful = living.filter((seat) => seat.role === 'faithful');
+    expect(traitors.length).toBeGreaterThan(1);
+
+    for (const [index, seat] of traitors.entries()) {
+      const task = game.state.taskAssignments.find(
+        (entry) => entry.seatId === seat.id && entry.cycle === game.state.cycle,
+      );
+      command(
+        game,
+        {
+          type: 'SubmitTaskReport',
+          answer:
+            task?.taskId && index === 0
+              ? 'missed'
+              : task?.taskId
+                ? 'done'
+                : 'I am keeping an eye on things.',
+        },
+        true,
+        { kind: 'player', seatId: seat.id },
+      );
+      command(
+        game,
+        { type: 'SubmitShadowChoice', choice: faithful[0]!.id },
+        true,
+        { kind: 'player', seatId: seat.id },
+      );
+    }
+    for (const seat of faithful) {
+      command(
+        game,
+        { type: 'SubmitTaskReport', answer: 'I suspect another player.' },
+        true,
+        { kind: 'player', seatId: seat.id },
+      );
+      command(
+        game,
+        {
+          type: 'SubmitShadowChoice',
+          choice: living.find((candidate) => candidate.id !== seat.id)!.id,
+        },
+        true,
+        { kind: 'player', seatId: seat.id },
+      );
+    }
+    game.context.now = game.state.deadline! + 1;
+    command(game, { type: 'AdvancePhase' });
+
+    expect(game.state.phase).toBe('DAWN');
+    expect(
+      game.state.seats.filter((seat) => seat.status === 'murdered'),
+    ).toHaveLength(0);
+    expect(game.state.taskMurderCancelledCycles).toContainEqual(
+      expect.objectContaining({ cycle: 1, cancelled: true }),
+    );
+    const notifiedTraitor = traitors.find((seat) => seat.status === 'alive')!;
+    const uninformedFaithful = game.state.seats.find(
+      (seat) => seat.role === 'faithful' && seat.status === 'alive',
+    )!;
+    expect(
+      viewFor(
+        { kind: 'player', seatId: notifiedTraitor.id, reveal: true },
+        game.state,
+      ).private?.task?.murderLost,
+    ).toBe(true);
+    expect(
+      viewFor(
+        { kind: 'player', seatId: uninformedFaithful.id, reveal: true },
+        game.state,
+      ).private?.task?.murderLost,
+    ).toBe(false);
+    expect(
+      viewFor({ kind: 'coordinator', reveal: true }, game.state).private,
+    ).toBeNull();
+  });
+  it('counts missing Traitor reports as missed only at the shadow deadline', () => {
+    const game = fixture(12, { tasks: { enabled: true } });
+    Reflect.set(game.context, 'taskCatalog', [
+      {
+        id: 'task-delta',
+        text: 'Ask two guests to use a chosen word during an ordinary conversation.',
+        tags: ['family', 'seated'],
+        minimumAge: 8,
+        difficulty: 'easy',
+      },
+    ]);
+    command(game, { type: 'StartGame' });
+    for (const seat of game.state.seats)
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    advance(game, 'SHADOW');
+    game.context.now =
+      game.state.phaseStarted +
+      game.state.config.privacy.shieldSeconds * 1000 +
+      game.state.config.privacy.holdMs;
+    const early = command(game, { type: 'AdvancePhase' }, false);
+    expect(early).toMatchObject({
+      ok: false,
+      code: 'TASK_REPORTS_PENDING',
+    });
+    const livingFaithful = game.state.seats.filter(
+      (seat) => seat.status === 'alive' && seat.role === 'faithful',
+    );
+    game.context.now = game.state.deadline! + 1;
+    command(game, { type: 'AdvancePhase' });
+
+    for (const seat of game.state.seats.filter(
+      (candidate) =>
+        candidate.status === 'alive' && candidate.role === 'traitor',
+    ))
+      expect(
+        game.state.taskAssignments.find(
+          (task) => task.seatId === seat.id && task.cycle === game.state.cycle,
+        )?.status,
+      ).toBe('missed');
+    expect(
+      game.state.taskReports
+        .filter((report) => report.cycle === 1)
+        .map((report) => report.seatId)
+        .sort(),
+    ).toEqual(livingFaithful.map((seat) => seat.id).sort());
+    expect(
+      game.state.taskMurderCancelledCycles.find(
+        (resolution) => resolution.cycle === 1,
+      )?.cancelled,
+    ).toBe(true);
+  });
+  it('voids a departed Traitor task without applying a task-miss penalty', () => {
+    const game = fixture(12, {
+      tasks: { enabled: true },
+      traitors: { sleeper: false, recruitment: 'off' },
+    });
+    Reflect.set(game.context, 'taskCatalog', [
+      {
+        id: 'task-epsilon',
+        text: 'Move a named object into a different room without drawing attention.',
+        tags: ['family', 'seated'],
+        minimumAge: 8,
+        difficulty: 'easy',
+      },
+    ]);
+    command(game, { type: 'StartGame' });
+    for (const seat of game.state.seats)
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    const departed = game.state.seats.find((seat) => seat.role === 'traitor')!;
+    command(game, { type: 'MarkDeparted', seatId: departed.id });
+    expect(
+      game.state.taskAssignments.find((task) => task.seatId === departed.id)
+        ?.status,
+    ).toBe('void');
+    advance(game, 'SHADOW');
+    const living = game.state.seats.filter((seat) => seat.status === 'alive');
+    const faithful = living.find((seat) => seat.role === 'faithful')!;
+    for (const seat of living.filter(
+      (candidate) => candidate.role === 'traitor',
+    )) {
+      const task = game.state.taskAssignments.find(
+        (item) => item.seatId === seat.id && item.cycle === game.state.cycle,
+      );
+      if (task?.taskId)
+        command(game, { type: 'SubmitTaskReport', answer: 'done' }, true, {
+          kind: 'player',
+          seatId: seat.id,
+        });
+      command(game, { type: 'SubmitShadowChoice', choice: faithful.id }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    }
+    game.context.now = game.state.deadline! + 1;
+    command(game, { type: 'AdvancePhase' });
+    expect(
+      game.state.taskMurderCancelledCycles.find(
+        (resolution) => resolution.cycle === 1,
+      )?.cancelled,
+    ).toBe(false);
+  });
+  it('assigns an activated sleeper a task at the next DAWN, not during the current SHADOW', () => {
+    const game = fixture(8, {
+      tasks: { enabled: true },
+      traitors: {
+        number: 1,
+        sleeper: true,
+        recruitment: 'off',
+        timeoutChoice: 'none',
+      },
+      missions: { enabled: false },
+      endgame: { size: 3 },
+    });
+    Reflect.set(game.context, 'taskCatalog', [
+      {
+        id: 'task-sleeper',
+        text: 'Make someone laugh during an ordinary conversation.',
+        tags: ['family', 'seated'],
+        minimumAge: 8,
+        difficulty: 'easy',
+      },
+    ]);
+    command(game, { type: 'StartGame' });
+    const sleeperId = game.state.deal!.sleeper!;
+    for (const seat of game.state.seats)
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    const originalTraitor = game.state.seats.find(
+      (seat) => seat.role === 'traitor',
+    )!;
+    command(game, { type: 'MarkDeparted', seatId: originalTraitor.id });
+    advance(game, 'SHADOW');
+    expect(game.state.seats.find((seat) => seat.id === sleeperId)?.role).toBe(
+      'traitor',
+    );
+    expect(
+      game.state.taskAssignments.find(
+        (task) => task.seatId === sleeperId && task.cycle === 1,
+      )?.taskId,
+    ).toBeNull();
+    game.context.now = game.state.deadline! + 1;
+    command(game, { type: 'AdvancePhase' });
+    expect(game.state.phase).toBe('DAWN');
+    expect(
+      game.state.taskAssignments.find(
+        (task) => task.seatId === sleeperId && task.cycle === 2,
+      )?.taskId,
+    ).toBe('task-sleeper');
+  });
+  it('does not carry a missed-task penalty from a cycle with zero murders', () => {
+    const game = fixture(12, {
+      tasks: { enabled: true },
+      traitors: { murders: 0, sleeper: false },
+    });
+    Reflect.set(game.context, 'taskCatalog', [
+      {
+        id: 'task-zero-murders',
+        text: 'Ask two guests to use a chosen word during an ordinary conversation.',
+        tags: ['family', 'seated'],
+        minimumAge: 8,
+        difficulty: 'easy',
+      },
+    ]);
+    command(game, { type: 'StartGame' });
+    for (const seat of game.state.seats)
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    advance(game, 'SHADOW');
+    game.context.now = game.state.deadline! + 1;
+    command(game, { type: 'AdvancePhase' });
+    expect(game.state.phase).toBe('DAWN');
+    expect(
+      game.state.taskMurderCancelledCycles.find(
+        (resolution) => resolution.cycle === 1,
+      )?.cancelled,
+    ).toBe(false);
+    expect(
+      game.state.taskAssignments.some(
+        (task) =>
+          task.cycle === 2 &&
+          game.state.seats.find(
+            (seat) => seat.id === task.seatId && seat.role === 'traitor',
+          ) !== undefined &&
+          task.taskId === 'task-zero-murders',
+      ),
+    ).toBe(true);
+    expect(
+      viewFor(
+        {
+          kind: 'player',
+          seatId: game.state.seats.find(
+            (seat) => seat.role === 'traitor' && seat.status === 'alive',
+          )!.id,
+          reveal: true,
+        },
+        game.state,
+      ).private?.task?.murderLost,
+    ).toBe(false);
+  });
+  it('does not add an empty mission step when missions are disabled', () => {
+    const game = fixture(12, {
+      missions: { enabled: false },
+      traitors: { sleeper: false },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'SHADOW');
+    advance(game, 'DAWN');
+    game.context.now = game.state.deadline! + 1;
+    command(game, { type: 'AdvancePhase' });
+    expect(game.state.phase).toBe('DEBATE');
+    expect(
+      game.events.some(
+        (event) => event.type === 'PhaseChanged' && event.phase === 'MISSION',
+      ),
+    ).toBe(false);
+  });
 });

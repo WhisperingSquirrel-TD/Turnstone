@@ -3,33 +3,69 @@ import { expect, it } from 'vitest';
 
 const theme = readFileSync('artifacts/party-game/src/theme.css', 'utf8');
 const tokens = Object.fromEntries(
-  [...theme.matchAll(/--([\w-]+):\s*(#[\da-f]{6})/gi)].map((match) => [
-    match[1],
-    match[2],
-  ]),
+  [...theme.matchAll(/--([\w-]+):\s*(#[\da-f]{6}|var\(--[\w-]+\))/gi)].map(
+    (match) => [match[1], match[2]],
+  ),
 );
-it('contains the six exact owner-approved candlelit tokens',()=>{
-  expect(Object.fromEntries(['peat','walnut','bark','gilt','candle','ash'].map(key=>[key,tokens[key]]))).toEqual({
-    peat:'#16110d',walnut:'#241c16',bark:'#3d3a38',gilt:'#c8944a',candle:'#fafaf5',ash:'#d4cdc4',
+function color(name: string, seen = new Set<string>()): string {
+  if (seen.has(name)) throw new Error(`Circular theme token: ${name}`);
+  seen.add(name);
+  const value = tokens[name];
+  if (!value) throw new Error(`Missing theme token: ${name}`);
+  if (value.startsWith('#')) return value;
+  const reference = value.match(/^var\(--([\w-]+)\)$/)?.[1];
+  if (!reference) throw new Error(`Unsupported theme colour token: ${name}`);
+  return color(reference, seen);
+}
+it('contains the six exact owner-approved candlelit tokens', () => {
+  expect(
+    Object.fromEntries(
+      ['peat', 'walnut', 'bark', 'gilt', 'candle', 'ash'].map((key) => [
+        key,
+        color(key).toLowerCase(),
+      ]),
+    ),
+  ).toEqual({
+    peat: '#16110d',
+    walnut: '#241c16',
+    bark: '#3d3a38',
+    gilt: '#c8944a',
+    candle: '#fafaf5',
+    ash: '#d4cdc4',
   });
 });
-for(const [foreground,background] of [
-  ['candle','peat'],['candle','walnut'],['candle','bark'],
-  ['ash','peat'],['ash','walnut'],['ash','bark'],
-  ['gilt','peat'],['gilt','walnut'],['peat','gilt'],
-]){
-  it(`${foreground} on ${background} passes AA for the new dark screens`,()=>{
-    const a=luminance(tokens[foreground!]!);const b=luminance(tokens[background!]!);
-    expect((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)).toBeGreaterThanOrEqual(4.5);
+for (const [foreground, background] of [
+  ['candle', 'peat'],
+  ['candle', 'walnut'],
+  ['candle', 'bark'],
+  ['ash', 'peat'],
+  ['ash', 'walnut'],
+  ['ash', 'bark'],
+  ['gilt', 'peat'],
+  ['gilt', 'walnut'],
+  ['peat', 'gilt'],
+]) {
+  it(`${foreground} on ${background} passes AA for the new dark screens`, () => {
+    const a = luminance(foreground!);
+    const b = luminance(background!);
+    expect(
+      (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
+    ).toBeGreaterThanOrEqual(4.5);
   });
 }
-it('rejects normal-size gold on Bark and Candle on gold',()=>{
-  for(const [foreground,background] of [['gilt','bark'],['candle','gilt']]){
-    const a=luminance(tokens[foreground!]!);const b=luminance(tokens[background!]!);
-    expect((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)).toBeLessThan(4.5);
+it('rejects normal-size gold on Bark and Candle on gold', () => {
+  for (const [foreground, background] of [
+    ['gilt', 'bark'],
+    ['candle', 'gilt'],
+  ]) {
+    const a = luminance(foreground!);
+    const b = luminance(background!);
+    expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeLessThan(4.5);
   }
 });
-function luminance(hex: string) {
+function luminance(name: string) {
+  const hex = name.startsWith('#') ? name : color(name);
+  if (!/^#[\da-f]{6}$/i.test(hex)) throw new Error(`Invalid colour: ${name}`);
   const channels = [1, 3, 5].map((start) => {
     const value = parseInt(hex.slice(start, start + 2), 16) / 255;
     return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
@@ -47,8 +83,8 @@ for (const [foreground, background] of [
   ['border', 'charcoal'],
 ]) {
   it(`${foreground} on ${background} meets WCAG AA for ordinary text`, () => {
-    const a = luminance(tokens[foreground!]!);
-    const b = luminance(tokens[background!]!);
+    const a = luminance(foreground!);
+    const b = luminance(background!);
     expect(
       (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
     ).toBeGreaterThanOrEqual(4.5);
@@ -56,8 +92,8 @@ for (const [foreground, background] of [
 }
 
 it('forbids ordinary text on amber because the supplied palette cannot meet 4.5:1', () => {
-  const a = luminance(tokens.charcoal!);
-  const b = luminance(tokens.amber!);
+  const a = luminance('charcoal');
+  const b = luminance('amber');
   expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeLessThan(4.5);
   const app = readFileSync('artifacts/party-game/src/App.tsx', 'utf8');
   expect(app).not.toMatch(/\bbg-amber\b|\btext-amber\b/);

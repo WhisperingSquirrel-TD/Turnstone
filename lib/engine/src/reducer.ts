@@ -43,6 +43,9 @@ export function evolve(previous: State | null, input: unknown): State {
       winner: null,
       reason: null,
       firstVoteOccurred: false,
+      taskAssignments: [],
+      taskReports: [],
+      taskMurderCancelledCycles: [],
     };
   }
   if (!previous) throw new Error('First event must create a game');
@@ -75,13 +78,17 @@ export function evolve(previous: State | null, input: unknown): State {
       state.shadow = {};
       state.chat = [];
       state.pendingSleeper = false;
+      state.taskAssignments = [];
+      state.taskReports = [];
+      state.taskMurderCancelledCycles = [];
       break;
     case 'PhaseChanged':
       state.phase = event.phase;
       state.phaseStarted = event.at;
       state.deadline = event.deadline;
       state.cycle = event.cycle;
-      if (!['DRAFT', 'LOBBY', 'ENDGAME'].includes(event.phase)) state.steps++;
+      if (!['DRAFT', 'LOBBY', 'ENDGAME', 'FINAL_BANISH'].includes(event.phase))
+        state.steps++;
       if (['VOTE', 'FINAL_BANISH'].includes(event.phase)) {
         state.votes = {};
         state.revealed = [];
@@ -114,12 +121,56 @@ export function evolve(previous: State | null, input: unknown): State {
       state.shadow[event.seatId] = event.choice;
       if (!state.acks.includes(event.seatId)) state.acks.push(event.seatId);
       break;
+    case 'TaskAssigned':
+      state.taskAssignments.push({
+        seatId: event.seatId,
+        cycle: event.cycle,
+        taskId: event.task?.id ?? null,
+        text: event.task?.text ?? 'Keep watch today: who is acting oddly?',
+        shared: event.shared,
+        status: 'assigned',
+      });
+      break;
+    case 'TaskReported': {
+      const task = state.taskAssignments.find(
+        (item) =>
+          item.seatId === event.seatId &&
+          item.cycle === event.cycle &&
+          item.status !== 'void',
+      );
+      if (!task) throw new Error('Task report has no live assignment');
+      task.status = event.report;
+      break;
+    }
+    case 'TaskDecoyAnswered': {
+      const prior = state.taskReports.find(
+        (item) => item.seatId === event.seatId && item.cycle === event.cycle,
+      );
+      if (prior) prior.answer = event.answer;
+      else
+        state.taskReports.push({
+          seatId: event.seatId,
+          cycle: event.cycle,
+          answer: event.answer,
+        });
+      break;
+    }
+    case 'TaskMurderCancelled':
+      state.taskMurderCancelledCycles.push({
+        cycle: event.cycle,
+        cancelled: event.cancelled,
+        traitors: event.traitors,
+      });
+      break;
     case 'SeatRemoved': {
       const seat = state.seats.find((s) => s.id === event.seatId);
       if (!seat || seat.status !== 'alive')
         throw new Error('Invalid elimination event');
       seat.status = event.reason;
       seat.publicRole = event.publicRole;
+      for (const task of state.taskAssignments)
+        if (task.seatId === event.seatId && task.status === 'assigned')
+          task.status = 'void';
       delete state.votes[event.seatId];
       delete state.shadow[event.seatId];
       break;

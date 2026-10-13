@@ -2,6 +2,28 @@ import { z } from 'zod';
 
 const minutes = (value: number, min = 1, max = 60) =>
   z.number().int().min(min).max(max).default(value);
+const taskTagSchema = z.enum([
+  'family',
+  'office',
+  'adults-only',
+  'seated',
+  'remote-friendly',
+]);
+export const taskDefinitionSchema = z
+  .object({
+    id: z.string().min(1).max(128),
+    text: z
+      .string()
+      .trim()
+      .min(8)
+      .max(400)
+      .refine((value) => !/\p{Cc}/u.test(value)),
+    tags: z.array(taskTagSchema).min(1),
+    minimumAge: z.number().int().min(5).max(18),
+    difficulty: z.enum(['easy', 'medium', 'hard']),
+  })
+  .strict();
+export type TaskDefinition = z.infer<typeof taskDefinitionSchema>;
 const interval = z
   .object({ start: z.string().datetime(), end: z.string().datetime() })
   .strict()
@@ -177,17 +199,7 @@ export const gameConfigSchema = z
         missedConsequence: z
           .enum(['none', 'lose-next-murder'])
           .default('lose-next-murder'),
-        filters: z
-          .array(
-            z.enum([
-              'family',
-              'office',
-              'adults-only',
-              'seated',
-              'remote-friendly',
-            ]),
-          )
-          .default([]),
+        filters: z.array(taskTagSchema).default([]),
       })
       .strict()
       .default({}),

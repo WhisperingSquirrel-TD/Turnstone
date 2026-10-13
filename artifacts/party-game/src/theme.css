@@ -1,10 +1,22 @@
 :root {
-  --charcoal: #2d2d2d;
-  --amber: #d97706; /* accent only: never body text, never white text on it */
-  --slate: #4a5568; /* body text on light backgrounds */
-  --light-bg: #f7f5f2;
-  --white: #ffffff;
-  --border: #cbd5e0;
-  --amber-light: #fef3c7;
-  --font-body: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  /* Turnstone's approved candlelit palette. New screens use these semantic tokens. */
+  --peat: #16110d;
+  --walnut: #241c16;
+  --bark: #3d3a38;
+  --gilt: #c8944a;
+  --candle: #fafaf5;
+  --ash: #d4cdc4;
+
+  /* Older foundation-shell aliases stay legible until their planned screen redesigns. */
+  --charcoal: var(--bark);
+  --amber: var(--gilt); /* accent only */
+  --slate: #5c5652;
+  --light-bg: var(--candle);
+  --white: var(--candle);
+  --border: var(--ash);
+  --amber-light: var(--candle);
+
+  --font-body:
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --font-headline: ui-serif, 'New York', 'Noto Serif', Georgia, serif;
 }
