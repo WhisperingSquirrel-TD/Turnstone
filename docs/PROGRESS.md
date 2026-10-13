@@ -36,7 +36,9 @@ The earlier owner-authorised `GIT_URL` push was rejected for repository access o
 
 The five restored commits were pushed to `main` at `c39fc9899b6f31626c23b57012e192bae815d3aa`; `git fetch origin` confirmed `origin/main` matches. The remote and `.git/config` remain credential-free. GitHub Actions Verify run #2 for this commit completed successfully: static-checks, unit, property, integration, scenarios, audit, Lighthouse, iPhone WebKit, Pixel Chromium, iPad WebKit, desktop Chromium and required-checks all passed. Promote verified commit run #2 was skipped; no release promotion occurred.
 
-The separate documentation commit `3f9a3326a327b6ab996f0cbc394d25106486a411` was pushed next. Verify run #3 for it ended cancelled: the scenarios job was cancelled and required-checks failed; all other reported jobs passed. No newer `main` push was present, so the precise cancellation cause is unknown. Promote run #3 was skipped. The visual-direction changes remain a separate local commit, not yet pushed. The workflow mirror and drift-check files remain removed.
+The separate documentation commit `3f9a3326a327b6ab996f0cbc394d25106486a411` was pushed next. Verify run #3 for it ended cancelled: the scenarios job was cancelled and required-checks failed; all other reported jobs passed. No newer `main` push was present, so the precise cancellation cause is unknown. Promote run #3 was skipped.
+
+The visual-direction commit `2297844858932ab21d84f004e401cecbdced34c1` was then pushed separately. GitHub Actions Verify run #4 completed successfully: static-checks, unit, property, integration, scenarios, audit, Lighthouse, iPhone WebKit, Pixel Chromium, iPad WebKit, desktop Chromium and required-checks all passed. Promote run #4 was skipped and the `release` branch remains absent. The workflow mirror and drift-check files remain removed.
 
 ### Milestone 3 gate — 13 October 2026
 
