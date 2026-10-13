@@ -657,6 +657,46 @@ The Relaxed option lengthens debates and adds one extra mission only when the fu
 
 **Consequence:** Secret scanning uses no paid licence or token. Missing, duplicated or mismatched checksum records fail CI before Gitleaks runs; any detected secret fails the scan.
 
+## D41 — Milestone 0 and Milestone 3 reviewer approvals (resolved)
+
+**Context:** The reviewer confirmed that GitHub Verify runs #2 and #4 were fully green, including both WebKit profiles, and approved Milestone 0 and Milestone 3. The reviewer also asked why Verify run #3's scenario job was cancelled.
+
+**Options:** Keep the previous provisional/pending status; or update the record from the completed GitHub runs and reviewer decision.
+
+**Choice:** Record Milestone 0 and Milestone 3 as approved. Verify run #3's scenario job reached its configured 15-minute limit and was cancelled before the subsequent push; `cancel-in-progress` was not the cause.
+
+**Consequence:** Milestone 0's WebKit gate is satisfied. Milestone 3 needs no further work. Milestone 2 remains unaccepted until its differential reference implementation meets the reviewer's findings and the sample is rerun green.
+
+## D42 — Independent scenario oracle review correction (in progress)
+
+**Context:** The reviewer found that the first reference model trusted engine elimination events and could not detect incorrect votes, murders, shields, missed-task handling or parity. The report also must not claim an independent pot comparison before missions exist.
+
+**Options:** Keep the former outcome-only replay; or independently derive rule outcomes from public event inputs and recorded random draws, then compare engine events.
+
+**Choice:** Replace the outcome-only replay with an independent model that tallies ballots, validates exact random candidate sets and choices, resolves shadow picks, shields, task cancellation, sleeper activation/D12, recruitment trigger eligibility, parity and terminal events. Random choices are now recorded in events. A scripts-only fault-injection seam tests five required engine faults plus an incorrect random candidate set. The report labels pot validation `pending Milestone 7`; it does not compare the model's pot placeholder with engine state.
+
+**Consequence:** These focused oracle and fault-injection tests pass locally. The full scenario sample, complete `pnpm run verify`, GitHub push and CI run are still pending. Recruitment offer/response outcomes cannot be compared until the engine has those events; recruitment trigger conditions are independently derived. Do not claim Milestone 2 acceptance or start Milestone 4 yet.
+
+## D43 — Unanimous Traitor decision after its re-vote (resolved)
+
+**Context:** §6 configures victim choice as “Unanimous with re-vote”, but does not state what happens if the Traitors still disagree after that re-vote. The current engine treats the setting like a majority choice, which is not a justified interpretation.
+
+**Options:** Apply the configured no-decision rule after one split re-vote; cancel the murder; or continue private re-votes until unanimous.
+
+**Choice:** Allow exactly one re-vote, then apply the configured no-decision rule if the Traitors still disagree. With one living Traitor, that Traitor's submitted choice is automatically unanimous. Every SHADOW always contains two equal hidden choice windows for every living player, even when the first choices agree. Traitors see each other's live picks in both windows; Faithful see same-shaped decoys for the same total duration, so no one can infer whether a re-vote occurred.
+
+**Consequence:** The engine uses a fixed midpoint transition and resets second-window picks before resolving the murder. A golden complete game covers a split after re-vote; the independent oracle validates the configured fallback and exact random candidate set. Do not reveal the re-vote to Faithful, visitors, the coordinator or presenter.
+
+## D44 — Sequential murder slots and terminal dawn outcomes (resolved)
+
+**Context:** The first full sample after strengthening the differential oracle found two linked outcome mismatches in multi-murder cycles: the engine could reuse an already-consumed Traitor pick (or invent another victim under the `no murder` fallback), and the engine announced later victims even when parity or the two-player rule ended the game after an earlier removal. The independent reference also initially predicted every selected victim without applying the immediate-finish rule within the dawn batch.
+
+**Options:** Treat all configured murders as one fixed target list regardless of intervening eliminations; or resolve each slot against the remaining eligible choices and stop when the game's win conditions end play.
+
+**Choice:** For each murder slot, exclude targets already selected and resolve the current picks under the configured choice/no-decision rules. If no eligible current pick remains, use the configured no-decision outcome; `no murder` does not invent or carry a later victim. Build `DawnResolved.victims` sequentially and stop at the first no-Traitor, parity or two-player finish, with the normal per-removal win check. The independent oracle separately derives this truncated list from roles, config, choices, shields, task reports and recorded random choices. Golden behavioral assertions such as “split after re-vote” are stored separately from the expected game outcome.
+
+**Consequence:** Regression tests cover a missing second murder choice and a multi-victim dawn that ends on its first removal. The reference-model test proves it stops its expected victim list at that same terminal boundary. The first failing sample's 45 simulation seeds now replay without differential failures. The fresh sample and full local `pnpm run verify` are green; GitHub Actions validation is pending.
+
 ## Dependency record
 
 This is the foundation's previously recorded inventory, **not** a new install/audit or a complete claim of pinning compliance. New product/tooling direct dependencies were pinned; inherited scaffold manifests still require review for §1's exact-pinning requirement. Workspace references use `workspace:*`.

@@ -6,6 +6,7 @@ import {
   resolveScenarioReportPath,
   type ScenarioReport,
 } from '../scripts/src/scenarios/report';
+import { SCENARIO_PENDING_LAYERS } from '../scripts/src/scenarios/runner';
 
 it('writes the default report into the workspace docs directory from any package cwd', () => {
   const workspaceRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -18,6 +19,12 @@ it('resolves a custom relative report path from the workspace root', () => {
   const workspaceRoot = fileURLToPath(new URL('../', import.meta.url));
   expect(resolveScenarioReportPath('tmp/report.md')).toBe(
     resolve(workspaceRoot, 'tmp/report.md'),
+  );
+});
+
+it('keeps the independent pot check explicitly pending until Milestone 7', () => {
+  expect(SCENARIO_PENDING_LAYERS).toContain(
+    'Independent pot validation — pending Milestone 7',
   );
 });
 

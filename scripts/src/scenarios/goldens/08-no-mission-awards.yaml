@@ -29,7 +29,7 @@ config:
     plannedCycles: 3
 expected:
   phase: FINISHED
-  winner: faithful
-  reason: no-traitors
+  winner: traitor
+  reason: two-players
   alive: 2
   eliminated: 8

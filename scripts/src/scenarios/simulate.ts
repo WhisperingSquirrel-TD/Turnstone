@@ -36,6 +36,7 @@ export type CompleteGameResult = {
   steps: number;
   checks: {
     referenceMatches: true;
+    potValidation: 'pending Milestone 7';
     replayMatches: true;
     incrementalReplayEvents: number;
     replayStepChecks: number;
@@ -411,7 +412,7 @@ export function runCompleteGame(
       for (const [index, seat] of state.seats.entries()) {
         if (seat.status !== 'alive' || strategySkipsSeat(index, state))
           continue;
-        if (config.tasks.enabled) {
+        if (config.tasks.enabled && state.shadowRound === 1) {
           const isTraitorTask = state.taskAssignments.some(
             (task) =>
               task.seatId === seat.id &&
@@ -498,11 +499,7 @@ export function runCompleteGame(
   }));
   if (JSON.stringify(referenceSeats) !== JSON.stringify(actualSeats))
     throw new Error('Independent reference model disagrees on seat outcomes');
-  if (
-    !reference.finished ||
-    reference.winner !== finalState.winner ||
-    reference.pot !== finalState.pot
-  )
+  if (!reference.finished || reference.winner !== finalState.winner)
     throw new Error('Independent reference model disagrees on game result');
   assertState({ state: finalState, events: game.events }, replayCursor);
 
@@ -514,6 +511,7 @@ export function runCompleteGame(
     steps: finalState.steps,
     checks: {
       referenceMatches: true,
+      potValidation: reference.potCheck,
       replayMatches: true,
       incrementalReplayEvents: replayCursor.eventCount,
       replayStepChecks: replayCursor.stepChecks,

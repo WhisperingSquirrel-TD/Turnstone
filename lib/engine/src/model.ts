@@ -52,8 +52,10 @@ export type State = {
   phase: Phase;
   phaseStarted: number;
   deadline: number | null;
+  shadowEndAt: number | null;
   paused: boolean;
   remaining: number | null;
+  shadowRemaining: number | null;
   cycle: number;
   steps: number;
   maxCycles: number;
@@ -72,6 +74,7 @@ export type State = {
   revote: boolean;
   candidates: string[];
   shadow: Record<string, string>;
+  shadowRound: 0 | 1 | 2;
   shields: string[];
   protected: string[];
   pendingSleeper: boolean;

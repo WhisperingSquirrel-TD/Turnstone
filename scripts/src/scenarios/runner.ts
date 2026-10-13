@@ -35,6 +35,13 @@ export const SAMPLE_SCENARIO_LIMITS = {
   fuzzGames: 32,
 } as const;
 
+export const SCENARIO_PENDING_LAYERS = [
+  'Independent pot validation — pending Milestone 7',
+  'HTTP/socket scenarios, real restart and network-fault integration (Milestone 4)',
+  'Complete phone, tablet and installed-mode browser games (Milestone 5)',
+  'Production-scale capacity, soak, chaos and mutation suites (Milestone 10)',
+];
+
 export type ScenarioBatchResult = {
   completed: number;
   failureSeeds: number[];
@@ -141,11 +148,7 @@ export async function runEngineScenarioSuite(
     goldenGames: 0,
     failures: [],
     failureSeeds: [],
-    pendingLayers: [
-      'HTTP/socket scenarios, real restart and network-fault integration (Milestone 4)',
-      'Complete phone, tablet and installed-mode browser games (Milestone 5)',
-      'Production-scale capacity, soak, chaos and mutation suites (Milestone 10)',
-    ],
+    pendingLayers: [...SCENARIO_PENDING_LAYERS],
   };
 
   const cells = sweepConfigs();

@@ -18,8 +18,10 @@ export function evolve(previous: State | null, input: unknown): State {
       phase: 'DRAFT',
       phaseStarted: event.at,
       deadline: null,
+      shadowEndAt: null,
       paused: false,
       remaining: null,
+      shadowRemaining: null,
       cycle: 0,
       steps: 0,
       maxCycles:
@@ -34,6 +36,7 @@ export function evolve(previous: State | null, input: unknown): State {
       revote: false,
       candidates: [],
       shadow: {},
+      shadowRound: 0,
       shields: [],
       protected: [],
       pendingSleeper: false,
@@ -86,6 +89,7 @@ export function evolve(previous: State | null, input: unknown): State {
       state.phase = event.phase;
       state.phaseStarted = event.at;
       state.deadline = event.deadline;
+      state.shadowEndAt = event.shadowEndAt;
       state.cycle = event.cycle;
       if (!['DRAFT', 'LOBBY', 'ENDGAME', 'FINAL_BANISH'].includes(event.phase))
         state.steps++;
@@ -98,7 +102,10 @@ export function evolve(previous: State | null, input: unknown): State {
       }
       if (event.phase === 'SHADOW') {
         state.shadow = {};
+        state.shadowRound = 1;
         state.acks = [];
+      } else {
+        state.shadowRound = 0;
       }
       if (event.phase === 'FINAL_VOTE') state.endVotes = {};
       break;
@@ -120,6 +127,14 @@ export function evolve(previous: State | null, input: unknown): State {
     case 'ShadowSubmitted':
       state.shadow[event.seatId] = event.choice;
       if (!state.acks.includes(event.seatId)) state.acks.push(event.seatId);
+      break;
+    case 'ShadowRoundAdvanced':
+      if (state.phase !== 'SHADOW' || state.shadowRound !== 1)
+        throw new Error('Invalid shadow round transition');
+      state.shadowRound = 2;
+      state.deadline = event.deadline;
+      state.shadow = {};
+      state.acks = [];
       break;
     case 'TaskAssigned':
       state.taskAssignments.push({
@@ -185,15 +200,20 @@ export function evolve(previous: State | null, input: unknown): State {
     case 'Paused':
       state.paused = true;
       state.remaining = event.remaining;
+      state.shadowRemaining = event.shadowRemaining;
       state.deadline = null;
+      state.shadowEndAt = null;
       break;
     case 'Resumed':
       state.paused = false;
       state.deadline = event.deadline;
+      state.shadowEndAt = event.shadowEndAt;
       state.remaining = null;
+      state.shadowRemaining = null;
       break;
     case 'DeadlineExtended':
       state.deadline = event.deadline;
+      state.shadowEndAt = event.shadowEndAt;
       break;
     case 'SleeperWaiting':
       state.pendingSleeper = true;
@@ -222,6 +242,7 @@ export function evolve(previous: State | null, input: unknown): State {
       state.winner = event.winner;
       state.reason = event.reason;
       state.deadline = null;
+      state.shadowEndAt = null;
       state.paused = false;
       break;
   }

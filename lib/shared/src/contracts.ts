@@ -67,6 +67,7 @@ export const eventSchema = z.discriminatedUnion('type', [
   event('PhaseChanged', {
     phase: phaseSchema,
     deadline: z.number().nullable(),
+    shadowEndAt: z.number().nullable().default(null),
     cycle: z.number().int().nonnegative(),
   }),
   event('RolesDealt', {
@@ -84,7 +85,20 @@ export const eventSchema = z.discriminatedUnion('type', [
     revote: z.boolean(),
     candidates: z.array(id),
   }),
+  event('RandomChoiceRecorded', {
+    purpose: z.enum([
+      'cycle-vote-tie-break',
+      'endgame-vote-tie-break',
+      'murder-target',
+    ]),
+    candidates: z.array(id).min(1),
+    chosen: id,
+  }),
   event('ShadowSubmitted', { seatId: id, choice: id }),
+  event('ShadowRoundAdvanced', {
+    cycle: z.number().int().positive(),
+    deadline: z.number().int().nonnegative(),
+  }),
   event('TaskAssigned', {
     seatId: id,
     cycle: z.number().int().positive(),
@@ -113,9 +127,18 @@ export const eventSchema = z.discriminatedUnion('type', [
   }),
   event('ShieldsAllocated', { holders: z.array(id) }),
   event('DawnResolved', { victims: z.array(id), protected: z.array(id) }),
-  event('Paused', { remaining: z.number().nullable() }),
-  event('Resumed', { deadline: z.number().nullable() }),
-  event('DeadlineExtended', { deadline: z.number() }),
+  event('Paused', {
+    remaining: z.number().nullable(),
+    shadowRemaining: z.number().nullable().default(null),
+  }),
+  event('Resumed', {
+    deadline: z.number().nullable(),
+    shadowEndAt: z.number().nullable().default(null),
+  }),
+  event('DeadlineExtended', {
+    deadline: z.number(),
+    shadowEndAt: z.number().nullable().default(null),
+  }),
   event('SleeperWaiting', {}),
   event('SleeperActivated', { seatId: id }),
   event('TraitorMessage', { seatId: id, text: z.string() }),

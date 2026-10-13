@@ -26,5 +26,5 @@ expected:
   phase: FINISHED
   winner: faithful
   reason: no-traitors
-  alive: 4
-  eliminated: 4
+  alive: 2
+  eliminated: 6

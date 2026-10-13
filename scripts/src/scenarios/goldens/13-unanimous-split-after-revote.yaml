@@ -1,0 +1,33 @@
+id: unanimous-split-after-revote
+description: Traitors split in the fixed second shadow window and the leading-pick timeout rule resolves the murder.
+seed: 1
+strategy: random
+config:
+  players:
+    count: 15
+  traitors:
+    number: 3
+    sleeper: false
+    recruitment: off
+    victimDecision: unanimous
+    timeoutChoice: leading
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-random
+    revealStyle: all
+  endgame:
+    size: 4
+    parity: false
+  schedule:
+    format: quick
+    plannedCycles: 1
+expected:
+  phase: FINISHED
+  winner: traitor
+  reason: two-players
+  alive: 2
+  eliminated: 13
+assertions:
+  shadowSplitAfterRevote: true

@@ -19,7 +19,11 @@ const strategies = [
   'coordinator-probes-for-secrets',
 ] as const;
 
-function runToFinish(strategy: (typeof strategies)[number], count: number) {
+function runToFinish(
+  strategy: (typeof strategies)[number],
+  count: number,
+  unanimous = false,
+) {
   const game = fixture(count, {
     tasks: { enabled: true },
     missions: { enabled: false, shields: 'off' },
@@ -27,6 +31,7 @@ function runToFinish(strategy: (typeof strategies)[number], count: number) {
       number: 'auto',
       sleeper: false,
       recruitment: 'off',
+      victimDecision: unanimous ? 'unanimous' : 'majority',
       timeoutChoice: 'random',
     },
     roundTable: {
@@ -118,13 +123,15 @@ function runToFinish(strategy: (typeof strategies)[number], count: number) {
       for (const seat of game.state.seats.filter(
         (item) => item.status === 'alive',
       )) {
-        const reported = command(
-          game,
-          { type: 'SubmitTaskReport', answer: 'done' },
-          true,
-          { kind: 'player', seatId: seat.id },
-        );
-        expect(reported.ok).toBe(true);
+        if (game.state.shadowRound === 1) {
+          const reported = command(
+            game,
+            { type: 'SubmitTaskReport', answer: 'done' },
+            true,
+            { kind: 'player', seatId: seat.id },
+          );
+          expect(reported.ok).toBe(true);
+        }
         const privateView = viewFor(
           { kind: 'player', seatId: seat.id, reveal: true },
           game.state,
@@ -136,10 +143,23 @@ function runToFinish(strategy: (typeof strategies)[number], count: number) {
           );
           options = options.filter((option) => !teammates.has(option.id));
         }
+        const livingTraitors = game.state.seats.filter(
+          (item) => item.status === 'alive' && item.role === 'traitor',
+        );
+        const choiceIndex =
+          unanimous &&
+          game.state.shadowRound === 2 &&
+          privateView.role === 'traitor'
+            ? livingTraitors.findIndex((item) => item.id === seat.id) %
+              options.length
+            : 0;
         if (options.length)
           command(
             game,
-            { type: 'SubmitShadowChoice', choice: options[0]!.id },
+            {
+              type: 'SubmitShadowChoice',
+              choice: options[choiceIndex]!.id,
+            },
             true,
             { kind: 'player', seatId: seat.id },
           );
@@ -184,5 +204,10 @@ for (const [index, strategy] of strategies.entries()) {
     );
     expect(millisecondsPerRuleStep).toBeLessThan(100);
     expect(durationMs).toBeLessThan(15_000);
+  }, 60_000);
+
+  it(`terminates with the fixed unanimous re-vote for the ${strategy} bot`, () => {
+    const steps = runToFinish(strategy, 15, true);
+    expect(steps).toBeGreaterThan(0);
   }, 60_000);
 }

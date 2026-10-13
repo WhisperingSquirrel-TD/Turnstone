@@ -4,8 +4,8 @@ Status: PASS — engine scenarios
 
 Mode: sample
 Seed: 20261013
-Started: 2026-10-13T15:02:05.750Z
-Duration: 397684 ms
+Started: 2026-10-13T18:26:27.420Z
+Duration: 472339 ms
 
 ## Executed
 
@@ -16,7 +16,7 @@ Duration: 397684 ms
 - High-seat pairwise rows: 792 (30–40 seats)
 - High-seat pairwise games: 792
 - Deterministic fault-fuzz games: 32
-- YAML golden games: 12
+- YAML golden games: 13
 
 ## Results
 
@@ -30,6 +30,7 @@ Failure seeds: none
 
 These are not counted as passes and remain release gates for their planned milestones:
 
+- Independent pot validation — pending Milestone 7 — NOT RUN
 - HTTP/socket scenarios, real restart and network-fault integration (Milestone 4) — NOT RUN
 - Complete phone, tablet and installed-mode browser games (Milestone 5) — NOT RUN
 - Production-scale capacity, soak, chaos and mutation suites (Milestone 10) — NOT RUN

@@ -65,6 +65,19 @@ export function decide(
       throw new Error('Invalid injected random source');
     return choices[index]!;
   };
+  const chooseSeat = (
+    choices: readonly string[],
+    purpose:
+      'cycle-vote-tie-break' | 'endgame-vote-tie-break' | 'murder-target',
+  ) => {
+    const chosen = choose(choices);
+    emit('RandomChoiceRecorded', {
+      purpose,
+      candidates: [...choices].sort(),
+      chosen,
+    });
+    return chosen;
+  };
   const eligibleTasks = () =>
     (ctx.taskCatalog ?? [])
       .flatMap((item) => {
@@ -228,11 +241,14 @@ export function decide(
     return (value[phase] ?? 1) * 60_000;
   };
   const enter = (phase: Phase, nextCycle = state!.cycle) => {
+    const phaseDuration = duration(phase);
     emit('PhaseChanged', {
       phase,
       deadline: ['DRAFT', 'LOBBY'].includes(phase)
         ? null
-        : ctx.now + duration(phase),
+        : ctx.now +
+          (phase === 'SHADOW' ? Math.ceil(phaseDuration / 2) : phaseDuration),
+      shadowEndAt: phase === 'SHADOW' ? ctx.now + phaseDuration : null,
       cycle: nextCycle,
     });
     if (phase === 'SHADOW' && state!.pendingSleeper) {
@@ -316,6 +332,7 @@ export function decide(
       break;
     case 'SubmitTaskReport': {
       if (state.phase !== 'SHADOW') return error('WRONG_PHASE');
+      if (state.shadowRound !== 1) return error('TASK_REPORT_CLOSED');
       if (state.deadline !== null && ctx.now >= state.deadline)
         return error('DEADLINE_PASSED');
       const assignment = state.taskAssignments.find(
@@ -453,18 +470,30 @@ export function decide(
           state.deadline === null
             ? null
             : Math.max(0, state.deadline - ctx.now),
+        shadowRemaining:
+          state.shadowEndAt === null
+            ? null
+            : Math.max(0, state.shadowEndAt - ctx.now),
       });
       break;
     case 'Resume':
       if (!state.paused) return error('NOT_PAUSED');
       emit('Resumed', {
         deadline: state.remaining === null ? null : ctx.now + state.remaining,
+        shadowEndAt:
+          state.shadowRemaining === null
+            ? null
+            : ctx.now + state.shadowRemaining,
       });
       break;
     case 'ExtendPhase':
       if (state.deadline === null) return error('NO_DEADLINE');
       emit('DeadlineExtended', {
         deadline: state.deadline + cmd.minutes * 60_000,
+        shadowEndAt:
+          state.shadowEndAt === null
+            ? null
+            : state.shadowEndAt + cmd.minutes * 60_000,
       });
       break;
     case 'SubmitEndgameVote':
@@ -532,7 +561,14 @@ export function decide(
           state.phase !== 'FINAL_BANISH' &&
           state.config.roundTable.tieRule === 'revote-none'
             ? null
-            : choose(tied);
+            : tied.length > 1
+              ? chooseSeat(
+                  tied,
+                  state.phase === 'FINAL_BANISH'
+                    ? 'endgame-vote-tie-break'
+                    : 'cycle-vote-tie-break',
+                )
+              : tied[0]!;
         emit('VoteClosed', { target, revote: false, candidates: [] });
         if (state!.phase === 'FINAL_BANISH') {
           if (target) remove(target, 'banished');
@@ -596,25 +632,67 @@ export function decide(
               answer: 'No decoy answer submitted.',
             });
         }
+        if (state.shadowRound === 1) {
+          if (state.deadline !== null && ctx.now < state.deadline)
+            return error('SHADOW_ROUND_NOT_DUE');
+          if (state.shadowEndAt === null)
+            return error('SHADOW_DEADLINE_MISSING');
+          emit('ShadowRoundAdvanced', {
+            cycle: state.cycle,
+            deadline: state.shadowEndAt,
+          });
+          break;
+        }
+        if (state.shadowRound !== 2) return error('INVALID_SHADOW_ROUND');
+        if (state.deadline !== null && ctx.now < state.deadline)
+          return error('SHADOW_WINDOW_NOT_DUE');
+        const livingTraitors = alive(state).filter(
+          (seat) => seat.role === 'traitor',
+        );
+        const liveAssignments = state.taskAssignments.filter(
+          (task) =>
+            task.cycle === state!.cycle &&
+            livingTraitors.some((seat) => seat.id === task.seatId),
+        );
+        const missedIndividualTask = liveAssignments.some(
+          (task) =>
+            !task.shared &&
+            (task.status === 'missed' || task.status === 'assigned'),
+        );
+        const sharedTaskIds = new Set(
+          liveAssignments
+            .filter((task) => task.shared)
+            .map((task) => task.taskId),
+        );
+        const missedSharedTask = [...sharedTaskIds].some((taskId) => {
+          const reports = liveAssignments.filter(
+            (task) => task.shared && task.taskId === taskId,
+          );
+          return (
+            !reports.some((task) => task.status === 'done') &&
+            reports.some(
+              (task) => task.status === 'missed' || task.status === 'assigned',
+            )
+          );
+        });
         const taskPenalty =
           state.config.tasks.enabled &&
           state.config.tasks.missedConsequence === 'lose-next-murder' &&
           state.config.traitors.murders > 0 &&
-          state.taskAssignments.some(
-            (task) =>
-              task.cycle === state!.cycle &&
-              task.status === 'missed' &&
-              alive(state!).some(
-                (seat) => seat.id === task.seatId && seat.role === 'traitor',
-              ),
-          );
+          (missedIndividualTask || missedSharedTask);
         const eligible = alive(state)
           .filter((seat) => seat.role === 'faithful')
           .map((seat) => seat.id);
-        const picks = alive(state)
-          .filter((seat) => seat.role === 'traitor')
-          .map((seat) => state!.shadow[seat.id])
-          .filter((id): id is string => Boolean(id) && eligible.includes(id!));
+        const submittedPicks = Object.entries(state.shadow)
+          .filter(([seatId]) =>
+            alive(state!).some(
+              (seat) => seat.id === seatId && seat.role === 'traitor',
+            ),
+          )
+          .map(([seatId, choice]) => ({ seatId, choice }));
+        const picks = submittedPicks
+          .map((pick) => pick.choice)
+          .filter((id) => eligible.includes(id));
         const selected: string[] = [];
         for (
           let i = 0;
@@ -623,41 +701,78 @@ export function decide(
         ) {
           const available = eligible.filter((id) => !selected.includes(id));
           if (!available.length) break;
-          if (!picks.length && state.config.traitors.timeoutChoice === 'none')
+          const currentPicks = picks.filter((id) => available.includes(id));
+          if (state.config.traitors.victimDecision === 'unanimous') {
+            const submittedByEveryTraitor =
+              submittedPicks.length === livingTraitors.length;
+            const unanimousChoice =
+              submittedByEveryTraitor &&
+              new Set(submittedPicks.map((pick) => pick.choice)).size === 1
+                ? submittedPicks[0]?.choice
+                : undefined;
+            if (unanimousChoice && available.includes(unanimousChoice)) {
+              selected.push(unanimousChoice);
+              continue;
+            }
+            if (state.config.traitors.timeoutChoice === 'none') break;
+            if (state.config.traitors.timeoutChoice === 'random') {
+              selected.push(chooseSeat(available, 'murder-target'));
+              continue;
+            }
+          } else if (
+            !currentPicks.length &&
+            state.config.traitors.timeoutChoice === 'none'
+          ) {
             break;
+          }
           const scores = available.map((id) => ({
             id,
-            score: picks.filter((pick) => pick === id).length,
+            score: currentPicks.filter((pick) => pick === id).length,
           }));
           const maximum = Math.max(...scores.map((v) => v.score));
           const leading = scores
             .filter((v) => v.score === maximum)
             .map((v) => v.id);
+          const firstPick =
+            state.config.traitors.victimDecision === 'first'
+              ? currentPicks[0]
+              : undefined;
+          const randomCandidates =
+            state.config.traitors.victimDecision !== 'unanimous' &&
+            !currentPicks.length &&
+            state.config.traitors.timeoutChoice === 'random'
+              ? available
+              : leading;
           selected.push(
-            state.config.traitors.victimDecision === 'first' &&
-              picks.find((id) => available.includes(id))
-              ? picks.find((id) => available.includes(id))!
-              : choose(
-                  !picks.length &&
-                    state.config.traitors.timeoutChoice === 'random'
-                    ? available
-                    : leading,
-                ),
+            state.config.traitors.victimDecision === 'first'
+              ? (firstPick ?? chooseSeat(randomCandidates, 'murder-target'))
+              : chooseSeat(randomCandidates, 'murder-target'),
           );
         }
         const protectedIds = selected.filter((id) =>
           state!.shields.includes(id),
         );
-        const victims = selected.filter((id) => !state!.shields.includes(id));
+        const selectedVictims = selected.filter(
+          (id) => !state!.shields.includes(id),
+        );
+        const traitorCount = livingTraitors.length;
+        let remainingSeats = alive(state).length;
+        const victims: string[] = [];
+        for (const victim of selectedVictims) {
+          victims.push(victim);
+          remainingSeats--;
+          const remainingFaithful = remainingSeats - traitorCount;
+          if (
+            remainingSeats <= 2 ||
+            (state.config.endgame.parity && traitorCount >= remainingFaithful)
+          )
+            break;
+        }
         if (state.config.tasks.enabled)
           emit('TaskMurderCancelled', {
             cycle: state!.cycle,
             cancelled: taskPenalty,
-            traitors: taskPenalty
-              ? alive(state!)
-                  .filter((seat) => seat.role === 'traitor')
-                  .map((seat) => seat.id)
-              : [],
+            traitors: taskPenalty ? livingTraitors.map((seat) => seat.id) : [],
           });
         enter('DAWN');
         emit('DawnResolved', { victims, protected: protectedIds });

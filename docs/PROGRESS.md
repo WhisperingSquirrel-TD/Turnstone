@@ -1,12 +1,12 @@
 # Progress
 
-## Current status — Milestone 3 green locally; GitHub Verify #1 failed
+## Current status — Milestones 0 and 3 approved; Milestone 2 oracle repair in progress
 
-Specification sections 1–25 and owner rulings are recorded. Milestone 1 has the owner's reviewer approval, recorded in DECISIONS; its engine and C5/C6 lifecycle/termination rules are complete. Milestones 2 and 3 are now complete locally; Milestone 4 has not started.
+Specification sections 1–25 and owner rulings are recorded. Milestone 1 has the owner's reviewer approval, recorded in DECISIONS; its engine and C5/C6 lifecycle/termination rules are complete. Milestone 3 was also approved by the owner's reviewer. Milestone 2 is not accepted: the reviewer found that its earlier independent reference model did not independently verify all outcomes. Its oracle is being strengthened under TDD before Milestone 4.
 
-Milestone 0 remains **provisionally accepted** until the first fully green GitHub Actions Verify run executes the iPhone and iPad WebKit profiles. The approved local notice is `WebKit profiles run in CI`; local Replit has not run those profiles.
+Milestone 0 is **accepted** following fully green GitHub Actions Verify runs #2 and #4, including iPhone WebKit and iPad WebKit. Local Replit verification may skip those profiles only with the explicit notice `WebKit profiles run in CI`.
 
-Milestone 2 meets its local acceptance criteria: the generated sample report records zero failures across 2,566 games. It covers 942 core sweep cells, 788 three-way rows, 792 high-seat pairwise rows, 32 fuzz games and 12 golden games. The current sample took 395.4 seconds. The two fuzz failures from the first full run were reproduced at fixed seeds and traced to the test driver issuing `AdvancePhase` after a bot action had already finished the game; a regression test now guards that terminal state.
+The earlier Milestone 2 sample reported zero failures across 2,566 games (942 core sweep cells, 788 three-way rows, 792 high-seat pairwise rows, 32 fuzz games and 12 golden games; 395.4 seconds). That result does not meet the reviewer's differential-oracle requirement and is not acceptance evidence. The two fuzz failures from the first full run were reproduced at fixed seeds and traced to the test driver issuing `AdvancePhase` after a bot action had already finished the game; a regression test guards that terminal state.
 
 ### CI and hosting findings addressed locally; external validation pending
 
@@ -28,7 +28,7 @@ The new visitor property test was confirmed failing at `VERDICT` because the ful
 
 GitHub Actions Verify run #1 for commit `947043607959b9e3146565217789406f80d5b6cb` failed on 13 October 2026. At that point the workflow had one `verify` job: setup, locked dependency installation and test database migrations passed; “Complete verification including all four browser profiles” failed when the D13 termination property exceeded its 30-second limit. The browser profiles and later suites did not run. The associated “Promote verified commit” run #1 was skipped because verification failed. The workflow therefore did not yet report independent browser, Lighthouse or audit results.
 
-The engine fix, independent CI jobs, Ubuntu 24.04 pin, Node 24-compatible action pins and checksum-verified Gitleaks CLI are committed locally, but have not reached GitHub. The exact six paths in the latest fix commit were reviewed; none are environment or credential files, and checksum-verified Gitleaks v8.30.1 scanned all 10 repository commits through `5f18b54` with no findings. Earlier Git and GitHub connector pushes failed authentication/permission checks; no remote ref was updated. GitHub `main` remains at `9470436`; `release` was not touched.
+The engine fix, independent CI jobs, Ubuntu 24.04 pin, Node 24-compatible action pins and checksum-verified Gitleaks CLI were subsequently pushed to GitHub before Verify run #4. Gitleaks scanned the full history without findings. The current oracle-review changes are local and not yet pushed; no release promotion or Replit deployment has occurred.
 
 ### Push authorisation and current state — 13 October 2026
 
@@ -36,9 +36,19 @@ The earlier owner-authorised `GIT_URL` push was rejected for repository access o
 
 The five restored commits were pushed to `main` at `c39fc9899b6f31626c23b57012e192bae815d3aa`; `git fetch origin` confirmed `origin/main` matches. The remote and `.git/config` remain credential-free. GitHub Actions Verify run #2 for this commit completed successfully: static-checks, unit, property, integration, scenarios, audit, Lighthouse, iPhone WebKit, Pixel Chromium, iPad WebKit, desktop Chromium and required-checks all passed. Promote verified commit run #2 was skipped; no release promotion occurred.
 
-The separate documentation commit `3f9a3326a327b6ab996f0cbc394d25106486a411` was pushed next. Verify run #3 for it ended cancelled: the scenarios job was cancelled and required-checks failed; all other reported jobs passed. No newer `main` push was present, so the precise cancellation cause is unknown. Promote run #3 was skipped.
+The separate documentation commit `3f9a3326a327b6ab996f0cbc394d25106486a411` was pushed next. Verify run #3's scenarios job reached its configured 15-minute job limit and was cancelled before the later push; `cancel-in-progress` did not cause it. All other reported jobs passed; the required-checks aggregator failed because the scenarios job did not complete. Promote run #3 was skipped.
 
 The visual-direction commit `2297844858932ab21d84f004e401cecbdced34c1` was then pushed separately. GitHub Actions Verify run #4 completed successfully: static-checks, unit, property, integration, scenarios, audit, Lighthouse, iPhone WebKit, Pixel Chromium, iPad WebKit, desktop Chromium and required-checks all passed. Promote run #4 was skipped and the `release` branch remains absent. The workflow mirror and drift-check files remain removed.
+
+GitHub Actions Verify run #5 (`38434899856`, commit `011d4dc`) passed static checks, unit, property, integration, audit, Lighthouse and all four browser profiles. Its scenarios job was cancelled at its configured 15-minute limit, so the required-checks aggregator did not pass. Milestone 2 remains subject to the reviewer’s differential-oracle rework and a fresh green scenario run.
+
+### Milestone 2 differential-oracle repair — 13 October 2026
+
+The first full sample after the reviewer changes completed 2,567 games but reported 46 failures: 45 simulated-game mismatches and one golden outcome comparison. Reproducing those simulation seeds isolated two engine defects and one reference-model boundary omission: a second murder slot could reuse an already-consumed choice or invent a victim despite the configured `no murder` fallback; `DawnResolved` could announce later victims after an earlier removal had already reached parity/two-player finish; and the reference expected all selected victims instead of truncating its independently derived list at the terminal condition. The golden runner also treated a scenario assertion as an outcome field.
+
+Under TDD, regression tests were observed failing for the repeated/invented murder and for the reference model's terminal-dawn list. The engine now resolves each slot from remaining picks and truncates announced victims at the first immediate win; the independent model applies the same written rules without importing engine decision logic. Golden assertions are separate from outcome expectations. All 45 previously failing simulation seeds now pass individually.
+
+The fresh full local `pnpm run verify` passed on 13 October 2026. It included 146 unit tests, 20 property tests, PostgreSQL integration, the scenario worker smoke, 2,567 engine games with zero failures, Pixel and desktop smoke tests, Lighthouse accessibility 100 for both routes, and an audit with zero high or critical findings. Local smoke explicitly printed `WebKit profiles run in CI`. Both managed services restarted cleanly; `/healthz` returned HTTP 200. Milestone 2's local gate is green, but GitHub CI has not yet run for this change set and reviewer acceptance remains pending. No push has been made yet.
 
 ### Milestone 3 gate — 13 October 2026
 

@@ -19,6 +19,7 @@ export type GoldenScenario = {
     alive: number;
     eliminated: number;
   };
+  assertions?: { shadowSplitAfterRevote?: boolean };
 };
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -26,8 +27,14 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function parseScenario(input: unknown, filename: string): GoldenScenario {
-  if (!record(input) || !record(input.config) || !record(input.expected))
+  if (
+    !record(input) ||
+    !record(input.config) ||
+    !record(input.expected) ||
+    (input.assertions !== undefined && !record(input.assertions))
+  )
     throw new Error(`Golden scenario ${filename} must contain objects`);
+  const assertions = input.assertions;
   const config = gameConfigSchema.safeParse(input.config);
   const winner = roleSchema.safeParse(input.expected.winner);
   if (!config.success)
@@ -47,7 +54,9 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
     input.expected.phase !== 'FINISHED' ||
     typeof input.expected.reason !== 'string' ||
     !Number.isInteger(input.expected.alive) ||
-    !Number.isInteger(input.expected.eliminated)
+    !Number.isInteger(input.expected.eliminated) ||
+    (assertions?.shadowSplitAfterRevote !== undefined &&
+      typeof assertions.shadowSplitAfterRevote !== 'boolean')
   )
     throw new Error(`Golden scenario ${filename} has invalid metadata`);
   return {
@@ -63,6 +72,13 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
       alive: input.expected.alive as number,
       eliminated: input.expected.eliminated as number,
     },
+    ...(assertions?.shadowSplitAfterRevote === undefined
+      ? {}
+      : {
+          assertions: {
+            shadowSplitAfterRevote: assertions.shadowSplitAfterRevote,
+          },
+        }),
   };
 }
 

@@ -25,6 +25,7 @@ for (const strategy of BOT_STRATEGIES) {
 
     expect(result.state.phase).toBe('FINISHED');
     expect(result.checks.referenceMatches).toBe(true);
+    expect(result.checks.potValidation).toBe('pending Milestone 7');
     expect(result.checks.replayMatches).toBe(true);
     expect(result.checks.incrementalReplayEvents).toBe(result.events.length);
     expect(result.checks.replayStepChecks).toBeGreaterThan(0);

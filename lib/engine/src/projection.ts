@@ -82,7 +82,7 @@ export function viewFor(viewer: Viewer, state: State): View {
     version: state.version,
     phase: state.phase,
     paused: state.paused,
-    deadline: state.deadline,
+    deadline: state.phase === 'SHADOW' ? state.shadowEndAt : state.deadline,
     coordinatorPlays: state.config.basics.coordinatorPlays,
     cycle: state.cycle,
     pot: state.pot,
