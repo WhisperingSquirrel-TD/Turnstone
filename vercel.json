@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "PORT=22814 BASE_PATH=/ pnpm --filter @workspace/party-game run build",
+  "outputDirectory": "artifacts/party-game/dist/public",
+  "rewrites": [
+    { "source": "/play/:path*", "destination": "/index.html" },
+    { "source": "/create/:path*", "destination": "/index.html" },
+    { "source": "/join/:path*", "destination": "/index.html" },
+    { "source": "/coordinate/:path*", "destination": "/index.html" },
+    { "source": "/tv/:path*", "destination": "/index.html" },
+    { "source": "/account/:path*", "destination": "/index.html" },
+    { "source": "/admin/:path*", "destination": "/index.html" },
+    { "source": "/recap/:path*", "destination": "/index.html" }
+  ]
+}

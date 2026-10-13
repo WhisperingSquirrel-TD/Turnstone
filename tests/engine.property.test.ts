@@ -1,0 +1,80 @@
+import { expect, it } from 'vitest';
+import fc from 'fast-check';
+import {
+  replay,
+  viewFor,
+  VIEW_ALLOW_LIST,
+  assertInvariants,
+} from '../lib/engine/src/index';
+import { fixture, command } from './support/engine';
+
+it('preserves deal, replay, projection allow-lists and secret isolation across seat/Traitor counts', () => {
+  fc.assert(
+    fc.property(
+      fc.integer({ min: 5, max: 40 }),
+      fc.integer({ min: 1, max: 8 }),
+      (count, value) => {
+        const traitors = Math.min(count - 1, value);
+        const game = fixture(count, { traitors: { number: traitors } });
+        command(game, { type: 'StartGame' });
+        expect(
+          game.state.seats.filter((seat) => seat.role === 'traitor'),
+        ).toHaveLength(traitors);
+        assertInvariants(game.state);
+        expect(replay(game.events)).toEqual(game.state);
+        const original = JSON.stringify(game.state);
+        for (const kind of [
+          'visitor',
+          'coordinator',
+          'presenter',
+          'admin',
+        ] as const) {
+          const view = viewFor({ kind, reveal: true }, game.state);
+          expect(Object.keys(view).sort()).toEqual([...VIEW_ALLOW_LIST].sort());
+          expect(view.private).toBeNull();
+          expect(view.seats.every((seat) => seat.role === undefined)).toBe(
+            true,
+          );
+          expect(view.fairness).toBeNull();
+          expect(JSON.stringify(view)).not.toContain(game.state.deal!.salt);
+        }
+        for (const seat of game.state.seats) {
+          const concealed = viewFor(
+            { kind: 'player', seatId: seat.id },
+            game.state,
+          );
+          expect(concealed.private).toBeNull();
+          const revealed = viewFor(
+            { kind: 'player', seatId: seat.id, reveal: true },
+            game.state,
+          );
+          expect(revealed.private?.role).toBe(seat.role);
+          if (seat.role === 'faithful')
+            expect(revealed.private?.team).toEqual([]);
+        }
+        expect(JSON.stringify(game.state)).toBe(original);
+      },
+    ),
+    { numRuns: 100, seed: 20261012 },
+  );
+});
+
+it('invariants reject corrupted role ownership and negative pots', () => {
+  const game = fixture(5);
+  command(game, { type: 'StartGame' });
+  expect(() => assertInvariants({ ...game.state, pot: -1 })).toThrow();
+  expect(() =>
+    assertInvariants({
+      ...game.state,
+      seats: [...game.state.seats, game.state.seats[0]!],
+    }),
+  ).toThrow();
+  expect(() =>
+    assertInvariants({
+      ...game.state,
+      seats: game.state.seats.map((seat, index) =>
+        index === 0 ? { ...seat, role: null } : seat,
+      ),
+    }),
+  ).toThrow();
+});

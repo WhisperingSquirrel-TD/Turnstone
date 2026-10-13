@@ -1,0 +1,79 @@
+import type { GameConfig, Event } from '../../shared/src/index';
+export type { Event };
+export type Role = 'traitor' | 'faithful';
+export type Phase =
+  | 'DRAFT'
+  | 'LOBBY'
+  | 'DEAL'
+  | 'MISSION'
+  | 'DEBATE'
+  | 'VOTE'
+  | 'VERDICT'
+  | 'SHADOW'
+  | 'DAWN'
+  | 'ENDGAME'
+  | 'FINAL_VOTE'
+  | 'FINAL_BANISH'
+  | 'FINISHED'
+  | 'ARCHIVED';
+export type Actor = {
+  kind: 'coordinator' | 'system' | 'player';
+  seatId?: string;
+};
+export type Context = {
+  now: number;
+  actor: Actor;
+  random: {
+    int: (upperExclusive: number) => number;
+    bytes: (length: number) => Uint8Array;
+  };
+};
+export type Seat = {
+  id: string;
+  name: string;
+  role: Role | null;
+  status: 'alive' | 'banished' | 'murdered' | 'departed';
+  publicRole: boolean;
+  traitorSince: number | null;
+};
+export type State = {
+  id: string;
+  config: GameConfig;
+  version: number;
+  phase: Phase;
+  phaseStarted: number;
+  deadline: number | null;
+  paused: boolean;
+  remaining: number | null;
+  cycle: number;
+  steps: number;
+  maxCycles: number;
+  seats: Seat[];
+  deal: {
+    roles: Record<string, Role>;
+    salt: string;
+    commitment: string;
+    sleeper: string | null;
+    redealUsed: boolean;
+  } | null;
+  acks: string[];
+  votes: Record<string, string>;
+  revealed: string[];
+  target: string | null;
+  revote: boolean;
+  candidates: string[];
+  shadow: Record<string, string>;
+  shields: string[];
+  protected: string[];
+  pendingSleeper: boolean;
+  chat: { seatId: string; text: string; seq: number }[];
+  endVotes: Record<string, 'end' | 'continue'>;
+  pot: number;
+  winner: Role | null;
+  reason: string | null;
+  firstVoteOccurred: boolean;
+};
+export type Result =
+  { ok: true; events: Event[] } | { ok: false; code: string };
+export const alive = (state: State) =>
+  state.seats.filter((seat) => seat.status === 'alive');

@@ -8,6 +8,27 @@ const tokens = Object.fromEntries(
     match[2],
   ]),
 );
+it('contains the six exact owner-approved candlelit tokens',()=>{
+  expect(Object.fromEntries(['peat','walnut','bark','gilt','candle','ash'].map(key=>[key,tokens[key]]))).toEqual({
+    peat:'#16110d',walnut:'#241c16',bark:'#3d3a38',gilt:'#c8944a',candle:'#fafaf5',ash:'#d4cdc4',
+  });
+});
+for(const [foreground,background] of [
+  ['candle','peat'],['candle','walnut'],['candle','bark'],
+  ['ash','peat'],['ash','walnut'],['ash','bark'],
+  ['gilt','peat'],['gilt','walnut'],['peat','gilt'],
+]){
+  it(`${foreground} on ${background} passes AA for the new dark screens`,()=>{
+    const a=luminance(tokens[foreground!]!);const b=luminance(tokens[background!]!);
+    expect((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)).toBeGreaterThanOrEqual(4.5);
+  });
+}
+it('rejects normal-size gold on Bark and Candle on gold',()=>{
+  for(const [foreground,background] of [['gilt','bark'],['candle','gilt']]){
+    const a=luminance(tokens[foreground!]!);const b=luminance(tokens[background!]!);
+    expect((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)).toBeLessThan(4.5);
+  }
+});
 function luminance(hex: string) {
   const channels = [1, 3, 5].map((start) => {
     const value = parseInt(hex.slice(start, start + 2), 16) / 255;

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "${CI:-}" == "true" ]]; then
+  # Ubuntu CI uses Playwright's official --with-deps installation, not Nix.
+  exec "$@"
+fi
 # Nix's selected executable outputs omit several native browser runtime outputs.
 # Resolve ABI-correct outputs; never alias incompatible library versions or skip
 # Playwright's host validation.

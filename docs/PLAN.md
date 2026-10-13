@@ -4,9 +4,9 @@
 
 `docs/SPEC.md` contains all seven supplied parts, with sections 1–19 in numerical order, followed by Amendments 1–4 as sections 20–23 and Amendment 5's owner decisions within section 23. Authorised earlier edits are Amendment 4's section 2 attribution expansion and Amendment 5's section 23 logo-link replacement, recorded in DECISIONS. Section 20 overrides conflicting parts of sections 4, 16 and 18; section 21 binds positioning, public pages, shared facts and test-gated claims; section 22 adds optional-per-game Must Traitor tasks and Must hosting portability; section 23 requires uniform branding and rename readiness with confirmed owner identity. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
 
-**Owner-approved as written.** The owner authorises finishing Milestone 0 to genuinely green verify, then Milestone 1 under strict TDD and stopping for review. Approval does not waive the verification gate. Owner resolutions in DECISIONS supersede the prior pending choices. No publishing, deployment or paid services.
+**Owner-approved, amended by §24 and its accompanying confirmations.** Milestone 0 is provisionally accepted; its first fully green GitHub Actions run, including iPhone/iPad WebKit, makes acceptance final. The owner explicitly authorises Milestone 1 now because the pure engine needs no browser. Local verify skips only WebKit, prints exactly “WebKit profiles run in CI”, and retains Pixel/desktop, axe, Lighthouse and all non-browser gates. CI never skips these four profiles. Stop for review after Milestone 1; unresolved rule questions still stop affected work.
 
-Milestone 0 is implemented in part but **not accepted**: its remaining WebKit page-creation blocker and the latest successful checks are recorded in `PROGRESS.md`. Milestone 1 has not started. These amendments do not restart or expand the current milestone; finish its existing instructions, then Milestone 1 and stop for review. Obtain genuinely green verification before progression.
+Section 24 is appended verbatim and supersedes conflicting provider/hosting notes. Canonical site/RP ID and the planned game origin are in the shared identity config; runtime API origin comes from the build-time variable. The owner pushes to the stated GitHub repository. Repository configurations do not mean a CI run has passed or a hosting service has been activated. No Replit publishing or paid services.
 
 Stay on the free tier: no publishing, deployment or paid service activation. Runs must stay focused. Release-scale suites are planned, not run now; cost constraints never justify weakening a gate or claiming unrun checks passed.
 
@@ -18,6 +18,15 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 - Keep a requirement-to-test traceability register using section/requirement IDs, planned milestone, failing-test evidence, implementation and acceptance evidence. Include all 40 numbered edge cases from §17.
 - Maintain `PROGRESS.md` at each milestone; maintain decisions and scenario reports without copying authoritative configuration values into multiple sources.
 - No mock authentication, fake provider connections, security bypasses, advisory exclusions, disabled tests or fabricated full-game success outside test code.
+
+## Amendment 6 delivery and authentication mapping
+
+- **Foundations/current delivery:** GitHub push-to-main verify on Ubuntu with official Chromium/WebKit system dependencies, pnpm/browser caches and a 15-minute job limit. Least-privilege jobs, full-SHA action pins and same-repository successful-main verification precede exact-commit promotion to release. Inclusive repository UTC freezes block promotion except the exact `[security]` commit-message tag. Measure actual runtime and obtain the first green CI run; local green is not final Milestone 0 acceptance.
+- **Milestone 2:** Add the nightly `verify:full` workflow only after the real harness exists; do not schedule the unavailable placeholder or claim its samples passed.
+- **Milestone 4:** Validate the configured API origin, production/passkey origins, credentialed sibling-domain topology, host-only cookies, explicit CORS/CSRF/CSP/socket origin checks and long-lived server portability. The server's always-on host is unchosen; no paid service activation.
+- **Milestones 5/9:** Keep the player/app shell and prerendered public outputs independently static; Vercel builds only the web package. API origin is supplied at build time. Complete CDN cache/security/header/budget checks before launch, rather than treating the current foundation SPA as finished public pages.
+- **Milestone 8:** Primary coordinator passkeys with required user verification, no attestation, production RP ID derived from config, multiple credentials and no recovery bypass. Lost passkey means a new account; co-coordinator transfer preserves games. Players remain guests. Optional Google/Microsoft OIDC only with configured client IDs/required server secrets. Remove LinkedIn/Facebook/Apple and the Meta callback from the active scope. Resolve trusted admin allow-list binding for passkey-only accounts; never trust self-asserted email.
+- **Milestone 10/LAUNCH:** Owner sets Vercel production branch, domain/DNS, API build variable and freezes; prove CI, full suites, real-device checks and launch safety before connecting a playable production release. Repository configuration is not a launch approval.
 
 ## Amendment 1 milestone mapping (SPEC §20)
 
@@ -162,18 +171,19 @@ React is retained. If the actual route budget cannot be met, record measured opt
 
 **Exit:** All golden scenarios pass; no-leak/uniformity and verify green.
 
-## Task 8 — Providers, account lifecycle and administrator
+## Task 8 — Passkeys, optional providers, account lifecycle and administrator
 
-**References:** §2, §13, §15, §18–19.
+**References:** §2, §13, §15, §18–19, overridden by §24.
 
-- [ ] Select/record a maintained real OIDC/OAuth approach against the provider/session requirements. Connect Google, LinkedIn and Facebook first; Apple/Microsoft `[S]` next, without mocks outside tests.
+- [ ] Select/pin/record a maintained WebAuthn library; primary coordinator passkeys, required user verification, no attestation, configured RP ID, multiple passkeys, and no lost-passkey recovery bypass. Players remain guests; games survive account loss through co-coordinator transfer.
+- [ ] Add Google/Microsoft OIDC `[S]` only when configured; hide unconfigured providers, require complete server credentials when enabled, and never mock sign-in outside tests. LinkedIn/Facebook/Apple and the Meta deletion callback are removed, not deferred.
 - [ ] PKCE/state/nonce/redirect/token checks; PostgreSQL session rotation/sliding expiry/all-device logout; host-only secure cookies; no automatic email merging; deliberate verified provider linking.
 - [ ] Account/history/consent preferences, data export, deletion/anonymisation and delayed hard deletion; age confirmation and guest/paired alternatives.
-- [ ] Verify Meta signed deletion callback/status URL; test missing Facebook email and hostile OAuth responses with local **test-only** identity providers.
-- [ ] Admin-email authorisation, audited user/reference-data management, aggregate usage, consent-only lead CSV exports, health view and change-freeze controls; unfinished roles/votes/choices remain inaccessible.
+- [ ] Test WebAuthn challenge/origin/RP ID/user-verification/replay/credential ownership and hostile optional OIDC responses with test-only authenticators/providers.
+- [ ] Resolve trusted admin identity binding for passkey-only accounts before authorisation tests: a self-asserted email cannot confer privileges. Implement audited user/reference management, aggregate usage, consent-only lead CSV, health/freeze controls; unfinished secrets remain inaccessible.
 - [ ] Keep admin code in its own lazy chunk with verify size checks; calculate per-day load forecasts from scheduled games and configure peak-day change freezes without exposing hidden state.
 
-**Exit:** Security/provider/account/admin tests green, Meta deletion callback works, admins cannot see live secrets; verify green. Real provider approvals are required, not assumed.
+**Exit:** Passkey, configured optional-provider, account and admin security tests green; admins cannot see live secrets; verify green. No removed-provider callback or developer-programme dependency.
 
 ## Task 9 — Public website and agent-readable content
 

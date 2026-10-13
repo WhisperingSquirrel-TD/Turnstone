@@ -1,0 +1,37 @@
+name: Promote verified commit
+on:
+  workflow_run:
+    workflows: [Verify]
+    types: [completed]
+    branches: [main]
+permissions: {}
+concurrency:
+  group: release-promotion
+  cancel-in-progress: false
+jobs:
+  promote:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: write
+    env:
+      VERIFIED_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - name: Check exact verified commit and current main ancestry
+        run: |
+          test "$(git rev-parse HEAD)" = "$VERIFIED_SHA"
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$VERIFIED_SHA" origin/main
+      - name: Apply repository change freeze
+        run: node scripts/src/promotion-guard.mjs
+      - name: Fast-forward release to this verified commit only
+        run: git push origin "$VERIFIED_SHA:refs/heads/release"

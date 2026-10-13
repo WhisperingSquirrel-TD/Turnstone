@@ -1,5 +1,59 @@
 # Decisions and open choices — complete specification
 
+## Amendment 6 — active owner authority
+
+Section 24 is appended verbatim, including the owner's concluding delivery instruction. Sections 1–23 remain unchanged. Its domain, provider and pipeline decisions supersede conflicting historical entries below. Role labels remain the stated defaults; no theme/font decision is inferred.
+
+### D25 — WebKit CI exception and provisional foundations
+
+**Context:** Replit WebKit cannot create its EGL display; the owner explicitly approves official Ubuntu GitHub Actions instead and permits browser-free engine work immediately.
+
+**Choice:** Local browser verification prints exactly `WebKit profiles run in CI`, then runs Pixel and desktop including axe. CI runs every configured profile, installs official Chromium/WebKit dependencies and avoids Nix/native-executable overrides. Milestone 0 is provisional until the first fully green Verify workflow; local green does not prove iPhone/iPad compatibility. Begin Milestone 1 now under strict TDD.
+
+**Consequence:** This is an owner-approved location change, not deletion/weakening of mobile tests or a silent skip. No first CI result is claimed: the owner must push the repository. The prior “WebKit blocks engine work” instruction is superseded.
+
+### D26 — Passkeys replace mandatory social providers
+
+**Context:** The owner rejects providers requiring developer programmes/business verification and confirms guest players.
+
+**Choice:** Milestone 8 selects an exactly pinned maintained WebAuthn library, with required user verification, no attestation, several passkeys/account and production RP ID from the single config. No passkey recovery bypass; loss means a new account and co-coordinator game transfer. Google/Microsoft OIDC are Shoulds enabled only with configured IDs/complete server credentials. LinkedIn, Facebook, Apple and Meta deletion callback are removed. Role labels stay Traitor/Faithful.
+
+**Consequence:** No auth libraries, identity providers or fake authentication are installed now. Before Milestone 8, resolve trustworthy administrator identity binding: passkeys authenticate credentials, not self-asserted email addresses. Existing session/privacy/authorisation requirements remain unless expressly superseded.
+
+### D27 — Confirmed domains and split static delivery
+
+**Context:** The owner confirms the canonical public/app domain, planned sibling API origin, Vercel front end and a later always-on server-host decision.
+
+**Choice:** Store domain/RP ID/planned API origin in the existing identity config; actual client API origin reads the public build-time `VITE_API_ORIGIN` variable, null when unconfigured, not a fabricated live service. Vercel configuration builds/output-selects only the web package and rewrites app routes to the static shell, never running/building the game server.
+
+**Consequence:** The canonical domain placeholder is resolved; the server host is not. Connecting domains/DNS/Vercel is the owner's later step, not performed here. Actual API connections/topology validation belong to Milestone 4; complete prerendered public output/static CSP/caching/security/budgets belong to Milestone 9. The current nonce-served production fixture is not proof of final CDN security.
+
+### D28 — Verify and exact-commit promotion
+
+**Context:** The source of truth is the owner's stated GitHub repository; the owner pushes from Replit.
+
+**Choice:** Push-to-main Verify uses Node 24, pinned pnpm, frozen lockfile, disposable PostgreSQL, masked generated test-session secret, pnpm/browser caches, official Playwright browser dependencies and a 15-minute job limit. All third-party actions are full-SHA pinned, resolved from official repositories. Permissions default to none; Verify gets contents read, only promotion gets contents write. Successful same-repository main push verification triggers exact-SHA checkout/ancestry/freeze checks and non-forced fast-forward release promotion. No `pull_request_target`, unchecked commit merge or Replit publish.
+
+**Consequence:** Promotion honours latest main-branch UTC freeze dates; malformed ranges fail closed and only the exact `[security]` message tag bypasses a valid freeze. Empty initial dates are pending owner configuration, not invented freeze policy. Out-of-order/non-fast-forward promotions fail rather than overwrite newer release history. Add nightly full verification when Milestone 2 exists; never run the unavailable placeholder nightly. First CI success/actual runtime/Vercel integration remain unverified owner steps.
+
+### D29 — Engine implementation boundary and cryptographic adapter
+
+**Context:** Milestone 1 may proceed independently of browser compatibility, but C5's task rules remain unresolved.
+
+**Choice:** Implement/test the pure core with injected time/random source, strict shared config/command/event/view schemas, versioned event replay, dealing/commitment, voting/reveal, shadow/protection, pause/departure/sleeper/win checks and explicit projections. Node's deterministic SHA-256 hash needs no extra package. The production random adapter is outside the engine and uses only `randomInt`/`randomBytes`; seeded randomness exists only in test fixtures. No engine database/network/logging or default random fallback.
+
+**Consequence:** This is in-progress, not Milestone 1 acceptance or a playable game. Task settings exist but starting tasks-on games rejects `TASK_RULES_PENDING`; assignment/report/lifecycle/consequence semantics await C5. Remaining full command/configuration and recruitment/ghost/pot/task contracts and exhaustive transition rejection coverage must be completed before accepting Milestone 1. No Milestone 2 started and no full scenario/termination/coverage result claimed.
+
+### C6 — Required termination versus endgame no-banishment ties
+
+**Context:** D13 requires FINISHED under every bot strategy when deadlines fire. With all voters absent, FINAL_VOTE means continue; a tied FINAL_BANISH re-vote followed by configured no banishment changes no survivors, so this can repeat forever after the cycle cap has started endgame.
+
+**Options:** Override final no-banishment ties with a random elimination; use an explicitly owner-defined forced finish; or amend the universal termination requirement. These change binding rules and cannot be invented.
+
+**Choice:** Pending owner decision; keep the configured tie behaviour and do not claim the universal bound has passed. Record/ask alongside the already-open C5 task-report, stacking, missing-report and mid-cycle role-change rules.
+
+**Consequence:** Engine core tests can be green while Milestone 1 remains incomplete. This is a rules blocker, not a browser gate. Never weaken a termination test or silently change the tie/endgame rule to make verification appear complete.
+
 ## Amendment 5 — resolved owner identity and logo-link policy
 
 These owner decisions supersede the corresponding D16/D17/D19 placeholders and Amendment 4 link restriction. Section 23 includes all five owner items and its previous mid-game-link prohibition has been replaced. No other SPEC section is changed by this amendment.
@@ -36,7 +90,7 @@ These owner decisions supersede the corresponding D16/D17/D19 placeholders and A
 
 **Choice:** Record Stackstone Consulting, `https://stackstoneconsulting.co.uk/`, and Abingdon, Oxfordshire in the shared identity config for Milestone 9 consumption.
 
-**Consequence:** Do not invent a street address, postcode, social profiles or product production domain. The Stackstone organisation site is not the game's still-unconfirmed production domain.
+**Consequence:** Do not invent a street address, postcode or social profiles. Amendment 6 resolves the game's canonical domain/planned API origin in D27; the organisation site is a distinct URL and the always-on server host remains unchosen.
 
 ### D24 — Naming record, owner-reported preliminary search
 
@@ -467,16 +521,15 @@ Each entry uses context, options, choice and consequence. **Pending** means no a
 
 **Options:** Keep placeholders; or use values explicitly confirmed by the owner.
 
-**Choice:** Amendment 5 resolves APP_NAME in the single config and supplies official SVGs plus the organisation website/location. Leave unconfirmed:
+**Choice:** Amendment 5 resolves APP_NAME and supplies official SVGs/organisation details; Amendment 6 resolves canonical domain/RP ID and the planned API origin. Leave unconfirmed:
 
-- Production domain.
 - Font (Arial remains provisional).
 - Retention period (the specification's default is not a separate owner confirmation).
 - Crawler policy (implement the specified configurable default only when authorised).
 - Change-freeze dates.
 - Stackstone social links.
 
-**Consequence:** The organisation website is confirmed; product domain/social links are not. No invented domain, policy confirmation or font substitution. Brand observation/approval is tracked in D22. Do not block local foundations merely to request release-stage placeholders.
+**Consequence:** Domain/organisation details are confirmed; server host, social links and freeze dates are not. No invented policy confirmation or font substitution. Brand observation/approval is tracked in D22. Do not block local foundations merely to request release-stage placeholders.
 
 ## Dependency record
 
