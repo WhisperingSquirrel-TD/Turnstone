@@ -1,14 +1,13 @@
 :root {
-  /* Turnstone's approved candlelit palette. New screens use these semantic tokens. */
-  --peat: #16110d;
-  --walnut: #241c16;
-  --bark: #3d3a38;
+  /* Turnstone's approved Stackstone talk-style palette for upcoming screens. */
+  --charcoal: #3d3a38;
+  --hearth: #2e2b29;
+  --stone: #55504b;
   --gilt: #c8944a;
   --candle: #fafaf5;
   --ash: #d4cdc4;
 
-  /* Older foundation-shell aliases stay legible until their planned screen redesigns. */
-  --charcoal: var(--bark);
+  /* Existing foundation-shell aliases stay stable until their screen milestones. */
   --amber: var(--gilt); /* accent only */
   --slate: #5c5652;
   --light-bg: var(--candle);
@@ -17,6 +16,10 @@
   --amber-light: var(--candle);
 
   --font-body:
-    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-  --font-headline: ui-serif, 'New York', 'Noto Serif', Georgia, serif;
+    'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial,
+    sans-serif;
+  --font-headline: 'Playfair Display', ui-serif, Georgia, serif;
+  --font-body-regular: 400;
+  --font-body-medium: 500;
+  --font-headline-weight: 400;
 }

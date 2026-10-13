@@ -17,51 +17,51 @@ function color(name: string, seen = new Set<string>()): string {
   if (!reference) throw new Error(`Unsupported theme colour token: ${name}`);
   return color(reference, seen);
 }
-it('contains the six exact owner-approved candlelit tokens', () => {
+it('contains the six exact owner-approved Stackstone talk-style tokens', () => {
   expect(
     Object.fromEntries(
-      ['peat', 'walnut', 'bark', 'gilt', 'candle', 'ash'].map((key) => [
+      ['charcoal', 'hearth', 'stone', 'gilt', 'candle', 'ash'].map((key) => [
         key,
         color(key).toLowerCase(),
       ]),
     ),
   ).toEqual({
-    peat: '#16110d',
-    walnut: '#241c16',
-    bark: '#3d3a38',
+    charcoal: '#3d3a38',
+    hearth: '#2e2b29',
+    stone: '#55504b',
     gilt: '#c8944a',
     candle: '#fafaf5',
     ash: '#d4cdc4',
   });
 });
-for (const [foreground, background] of [
-  ['candle', 'peat'],
-  ['candle', 'walnut'],
-  ['candle', 'bark'],
-  ['ash', 'peat'],
-  ['ash', 'walnut'],
-  ['ash', 'bark'],
-  ['gilt', 'peat'],
-  ['gilt', 'walnut'],
-  ['peat', 'gilt'],
-]) {
-  it(`${foreground} on ${background} passes AA for the new dark screens`, () => {
-    const a = luminance(foreground!);
-    const b = luminance(background!);
-    expect(
-      (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
-    ).toBeGreaterThanOrEqual(4.5);
-  });
-}
-it('rejects normal-size gold on Bark and Candle on gold', () => {
-  for (const [foreground, background] of [
-    ['gilt', 'bark'],
-    ['candle', 'gilt'],
-  ]) {
-    const a = luminance(foreground!);
-    const b = luminance(background!);
-    expect((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toBeLessThan(4.5);
+for (const foreground of ['candle', 'ash']) {
+  for (const background of ['charcoal', 'hearth', 'stone']) {
+    it(`${foreground} on ${background} passes WCAG AA for ordinary text`, () => {
+      const a = luminance(foreground);
+      const b = luminance(background);
+      expect(
+        (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
+      ).toBeGreaterThanOrEqual(4.5);
+    });
   }
+}
+it('allows Gilt on Charcoal only at the large-text threshold, not normal text', () => {
+  const a = luminance('gilt');
+  const b = luminance('charcoal');
+  const contrast = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  expect(contrast).toBeGreaterThanOrEqual(3);
+  expect(contrast).toBeLessThan(4.5);
+});
+it('defines Playfair Display and DM Sans as the screen-milestone font tokens', () => {
+  expect(theme).toMatch(/--font-headline:\s*['"]?Playfair Display/);
+  expect(theme).toMatch(/--font-body:\s*['"]?DM Sans/);
+});
+it('rejects Gilt text on Stone and Candle text on Gilt', () => {
+  const giltOnStone = (luminance('gilt') + 0.05) / (luminance('stone') + 0.05);
+  expect(giltOnStone).toBeLessThan(3);
+  const candleOnGilt =
+    (luminance('candle') + 0.05) / (luminance('gilt') + 0.05);
+  expect(candleOnGilt).toBeLessThan(4.5);
 });
 function luminance(name: string) {
   const hex = name.startsWith('#') ? name : color(name);
