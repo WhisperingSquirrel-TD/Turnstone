@@ -1,5 +1,6 @@
 import type { Plugin } from 'vite';
 import { createNonce, securityHeaders } from '@workspace/security';
+import { PRE_LAUNCH_NOINDEX } from '@workspace/security/deployment';
 
 export function noncePlugin(): Plugin {
   return {
@@ -9,6 +10,8 @@ export function noncePlugin(): Plugin {
         const nonce = createNonce();
         for (const [key, value] of Object.entries(securityHeaders(nonce, true)))
           res.setHeader(key, value);
+        if (PRE_LAUNCH_NOINDEX)
+          res.setHeader('X-Robots-Tag', 'noindex, nofollow');
         const end = res.end.bind(res);
         // Vite's cspNonce puts the placeholder on scripts/styles and in its nonce meta.
         // Replace only the final HTML response, not JS/CSS assets.

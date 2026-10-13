@@ -1,0 +1,34 @@
+id: never-acts
+description: The game reaches an outcome when every player misses all private actions.
+seed: 20261040
+strategy: never-acts
+config:
+  players:
+    count: 7
+  traitors:
+    number: 1
+    sleeper: true
+    recruitment: off
+    timeoutChoice: none
+  missions:
+    enabled: true
+    shields: off
+  tasks:
+    enabled: true
+    filters:
+      - family
+  roundTable:
+    tieRule: revote-random
+    revealRole: always
+  endgame:
+    size: 3
+    parity: true
+  schedule:
+    format: quick
+    plannedCycles: 1
+expected:
+  phase: FINISHED
+  winner: traitor
+  reason: two-players
+  alive: 2
+  eliminated: 5

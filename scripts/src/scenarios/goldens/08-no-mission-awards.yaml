@@ -1,0 +1,35 @@
+id: no-mission-awards
+description: A full game runs with mission steps enabled and no shield allocation.
+seed: 20261037
+strategy: random
+config:
+  players:
+    count: 10
+  traitors:
+    number: 2
+    sleeper: false
+    recruitment: off
+    murders: 2
+    victimDecision: first
+  missions:
+    enabled: true
+    shields: public
+    allocation: coordinator
+  tasks:
+    enabled: true
+    perCycle: shared
+    missedConsequence: none
+  roundTable:
+    banishments: 2
+  endgame:
+    size: 4
+    parity: true
+  schedule:
+    format: multi-day
+    plannedCycles: 3
+expected:
+  phase: FINISHED
+  winner: faithful
+  reason: no-traitors
+  alive: 2
+  eliminated: 8

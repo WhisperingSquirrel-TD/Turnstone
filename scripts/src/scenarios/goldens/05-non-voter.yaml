@@ -1,0 +1,28 @@
+id: non-voter
+description: Missing ballots and endgame votes do not prevent a complete quick game.
+seed: 20261034
+strategy: non-voter
+config:
+  players:
+    count: 5
+  traitors:
+    number: 1
+    sleeper: false
+    recruitment: off
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-random
+  endgame:
+    size: 3
+    parity: false
+  schedule:
+    format: quick
+    plannedCycles: 1
+expected:
+  phase: FINISHED
+  winner: traitor
+  reason: two-players
+  alive: 2
+  eliminated: 3

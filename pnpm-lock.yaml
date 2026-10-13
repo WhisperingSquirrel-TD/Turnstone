@@ -355,9 +355,18 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.6
+      '@workspace/engine':
+        specifier: workspace:*
+        version: link:../lib/engine
+      '@workspace/shared':
+        specifier: workspace:*
+        version: link:../lib/shared
       tsx:
         specifier: 'catalog:'
         version: 4.23.13
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
 
 packages:
 

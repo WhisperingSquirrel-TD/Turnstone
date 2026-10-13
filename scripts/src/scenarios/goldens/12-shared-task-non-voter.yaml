@@ -1,0 +1,35 @@
+id: shared-task-non-voter
+description: Shared task cards and missed ballots still finish a multi-day game.
+seed: 20261041
+strategy: non-voter
+config:
+  players:
+    count: 10
+  traitors:
+    number: 2
+    sleeper: false
+    recruitment: off
+    murders: 2
+    victimDecision: first
+  missions:
+    enabled: true
+    shields: public
+    allocation: coordinator
+  tasks:
+    enabled: true
+    perCycle: shared
+    missedConsequence: none
+  roundTable:
+    banishments: 2
+  endgame:
+    size: 4
+    parity: true
+  schedule:
+    format: multi-day
+    plannedCycles: 3
+expected:
+  phase: FINISHED
+  winner: traitor
+  reason: two-players
+  alive: 2
+  eliminated: 8

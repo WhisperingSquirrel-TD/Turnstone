@@ -1,20 +1,22 @@
 # Progress
 
-## Current status — Amendment 7; Milestone 1 complete, awaiting review
+## Current status — Milestone 2 green locally; GitHub CI pending
 
-Specification sections 1–25 and the owner rulings are recorded. `docs/DESIGN.md` holds the approved screen-set planning rules. The shared candlelit theme tokens and contrast coverage are updated without redesigning screens ahead of their scheduled milestones. Four font-independent wordmarks are also ready: Playwright Chromium side-by-side comparisons against the original DM Sans-rendered SVGs matched visually; originals remain intact and each outlined file is under 5,000 bytes.
+Specification sections 1–25 and owner rulings are recorded. Milestone 1 has the owner's reviewer approval, recorded in DECISIONS; its engine and C5/C6 lifecycle/termination rules are complete.
 
-Milestone 0 is **provisionally accepted by the owner**: local `pnpm run verify` is green, while final acceptance still depends on the first fully green GitHub Actions run with official iPhone/iPad WebKit. The local run prints the approved explicit notice, `WebKit profiles run in CI`; those profiles were not run in Replit.
+Milestone 0 remains **provisionally accepted** until the first fully green GitHub Actions Verify run executes the iPhone and iPad WebKit profiles. The approved local notice is `WebKit profiles run in CI`; local Replit has not run those profiles.
 
-Milestone 1 is **complete and awaiting owner review**. The engine includes validated settings, deterministic event-sourced transitions, deal/redeal, votes and shadow choices, explicit viewer projections, sleeper precedence, endgame termination, and the agreed Traitor-task lifecycle. Task reports and shared-task completion remain private until the fairness reveal. A missed task cancels only that shadow's scheduled murder; a zero-murder cycle carries no penalty. All seven termination bots now run with tasks enabled.
+Milestone 2 now meets its local acceptance criteria: `pnpm run verify` passed on 13 October 2026, and the generated sample report records zero failures across 2,566 games. It covers 942 core sweep cells, 788 three-way rows, 792 high-seat pairwise rows, 32 fuzz games and 12 golden games. The sample took 394.7 seconds. The two fuzz failures from the first full run were reproduced at fixed seeds and traced to the test driver issuing `AdvancePhase` after a bot action had already finished the game; a regression test now guards that terminal state.
 
-Strict TDD evidence includes a shared-task test that first failed because the final fairness projection did not report group completion; the projection was then implemented and the test passed. Regression coverage also checks task-report deadlines, departed-seat voiding, sleeper assignment at the next DAWN, zero-murder no-carry, blind-coordinator/admin projections, endgame ties, replay and termination. No screen implementation, public-site work, full scenario harness, or Milestone 2/3 work has started.
+### CI and hosting findings being addressed
 
-No owner push, successful GitHub Actions run, Vercel connection, production promotion, DNS change, Replit publish, or paid-service activation has occurred. The `verify:full` placeholder was not run.
+- Root cause of the GitHub 30-second D13 property timeout: the test replayed the entire growing event log after every phase, repeating work quadratically. The test now advances an event cursor and retains a final full replay check. A strict performance-budget test logged the pre-fix random case at 32.6 s / 664.7 ms per step; after the change it logged 2.9 s / 58.5 ms per step. All seven bot cases passed locally with the 100 ms mean-step and 15 s per-game limits. Independent 40-seat scenario runs measured 0.62–1.07 s per game. These are local-container measurements; GitHub-hosted runner readings remain pending.
+- Verify is split into separate static, unit, property, PostgreSQL integration, scenario, four-profile browser, Lighthouse and audit jobs. Every job has its own timeout and a final required-checks aggregator. `actions/cache` and `pnpm/action-setup` are pinned to Node 24-compatible full SHAs; runners are pinned to `ubuntu-24.04` for review on 19 October 2026.
+- The CI scenario sample now runs one complete deterministic game per core/three-way/high-seat coverage row and 32 fuzz games; full repetition volumes remain in `verify:full`. This retains each row's coverage and is recorded in PLAN/D32.
+- One `PRE_LAUNCH_NOINDEX` security flag now controls app preview, built web-server and API headers. `vercel.json` contains the static security/cache headers; `robots.txt` blocks crawlers. Tests parse the full Vercel header set and exercise built HTML and API/web responses. Vercel itself has not been deployed or live-tested.
+- Release promotion is guarded by `TURNSTONE_PROMOTION_ENABLED == 'true'`, unset by default, so a `main` push cannot automatically advance `release` or deploy to Vercel.
 
-### Final local delivery checks
-
-`pnpm run verify` passed on 13 October 2026: application and test type checks, lint, formatting, production build, 79 unit tests (including the outlined-logo regression test), 10 property tests (including the seven-bot termination suite), 1 PostgreSQL integration test, 2 Pixel/desktop smoke tests with axe, Lighthouse accessibility 100 on both built routes, and dependency audit with 0 high/0 critical findings and no exceptions. The permitted WebKit notice appeared. The managed web and API workflows restarted successfully; actual remote WebKit/CI results remain pending an owner push.
+The final local gate also passed 106 unit tests, 10 property tests, the PostgreSQL integration test, two Pixel/desktop smoke tests, built-page Lighthouse accessibility checks, and `pnpm audit` with zero high or critical findings. The local smoke command printed `WebKit profiles run in CI`. The requested `origin/main` push and first GitHub Actions run are pending. No release promotion, Vercel deployment, Replit publish or paid service has been enabled.
 
 ## Historical record before Amendment 6 (superseded acceptance state)
 

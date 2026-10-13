@@ -1,0 +1,28 @@
+id: quick-faithful-win
+description: A five-seat quick game finishes after the final Traitor is banished.
+seed: 20261030
+strategy: random
+config:
+  players:
+    count: 5
+  traitors:
+    number: 1
+    sleeper: false
+    recruitment: off
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-random
+  endgame:
+    size: 3
+    parity: false
+  schedule:
+    format: quick
+    plannedCycles: 1
+expected:
+  phase: FINISHED
+  winner: faithful
+  reason: no-traitors
+  alive: 4
+  eliminated: 1

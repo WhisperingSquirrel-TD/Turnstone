@@ -1,10 +1,14 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
 
 test('home and play are accessible, reloadable and responsive', async ({
   page,
 }) => {
-  await page.goto('/');
+  const homeResponse = await page.goto('/');
+  expect(homeResponse?.headers()['x-robots-tag']).toBe(
+    PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,
+  );
   await expect(page.getByRole('main')).toBeVisible();
   await expect(page.getByRole('contentinfo')).toContainText(
     'Built by Stackstone Consulting',
@@ -22,7 +26,10 @@ test('home and play are accessible, reloadable and responsive', async ({
     .first()
     .click();
   await expect(page).toHaveURL(/\/play$/);
-  await page.reload();
+  const playResponse = await page.reload();
+  expect(playResponse?.headers()['x-robots-tag']).toBe(
+    PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,
+  );
   await expect(page.getByRole('main')).toBeVisible();
   expect(
     (

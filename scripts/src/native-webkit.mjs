@@ -11,25 +11,41 @@ const bundle = `${root}/minibrowser-wpe`;
 const libraries = `${bundle}/lib:${bundle}/sys/lib:${process.env.LD_LIBRARY_PATH ?? ''}`;
 const binary = `${bundle}/bin/MiniBrowser`;
 const preflight = spawnSync('ldd', [binary], {
-  encoding: 'utf8', env: {...process.env, LD_LIBRARY_PATH:libraries},
+  encoding: 'utf8',
+  env: { ...process.env, LD_LIBRARY_PATH: libraries },
 });
 if (preflight.status !== 0 || preflight.stdout.includes('not found')) {
-  throw new Error(`WebKit native preflight failed:\n${preflight.stdout}\n${preflight.stderr}`);
+  throw new Error(
+    `WebKit native preflight failed:\n${preflight.stdout}\n${preflight.stderr}`,
+  );
 }
-const dlopen = spawnSync('python3', ['-c', 'import ctypes; ctypes.CDLL("libGLESv2.so.2"); ctypes.CDLL("libx264.so")'], {
-  encoding:'utf8', env:{...process.env, LD_LIBRARY_PATH:libraries},
-});
-if (dlopen.status !== 0) throw new Error(`WebKit native dlopen preflight failed:\n${dlopen.stderr}`);
-mkdirSync('generated-artifacts/browser-runtime', {recursive:true});
+const dlopen = spawnSync(
+  'python3',
+  [
+    '-c',
+    'import ctypes; ctypes.CDLL("libGLESv2.so.2"); ctypes.CDLL("libx264.so")',
+  ],
+  {
+    encoding: 'utf8',
+    env: { ...process.env, LD_LIBRARY_PATH: libraries },
+  },
+);
+if (dlopen.status !== 0)
+  throw new Error(`WebKit native dlopen preflight failed:\n${dlopen.stderr}`);
+mkdirSync('generated-artifacts/browser-runtime', { recursive: true });
 const wrapper = resolve('generated-artifacts/browser-runtime/webkit.sh');
-const quote = value => `'${value.replaceAll("'", "'\\''")}'`;
-writeFileSync(wrapper, [
-  '#!/usr/bin/env bash',
-  `export WEBKIT_EXEC_PATH=${quote(`${bundle}/bin`)}`,
-  `export WEBKIT_INJECTED_BUNDLE_PATH=${quote(`${bundle}/lib`)}`,
-  `export WEBKIT_INSPECTOR_RESOURCES_PATH=${quote(`${bundle}/share`)}`,
-  `export LD_LIBRARY_PATH=${quote(libraries)}`,
-  `exec ${quote(binary)} "$@"`,
-  '',
-].join('\n'), {mode:0o700});
+const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
+writeFileSync(
+  wrapper,
+  [
+    '#!/usr/bin/env bash',
+    `export WEBKIT_EXEC_PATH=${quote(`${bundle}/bin`)}`,
+    `export WEBKIT_INJECTED_BUNDLE_PATH=${quote(`${bundle}/lib`)}`,
+    `export WEBKIT_INSPECTOR_RESOURCES_PATH=${quote(`${bundle}/share`)}`,
+    `export LD_LIBRARY_PATH=${quote(libraries)}`,
+    `exec ${quote(binary)} "$@"`,
+    '',
+  ].join('\n'),
+  { mode: 0o700 },
+);
 console.info(wrapper);

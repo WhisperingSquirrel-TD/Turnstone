@@ -1,5 +1,41 @@
 # Decisions and open choices — complete specification
 
+## CI and hosting review — 13 October 2026
+
+### D31 — Termination benchmark and bounded verification sample
+
+**Context:** The owner’s reviewer reported a 30-second GitHub Actions timeout in the random-bot D13 termination property. Raising its timeout would conceal a performance defect.
+
+**Options:** Increase the test timeout; remove repeated replay checking; or retain every replay assertion while advancing a replay cursor incrementally.
+
+**Choice:** The measured hot path was the test re-running `replay(game.events)` from the beginning after every phase, making the test quadratic in its event-log length. The property now evolves each newly appended event once, compares the cursor at each transition, and performs one final full replay. It still asserts termination and replay equality. The performance budget is under 100 ms per rule-progress step on average and under 15 seconds per complete game, printed for each of the seven bots. Local before/after random-bot results were 32.6 s / 664.7 ms per step and 2.9 s / 58.5 ms per step; separate 40-seat full-game samples measured 0.62–1.07 s and 10.7–13.8 ms per rule step. These are Replit-container measurements, not GitHub-hosted-runner measurements; CI will report its own readings.
+
+**Consequence:** No timeout was raised and no engine rule or assertion was weakened. The measured root cause was repeated verification work, not a demonstrated slow single engine transition. Preserve the benchmark and use the GitHub result to confirm performance on CI-class hardware.
+
+### D32 — Fast deterministic scenario sample
+
+**Context:** The reviewer requires a fast `verify` sample and reserves full-volume games for `verify:full`; the prior repeated sample was taking too long.
+
+**Choice:** `verify` runs one complete deterministic game for every core-sweep cell, one for every constrained three-way row, one for every high-seat two-way row, and 32 fuzz games. This changes only the repetition counts; all valid matrix cells/rows and independent coverage checks remain in the sample. `verify:full` retains 20 games per sweep cell, 50 per covering row, 100,000 fuzz games and the full scenario report.
+
+**Consequence:** This reviewer-directed fast sample supersedes §18’s smaller-verification repetition counts; full-volume acceptance criteria are unchanged. Keep the change visible in PLAN and reports, and do not describe the sample as full-volume validation.
+
+### D33 — Independent CI suites and release protection
+
+**Context:** The monolithic Verify job stopped before WebKit, and the reviewer confirmed Vercel’s production branch is `release`; the repository is public with secret and push protection enabled.
+
+**Choice:** Verify is split into independent static, unit, property, PostgreSQL integration, scenario, per-device browser, Lighthouse and audit jobs, with a required-checks aggregator. Every job has an explicit timeout; WebKit iPhone/iPad jobs run on GitHub Actions. Use the full-SHA-pinned Node 24-compatible `pnpm/action-setup` 6.1.0 and `actions/cache` 6.1.0 actions. Pin runners to `ubuntu-24.04`; review the pin on 19 October 2026 after checking Playwright’s support for the newer image. Release promotion requires every Verify job to pass and the repository variable `TURNSTONE_PROMOTION_ENABLED` to equal `true`; the variable is unset/false by default.
+
+**Consequence:** The promotion workflow cannot update `release` or trigger Vercel merely because this work is pushed to `main`. No production deployment or paid service is enabled. Keep secrets and personal data out of the public repository; CI secret scanning remains full-history and SHA-pinned.
+
+### D34 — Static-host pre-launch headers
+
+**Context:** Vercel serves the static app without the Express server, while every preview and production response must stay unindexed until the owner declares launch.
+
+**Choice:** Use the single `PRE_LAUNCH_NOINDEX` security configuration flag. While enabled, Vercel applies `X-Robots-Tag: noindex, nofollow` globally; the app preview, built web server and API middleware use the same flag, and `robots.txt` disallows all crawlers. `vercel.json` carries the specified static, nonce-free CSP, HSTS, no-referrer, nosniff, COOP, Permissions-Policy and cache rules. Tests compare the Vercel JSON with the flag and exercise built production HTML/preview/API responses.
+
+**Consequence:** The static headers are verified from repository configuration, not from a live Vercel deployment; no deployment was made. Because Vercel headers are literal static configuration, the sync test must remain green when the owner changes the flag and its matching Vercel header at launch.
+
 ## Amendment 6 — active owner authority
 
 Section 24 is appended verbatim, including the owner's concluding delivery instruction. Sections 1–23 remain unchanged. Its domain, provider and pipeline decisions supersede conflicting historical entries below. Role labels remain the stated defaults; no theme/font decision is inferred.
@@ -369,19 +405,19 @@ Lighthouse reports accessibility 100 for home and play. Its dependency replaces 
 
 The new actual-build test first failed on missing build output, then passed after building. Both production routes emit fresh response-specific nonces and external-only script elements; no inline production scripts or unresolved nonce placeholders were found. Existing no-referrer tests are unchanged. Native browser assertions still apply.
 
-## Native browser environment — unresolved Milestone 0 acceptance blocker
+## Native browser execution — owner-approved CI location
 
-**Context:** Chromium profiles passed smoke/axe. Ubuntu-packaged WebKit depends on native loader assumptions and a headless EGL renderer not provided by the selected Nix execution environment.
+**Context:** Replit's Nix environment launches the official WebKit binary but cannot create its headless EGL display. Chromium profiles, axe and Lighthouse have passed locally.
 
-**Options:** Supply a compatible software EGL backend or a supported headless display/runtime for the official WebKit binary, preserving both WebKit profiles and assertions; or obtain an approved supported test execution environment. Switching profiles to Chromium or skipping them would violate acceptance.
+**Options:** Keep retrying incompatible native WebKit setup in Replit; replace WebKit with Chromium; or run the iPhone/iPad WebKit projects in the owner-approved GitHub Actions environment.
 
-**Choice:** Stop retrying after native package installation, ABI-correct output wiring and a dependency-preflighted official-binary wrapper. No gameplay work while this gate is red.
+**Choice:** WebKit runs in GitHub Actions with the official system dependencies. Local verify may omit only the two WebKit projects and must print exactly `WebKit profiles run in CI`; CI never omits them.
 
-**Consequence:** WebKit reaches launch but page creation aborts with “Could not create EGL display: no supported platform available.” Both iPhone/iPad profiles remain failed. A new approach is needed before further verification or Milestone 1.
+**Consequence:** Do not spend further Replit runs on EGL workarounds. Milestone 0 remains provisionally accepted until the first fully green Actions run; Milestone 1 is separately approved to proceed.
 
 ## Authority and approval
 
-All seven supplied parts are saved in `SPEC.md`, ordered as sections 1–19 without changing section text. The owner must approve PLAN before Milestone 1; a green Milestone 0 verification gate is also required. This turn updates documentation only, not implementation.
+All supplied specification parts and amendments are saved in `SPEC.md` in numerical order. PLAN was approved; the reviewer approved Milestone 1. The owner explicitly authorised continuing Milestones 2 and 3 without pausing for review between them. Milestone 0's remote WebKit acceptance remains pending.
 
 Each entry uses context, options, choice and consequence. **Pending** means no assumption is authorised. Requirements are referenced rather than copied into a second configuration source.
 
@@ -405,35 +441,35 @@ Each entry uses context, options, choice and consequence. **Pending** means no a
 
 **Consequence:** Reserved VM is a later owner decision, not an action now. Full-volume testing and external providers must be planned honestly; resource constraints cannot waive a Must, fake coverage, or authorise spending.
 
-## D3 — Milestone 0 acceptance and dependency remediation (blocked)
+## D3 — Milestone 0 acceptance and dependency remediation (resolved locally)
 
-**Context:** Last recorded application/test type checks, lint, formatting, unit/property tests and real PostgreSQL integration passed. Health/readiness and development nonce responses were checked; a narrow-viewport home screenshot rendered. Four-device Playwright/axe and Lighthouse execution were not demonstrated. The last audit had five high advisories, zero critical; this documentation turn did not rerun it.
+**Context:** The owner required every patchable advisory to be fixed, removal of the unused preview scaffold, and a maintained Lighthouse alternative before accepting any development-only exception. Milestone 0 has since been verified locally with its retained gates.
 
-**Options:** Patch/upgrade affected dependencies; use a maintained compatible tool replacement after approval; or await upstream fixes. Suppressing advisories, excluding development dependencies or calling unrun tests green is not an option.
+**Options:** Patch affected dependencies; replace the Lighthouse CLI while retaining Lighthouse; or use an owner-approved, expiring exception only if no maintained alternative exists. No production-tree exception is allowed.
 
-**Choice:** Gate remains **not green**, no milestone progression. Before any implementation resumes, recheck current advisories and resolve both patched and unpatched paths.
+**Choice:** Patched `brace-expansion`, removed the unused component-preview scaffold and its `braces` dependency, and replaced Lighthouse CI CLI with Lighthouse's maintained Node API driven by Playwright Chromium. No exception list is needed or permitted for the current dependency tree.
 
-**Consequence:** Last findings: two `extract-zip` high advisories (Lighthouse CI dependency; no patched release reported), one unpatched `braces` high advisory (existing component-preview scaffold), two `brace-expansion` high advisories (patch available). Any proposed replacement/removal must keep the required testing capability and avoid unrelated destructive changes.
+**Consequence:** The local dependency audit has no high or critical findings. Milestone 0 remains provisional only until the first green GitHub Actions run includes WebKit; this does not block the already-authorised engine work.
 
-## D4 — Baseline header/test disagreement (pending owner review)
+## D4 — Baseline headers and built response tests (resolved)
 
-**Context:** Current foundation tests expect `Referrer-Policy: no-referrer`; complete SPEC §15 explicitly requires `strict-origin-when-cross-origin`. §15 also says “no inline scripts”, while Vite's development runtime can contain nonce-bearing inline modules. Production header/nonces have not yet been exercised in a browser.
+**Context:** The owner chose a stricter referrer policy because join links carry tokens and clarified that the inline-script prohibition applies to production builds.
 
-**Options:** Align policy/test with the binding requirement as an explicit requirement change; or retain a stricter policy only with owner approval. Clarify whether the inline-script prohibition includes development tooling or only production application scripts.
+**Options:** Use the specification's baseline policy or the owner-approved stricter policy; treat development tooling as production code or test the built production server.
 
-**Choice:** Pending; no code/test changes in this turn. Do not silently weaken or rewrite an existing test to get a pass.
+**Choice:** Keep `Referrer-Policy: no-referrer` and the existing regression test. Check security headers and emitted HTML on the built production response server; development tooling is exempt from the no-inline-script requirement.
 
-**Consequence:** Must resolve before Milestone 0 acceptance. Header settings and emitted HTML need actual checks in development and the built production response server; iframe preview restrictions must not be bypassed.
+**Consequence:** Built responses are tested for the stricter policy, nonce-based CSP, and absence of inline production scripts. No preview security bypass is allowed.
 
-## D5 — Palette contrast and the earlier test correction (recorded, review required)
+## D5 — Brand palette and contrast (resolved by SPEC §25)
 
-**Context:** Charcoal on the specified amber measures 4.32:1, not AA for ordinary text. The initial design used that combination. Buttons were changed to amber-light while amber remained decorative. The initially incorrect test for ordinary charcoal-on-amber text was changed into a regression forbidding that pairing.
+**Context:** The owner's visual-direction amendment supersedes the prior light palette and the earlier brand-colour decision. Gold is not suitable for ordinary text on all surfaces.
 
-**Options:** Use only supported AA text/background pairs while retaining exact brand tokens; or obtain an explicit approved token change. Do not claim the original pairing passes.
+**Options:** Keep the initial light brand palette or use the approved candlelit brown-and-gold direction with tested AA pairs.
 
-**Choice:** Existing implementation retains brand tokens and avoids text-bearing amber backgrounds. No further changes now.
+**Choice:** Use Peat, Walnut, Bark, Gilt, Candle and Ash tokens from §25; Gilt normal-size text only on Peat/Walnut where measured contrast passes. System serif headlines and system sans body; no web fonts.
 
-**Consequence:** Supported pairs pass contrast checks, but the earlier test was revised before asking the owner about its invalid assumption. This does not meet the requested stop-and-ask process; it is disclosed, not presented as permission to change failing tests. Future test/spec disagreements must stop for a decision.
+**Consequence:** Update tokens and contrast tests only ahead of the visual milestones. Screen redesign remains assigned to Milestones 5, 6 and 9; preserve the regression test.
 
 ## D6 — Infrastructure database, migration and response serving (recorded)
 
@@ -455,119 +491,148 @@ Each entry uses context, options, choice and consequence. **Pending** means no a
 
 **Consequence:** Future Pino logs must use explicit safe fields/redaction and never include roles/votes/choices/PINs/tokens/cookies. Lifecycle-only foundation logging is not evidence that full-game log leakage has been tested.
 
-## D8 — Verification layers and placeholder (recorded)
+## D8 — Verification layers and scenario runner (resolved in milestones)
 
 **Context:** SPEC §18 requires real engine, server and browser complete-game evidence, but Milestone 2 precedes server/browser implementation.
 
-**Options:** Fake all-layer success early; or report implemented layers and add subsequent layers at their milestones.
+**Options:** Mark the specification's eventual full-stack/browser suites as passed before their layers exist; or implement the real engine-level samples now and explicitly keep later suites pending.
 
-**Choice:** Honest staged harness, sample/full volumes exactly as §18 and documented in PLAN. Current `verify:full` placeholder remains explicitly unavailable, not green. No suite is marked passed merely because configuration exists.
+**Choice:** `pnpm run verify` runs the engine sample sweep, five games per covering row, deterministic fuzz and YAML goldens. `pnpm run verify:full` runs the full-volume engine suite and writes `docs/SCENARIO_REPORT.md`. The real report lists unimplemented server/browser/capacity layers as NOT RUN.
 
-**Consequence:** The first harness report covers real implemented engine layers; pending server/browser cases must remain visible until Milestones 4–7. Final release needs every layer, required coverage, full volume and real-device/real-person evidence.
+**Consequence:** No pending layer counts as a pass. HTTP/socket and restart tests land in Milestone 4, browser complete games in Milestone 5, complete golden/game features through Milestone 7, and full capacity/soak/mutation evidence in Milestone 10. A report at Milestone 2 is not production approval.
 
-## D9 — Covering-array generator and independent reference (pending)
+## D9 — Covering-array generator and independent reference (resolved)
 
 **Context:** §18 requires constrained three-way coverage of all rule-affecting settings, plus two-way at larger seat counts, and a separately written reference implementation.
 
 **Options:** A small reproducible in-repository constraint-aware generator with independent coverage verification; or an exactly pinned maintained generator justified by capability/maintenance/cost. Reference logic must not reuse engine decisions.
 
-**Choice:** Pending Milestone 2 research/decision; no package installed or generator selected in this documentation turn.
+**Choice:** Use a deterministic constrained generator implemented in-repository, with an independently written checker that re-enumerates legal three-way tuples. No generator dependency. Pin `yaml` 2.9.0 for readable golden scenario files. The separately written reference model replays events and independently checks eliminations, winners and the currently implemented pot state.
 
-**Consequence:** Record generator/version, constraint handling, seed, verified covered tuples and excluded invalid tuples. Never confuse unconstrained pairwise coverage with the required three-way model.
+**Consequence:** Record the generator algorithm, fixed seeds, covered/total legal tuples and excluded invalid tuples in every report. Future Must rules extend the factor model. The reference currently treats pot as unchanged because mission/pot events are scheduled for Milestone 7; do not claim pot behavior is cross-checked until then.
 
-## D10 — Scheduler and OAuth implementation choices (pending)
+## D10 — Durable deadline scheduler and authentication library (partly resolved)
 
 **Context:** §4 permits a one-second durable deadline poller or pg-boss; sign-in requires a maintained library and §13's real provider/session controls.
 
 **Options:** PostgreSQL-backed deadline polling or justified pg-boss; maintained identity-library approaches allowed by §4, evaluated against provider support, PKCE/nonce checks, Postgres sessions, deletion callback and approved costs.
 
-**Choice:** Pending at Milestones 4/8. Do not provision services, obtain credentials in chat, add mock providers outside tests, or assume all provider approvals exist.
+**Choice:** Use a PostgreSQL deadline poller claiming due rows with `FOR UPDATE SKIP LOCKED`, with no new queue service or Redis. Choose and pin a maintained WebAuthn library during Milestone 8; SimpleWebAuthn is the initial candidate under §24, subject to compatibility and security review.
 
-**Consequence:** Document exact dependency choices only after checking compatibility. No hand-written local-auth fallback or security stub. Guest-seat security can be real before provider sign-in; coordinator production journeys stay unavailable until real sign-in exists.
+**Consequence:** Scheduler implementation belongs to Milestone 4 and must survive restart/multi-instance claims. Do not add mock authentication or hand-written passkey validation; coordinator production journeys remain unavailable until real passkeys exist. Optional Google/Microsoft providers require owner-supplied configuration.
 
-## D11 — Could features versus planner extensions (needs clarification)
+## D11 — Could features versus planner extensions (resolved)
 
 **Context:** §7 recommends the seer as a spare-time extension, but §8/§19 classify seer as Could. Similar configurable entries exist for Could powers.
 
 **Options:** Keep Could features disabled/unbuilt until requested; or explicitly approve a particular Could feature and add it to scope/testing.
 
-**Choice:** Do not enable Could features implicitly. Owner clarification is pending for whether planner options should merely mention an unavailable extension or omit it.
+**Choice:** The planner offers only features already built and enabled. Omit Seer and every other Could item from planner extensions until the owner requests them.
 
-**Consequence:** Covering arrays test implemented permitted settings; they cannot claim gameplay coverage for an unbuilt Could feature.
+**Consequence:** Could values stay disabled/unbuilt in the parameter model and planner. Tests must not treat an unavailable feature as an available timetable option.
 
-## D12 — Sleeper/terminal-state precedence (needs clarification)
+## D12 — Sleeper/terminal-state precedence (resolved by owner)
 
 **Context:** §5 prevents a Faithful win while a sleeper is waiting; §17 also requires only-Faithful states to end at once. Sleeper activation is limited to before endgame.
 
 **Options:** Treat “only Faithful” as excluding an eligible waiting sleeper, with explicit activation precedence; or give immediate terminal-state rules priority. Define behaviour if a sleeper is waiting at endgame/two-player thresholds.
 
-**Choice:** Pending owner resolution before Milestone 1 terminal-state tests.
+**Choice:** When the final Traitor is removed, an alive, non-departed eligible sleeper activates at the next private moment only if the endgame trigger has not been reached and more than three players remain. Otherwise the Faithful win immediately. A sleeper never activates in or after endgame.
 
-**Consequence:** Cannot invent winners, activation order or termination properties from conflicting interpretations.
+**Consequence:** Run parity and two-player win checks after activation. This precedence applies to engine, reference, scenarios and planner estimates.
 
-## D13 — Termination bound and manual controls (needs clarification)
+## D13 — Termination bound and manual controls (resolved by owner)
 
 **Context:** §5 demands every game ends within a computed maximum number of steps; §11 allows pause, extend and schedule shifts without explicit limits, and manual advancement is supported.
 
 **Options:** Bound only rule-progress transitions with explicit exclusions for logistics/waiting; or impose owner-approved limits/forced closure for all commands/time.
 
-**Choice:** Pending before engine/harness termination assertions.
+**Choice:** A step is a rule-progress transition (deal, cycle step, endgame round), not pause/extend/shift/undo. Deadlines must eventually fire. Maximum cycles equal the planner cycle count plus three; when reached, begin endgame immediately.
 
-**Consequence:** Define exactly what counts as a step and what fairness/eventual-progress assumption bots satisfy. Do not invent limits that change coordinator powers.
+**Consequence:** Under every bot strategy, with deadlines firing, each game reaches FINISHED within the bound. This is a property test; logistics actions cannot extend the rule-progress bound.
 
-## D14 — Secrecy assertions and entitled viewers (needs clarification)
+## D14 — Secrecy assertions and entitled viewers (resolved by owner)
 
 **Context:** §8 allows Traitors to know other Traitors; §6/§11 allow configured ghost spectators; §3 allows announced all-seeing host mode. §18's broad “no ... another seat's role” payload assertion needs those entitlements expressed explicitly.
 
 **Options:** Apply the no-leak assertion to each viewer's configured allow-list, including deliberate host/spectator entitlements; or prohibit those modes by an explicit scope change.
 
-**Choice:** Pending clarification; proposed test interpretation is per-viewer allow-lists with no blind-coordinator/admin entitlement to unfinished secrets.
+**Choice:** Test no-leak against each viewer's explicit allow-list, including legitimate Traitor knowledge, an announced all-seeing host and spectator ghosts. Blind coordinators and admins are never entitled to unfinished secrets.
 
-**Consequence:** Tests must forbid unauthorised data, not reject legitimate Traitor knowledge or silently grant unrestricted rights.
+**Consequence:** Apply the same policy to projections, HTTP responses, socket payloads, DOM, browser storage, URLs and logs. All-seeing mode must be announced to every player before joining.
 
-## D15 — Seat/device recovery and later-rule details (needs clarification)
+## D15 — Seat/device recovery and later-rule details (resolved by owner)
 
 **Context:** §9 allows multiple devices per seat but recovery says the old device leaves. Several rule paths do not yet define all boundary outcomes.
 
 **Options:** Distinguish authorised additional devices from recovery migration; or revoke all prior seat devices on recovery. Clarify reserve roles/late joins, unanimous endgame with abstentions, ghost collective/half-vote ties, shield lifetime when no murder occurs, and recruitment selection/no-response mechanics.
 
-**Choice:** Pending targeted questions before affected engine/server tests; the supplied text remains unchanged.
+**Choice:** Recovery revokes every earlier device on that seat. Adding a second paired-seat device requires confirmation on a device already on the seat plus the PIN. Late joiners are always Faithful; remove random-from-reserve. Missing/abstaining endgame votes mean continue. Ghost collective vote is a majority of ghosts who voted, with ties as no vote; half-vote round-table ties use the configured rule. Shields expire at the next DAWN whether used or not. Recruitment targets use the victim-selection rule; no response by the deadline is a decline.
 
-**Consequence:** Recovery, lockouts, votes and recruitment cannot be implemented with silent fallback rules.
+**Consequence:** These owner rules override conflicting specification options and are test requirements for their assigned milestones. Seat recovery and recruitment delivery remain later server milestones.
 
-## D16 — Owner identity partly resolved; remaining placeholders
+## D16 — Owner identity and brand decisions
 
 **Context:** §19 expressly leaves these values open.
 
 **Options:** Keep placeholders; or use values explicitly confirmed by the owner.
 
-**Choice:** Amendment 5 resolves APP_NAME and supplies official SVGs/organisation details; Amendment 6 resolves canonical domain/RP ID and the planned API origin. Leave unconfirmed:
+**Choice:** The owner selected Turnstone, tagline “Turnstone: the traitor game where everyone plays.” and byline “A Stackstone game”. Amendment 5 supplies the organisation site/location and SVG brand assets; Amendment 6 resolves the canonical site and production passkey RP ID. Section 25 resolves the dark visual direction. Keep system fonts and the 30-day retention default. Leave unconfirmed:
 
-- Font (Arial remains provisional).
-- Retention period (the specification's default is not a separate owner confirmation).
 - Crawler policy (implement the specified configurable default only when authorised).
 - Change-freeze dates.
-- Stackstone social links.
+- Stackstone social links beyond the confirmed main site.
 
-**Consequence:** Domain/organisation details are confirmed; server host, social links and freeze dates are not. No invented policy confirmation or font substitution. Brand observation/approval is tracked in D22. Do not block local foundations merely to request release-stage placeholders.
+**Consequence:** Use one identity config and the outlined brand mark. The owner-reported preliminary name search is not legal clearance; trade mark/domain/handle checks remain pending. Do not invent a legal approval, social account, hosting choice or change-freeze date.
+
+## D17 — Milestone 1 review approval (resolved)
+
+**Context:** The owner reported that their reviewer approved Milestone 1 and asked that work continue into Milestones 2 and 3.
+
+**Options:** Keep Milestone 1 in review; or record the explicit reviewer approval and proceed.
+
+**Choice:** Milestone 1 is approved. Continue Milestone 2 then Milestone 3, with a green local `pnpm run verify` gate at each milestone.
+
+**Consequence:** This approval does not waive the still-provisional Milestone 0 GitHub Actions/WebKit acceptance, any milestone gate, or the no-deployment rule.
+
+## D18 — Push and secret scanning after each green milestone (resolved)
+
+**Context:** The owner connected the Turnstone repository and requires each green milestone to be pushed when this Repl has push access; GitHub CI provides the approved WebKit environment.
+
+**Options:** Rely on local verification alone; or scan and push the exact green milestone commit to `origin/main`, leaving owner Sync as the fallback when credentials do not permit push.
+
+**Choice:** Before every push, inspect the staged file list and confirm that no secrets, tokens, `.env` files or credentials are staged. CI scans full Git history using Gitleaks pinned to a full commit SHA.
+
+**Consequence:** If this Repl cannot push, record that fact in `PROGRESS.md` and ask the owner to press Sync. A push targets `main` only; no release promotion or deployment is authorised in this work.
+
+## D19 — Pre-launch privacy flag (resolved; implementation assigned to Milestone 9)
+
+**Context:** Until the owner declares launch, every preview and production response must be excluded from indexing.
+
+**Options:** Apply scattered route-specific noindex rules; or use one configuration flag that controls response headers and robots policy.
+
+**Choice:** Implement one pre-launch flag: while enabled, every response carries `X-Robots-Tag: noindex, nofollow` and `robots.txt` disallows everything. Turn it off only at launch in one configuration change; the normal crawler policy applies only then.
+
+**Consequence:** Add a test for every response class and robots output when the public response/server work is introduced. No preview or production deployment is permitted here.
 
 ## Dependency record
 
 This is the foundation's previously recorded inventory, **not** a new install/audit or a complete claim of pinning compliance. New product/tooling direct dependencies were pinned; inherited scaffold manifests still require review for §1's exact-pinning requirement. Workspace references use `workspace:*`.
 
-| Group                                                                      | Recorded purpose                                       |
-| -------------------------------------------------------------------------- | ------------------------------------------------------ |
-| TypeScript 5.9.3, ESLint 10.12.0, typescript-eslint 8.71.1, Prettier 3.9.6 | Strict typing, lint/format                             |
-| Vitest 5.0.3, fast-check 4.10.2                                            | Unit/property falsification                            |
-| Supertest 7.3.1, types 7.2.1                                               | Real HTTP integration testing                          |
-| Playwright 1.64.0                                                          | Four browser/device profiles                           |
-| axe-core 4.14.0, @axe-core/playwright 4.13.0                               | Automated accessibility                                |
-| @lhci/cli 0.15.1                                                           | Requested Lighthouse tooling; audit blocker unresolved |
-| Socket.IO/server and client 4.8.4                                          | Future realtime/testing; no active gameplay socket     |
-| Express 5.2.1, Zod 3.25.76, Drizzle 0.45.2, pg 8.23.0                      | HTTP validation and PostgreSQL                         |
-| React/DOM 19.1.0, React Router 7.18.4, Query 5.102.8                       | Browser rendering/routing/server-view tooling          |
-| Vite 7.3.6, React plugin 5.2.0, Tailwind/plugin 4.3.3, tsx 4.23.13         | Dev/build and typed response/migration tools           |
-| Existing Pino/logger build dependencies                                    | Safe lifecycle logging; exact-pin review outstanding   |
+| Group                                                                      | Recorded purpose                                                                               |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| TypeScript 5.9.3, ESLint 10.12.0, typescript-eslint 8.71.1, Prettier 3.9.6 | Strict typing, lint/format                                                                     |
+| Vitest 5.0.3, fast-check 4.10.2                                            | Unit/property falsification                                                                    |
+| Supertest 7.3.1, types 7.2.1                                               | Real HTTP integration testing                                                                  |
+| Playwright 1.64.0                                                          | Four browser/device profiles                                                                   |
+| axe-core 4.14.0, @axe-core/playwright 4.13.0                               | Automated accessibility                                                                        |
+| Lighthouse 13.5.0 Node API                                                 | Maintained Lighthouse audits against Playwright Chromium without the vulnerable CLI dependency |
+| yaml 2.9.0                                                                 | Parse readable golden scenario fixtures                                                        |
+| Socket.IO/server and client 4.8.4                                          | Future realtime/testing; no active gameplay socket                                             |
+| Express 5.2.1, Zod 3.25.76, Drizzle 0.45.2, pg 8.23.0                      | HTTP validation and PostgreSQL                                                                 |
+| React/DOM 19.1.0, React Router 7.18.4, Query 5.102.8                       | Browser rendering/routing/server-view tooling                                                  |
+| Vite 7.3.6, React plugin 5.2.0, Tailwind/plugin 4.3.3, tsx 4.23.13         | Dev/build and typed response/migration tools                                                   |
+| Existing Pino/logger build dependencies                                    | Safe lifecycle logging; exact-pin review outstanding                                           |
 
 Patched transitive overrides recorded previously: `proxy-addr`, `source-map-js`, `tmp`, `basic-ftp`. Keep advisories included; do not use this record as evidence that the audit is now green.
 

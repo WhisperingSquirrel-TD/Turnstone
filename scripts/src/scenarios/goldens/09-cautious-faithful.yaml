@@ -1,0 +1,28 @@
+id: cautious-faithful
+description: Cautious Faithful bots finish a small game when only one Traitor is dealt.
+seed: 20261038
+strategy: cautious-faithful
+config:
+  players:
+    count: 5
+  traitors:
+    number: 1
+    sleeper: false
+    recruitment: off
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-random
+  endgame:
+    size: 3
+    parity: false
+  schedule:
+    format: quick
+    plannedCycles: 1
+expected:
+  phase: FINISHED
+  winner: traitor
+  reason: two-players
+  alive: 2
+  eliminated: 3

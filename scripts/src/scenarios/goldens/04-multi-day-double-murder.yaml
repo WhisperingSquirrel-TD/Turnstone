@@ -1,0 +1,35 @@
+id: multi-day-double-murder
+description: A multi-day game with two murders, shared tasks and coordinator-allocated public shields.
+seed: 20261033
+strategy: never-acts
+config:
+  players:
+    count: 10
+  traitors:
+    number: 2
+    sleeper: false
+    recruitment: off
+    murders: 2
+    victimDecision: first
+  missions:
+    enabled: true
+    shields: public
+    allocation: coordinator
+  tasks:
+    enabled: true
+    perCycle: shared
+    missedConsequence: none
+  roundTable:
+    banishments: 2
+  endgame:
+    size: 4
+    parity: true
+  schedule:
+    format: multi-day
+    plannedCycles: 3
+expected:
+  phase: FINISHED
+  winner: traitor
+  reason: parity
+  alive: 4
+  eliminated: 6

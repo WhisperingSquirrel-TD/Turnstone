@@ -5,10 +5,16 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "scenarios": "tsx ./src/scenarios/runner.ts --sample",
+    "scenarios:full": "tsx ./src/scenarios/runner.ts --full",
+    "test:scenario-workers": "tsx ./src/scenarios/worker-smoke.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "tsx": "catalog:"
+    "@workspace/engine": "workspace:*",
+    "@workspace/shared": "workspace:*",
+    "tsx": "catalog:",
+    "yaml": "2.9.0"
   }
 }

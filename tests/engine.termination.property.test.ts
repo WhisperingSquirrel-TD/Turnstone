@@ -1,6 +1,12 @@
 import { expect, it } from 'vitest';
 import fc from 'fast-check';
-import { assertInvariants, replay, viewFor } from '../lib/engine/src/index';
+import { performance } from 'node:perf_hooks';
+import {
+  assertInvariants,
+  evolve,
+  replay,
+  viewFor,
+} from '../lib/engine/src/index';
 import { command, fixture } from './support/engine';
 
 const strategies = [
@@ -47,6 +53,8 @@ function runToFinish(strategy: (typeof strategies)[number], count: number) {
       kind: 'player',
       seatId: seat.id,
     });
+  let replayCursor = replay(game.events);
+  let replayedEvents = game.events.length;
   const cycleLimit = game.state.maxCycles;
   let transitions = 0;
 
@@ -141,24 +149,40 @@ function runToFinish(strategy: (typeof strategies)[number], count: number) {
     game.context.now = (game.state.deadline ?? game.context.now) + 1;
     command(game, { type: 'AdvancePhase' });
     assertInvariants(game.state);
-    expect(replay(game.events)).toEqual(game.state);
+    while (replayedEvents < game.events.length) {
+      replayCursor = evolve(replayCursor, game.events[replayedEvents]!);
+      replayedEvents++;
+    }
+    expect(replayCursor).toEqual(game.state);
     expect(game.state.cycle).toBeLessThanOrEqual(cycleLimit);
     transitions += 1;
   }
 
   expect(game.state.phase).toBe('FINISHED');
+  expect(replay(game.events)).toEqual(game.state);
   expect(game.state.steps).toBeLessThanOrEqual(
     1 + cycleLimit * 7 + Math.max(0, count - 2),
   );
+  return game.state.steps;
 }
 
 for (const [index, strategy] of strategies.entries()) {
   it(`reaches FINISHED within the D13 bound for the ${strategy} bot`, () => {
+    let durationMs = 0;
+    let ruleSteps = 0;
     fc.assert(
-      fc.property(fc.integer({ min: 5, max: 40 }), (count) =>
-        runToFinish(strategy, count),
-      ),
+      fc.property(fc.integer({ min: 5, max: 40 }), (count) => {
+        const started = performance.now();
+        ruleSteps = runToFinish(strategy, count);
+        durationMs = performance.now() - started;
+      }),
       { numRuns: 1, seed: 20261020 + index },
     );
-  }, 30_000);
+    const millisecondsPerRuleStep = durationMs / Math.max(1, ruleSteps);
+    console.info(
+      `[engine-performance] strategy=${strategy} game=${durationMs.toFixed(1)}ms steps=${ruleSteps} mean-step=${millisecondsPerRuleStep.toFixed(1)}ms`,
+    );
+    expect(millisecondsPerRuleStep).toBeLessThan(100);
+    expect(durationMs).toBeLessThan(15_000);
+  }, 60_000);
 }

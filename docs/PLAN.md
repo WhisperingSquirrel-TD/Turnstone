@@ -4,7 +4,7 @@
 
 `docs/SPEC.md` contains all seven supplied parts, with sections 1–19 in numerical order, followed by Amendments 1–7 as sections 20–25. Owner rulings on task timing, sleeper timing and termination are recorded in sections 5 and 22. Section 25 supersedes the previous light-palette decisions and section 2's light-public-site palette. Sections 20–25 add performance, positioning, task, branding, delivery and visual requirements. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
 
-**Owner-approved, amended by §24–25 and all supplied rulings.** Milestone 0 is provisionally accepted; its first fully green GitHub Actions run, including iPhone/iPad WebKit, makes acceptance final. The owner explicitly authorises Milestone 1 now because the pure engine needs no browser. Local verify skips only WebKit, prints exactly “WebKit profiles run in CI”, and retains Pixel/desktop, axe, Lighthouse and all non-browser gates. CI never skips these four profiles. C5, C6 and D12–D15 are resolved as recorded in `DECISIONS.md`; do not treat those former questions as current blockers. Stop for review after Milestone 1; do not start Milestones 2 or 3 before review.
+**Owner-approved, amended by §24–25 and all supplied rulings.** Milestone 0 is provisionally accepted; its first fully green GitHub Actions run, including iPhone/iPad WebKit, makes acceptance final. Milestone 1 was approved by the owner's reviewer. Milestone 2 is in progress; once its local verify is green, continue directly through Milestone 3, then stop for review. Local verify skips only WebKit, prints exactly “WebKit profiles run in CI”, and retains Pixel/desktop, axe, Lighthouse and all non-browser gates. CI never skips these four profiles. C5, C6 and D12–D19 are resolved as recorded in `DECISIONS.md`; do not treat those former questions as current blockers.
 
 Section 24 is appended verbatim and supersedes conflicting provider/hosting notes. Canonical site/RP ID and the planned game origin are in the shared identity config; runtime API origin comes from the build-time variable. The owner pushes to the stated GitHub repository. Repository configurations do not mean a CI run has passed or a hosting service has been activated. No Replit publishing or paid services.
 
@@ -22,7 +22,7 @@ Stay on the free tier: no publishing, deployment or paid service activation. Run
 ## Amendment 6 delivery and authentication mapping
 
 - **Foundations/current delivery:** GitHub push-to-main verify on Ubuntu with official Chromium/WebKit system dependencies, pnpm/browser caches and a 15-minute job limit. Least-privilege jobs, full-SHA action pins and same-repository successful-main verification precede exact-commit promotion to release. Inclusive repository UTC freezes block promotion except the exact `[security]` commit-message tag. Measure actual runtime and obtain the first green CI run; local green is not final Milestone 0 acceptance.
-- **Milestone 2:** Add the nightly `verify:full` workflow only after the real harness exists; do not schedule the unavailable placeholder or claim its samples passed.
+- **Milestone 2:** The real scenario harness and `verify:full` are being added; nightly full runs may start only after this milestone is green. Keep reports explicit about later layers that are not yet implemented.
 - **Milestone 4:** Validate the configured API origin, production/passkey origins, credentialed sibling-domain topology, host-only cookies, explicit CORS/CSRF/CSP/socket origin checks and long-lived server portability. The server's always-on host is unchosen; no paid service activation.
 - **Milestones 5/9:** Keep the player/app shell and prerendered public outputs independently static; Vercel builds only the web package. API origin is supplied at build time. Complete CDN cache/security/header/budget checks before launch, rather than treating the current foundation SPA as finished public pages.
 - **Milestone 8:** Primary coordinator passkeys with required user verification, no attestation, production RP ID derived from config, multiple credentials and no recovery bypass. Lost passkey means a new account; co-coordinator transfer preserves games. Players remain guests. Optional Google/Microsoft OIDC only with configured client IDs/required server secrets. Remove LinkedIn/Facebook/Apple and the Meta callback from the active scope. Resolve trusted admin allow-list binding for passkey-only accounts; never trust self-asserted email.
@@ -101,6 +101,7 @@ React is retained. If the actual route budget cannot be met, record measured opt
 - [ ] Implement elimination arithmetic, odd half-cycle, duration defaults and ordered compression/extension exactly as §7, subject to resolved Could-feature and player-count constraints.
 - [ ] Test the full §7 example; boundary seat counts/window lengths; insufficient/mostly-blocked windows; leave times, clock changes, time zones and early endgame.
 - [ ] Distinguish an estimated timetable from an actual game's earlier win/parity outcome. Report a clear minimum-time error when no valid plan fits.
+- [ ] Before completing this milestone, implement D19's single pre-launch privacy flag on every web/API preview response and `robots.txt`; test that all responses are noindex while the flag is enabled. Do not deploy.
 
 **Exit:** Example, Quick and Multi-day planner tests pass; clear too-short error; verify green.
 
@@ -191,6 +192,7 @@ React is retained. If the actual route budget cannot be met, record measured opt
 
 - [ ] Deliver every §14 public page as meaningful prerendered HTML with JavaScript off; original UK English copy; required legal/accessibility templates marked for solicitor review.
 - [ ] Apply Milestone 5's shared Stackstone mark/config/rename checks to every public page. Add §23's exact independence statement to the footer and `/about`, substituting the configured APP_NAME; name no TV programme. Test raw prerendered HTML, renamed output and Amendment 5's context-specific link behaviour.
+- [ ] Keep D19's pre-launch flag as the single switch for public crawler policy. The §14 robots, sitemap and llms.txt allow-list applies only after the owner declares launch and the flag is turned off.
 - [ ] Use the confirmed tagline/byline and organisation name/site/Abingdon, Oxfordshire details from the shared config in sales copy, structured data and `/about`; do not invent an address, social handles or production domain.
 - [ ] Maintain the existing `docs/NAMING.md` `[S]`: owner-confirmed choice/date, owner-reported preliminary web search, and pending owner trade mark/domain/handle checks. Add dated evidence as supplied, not fabricated clearance or paid registrations.
 - [ ] Apply §21's exact lead message and everyone-plays/even-the-host positioning; explain the full original game loop, phones as the private channel and narrated TV. Render the required proof points across sales/agent surfaces only when the claims gate permits them.
@@ -238,15 +240,18 @@ All-Vercel hosting is `[C]`, not the Must split-host portability architecture. D
 
 | Suite                      | `pnpm run verify` sample                                     | `pnpm run verify:full`                                          |
 | -------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
-| Exhaustive core sweep      | 2 complete games per cell                                    | At least 20 per cell                                            |
-| Constrained covering array | 5 complete games per row                                     | At least 50 per row                                             |
-| Fault fuzzing              | Real documented sample, not skipped                          | 100,000 fuzzed games                                            |
+| Exhaustive core sweep      | 1 complete game per cell                                     | At least 20 per cell                                            |
+| Constrained covering array | 1 complete game per 3-way row                                | At least 50 per row                                             |
+| High-seat covering array   | 1 complete game per 2-way row                                | At least 50 per row                                             |
+| Fault fuzzing              | 32 deterministic games                                       | 100,000 fuzzed games                                            |
 | Real HTTP/socket games     | 3 full-stack games                                           | 20 full-stack games                                             |
 | Browser engines            | Device smoke tests                                           | Complete games on every profile, browser and installed modes    |
 | Route sizes (§20)          | Automated checks as each real client/public route exists     | Same hard budgets plus full network/performance evidence        |
 | Capacity (§20)             | Bounded reduced-scale checks as relevant server/routes exist | Full target suites in Task 10, only on owner-approved resources |
 
 Every suite checks its invariants, leakage, replay and termination after each step. Reports include coverage evidence, timings and failing seeds/reproductions. Browser/full-stack scenarios are added at their relevant milestones, not falsely claimed at Task 2. No production deployment before full-volume success and all release criteria; currently no deployment at all.
+
+The fast verification sample runs every generated coverage row once; the repeated/full volumes remain reserved for `verify:full`, per decision D32.
 
 ## Retained workspace mapping
 

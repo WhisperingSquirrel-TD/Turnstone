@@ -1,0 +1,30 @@
+id: day-no-murder
+description: A day-format game with two Traitors and no scheduled murders.
+seed: 20261031
+strategy: cautious-faithful
+config:
+  players:
+    count: 8
+  traitors:
+    number: 2
+    sleeper: false
+    recruitment: off
+    murders: 0
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-none
+    revealStyle: all
+  endgame:
+    size: 4
+    parity: false
+  schedule:
+    format: day
+    plannedCycles: 2
+expected:
+  phase: FINISHED
+  winner: faithful
+  reason: no-traitors
+  alive: 4
+  eliminated: 4

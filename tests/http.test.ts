@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../artifacts/api-server/src/app';
+import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
 
 describe('health and readiness', () => {
   it('health is independent of database availability', async () => {
@@ -16,6 +17,9 @@ describe('health and readiness', () => {
     expect((await request(app).get('/api/readyz')).body).toEqual({
       status: 'ready',
     });
+    expect(
+      (await request(app).get('/api/readyz')).headers['x-robots-tag'],
+    ).toBe(PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined);
   });
   it('fails closed without disclosing database errors', async () => {
     const app = createApp(async () => {
@@ -25,6 +29,9 @@ describe('health and readiness', () => {
     expect(response.status).toBe(503);
     expect(response.body).toEqual({ status: 'unavailable' });
     expect(response.text).not.toContain('private');
+    expect(response.headers['x-robots-tag']).toBe(
+      PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,
+    );
   });
   it('sets baseline security headers including independent unpredictable nonces', async () => {
     const app = createApp(async () => {});
@@ -45,5 +52,14 @@ describe('health and readiness', () => {
     expect(first.headers['x-frame-options']).toBe('DENY');
     expect(first.headers['x-powered-by']).toBeUndefined();
     expect(first.headers['cache-control']).toBe('no-store');
+    expect(first.headers['x-robots-tag']).toBe(
+      PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,
+    );
+    expect(second.headers['x-robots-tag']).toBe(
+      PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,
+    );
+    expect(
+      (await request(app).get('/missing-route')).headers['x-robots-tag'],
+    ).toBe(PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined);
   });
 });

@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import { PRE_LAUNCH_NOINDEX } from '@workspace/security/deployment';
 
 const appName = 'Turnstone';
 const builder = 'Stackstone Consulting';
@@ -13,6 +14,7 @@ export const config = {
   productionRpId: new URL(siteOrigin).hostname,
   plannedApiOrigin: 'https://live.turnstone.stackstoneconsulting.co.uk',
   apiOrigin: (import.meta.env?.VITE_API_ORIGIN as string | undefined) ?? null,
+  preLaunch: PRE_LAUNCH_NOINDEX,
   organisation: {
     name: builder,
     url: 'https://stackstoneconsulting.co.uk/',

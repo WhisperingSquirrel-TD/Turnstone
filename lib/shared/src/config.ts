@@ -224,6 +224,16 @@ export const gameConfigSchema = z
         path: ['traitors', 'number'],
         message: 'At least one Faithful seat is required',
       });
+    if (
+      value.tasks.enabled &&
+      value.tasks.filters.includes('family') &&
+      value.tasks.filters.includes('adults-only')
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['tasks', 'filters'],
+        message: 'Family and adults-only task filters cannot be combined',
+      });
   });
 export type GameConfig = z.infer<typeof gameConfigSchema>;
 export function recommended(count: number) {

@@ -1,0 +1,34 @@
+id: task-enabled-sleeper
+description: Tasks, the sleeper option and public role reveals in a quick game.
+seed: 20261032
+strategy: aggressive-traitor
+config:
+  players:
+    count: 7
+  traitors:
+    number: 1
+    sleeper: true
+    recruitment: off
+    timeoutChoice: none
+  missions:
+    enabled: true
+    shields: off
+  tasks:
+    enabled: true
+    filters:
+      - family
+  roundTable:
+    tieRule: revote-random
+    revealRole: always
+  endgame:
+    size: 3
+    parity: true
+  schedule:
+    format: quick
+    plannedCycles: 1
+expected:
+  phase: FINISHED
+  winner: traitor
+  reason: two-players
+  alive: 2
+  eliminated: 5

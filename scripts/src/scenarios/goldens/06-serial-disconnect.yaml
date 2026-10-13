@@ -1,0 +1,30 @@
+id: serial-disconnect
+description: Alternating disconnects do not stop a day-format game from terminating.
+seed: 20261035
+strategy: serial-disconnector
+config:
+  players:
+    count: 8
+  traitors:
+    number: 2
+    sleeper: false
+    recruitment: off
+    murders: 0
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-none
+    revealStyle: all
+  endgame:
+    size: 4
+    parity: false
+  schedule:
+    format: day
+    plannedCycles: 2
+expected:
+  phase: FINISHED
+  winner: traitor
+  reason: two-players
+  alive: 2
+  eliminated: 6

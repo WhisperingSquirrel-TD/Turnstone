@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { createNonce, securityHeaders } from '@workspace/security';
+import { PRE_LAUNCH_NOINDEX } from '../../../lib/security/src/deployment';
 
 export function createWebApp(publicDirectory: string) {
   const app = express();
@@ -10,6 +11,7 @@ export function createWebApp(publicDirectory: string) {
     const nonce = createNonce();
     res.locals.nonce = nonce;
     res.set(securityHeaders(nonce));
+    if (PRE_LAUNCH_NOINDEX) res.set('X-Robots-Tag', 'noindex, nofollow');
     next();
   });
   app.use(
