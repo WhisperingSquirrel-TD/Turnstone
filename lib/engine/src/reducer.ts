@@ -52,18 +52,22 @@ export function evolve(previous: State | null, input: unknown): State {
     };
   }
   if (!previous) throw new Error('First event must create a game');
-  const state = structuredClone(previous);
-  state.version = event.seq;
+  // State is immutable. Copy only the branch changed by this event rather
+  // than cloning every seat, ballot, task and chat message on every replay.
+  const state: State = { ...previous, version: event.seq };
   switch (event.type) {
     case 'SeatJoined':
-      state.seats.push({
-        id: event.seatId,
-        name: event.name,
-        role: state.deal ? 'faithful' : null,
-        status: 'alive',
-        publicRole: Boolean(state.deal),
-        traitorSince: null,
-      });
+      state.seats = [
+        ...previous.seats,
+        {
+          id: event.seatId,
+          name: event.name,
+          role: state.deal ? 'faithful' : null,
+          status: 'alive',
+          publicRole: Boolean(state.deal),
+          traitorSince: null,
+        },
+      ];
       break;
     case 'RolesDealt':
       state.deal = {
@@ -73,10 +77,14 @@ export function evolve(previous: State | null, input: unknown): State {
         sleeper: event.sleeper,
         redealUsed: event.redeal,
       };
-      for (const seat of state.seats) {
-        seat.role = event.roles[seat.id] ?? null;
-        seat.traitorSince = seat.role === 'traitor' ? event.seq : null;
-      }
+      state.seats = previous.seats.map((seat) => {
+        const role = event.roles[seat.id] ?? null;
+        return {
+          ...seat,
+          role,
+          traitorSince: role === 'traitor' ? event.seq : null,
+        };
+      });
       state.acks = [];
       state.shadow = {};
       state.chat = [];
@@ -110,14 +118,15 @@ export function evolve(previous: State | null, input: unknown): State {
       if (event.phase === 'FINAL_VOTE') state.endVotes = {};
       break;
     case 'PrivateAcknowledged':
-      if (!state.acks.includes(event.seatId)) state.acks.push(event.seatId);
+      if (!previous.acks.includes(event.seatId))
+        state.acks = [...previous.acks, event.seatId];
       break;
     case 'VoteSubmitted':
-      state.votes[event.seatId] = event.target;
+      state.votes = { ...previous.votes, [event.seatId]: event.target };
       break;
     case 'VoteRevealed':
-      if (!state.revealed.includes(event.seatId))
-        state.revealed.push(event.seatId);
+      if (!previous.revealed.includes(event.seatId))
+        state.revealed = [...previous.revealed, event.seatId];
       break;
     case 'VoteClosed':
       state.target = event.target;
@@ -125,8 +134,9 @@ export function evolve(previous: State | null, input: unknown): State {
       state.candidates = event.candidates;
       break;
     case 'ShadowSubmitted':
-      state.shadow[event.seatId] = event.choice;
-      if (!state.acks.includes(event.seatId)) state.acks.push(event.seatId);
+      state.shadow = { ...previous.shadow, [event.seatId]: event.choice };
+      if (!previous.acks.includes(event.seatId))
+        state.acks = [...previous.acks, event.seatId];
       break;
     case 'ShadowRoundAdvanced':
       if (state.phase !== 'SHADOW' || state.shadowRound !== 1)
@@ -137,56 +147,81 @@ export function evolve(previous: State | null, input: unknown): State {
       state.acks = [];
       break;
     case 'TaskAssigned':
-      state.taskAssignments.push({
-        seatId: event.seatId,
-        cycle: event.cycle,
-        taskId: event.task?.id ?? null,
-        text: event.task?.text ?? 'Keep watch today: who is acting oddly?',
-        shared: event.shared,
-        status: 'assigned',
-      });
+      state.taskAssignments = [
+        ...previous.taskAssignments,
+        {
+          seatId: event.seatId,
+          cycle: event.cycle,
+          taskId: event.task?.id ?? null,
+          text: event.task?.text ?? 'Keep watch today: who is acting oddly?',
+          shared: event.shared,
+          status: 'assigned',
+        },
+      ];
       break;
     case 'TaskReported': {
-      const task = state.taskAssignments.find(
+      const index = previous.taskAssignments.findIndex(
         (item) =>
           item.seatId === event.seatId &&
           item.cycle === event.cycle &&
           item.status !== 'void',
       );
-      if (!task) throw new Error('Task report has no live assignment');
-      task.status = event.report;
+      if (index < 0) throw new Error('Task report has no live assignment');
+      state.taskAssignments = previous.taskAssignments.map((task, taskIndex) =>
+        taskIndex === index ? { ...task, status: event.report } : task,
+      );
       break;
     }
     case 'TaskDecoyAnswered': {
-      const prior = state.taskReports.find(
+      const index = previous.taskReports.findIndex(
         (item) => item.seatId === event.seatId && item.cycle === event.cycle,
       );
-      if (prior) prior.answer = event.answer;
+      if (index >= 0)
+        state.taskReports = previous.taskReports.map((prior, reportIndex) =>
+          reportIndex === index ? { ...prior, answer: event.answer } : prior,
+        );
       else
-        state.taskReports.push({
-          seatId: event.seatId,
-          cycle: event.cycle,
-          answer: event.answer,
-        });
+        state.taskReports = [
+          ...previous.taskReports,
+          {
+            seatId: event.seatId,
+            cycle: event.cycle,
+            answer: event.answer,
+          },
+        ];
       break;
     }
     case 'TaskMurderCancelled':
-      state.taskMurderCancelledCycles.push({
-        cycle: event.cycle,
-        cancelled: event.cancelled,
-        traitors: event.traitors,
-      });
+      state.taskMurderCancelledCycles = [
+        ...previous.taskMurderCancelledCycles,
+        {
+          cycle: event.cycle,
+          cancelled: event.cancelled,
+          traitors: event.traitors,
+        },
+      ];
       break;
     case 'SeatRemoved': {
-      const seat = state.seats.find((s) => s.id === event.seatId);
+      const seat = previous.seats.find((s) => s.id === event.seatId);
       if (!seat || seat.status !== 'alive')
         throw new Error('Invalid elimination event');
-      seat.status = event.reason;
-      seat.publicRole = event.publicRole;
-      for (const task of state.taskAssignments)
-        if (task.seatId === event.seatId && task.status === 'assigned')
-          task.status = 'void';
+      state.seats = previous.seats.map((candidate) =>
+        candidate.id === event.seatId
+          ? {
+              ...candidate,
+              status: event.reason,
+              publicRole: event.publicRole,
+            }
+          : candidate,
+      );
+      state.taskAssignments = previous.taskAssignments.map((task) =>
+        task.seatId === event.seatId && task.status === 'assigned'
+          ? { ...task, status: 'void' }
+          : task,
+      );
+      state.votes = { ...previous.votes };
       delete state.votes[event.seatId];
+      state.shadow = { ...previous.shadow };
       delete state.shadow[event.seatId];
       break;
     }
@@ -219,23 +254,29 @@ export function evolve(previous: State | null, input: unknown): State {
       state.pendingSleeper = true;
       break;
     case 'SleeperActivated': {
-      const seat = state.seats.find((s) => s.id === event.seatId);
+      const seat = previous.seats.find((s) => s.id === event.seatId);
       if (!seat || seat.status !== 'alive' || seat.role !== 'faithful')
         throw new Error('Invalid sleeper activation');
-      seat.role = 'traitor';
-      seat.traitorSince = event.seq;
+      state.seats = previous.seats.map((candidate) =>
+        candidate.id === event.seatId
+          ? { ...candidate, role: 'traitor', traitorSince: event.seq }
+          : candidate,
+      );
       state.pendingSleeper = false;
       break;
     }
     case 'TraitorMessage':
-      state.chat.push({
-        seatId: event.seatId,
-        text: event.text,
-        seq: event.seq,
-      });
+      state.chat = [
+        ...previous.chat,
+        {
+          seatId: event.seatId,
+          text: event.text,
+          seq: event.seq,
+        },
+      ];
       break;
     case 'EndgameVote':
-      state.endVotes[event.seatId] = event.choice;
+      state.endVotes = { ...previous.endVotes, [event.seatId]: event.choice };
       break;
     case 'GameFinished':
       state.phase = 'FINISHED';

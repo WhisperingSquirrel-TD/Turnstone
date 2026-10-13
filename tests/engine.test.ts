@@ -85,6 +85,26 @@ describe('Milestone 1 deterministic engine', () => {
     ).toMatchObject({ ok: false, code: 'INVALID_COMMAND' });
     expect(() => evolve(game.state, { ...game.events[0], seq: 999 })).toThrow();
   });
+  it('shares unchanged event-state branches without mutating the prior state', () => {
+    const game = fixture(5);
+    const previous = game.state;
+    const result = decide(
+      previous,
+      {
+        type: 'StartGame',
+        idempotencyKey: 'deal',
+        expectedVersion: previous.version,
+      },
+      game.context,
+    );
+    if (!result.ok) throw new Error(result.code);
+
+    const next = evolve(previous, result.events[0]!);
+
+    expect(next.config).toBe(previous.config);
+    expect(previous.seats.every((seat) => seat.role === null)).toBe(true);
+    expect(next.seats).not.toBe(previous.seats);
+  });
   it('blocks fewer than five seats, duplicates and excess seats', () => {
     const game = fixture(5, {}, 4);
     expect(command(game, { type: 'StartGame' }, false)).toMatchObject({

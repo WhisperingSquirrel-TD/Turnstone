@@ -768,9 +768,9 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Options:** Raise the CI timeout; reduce or omit sample coverage; or split the same deterministic work across parallel shards and prove the complete union.
 
-**Choice:** Use six deterministic, cost-balanced shards. Keep every repeated game for one coverage row together; assign every generated row to exactly one shard. Each shard writes a partial report with coverage IDs, measured wall time and a per-seat-count game profile. A required merge job rejects missing/duplicate/unexpected rows, a missing shard, or actual/projected shard time over five minutes. The shard workflow has a ten-minute timeout only as a safety margin. Keep the plan-time projection conservative: 50 seconds for planning/start-up plus 0.70 ms per seat-square workload unit, calibrated above the observed 1.07-second 40-seat game and 44.8-second plan build. Upload the merged `SCENARIO_REPORT.md` as a short-lived CI artifact. Artifact actions are pinned by full commit SHA.
+**Choice:** Use six deterministic, cost-balanced shards. Keep every repeated game for one coverage row together; assign every generated row to exactly one shard. Each shard writes a partial report with coverage IDs, measured wall time and a per-seat-count game profile. A required merge job rejects missing/duplicate/unexpected rows, a missing shard, or actual/projected shard time over five minutes. The shard workflow has a ten-minute timeout only as a safety margin. The initial plan-time projection is 50 seconds for planning/start-up plus 0.70 ms per seat-square workload unit. Upload the merged `SCENARIO_REPORT.md` as a short-lived CI artifact. Artifact actions are pinned by full commit SHA.
 
-**Consequence:** No sample row or suite is dropped. The report can compare actual per-seat and per-shard costs to the projection and expose any remaining scaling issue. The projected-budget, deterministic partition and coverage-union tests pass locally; the next GitHub run must confirm all six shards finish under five minutes, the merger proves 100% coverage, and every required job succeeds before Milestone 2 acceptance. This does not waive the separate differential-oracle mutation requirement.
+**Consequence:** No sample row or suite is dropped. Verify #11 (`38477961591`, commit `362beec`) passed all jobs, including the four browser profiles, six shards, the coverage merger and required-checks. The merger verified all 2,522 rows; measured shard times were 238,532, 135,484, 157,526, 260,964, 122,728 and 280,875 ms. The slowest shard exceeded its projection (264,417 ms) but stayed below the five-minute actual-time budget; the projection was therefore not conservative. D50 addresses the measured reducer cost before the next CI run, after which the projection will be recalibrated if it still underestimates actual time. This does not waive Milestone 2's differential-oracle review.
 
 ## D47 — Milestone 4 backend infrastructure choices (resolved; acceptance pending)
 
@@ -790,4 +790,14 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Keep the assertion and configure Playwright's local and CI runs to launch the party-game Vite server on the dedicated test port. Local smoke continues to skip WebKit only with the explicit `WebKit profiles run in CI` notice; CI runs all four device profiles.
 
-**Consequence:** The regression test failed on the previous conditional configuration, then passed after the change. Both local browser profiles passed against the dedicated server, including the pre-launch header check; GitHub's four-profile result remains pending.
+**Consequence:** The regression test failed on the previous conditional configuration, then passed after the change. Both local browser profiles passed against the dedicated server, including the pre-launch header check. GitHub Verify #11 subsequently passed Pixel Chromium, desktop Chromium, iPhone WebKit and iPad WebKit. That run predates the current reducer performance change, whose CI confirmation remains pending.
+
+## D50 — Event reducer uses copy-on-write (resolved; CI confirmation pending)
+
+**Context:** Verify #11's CI sample profile showed average game time rising from 163 ms at 15 seats to 2,982 ms at 40 seats, with high-seat outliers. A V8 profile of a reproducible 40-seat game attributed 539.5 ms to `evolve` and 133.5 ms to `structuredClone`; `evolve` deep-cloned the entire authoritative state for every event. This repeated work grew with both event count and state size.
+
+**Options:** Keep the whole-state clone; make state mutable and weaken replay guarantees; or preserve immutable state while copying only branches an event changes.
+
+**Choice:** Use event-level copy-on-write in `evolve`. Unchanged branches are shared; changed arrays, records and seat/task objects are copied before updates. Keep event-schema validation, prior-state immutability, full replay equality and the scenario checks.
+
+**Consequence:** A regression test first failed because `evolve` cloned an unchanged config branch. After the change it passed, along with the targeted engine/scenario tests and type-check. The same local 40-seat game completed in 456 ms, and `structuredClone` no longer appeared among the top CPU-profile frames. Full local `pnpm run verify` passed with 2,567 scenarios in 129,853 ms. Verify #11 predates this change; CI confirmation is pending.
