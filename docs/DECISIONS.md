@@ -770,7 +770,7 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Use six deterministic, cost-balanced shards. Keep every repeated game for one coverage row together; assign every generated row to exactly one shard. Each shard writes a partial report with coverage IDs, measured wall time and a per-seat-count game profile. A required merge job rejects missing/duplicate/unexpected rows, a missing shard, or actual/projected shard time over five minutes. The shard workflow has a ten-minute timeout only as a safety margin. The initial plan-time projection is 50 seconds for planning/start-up plus 0.70 ms per seat-square workload unit. Upload the merged `SCENARIO_REPORT.md` as a short-lived CI artifact. Artifact actions are pinned by full commit SHA.
 
-**Consequence:** No sample row or suite is dropped. Verify #11 (`38477961591`, commit `362beec`) passed all jobs, including the four browser profiles, six shards, the coverage merger and required-checks. The merger verified all 2,522 rows; measured shard times were 238,532, 135,484, 157,526, 260,964, 122,728 and 280,875 ms. The slowest shard exceeded its projection (264,417 ms) but stayed below the five-minute actual-time budget; the projection was therefore not conservative. D50 addresses the measured reducer cost before the next CI run, after which the projection will be recalibrated if it still underestimates actual time. This does not waive Milestone 2's differential-oracle review.
+**Consequence:** No sample row or suite is dropped. Verify #12 (`38480622636`, commit `d1ada52`) passed all 18 jobs, including the four browser profiles, six shards, the coverage merger and required-checks. The merger verified all 2,522 rows; shard actual times were 56,859, 84,126, 84,272, 76,661, 76,598 and 61,934 ms, against projections of 266,650, 264,437, 264,461, 264,458, 264,458 and 264,417 ms. Every shard stayed below five minutes; the maximum actual time was 84,272 ms, so the post-optimization projection is now conservative. The run's Node 20 artifact-action annotations are addressed in D51. This does not waive Milestone 2's differential-oracle review.
 
 ## D47 — Milestone 4 backend infrastructure choices (resolved; acceptance pending)
 
@@ -790,9 +790,9 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Keep the assertion and configure Playwright's local and CI runs to launch the party-game Vite server on the dedicated test port. Local smoke continues to skip WebKit only with the explicit `WebKit profiles run in CI` notice; CI runs all four device profiles.
 
-**Consequence:** The regression test failed on the previous conditional configuration, then passed after the change. Both local browser profiles passed against the dedicated server, including the pre-launch header check. GitHub Verify #11 subsequently passed Pixel Chromium, desktop Chromium, iPhone WebKit and iPad WebKit. That run predates the current reducer performance change, whose CI confirmation remains pending.
+**Consequence:** The regression test failed on the previous conditional configuration, then passed after the change. Both local browser profiles passed against the dedicated server, including the pre-launch header check. GitHub Verify #12 passed Pixel Chromium, desktop Chromium, iPhone WebKit and iPad WebKit. The run also confirmed the reducer performance fix; its non-blocking artifact-action runtime warnings are recorded in D51.
 
-## D50 — Event reducer uses copy-on-write (resolved; CI confirmation pending)
+## D50 — Event reducer uses copy-on-write (resolved; CI confirmed)
 
 **Context:** Verify #11's CI sample profile showed average game time rising from 163 ms at 15 seats to 2,982 ms at 40 seats, with high-seat outliers. A V8 profile of a reproducible 40-seat game attributed 539.5 ms to `evolve` and 133.5 ms to `structuredClone`; `evolve` deep-cloned the entire authoritative state for every event. This repeated work grew with both event count and state size.
 
@@ -800,4 +800,14 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Use event-level copy-on-write in `evolve`. Unchanged branches are shared; changed arrays, records and seat/task objects are copied before updates. Keep event-schema validation, prior-state immutability, full replay equality and the scenario checks.
 
-**Consequence:** A regression test first failed because `evolve` cloned an unchanged config branch. After the change it passed, along with the targeted engine/scenario tests and type-check. The same local 40-seat game completed in 456 ms, and `structuredClone` no longer appeared among the top CPU-profile frames. Full local `pnpm run verify` passed with 2,567 scenarios in 129,853 ms. Verify #11 predates this change; CI confirmation is pending.
+**Consequence:** A regression test first failed because `evolve` cloned an unchanged config branch. After the change it passed, along with the targeted engine/scenario tests and type-check. The same local 40-seat game completed in 456 ms, and `structuredClone` no longer appeared among the top CPU-profile frames. In GitHub Verify #12, the scenario profile measured 79 ms/game at 15 seats and 711 ms/game at 40 seats (maximum 2,112 ms), versus 163 ms and 2,982 ms respectively before the change: a 76% reduction at 40 seats. All 2,522 coverage rows and all six shards passed; the termination property and full local verification also passed. The engine's independent pot check remains explicitly pending Milestone 7.
+
+## D51 — Pin Node 24 artifact actions (resolved; CI confirmation pending)
+
+**Context:** Verify #12 passed every required job, but its public annotations warned that the pinned upload/download artifact actions targeted Node 20 and were being forced to run on Node 24. The warning appeared on the six scenario shards and report merger; it did not fail verification.
+
+**Options:** Leave the old action versions and warning, or move to maintained Node 24 releases with full commit-SHA pins and a regression check.
+
+**Choice:** Pin `actions/upload-artifact` v7.0.2 to `cf430e030ddbb5b0abf93d22962f4752f3646cd9` and `actions/download-artifact` v8.0.2 to `9000827ccba6bdab643e8b6fd33ac0654aef8333`. Their official `action.yml` files declare `runs.using: node24`. Add a pipeline test for the exact pins. The Verify #12 promotion check was skipped; this change does not enable deployment.
+
+**Consequence:** The new regression test failed against the prior pins, then passed after the update. Full local `pnpm run verify` is green. The next GitHub run must confirm the new pins remove the Node 20 warnings; no release promotion, deployment or paid service is authorised.
