@@ -678,6 +678,26 @@ This is the foundation's previously recorded inventory, **not** a new install/au
 
 Patched transitive overrides recorded previously: `proxy-addr`, `source-map-js`, `tmp`, `basic-ftp`. Keep advisories included; do not use this record as evidence that the audit is now green.
 
+## D39 — Owner-authorised GitHub push via GIT_URL (rejected)
+
+**Context:** The owner authorised a push to `WhisperingSquirrel-TD/Turnstone` using the Replit secret named `GIT_URL`, superseding the earlier workflow-scope workaround. A presence-only check returned `GIT_URL present`.
+
+**Options:** Inspect and persist the credential; use it only by reference in the push command; or use Replit's Git connection or an owner-operated push.
+
+**Choice:** Use the secret only by reference in `git push "$GIT_URL" main:main`. Do not display, inspect, persist or write it into Git configuration, remotes, files, commits or logs. Keep `origin` as the plain HTTPS repository URL.
+
+**Consequence:** GitHub rejected the push for repository access or authentication. `git fetch origin` succeeded; the remote and `.git/config` were verified credential-free. The remote branch did not move. The detailed push output was withheld to avoid exposing any credential-bearing URL.
+
+## D40 — Fine-grained repository token for Git pushes (resolved)
+
+**Context:** The owner created a fine-grained token restricted to `WhisperingSquirrel-TD/Turnstone`, with Contents and Workflows read/write permission and a 90-day expiry, stored as the Replit secret `TURNSTONE_GITHUB_TOKEN`.
+
+**Options:** Continue using the rejected `GIT_URL`; use the new token only through a one-off credential helper; or rely on Replit Sync.
+
+**Choice:** Do not use `GIT_URL` again for this repository. Use `TURNSTONE_GITHUB_TOKEN` only by reference through a one-off Git credential helper at runtime. Never display, inspect, persist, or store the token in a remote, file, commit, or log.
+
+**Consequence:** The five restored commits were pushed successfully to `main` at `c39fc9899b6f31626c23b57012e192bae815d3aa`. The remote and `.git/config` remain credential-free. GitHub Verify run #2 completed successfully with every job green; the promotion workflow was skipped.
+
 ## Approval request boundary
 
 Owner approval requested for PLAN, with unresolved choices above kept explicit. Plan approval is not a deployment instruction, acceptance of red verification, approval of Could features, or permission to guess missing rules. No Milestone 1 implementation has started.
