@@ -12,6 +12,26 @@ describe('environment validation', () => {
   it('accepts valid configuration', () => {
     expect(parseEnvironment(valid).PORT).toBe(5000);
   });
+  it('requires the public app origin in production', () => {
+    expect(() =>
+      parseEnvironment({ ...valid, NODE_ENV: 'production' }),
+    ).toThrow('APP_BASE_URL');
+    expect(
+      parseEnvironment({
+        ...valid,
+        NODE_ENV: 'production',
+        APP_BASE_URL: 'https://turnstone.stackstoneconsulting.co.uk',
+        MAX_ACTIVE_GAMES: '1000',
+      }).APP_BASE_URL,
+    ).toBe('https://turnstone.stackstoneconsulting.co.uk');
+    expect(() =>
+      parseEnvironment({
+        ...valid,
+        NODE_ENV: 'production',
+        APP_BASE_URL: 'https://turnstone.stackstoneconsulting.co.uk',
+      }),
+    ).toThrow('MAX_ACTIVE_GAMES');
+  });
   for (const key of ['DATABASE_URL', 'SESSION_SECRET', 'PORT'] as const) {
     it(`fails clearly when ${key} is missing without exposing values`, () => {
       const input = { ...valid, [key]: undefined };

@@ -1,16 +1,38 @@
 import { z } from 'zod';
 
-const environmentSchema = z.object({
-  DATABASE_URL: z
-    .string()
-    .url()
-    .refine((value) => /^postgres(ql)?:\/\//.test(value)),
-  SESSION_SECRET: z.string().min(32),
-  PORT: z.coerce.number().int().min(1).max(65535),
-  NODE_ENV: z
-    .enum(['development', 'production', 'test'])
-    .default('development'),
-});
+const environmentSchema = z
+  .object({
+    DATABASE_URL: z
+      .string()
+      .url()
+      .refine((value) => /^postgres(ql)?:\/\//.test(value)),
+    SESSION_SECRET: z.string().min(32),
+    PORT: z.coerce.number().int().min(1).max(65535),
+    NODE_ENV: z
+      .enum(['development', 'production', 'test'])
+      .default('development'),
+    APP_BASE_URL: z.string().url().optional(),
+    MAX_ACTIVE_GAMES: z.coerce.number().int().min(1).optional(),
+  })
+  .superRefine((environment, context) => {
+    if (environment.NODE_ENV === 'production' && !environment.APP_BASE_URL) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['APP_BASE_URL'],
+        message: 'Required in production',
+      });
+    }
+    if (
+      environment.NODE_ENV === 'production' &&
+      !environment.MAX_ACTIVE_GAMES
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['MAX_ACTIVE_GAMES'],
+        message: 'Required in production',
+      });
+    }
+  });
 
 export function parseEnvironment(input: Record<string, unknown>) {
   const result = environmentSchema.safeParse(input);

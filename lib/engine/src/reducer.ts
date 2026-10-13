@@ -248,9 +248,16 @@ export function evolve(previous: State | null, input: unknown): State {
   }
   return state;
 }
-export function replay(events: readonly Event[]): State {
-  let state: State | null = null;
+export function replayFrom(
+  snapshot: State | null,
+  events: readonly Event[],
+): State {
+  let state = snapshot;
   for (const event of events) state = evolve(state, event);
   if (!state) throw new Error('Empty event stream');
   return state;
+}
+
+export function replay(events: readonly Event[]): State {
+  return replayFrom(null, events);
 }

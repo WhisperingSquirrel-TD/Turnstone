@@ -8,6 +8,20 @@
       "when": 1791833237573,
       "tag": "0000_glamorous_ultron",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791922034374,
+      "tag": "0001_game-runtime",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791923970413,
+      "tag": "0002_api-rate-limits",
+      "breakpoints": true
     }
   ]
 }

@@ -760,4 +760,14 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Keep every generated pairwise row and the 15-minute limit. Split high-seat jobs into four deterministic shards of 198 games. Balance estimated work using each row's player count squared, keep the full pairwise coverage check in each shard, and test exact seed partitioning, row counts, workload balance and CI-matrix parity.
 
-**Consequence:** The full local scenario report remains unchanged. The GitHub workflow has seven scenario matrix entries; Verify run #8 must complete all of them and the required-checks aggregator before Milestone 2 is accepted or Milestone 4 begins.
+**Consequence:** The full local scenario report remains unchanged. Commit `7594c18` passed Verify run #8 (`38458930078`) on 13 October 2026: all seven scenario entries, static/unit/property/integration/audit/Lighthouse checks, four browser profiles and required-checks succeeded. Milestone 2's differential and scenario gates are green; Milestone 4 proceeds under the owner's instruction.
+
+## D47 — Milestone 4 backend infrastructure choices (resolved; acceptance pending)
+
+**Context:** The server/realtime implementation needs durable state and deadlines, cross-instance pushes, admission control and measurable local checks while remaining within the free-tier restriction. Coordinator passkey sign-in is Milestone 8; the server must not simulate an identity before then.
+
+**Options:** Keep authoritative state or deadlines in process memory; add a separately paid Redis/queue service; or use PostgreSQL transactions and claims. For realtime, use a paid Redis adapter or PostgreSQL notifications.
+
+**Choice:** PostgreSQL is authoritative for append-only events, snapshots, idempotency, deadlines, active-game counts and pseudonymous rate-limit buckets. Use transactional optimistic versions and `FOR UPDATE SKIP LOCKED` deadline claims; use PostgreSQL notifications for cross-instance Socket.IO fan-out. Apply the 80%-of-configured-capacity refusal only to new-game creation. Keep the coverage gate at 85% lines for the declared API runtime modules, with bootstrap and test harness excluded. Keep reduced-scale performance evidence in `docs/CAPACITY.md`; do not extrapolate to production capacity.
+
+**Consequence:** No Redis, paid service, or Replit-only runtime feature was added. Local verification passed with 86.11% line coverage for the declared server-core modules. The backend implementation does not complete production viewer authentication, guest PIN/device recovery, complete 5–40-player HTTP/socket fault games, or static-host/sibling-origin portability; those are still open PLAN criteria, so Milestone 4 is not recorded as accepted.

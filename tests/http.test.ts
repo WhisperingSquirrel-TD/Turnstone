@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../artifacts/api-server/src/app';
 import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
+import { gameConfigSchema } from '../lib/shared/src';
 
 describe('health and readiness', () => {
   it('health is independent of database availability', async () => {
@@ -62,4 +63,232 @@ describe('health and readiness', () => {
       (await request(app).get('/missing-route')).headers['x-robots-tag'],
     ).toBe(PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined);
   });
+
+  it('fails closed for game creation and commands without an authenticated viewer', async () => {
+    const app = createApp(async () => {});
+    const createResponse = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        id: 'not-authorised',
+        idempotencyKey: 'create-key',
+        config: gameConfigSchema.parse({}),
+      });
+    expect(createResponse.status).toBe(401);
+    expect(createResponse.body).toEqual({
+      error: 'Authentication required',
+    });
+
+    const commandResponse = await request(app)
+      .post('/api/games/not-authorised/commands')
+      .send({
+        type: 'AdvancePhase',
+        idempotencyKey: 'advance-key',
+        expectedVersion: 0,
+      });
+    expect(commandResponse.status).toBe(401);
+    expect(commandResponse.body).toEqual({
+      error: 'Authentication required',
+    });
+  });
+
+  it('hides authentication dependency errors behind a generic response', async () => {
+    const app = createApp(async () => {}, {
+      resolveViewer: async () => {
+        throw new Error('private identity-provider response');
+      },
+    });
+    const response = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        id: 'auth-error-game',
+        idempotencyKey: 'auth-error-request',
+        config: gameConfigSchema.parse({}),
+      });
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ error: 'Service unavailable' });
+    expect(response.text).not.toContain('private identity-provider response');
+  });
+
+  it('allows credentialed browser requests only from the configured app origin', async () => {
+    const app = createApp(async () => {}, {
+      allowedOrigins: ['https://turnstone.stackstoneconsulting.co.uk'],
+    });
+    const allowed = await request(app)
+      .get('/api/healthz')
+      .set('Origin', 'https://turnstone.stackstoneconsulting.co.uk');
+    expect(allowed.headers['access-control-allow-origin']).toBe(
+      'https://turnstone.stackstoneconsulting.co.uk',
+    );
+    expect(allowed.headers['access-control-allow-credentials']).toBe('true');
+
+    const denied = await request(app)
+      .get('/api/healthz')
+      .set('Origin', 'https://untrusted.example');
+    expect(denied.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('returns a generic JSON error for malformed boundary payloads', async () => {
+    const app = createApp(async () => {});
+    const response = await request(app)
+      .post('/api/games')
+      .set('Content-Type', 'application/json')
+      .send('{"secret":"never echo this"');
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Invalid request' });
+  });
+
+  it('rejects new games above 80 percent of measured capacity', async () => {
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      maxActiveGames: 10,
+      countActiveGames: async () => 9,
+    });
+    const response = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        id: 'busy-game',
+        idempotencyKey: 'create-while-busy',
+        config: gameConfigSchema.parse({}),
+      });
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      error: 'Busy right now, try again in a few minutes',
+    });
+  });
+
+  it('issues a host-only CSRF cookie and requires its token on browser mutations', async () => {
+    const origin = 'https://turnstone.stackstoneconsulting.co.uk';
+    const app = createApp(async () => {}, {
+      allowedOrigins: [origin],
+      secureCookies: true,
+    });
+    const tokenResponse = await request(app).get('/api/csrf');
+    expect(tokenResponse.status).toBe(200);
+    expect(tokenResponse.body.csrfToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const setCookie = tokenResponse.headers['set-cookie']?.[0] ?? '';
+    expect(setCookie).toContain('HttpOnly');
+    expect(setCookie).toContain('Secure');
+    expect(setCookie).toContain('SameSite=Strict');
+    expect(setCookie).not.toContain('Domain=');
+    const reusedToken = await request(app)
+      .get('/api/csrf')
+      .set('Cookie', `turnstone-csrf=${tokenResponse.body.csrfToken}`);
+    expect(reusedToken.body.csrfToken).toBe(tokenResponse.body.csrfToken);
+
+    const denied = await request(app)
+      .post('/api/games')
+      .set('Origin', origin)
+      .send({});
+    expect(denied.status).toBe(403);
+    expect(denied.body).toEqual({ error: 'Invalid request' });
+
+    const allowed = await request(app)
+      .post('/api/games')
+      .set('Origin', origin)
+      .set('Cookie', setCookie.split(';')[0]!)
+      .set('X-CSRF-Token', tokenResponse.body.csrfToken)
+      .send({
+        type: 'CreateGame',
+        id: 'csrf-game',
+        idempotencyKey: 'csrf-request',
+        config: gameConfigSchema.parse({}),
+      });
+    expect(allowed.status).toBe(401);
+    expect(allowed.body).toEqual({ error: 'Authentication required' });
+  });
+
+  it('rate-limits creation by a pseudonymous IP and coordinator bucket', async () => {
+    const bucketHashes: string[] = [];
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'unit-test-secret',
+      consumeRateLimit: async (bucketHash) => {
+        bucketHashes.push(bucketHash);
+        return false;
+      },
+    });
+    const response = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        id: 'rate-limited-game',
+        idempotencyKey: 'rate-limited-request',
+        config: gameConfigSchema.parse({}),
+      });
+    expect(response.status).toBe(429);
+    expect(response.body).toEqual({ error: 'Too many requests' });
+    expect(bucketHashes).toHaveLength(1);
+    expect(bucketHashes[0]).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('checks both pseudonymous buckets before applying admission control', async () => {
+    const bucketHashes: string[] = [];
+    const limits: number[] = [];
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'unit-test-secret',
+      consumeRateLimit: async (bucketHash, limit) => {
+        bucketHashes.push(bucketHash);
+        limits.push(limit);
+        return true;
+      },
+      maxActiveGames: 0,
+      countActiveGames: async () => 1,
+    });
+    const response = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        id: 'admission-limited-game',
+        idempotencyKey: 'admission-limited-request',
+        config: gameConfigSchema.parse({}),
+      });
+    expect(response.status).toBe(503);
+    expect(bucketHashes).toHaveLength(2);
+    expect(new Set(bucketHashes).size).toBe(2);
+    expect(limits).toEqual([5, 5]);
+  });
+
+  it('uses the tighter rate limit for private Traitor chat', async () => {
+    const limits: number[] = [];
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'player', seatId: 'seat-1' }),
+      rateLimitSecret: 'unit-test-secret',
+      consumeRateLimit: async (_bucketHash, limit) => {
+        limits.push(limit);
+        return false;
+      },
+    });
+    const response = await request(app)
+      .post('/api/games/game-id/commands')
+      .send({
+        type: 'PostTraitorMessage',
+        expectedVersion: 1,
+        idempotencyKey: 'chat-rate-limit',
+        text: 'A private message',
+      });
+    expect(response.status).toBe(429);
+    expect(limits).toEqual([30]);
+  });
+
+  it.each(['visitor', 'ghost', 'presenter', 'admin'] as const)(
+    'denies %s from mutating an existing game',
+    async (kind) => {
+      const app = createApp(async () => {}, {
+        resolveViewer: () => ({ kind }),
+      });
+      const response = await request(app)
+        .post('/api/games/game-id/commands')
+        .send({
+          type: 'AdvancePhase',
+          expectedVersion: 1,
+          idempotencyKey: `unauthorised-${kind}`,
+        });
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({ error: 'Authentication required' });
+    },
+  );
 });

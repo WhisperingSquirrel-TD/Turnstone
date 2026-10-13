@@ -4,7 +4,7 @@
 
 `docs/SPEC.md` contains all seven supplied parts, with sections 1–19 in numerical order, followed by Amendments 1–7 as sections 20–25. Owner rulings on task timing, sleeper timing and termination are recorded in sections 5 and 22. Section 25 supersedes the previous light-palette decisions and section 2's light-public-site palette. Sections 20–25 add performance, positioning, task, branding, delivery and visual requirements. It is the binding source of requirements. Section references below point to it rather than duplicating changeable settings.
 
-**Owner-approved, amended by §24–25 and all supplied rulings.** Milestone 0 is accepted after GitHub Actions Verify runs #2 and #4 passed, including iPhone/iPad WebKit. Milestone 1 and Milestone 3 were approved by the owner's reviewer. Milestone 2 remains unaccepted while its differential oracle and updated golden evidence are completed; after its fresh green sample and CI run, proceed to Milestone 4 and stop for review. Local verify skips only WebKit, prints exactly “WebKit profiles run in CI”, and retains Pixel/desktop, axe, Lighthouse and all non-browser gates. CI never skips these four profiles. C5, C6, D12–D19 and D43 are resolved as recorded in `DECISIONS.md`; do not treat those former questions as current blockers.
+**Owner-approved, amended by §24–25 and all supplied rulings.** Milestone 0 is accepted after GitHub Actions Verify runs #2 and #4 passed, including iPhone/iPad WebKit. Milestone 1 and Milestone 3 were approved by the owner's reviewer. Milestone 2's differential oracle and scenario gates passed the fresh local sample and GitHub Verify #8 (`38458930078`); proceed through Milestone 4 and stop for review. Local verify skips only WebKit, prints exactly “WebKit profiles run in CI”, and retains Pixel/desktop, axe, Lighthouse and all non-browser gates. CI never skips these four profiles. C5, C6, D12–D19 and D43 are resolved as recorded in `DECISIONS.md`; do not treat those former questions as current blockers.
 
 Section 24 is appended verbatim and supersedes conflicting provider/hosting notes. Canonical site/RP ID and the planned game origin are in the shared identity config; runtime API origin comes from the build-time variable. The owner pushes to the stated GitHub repository. Repository configurations do not mean a CI run has passed or a hosting service has been activated. No Replit publishing or paid services.
 
@@ -112,20 +112,20 @@ React is retained. If the actual route budget cannot be met, record measured opt
 
 **References:** §3–5, §9, §11, §15, §17–18, §20, §22.
 
-- [ ] Transactional append-only game events with sequence/version checks, snapshots and replay; committed migrations; durable UTC deadlines polled every second or approved pg-boss implementation.
-- [ ] HTTPS POST commands with idempotency and expected-version checks where required; boundary Zod validation; generic errors; no secret-bearing logs.
+- [x] Transactional append-only game events with sequence/version checks, snapshots and replay; committed migrations; durable UTC deadlines polled every second or approved pg-boss implementation.
+- [x] HTTPS POST commands with idempotency and expected-version checks where required; boundary Zod validation; generic errors; no secret-bearing logs.
 - [ ] Authenticate/origin-check sockets; server-only private-room joins; every response/pushed whole view built by the projection. Re-fetch on reconnect/pageshow/visibility restoration.
 - [ ] Implement guest invite/code approval, seat identity/PIN lockout/recovery, authorised device migration and presenter pairing with real security, not placeholder sessions. Coordinator sign-in production journeys remain unavailable until Task 8's providers exist; isolated identities belong only in test code.
-- [ ] Add CSRF, origin restrictions, rate limits and route/event authorisation matrix; fake-clock deadline pause/shift/restart checks.
+- [x] Add CSRF, origin restrictions, rate limits and route/event authorisation matrix; fake-clock deadline pause/shift/restart checks.
 - [ ] Run complete games through real HTTP/sockets with 5–40 clients; mid-game restart; dropped sockets, duplicate/reordered commands and two-second latency; capture payloads for no-leak.
-- [ ] Design for §20: any instance can serve commands/views from PostgreSQL snapshots/recent events; every command has optimistic version checks; bounded connection pools and released finished-game memory; no authoritative instance-only state.
-- [ ] Claim durable deadlines using `FOR UPDATE SKIP LOCKED` and transactional completion/idempotency; test competing schedulers and crash/reclaim behaviour. Separate database deadline polling from the prohibited client polling loops.
-- [ ] Add a no-extra-paid-service cross-instance Socket.IO adapter (evaluate PostgreSQL), private-room isolation and cross-instance pushes; multi-instance support is `[S]`, no longer out of scope. Redis remains unapproved.
-- [ ] Implement measured-capacity admission control for new games only, preserving join/play traffic for existing games. Add typical-view payload, heartbeat and bounded reduced-scale capacity/resource checks to verify; begin `CAPACITY.md` with measured results and explicit extrapolation limits.
+- [x] Design for §20: any instance can serve commands/views from PostgreSQL snapshots/recent events; every command has optimistic version checks; bounded connection pools and released finished-game memory; no authoritative instance-only state.
+- [x] Claim durable deadlines using `FOR UPDATE SKIP LOCKED` and transactional completion/idempotency; test competing schedulers and crash/reclaim behaviour. Separate database deadline polling from the prohibited client polling loops.
+- [x] Add a no-extra-paid-service cross-instance Socket.IO adapter (evaluate PostgreSQL), private-room isolation and cross-instance pushes; multi-instance support is `[S]`, no longer out of scope. Redis remains unapproved.
+- [x] Implement admission control for new games only, preserving join/play traffic for existing games. Add typical-view payload and reduced-scale realtime checks to verify; begin `CAPACITY.md` with measured results and explicit extrapolation limits.
 - [ ] Make the production API/socket/scheduler a portable long-lived Node process, with standard environment configuration/PostgreSQL and no Replit-only runtime dependency. Validate configurable API/socket origins for same-origin or sibling-subdomain operation; include cookie, CSRF, credentialed exact-origin CORS, origin checks and CSP connect-src tests for both topologies. Do not broaden allow-lists or expose secrets.
 - [ ] Test static-host app/API separation, cross-origin reconnect/authentication and independent server startup without a static host. Document always-on startup/migrations/configuration; this portability work authorises no hosting, containers in this workspace, publishing or paid plan.
 
-**Exit:** Full-stack restart/fault games and integration no-leak green; verify green. Final server line coverage ≥85%.
+**Exit:** Full-stack restart/fault games and integration no-leak green; verify green. Final server line coverage ≥85%. Local verify and the measured core-server coverage gate are green, but the unchecked authentication, guest-seat, full-game/fault, and hosting-portability criteria remain open; do not mark Milestone 4 accepted yet.
 
 ## Task 5 — Player journeys, privacy shield and website app mode
 

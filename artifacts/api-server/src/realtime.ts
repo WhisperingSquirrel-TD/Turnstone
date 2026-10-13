@@ -1,0 +1,221 @@
+import { randomUUID } from 'node:crypto';
+import type { IncomingHttpHeaders, Server as HttpServer } from 'node:http';
+import { Server } from 'socket.io';
+import { pool, type PoolClient } from '@workspace/db';
+import {
+  gameChangedNotificationSchema,
+  gameWatchSchema,
+  gameViewResponseSchema,
+} from '@workspace/shared';
+import {
+  replay,
+  replayFrom,
+  viewFor,
+  type State,
+  type Viewer,
+} from '@workspace/engine';
+import {
+  readGameEvents,
+  readGameEventsAfter,
+  readLatestGameSnapshot,
+} from '@workspace/db/game-store';
+
+export type RealtimeOptions = {
+  allowedOrigins: readonly string[];
+  resolveViewer: (headers: IncomingHttpHeaders) => Viewer | Promise<Viewer>;
+  authoriseGame?: (
+    viewer: Viewer,
+    gameId: string,
+  ) => boolean | Promise<boolean>;
+  onError?: () => void;
+};
+
+function projectViewer(viewer: Viewer, state: State) {
+  return viewer.kind === 'visitor'
+    ? viewFor({ kind: 'visitor' }, state)
+    : viewFor(viewer, state);
+}
+
+function encodedGameRoom(gameId: string): string {
+  return `watch:${Buffer.from(gameId).toString('base64url')}`;
+}
+
+async function loadGameState(gameId: string): Promise<State | null> {
+  const snapshot = await readLatestGameSnapshot(gameId);
+  if (!snapshot) {
+    const events = await readGameEvents(gameId);
+    return events.length > 0 ? replay(events) : null;
+  }
+  if (
+    !snapshot.state ||
+    typeof snapshot.state !== 'object' ||
+    !('version' in snapshot.state) ||
+    snapshot.state.version !== snapshot.seq
+  ) {
+    throw new Error('Stored snapshot is invalid');
+  }
+  return replayFrom(
+    snapshot.state as State,
+    await readGameEventsAfter(gameId, snapshot.seq),
+  );
+}
+
+export async function attachRealtime(
+  httpServer: HttpServer,
+  options: RealtimeOptions,
+) {
+  const notificationChannel = 'turnstone_game_changed';
+  const instanceId = randomUUID();
+  let notificationClient: PoolClient | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let closed = false;
+  const io = new Server(httpServer, {
+    cors: {
+      origin: [...options.allowedOrigins],
+      credentials: true,
+      methods: ['GET', 'POST'],
+    },
+    maxHttpBufferSize: 32_768,
+    pingInterval: 25_000,
+  });
+
+  async function publishLocal(gameId: string): Promise<void> {
+    const state = await loadGameState(gameId);
+    if (!state) return;
+    const sockets = await io.in(encodedGameRoom(gameId)).fetchSockets();
+    for (const socket of sockets) {
+      if (socket.data.gameId !== gameId) continue;
+      const viewer = socket.data.viewer as Viewer;
+      const response = gameViewResponseSchema.parse({
+        version: state.version,
+        view: projectViewer(viewer, state),
+      });
+      socket.emit('game:view', response);
+    }
+  }
+
+  function onNotification(message: {
+    channel?: string;
+    payload?: string;
+  }): void {
+    if (message.channel !== notificationChannel || !message.payload) return;
+    try {
+      const parsed = gameChangedNotificationSchema.safeParse(
+        JSON.parse(message.payload),
+      );
+      if (!parsed.success || parsed.data.source === instanceId) return;
+      void publishLocal(parsed.data.gameId).catch(() => options.onError?.());
+    } catch {
+      options.onError?.();
+    }
+  }
+
+  async function connectNotificationClient(): Promise<void> {
+    if (closed) return;
+    let client: PoolClient | null = null;
+    try {
+      client = await pool.connect();
+      await client.query(`LISTEN ${notificationChannel}`);
+      notificationClient = client;
+      client.on('notification', onNotification);
+      client.on('error', () => {
+        if (notificationClient !== client) return;
+        notificationClient = null;
+        client?.release(new Error('PostgreSQL notification connection failed'));
+        options.onError?.();
+        if (!closed) {
+          reconnectTimer = setTimeout(() => {
+            void connectNotificationClient().catch(() => options.onError?.());
+          }, 1_000);
+        }
+      });
+    } catch {
+      client?.release(new Error('PostgreSQL notification setup failed'));
+      options.onError?.();
+      throw new Error('Unable to start PostgreSQL realtime notifications');
+    }
+  }
+
+  await connectNotificationClient();
+
+  io.use((socket, next) => {
+    const origin = socket.handshake.headers.origin;
+    if (!origin || !options.allowedOrigins.includes(origin)) {
+      next(new Error('Unauthorized'));
+      return;
+    }
+    void Promise.resolve(options.resolveViewer(socket.request.headers))
+      .then((viewer) => {
+        if (viewer.kind === 'visitor') {
+          next(new Error('Unauthorized'));
+          return;
+        }
+        socket.data.viewer = viewer;
+        next();
+      })
+      .catch(() => next(new Error('Unauthorized')));
+  });
+
+  io.on('connection', (socket) => {
+    socket.on(
+      'game:watch',
+      async (input: unknown, acknowledgement?: (response: unknown) => void) => {
+        try {
+          const parsed = gameWatchSchema.safeParse(input);
+          if (!parsed.success) {
+            acknowledgement?.({ error: 'Invalid request' });
+            return;
+          }
+          const gameId = parsed.data.gameId;
+          const viewer = socket.data.viewer as Viewer;
+          const state = await loadGameState(gameId);
+          const seatId =
+            viewer.kind === 'player' || viewer.kind === 'ghost'
+              ? viewer.seatId
+              : undefined;
+          const seatAuthorised = Boolean(
+            seatId && state?.seats.some((seat) => seat.id === seatId),
+          );
+          const gameAuthorised =
+            options.authoriseGame &&
+            (await options.authoriseGame(viewer, gameId));
+          if (!state || (!seatAuthorised && !gameAuthorised)) {
+            acknowledgement?.({ error: 'Not found' });
+            return;
+          }
+          const previousRoom = socket.data.gameRoom as string | undefined;
+          if (previousRoom) await socket.leave(previousRoom);
+          const room = encodedGameRoom(gameId);
+          socket.data.gameId = gameId;
+          socket.data.gameRoom = room;
+          await socket.join(room);
+          const response = gameViewResponseSchema.parse({
+            version: state.version,
+            view: projectViewer(viewer, state),
+          });
+          socket.emit('game:view', response);
+          acknowledgement?.({ ok: true });
+        } catch {
+          acknowledgement?.({ error: 'Service unavailable' });
+        }
+      },
+    );
+  });
+
+  return {
+    async publishGame(gameId: string): Promise<void> {
+      await publishLocal(gameId);
+      await pool.query('select pg_notify($1, $2)', [
+        notificationChannel,
+        JSON.stringify({ gameId, source: instanceId }),
+      ]);
+    },
+    close(): Promise<void> {
+      closed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      notificationClient?.release();
+      notificationClient = null;
+      return new Promise((resolve) => io.close(() => resolve()));
+    },
+  };
+}

@@ -239,3 +239,21 @@ export const viewSchema = z.union([visitorViewSchema, fullViewSchema]);
 export type FullView = z.infer<typeof fullViewSchema>;
 export type VisitorView = z.infer<typeof visitorViewSchema>;
 export type View = z.infer<typeof viewSchema>;
+export const gameViewResponseSchema = z
+  .object({
+    version: z.number().int().nonnegative(),
+    view: viewSchema,
+  })
+  .strict();
+export const apiErrorResponseSchema = z
+  .object({
+    error: z.string().min(1).max(80),
+  })
+  .strict();
+export const gameWatchSchema = z.object({ gameId: id }).strict();
+export const gameChangedNotificationSchema = z
+  .object({ gameId: id, source: id })
+  .strict();
+export const csrfTokenResponseSchema = z
+  .object({ csrfToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
+  .strict();
