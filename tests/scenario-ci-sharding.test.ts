@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs';
 import { beforeAll, expect, it } from 'vitest';
 import {
   buildScenarioSuitePlan,
+  partitionScenarioPlan,
   partitionScenarioJobs,
+  scenarioShardProjectionMs,
+  SCENARIO_SHARD_BUDGET_MS,
+  SCENARIO_SHARD_COUNT,
   SCENARIO_SUITE_NAMES,
 } from '../scripts/src/scenarios/runner';
 
@@ -42,12 +46,7 @@ it('balances the high-seat sample across four disjoint workload shards', () => {
     (suite) => suite.name === 'high-seat-pairwise',
   )!;
   const shards = partitionScenarioJobs(fullSuite.jobs, 4);
-  const configuredShard = buildScenarioSuitePlan({
-    mode: 'sample',
-    suite: 'high-seat-pairwise',
-    shardIndex: 0,
-    shardCount: 4,
-  })[0]!;
+  const configuredShard = partitionScenarioPlan([fullSuite], 0, 4)[0]!;
 
   expect(shards.map((shard) => shard.length)).toEqual([198, 198, 198, 198]);
   expect(
@@ -69,41 +68,89 @@ it('balances the high-seat sample across four disjoint workload shards', () => {
   expect(Math.max(...loads) / Math.min(...loads)).toBeLessThan(1.02);
 }, 120_000);
 
-it('keeps the GitHub Actions scenario matrix in sync with the suite plan', () => {
+it('distributes fuzz and golden samples once, and projects every shard under five minutes', () => {
+  const shards = Array.from({ length: SCENARIO_SHARD_COUNT }, (_, shardIndex) =>
+    partitionScenarioPlan(fullSampleSuites!, shardIndex, SCENARIO_SHARD_COUNT),
+  );
+  const completeCounts = fullSampleSuites!.map((suite) => ({
+    name: suite.name,
+    rows: suite.sweepCells + suite.coveringRows + suite.highSeatCoveringRows,
+    seeds: suite.jobs.map((job) => job.seed),
+    fuzzGames: suite.fuzzGames,
+    goldenIds: suite.goldenScenarios.map((scenario) => scenario.id),
+  }));
+
+  for (const full of completeCounts) {
+    const distributed = shards.map((shard) =>
+      shard.find((suite) => suite.name === full.name)!,
+    );
+    const unionSeeds = distributed.flatMap((suite) =>
+      suite.jobs.map((job) => job.seed),
+    );
+    expect(new Set(unionSeeds).size).toBe(full.seeds.length);
+    expect(unionSeeds.sort((left, right) => left - right)).toEqual(
+      full.seeds.sort((left, right) => left - right),
+    );
+    expect(
+      distributed.reduce(
+        (total, suite) =>
+          total +
+          suite.sweepCells +
+          suite.coveringRows +
+          suite.highSeatCoveringRows,
+        0,
+      ),
+    ).toBe(full.rows);
+    const expectedRows = new Set(
+      fullSampleSuites!.find((suite) => suite.name === full.name)!
+        .coverageRowIds,
+    );
+    const shardRows = distributed.flatMap((suite) => suite.coverageRowIds);
+    expect(new Set(shardRows)).toEqual(expectedRows);
+    expect(shardRows).toHaveLength(expectedRows.size);
+  }
+  const fuzzCount = shards
+    .flat()
+    .reduce((total, suite) => total + suite.fuzzGames, 0);
+  const goldenIds = shards.flatMap((shard) =>
+    shard.flatMap((suite) =>
+      suite.goldenScenarios.map((scenario) => scenario.id),
+    ),
+  );
+
+  expect(fuzzCount).toBe(32);
+  expect(new Set(goldenIds).size).toBe(13);
+  expect(goldenIds).toHaveLength(13);
+  expect(
+    Math.max(...shards.map((shard) => scenarioShardProjectionMs(shard))),
+  ).toBeLessThan(SCENARIO_SHARD_BUDGET_MS);
+}, 120_000);
+
+it('keeps the six-shard GitHub Actions scenario matrix in sync with the suite plan', () => {
   const workflow = readFileSync(
     new URL('../.github/workflows/verify.yml', import.meta.url),
     'utf8',
   );
   const scenarioJob = workflow
     .split(/^[ ]{2}scenarios:\s*$/m)[1]
-    ?.split(/^[ ]{2}browsers:\s*$/m)[0];
+    ?.split(/^[ ]{2}merge-scenario-reports:\s*$/m)[0];
   const matrixRows = [
     ...(scenarioJob?.matchAll(
-      /^[ ]{10}- suite: ([\w-]+)\n[ ]{12}shardIndex: (\d+)\n[ ]{12}shardCount: (\d+)$/gm,
+      /^[ ]{10}- shardIndex: (\d+)\n[ ]{12}shardCount: (\d+)$/gm,
     ) ?? []),
-  ].map(([, suite, shardIndex, shardCount]) => ({
-    suite,
+  ].map(([, shardIndex, shardCount]) => ({
     shardIndex: Number(shardIndex),
     shardCount: Number(shardCount),
   }));
-  const expectedRows = [
-    { suite: 'core-sweep', shardIndex: 0, shardCount: 1 },
-    { suite: 'three-way', shardIndex: 0, shardCount: 1 },
-    ...Array.from({ length: 4 }, (_, shardIndex) => ({
-      suite: 'high-seat-pairwise',
-      shardIndex,
-      shardCount: 4,
-    })),
-    { suite: 'fuzz-and-golden', shardIndex: 0, shardCount: 1 },
-  ];
+  const expectedRows = Array.from({ length: 6 }, (_, shardIndex) => ({
+    shardIndex,
+    shardCount: 6,
+  }));
 
-  expect(matrixRows.map(({ suite }) => suite)).toEqual([
-    SCENARIO_SUITE_NAMES[0],
-    SCENARIO_SUITE_NAMES[1],
-    ...Array.from({ length: 4 }, () => SCENARIO_SUITE_NAMES[2]),
-    SCENARIO_SUITE_NAMES[3],
-  ]);
   expect(matrixRows).toEqual(expectedRows);
   expect(scenarioJob).toContain('--shard-index="${{ matrix.shardIndex }}"');
   expect(scenarioJob).toContain('--shard-count="${{ matrix.shardCount }}"');
+  expect(scenarioJob).toContain('--partial-report=');
+  expect(scenarioJob).toContain('timeout-minutes: 10');
+  expect(workflow).toContain('merge-scenario-reports:');
 });

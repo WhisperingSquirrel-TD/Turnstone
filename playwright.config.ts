@@ -11,11 +11,7 @@ export default defineConfig({
     ],
   ],
   use: {
-    baseURL:
-      process.env.TEST_BASE_URL ??
-      (process.env.CI === 'true'
-        ? 'http://127.0.0.1:22814'
-        : 'http://localhost:80'),
+    baseURL: process.env.TEST_BASE_URL ?? 'http://127.0.0.1:22814',
     trace: 'off',
     screenshot: 'off',
     video: 'off',
@@ -40,13 +36,10 @@ export default defineConfig({
     },
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
   ],
-  webServer:
-    process.env.CI === 'true'
-      ? {
-          command: 'pnpm --filter @workspace/party-game run dev',
-          url: 'http://127.0.0.1:22814',
-          reuseExistingServer: false,
-          env: { PORT: '22814', BASE_PATH: '/' },
-        }
-      : undefined,
+  webServer: {
+    command: 'pnpm --filter @workspace/party-game run dev',
+    url: 'http://127.0.0.1:22814',
+    reuseExistingServer: false,
+    env: { PORT: '22814', BASE_PATH: '/' },
+  },
 });

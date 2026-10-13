@@ -15,7 +15,14 @@ import {
   formatScenarioReport,
   resolveScenarioReportPath,
   type ScenarioReport,
+  type ScenarioGameProfile,
 } from './report';
+import {
+  projectScenarioShardDurationMs,
+  SCENARIO_SHARD_BUDGET_MS,
+  SCENARIO_SHARD_COUNT,
+} from './scenario-budget';
+import type { ScenarioShardPartial } from './shard-report';
 
 export type ScenarioRunOptions = {
   mode: 'sample' | 'full';
@@ -44,6 +51,7 @@ export type ScenarioSuiteName = (typeof SCENARIO_SUITE_NAMES)[number];
 export type ScenarioSuitePlan = {
   name: ScenarioSuiteName;
   jobs: ScenarioJob[];
+  coverageRowIds: string[];
   sweepCells: number;
   coveringRows: number;
   highSeatCoveringRows: number;
@@ -53,6 +61,9 @@ export type ScenarioSuitePlan = {
   coverageFailures: string[];
 };
 
+export { SCENARIO_SHARD_BUDGET_MS, SCENARIO_SHARD_COUNT };
+export { projectScenarioShardDurationMs };
+
 export function partitionScenarioJobs(
   jobs: ScenarioJob[],
   shardCount: number,
@@ -61,33 +72,43 @@ export function partitionScenarioJobs(
     throw new RangeError('Scenario shard count must be a positive integer');
   }
 
-  const shardLoads = Array.from({ length: shardCount }, () => 0);
+  const groupById = new Map<
+    string,
+    { jobs: ScenarioJob[]; originalIndex: number; estimatedCost: number }
+  >();
+  jobs.forEach((job, originalIndex) => {
+    const groupId = job.coverageRowId ?? `job:${job.seed}:${originalIndex}`;
+    const group = groupById.get(groupId) ?? {
+      jobs: [],
+      originalIndex,
+      estimatedCost: 0,
+    };
+    group.jobs.push(job);
+    group.estimatedCost += job.config.players.count ** 2;
+    groupById.set(groupId, group);
+  });
+  const groups = [...groupById.values()].sort(
+    (left, right) =>
+      right.estimatedCost - left.estimatedCost ||
+      left.originalIndex - right.originalIndex,
+  );
   const shardCapacity = Array.from(
     { length: shardCount },
     (_, index) =>
-      Math.floor(jobs.length / shardCount) +
-      (index < jobs.length % shardCount ? 1 : 0),
+      Math.floor(groups.length / shardCount) +
+      (index < groups.length % shardCount ? 1 : 0),
   );
+  const shardGroups = Array.from({ length: shardCount }, () => 0);
   const shardJobs = Array.from(
     { length: shardCount },
     () => [] as ScenarioJob[],
   );
-  const orderedJobs = jobs
-    .map((job, originalIndex) => ({
-      job,
-      originalIndex,
-      estimatedCost: job.config.players.count ** 2,
-    }))
-    .sort(
-      (left, right) =>
-        right.estimatedCost - left.estimatedCost ||
-        left.originalIndex - right.originalIndex,
-    );
+  const shardLoads = Array.from({ length: shardCount }, () => 0);
 
-  for (const entry of orderedJobs) {
+  for (const group of groups) {
     let selectedShard = -1;
     for (let index = 0; index < shardCount; index++) {
-      if (shardJobs[index]!.length >= shardCapacity[index]!) continue;
+      if (shardGroups[index]! >= shardCapacity[index]!) continue;
       if (
         selectedShard === -1 ||
         shardLoads[index]! < shardLoads[selectedShard]!
@@ -96,14 +117,71 @@ export function partitionScenarioJobs(
       }
     }
     if (selectedShard === -1)
-      throw new Error('Scenario shard partition did not assign every job');
-    shardJobs[selectedShard]!.push(entry.job);
-    shardLoads[selectedShard] += entry.estimatedCost;
+      throw new Error('Scenario shard partition did not assign every row');
+    shardJobs[selectedShard]!.push(...group.jobs);
+    shardGroups[selectedShard]++;
+    shardLoads[selectedShard] += group.estimatedCost;
   }
 
   return shardJobs.map((shard) =>
     shard.sort((left, right) => left.seed - right.seed),
   );
+}
+
+export function partitionScenarioPlan(
+  plan: readonly ScenarioSuitePlan[],
+  shardIndex: number,
+  shardCount: number,
+): ScenarioSuitePlan[] {
+  if (
+    !Number.isSafeInteger(shardCount) ||
+    shardCount < 1 ||
+    !Number.isSafeInteger(shardIndex) ||
+    shardIndex < 0 ||
+    shardIndex >= shardCount
+  )
+    throw new RangeError('Invalid scenario shard index or count');
+
+  return plan.map((suite) => {
+    const jobs = partitionScenarioJobs(suite.jobs, shardCount)[shardIndex]!;
+    const coverageRowIds = [
+      ...new Set(
+        jobs.flatMap((job) => (job.coverageRowId ? [job.coverageRowId] : [])),
+      ),
+    ].sort();
+    const includeNonCoverage = shardIndex === 0;
+    return {
+      ...suite,
+      jobs,
+      coverageRowIds,
+      sweepCells: suite.name === 'core-sweep' ? coverageRowIds.length : 0,
+      coveringRows: suite.name === 'three-way' ? coverageRowIds.length : 0,
+      highSeatCoveringRows:
+        suite.name === 'high-seat-pairwise' ? coverageRowIds.length : 0,
+      fuzzGames: includeNonCoverage ? suite.fuzzGames : 0,
+      goldenScenarios: includeNonCoverage ? suite.goldenScenarios : [],
+      coverageFailures: includeNonCoverage ? suite.coverageFailures : [],
+    };
+  });
+}
+
+export function scenarioShardProjectionMs(
+  suites: readonly ScenarioSuitePlan[],
+): number {
+  const workloadUnits = suites.reduce((total, suite) => {
+    const jobs = suite.jobs.reduce(
+      (jobTotal, job) => jobTotal + job.config.players.count ** 2,
+      0,
+    );
+    const fuzz = suite.fuzzGames * 8 ** 2;
+    const golden = suite.goldenScenarios.reduce(
+      (scenarioTotal, scenario) =>
+        scenarioTotal + scenario.config.players.count ** 2,
+      0,
+    );
+    return total + jobs + fuzz + golden;
+  }, 0);
+  return projectScenarioShardDurationMs(workloadUnits);
 }
 
 export const SAMPLE_SCENARIO_LIMITS = {
@@ -123,12 +201,14 @@ export type ScenarioBatchResult = {
   completed: number;
   failureSeeds: number[];
   failures: string[];
+  gameProfiles: ScenarioGameProfile[];
 };
 
 export async function runScenarioJobs(
   jobs: readonly ScenarioJob[],
 ): Promise<ScenarioBatchResult> {
-  if (!jobs.length) return { completed: 0, failureSeeds: [], failures: [] };
+  if (!jobs.length)
+    return { completed: 0, failureSeeds: [], failures: [], gameProfiles: [] };
   const workerCount = Math.min(availableParallelism(), 8, jobs.length);
   const chunks = Array.from({ length: workerCount }, () => [] as ScenarioJob[]);
   jobs.forEach((job, index) => chunks[index % workerCount]!.push(job));
@@ -155,6 +235,19 @@ export async function runScenarioJobs(
         }),
     ),
   );
+  const profileByPlayers = new Map<number, ScenarioGameProfile>();
+  for (const profile of results.flatMap((result) => result.gameProfiles)) {
+    const existing = profileByPlayers.get(profile.players) ?? {
+      players: profile.players,
+      games: 0,
+      totalMs: 0,
+      maxMs: 0,
+    };
+    existing.games += profile.games;
+    existing.totalMs += profile.totalMs;
+    existing.maxMs = Math.max(existing.maxMs, profile.maxMs);
+    profileByPlayers.set(profile.players, existing);
+  }
   return {
     completed: results.reduce((total, result) => total + result.completed, 0),
     failureSeeds: results.flatMap((result) =>
@@ -164,6 +257,9 @@ export async function runScenarioJobs(
       result.failures.map(
         (failure) => `Seed ${failure.seed}: ${failure.reason}`,
       ),
+    ),
+    gameProfiles: [...profileByPlayers.values()].sort(
+      (left, right) => left.players - right.players,
     ),
   };
 }
@@ -242,6 +338,7 @@ export function buildScenarioSuitePlan(
         const caseSeed = seed + cellIndex * 101 + repeat;
         jobs.push({
           seed: caseSeed,
+          coverageRowId: `core-sweep:${cellIndex}`,
           strategy:
             BOT_STRATEGIES[(cellIndex + repeat) % BOT_STRATEGIES.length]!,
           config,
@@ -251,6 +348,7 @@ export function buildScenarioSuitePlan(
     plan.push({
       name: 'core-sweep',
       jobs,
+      coverageRowIds: jobs.map((job) => job.coverageRowId!),
       sweepCells: sweepLimit,
       coveringRows: 0,
       highSeatCoveringRows: 0,
@@ -279,6 +377,7 @@ export function buildScenarioSuitePlan(
         const caseSeed = seed + 1_000_000 + rowIndex * 101 + repeat;
         jobs.push({
           seed: caseSeed,
+          coverageRowId: `three-way:${rowIndex}`,
           strategy:
             BOT_STRATEGIES[(rowIndex + repeat) % BOT_STRATEGIES.length]!,
           config: covering[rowIndex]!,
@@ -288,6 +387,7 @@ export function buildScenarioSuitePlan(
     plan.push({
       name: 'three-way',
       jobs,
+      coverageRowIds: jobs.map((job) => job.coverageRowId!),
       sweepCells: 0,
       coveringRows: rowLimit,
       highSeatCoveringRows: 0,
@@ -320,6 +420,7 @@ export function buildScenarioSuitePlan(
         const caseSeed = seed + 4_000_000 + rowIndex * 101 + repeat;
         jobs.push({
           seed: caseSeed,
+          coverageRowId: `high-seat-pairwise:${rowIndex}`,
           strategy:
             BOT_STRATEGIES[(rowIndex + repeat) % BOT_STRATEGIES.length]!,
           config: highSeatCovering[rowIndex]!,
@@ -328,7 +429,8 @@ export function buildScenarioSuitePlan(
     }
     plan.push({
       name: 'high-seat-pairwise',
-      jobs: partitionScenarioJobs(jobs, shardCount)[shardIndex]!,
+      jobs,
+      coverageRowIds: jobs.map((job) => job.coverageRowId!),
       sweepCells: 0,
       coveringRows: 0,
       highSeatCoveringRows: highSeatRowLimit,
@@ -351,6 +453,7 @@ export function buildScenarioSuitePlan(
     plan.push({
       name: 'fuzz-and-golden',
       jobs: [],
+      coverageRowIds: [],
       sweepCells: 0,
       coveringRows: 0,
       highSeatCoveringRows: 0,
@@ -361,7 +464,7 @@ export function buildScenarioSuitePlan(
     });
   }
 
-  return plan;
+  return partitionScenarioPlan(plan, shardIndex, shardCount);
 }
 
 export async function runEngineScenarioSuite(
@@ -386,9 +489,21 @@ export async function runEngineScenarioSuite(
     failures: [],
     failureSeeds: [],
     pendingLayers: [...SCENARIO_PENDING_LAYERS],
+    gameProfiles: [],
   };
 
   const plan = buildScenarioSuitePlan(options);
+  const projectedDurationMs = scenarioShardProjectionMs(plan);
+  if (
+    options.shardCount !== undefined &&
+    projectedDurationMs >= SCENARIO_SHARD_BUDGET_MS
+  )
+    throw new Error(
+      `Projected scenario shard time ${projectedDurationMs} ms exceeds the five-minute budget`,
+    );
+  const coverageRowIds = [
+    ...new Set(plan.flatMap((suite) => suite.coverageRowIds)),
+  ].sort();
   for (const suite of plan) {
     report.sweepCells += suite.sweepCells;
     report.sweepGames += suite.name === 'core-sweep' ? suite.jobs.length : 0;
@@ -402,6 +517,16 @@ export async function runEngineScenarioSuite(
     const batch = await runScenarioJobs(suite.jobs);
     report.failures.push(...batch.failures);
     report.failureSeeds.push(...batch.failureSeeds);
+    for (const profile of batch.gameProfiles) {
+      const existing = report.gameProfiles!.find(
+        (item) => item.players === profile.players,
+      );
+      if (existing) {
+        existing.games += profile.games;
+        existing.totalMs += profile.totalMs;
+        existing.maxMs = Math.max(existing.maxMs, profile.maxMs);
+      } else report.gameProfiles!.push({ ...profile });
+    }
 
     if (suite.fuzzGames > 0) {
       const fuzz = runFuzzBatch({
@@ -446,6 +571,8 @@ export async function runEngineScenarioSuite(
 
   report.failureSeeds = [...new Set(report.failureSeeds)].sort((a, b) => a - b);
   report.durationMs = Math.round(performance.now() - started);
+  report.coverageRowIds = coverageRowIds;
+  report.projectedDurationMs = projectedDurationMs;
   return report;
 }
 
@@ -470,6 +597,12 @@ export async function writeScenarioReport(
   const shardCount = shardCountArgument
     ? Number(shardCountArgument.slice('--shard-count='.length))
     : undefined;
+  const partialReportArgument = process.argv.find((argument) =>
+    argument.startsWith('--partial-report='),
+  );
+  const partialReportPath = partialReportArgument?.slice(
+    '--partial-report='.length,
+  );
   if (suiteArgument && !suite)
     throw new Error(`Unknown scenario suite: ${requestedSuite}`);
 
@@ -479,6 +612,27 @@ export async function writeScenarioReport(
     shardIndex,
     shardCount,
   });
+  if (partialReportPath) {
+    const partial: ScenarioShardPartial = {
+      shardIndex: shardIndex ?? 0,
+      shardCount: shardCount ?? 1,
+      durationMs: report.durationMs,
+      projectedDurationMs: report.projectedDurationMs ?? 0,
+      coverageRowIds: report.coverageRowIds ?? [],
+      report,
+    };
+    const resolvedPartialPath = resolveScenarioReportPath(partialReportPath);
+    writeFileSync(
+      resolvedPartialPath,
+      JSON.stringify(partial, null, 2),
+      'utf8',
+    );
+    console.log(
+      `Scenario shard ${partial.shardIndex}/${partial.shardCount}: ${report.failures.length} failures across ${report.sweepGames + report.coveringGames + report.highSeatCoveringGames + report.fuzzGames + report.goldenGames} games; ${report.durationMs} ms actual, ${partial.projectedDurationMs} ms projected.`,
+    );
+    if (report.failures.length) process.exitCode = 1;
+    return report;
+  }
   if (suite) {
     const games =
       report.sweepGames +

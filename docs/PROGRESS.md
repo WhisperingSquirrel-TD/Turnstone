@@ -1,8 +1,8 @@
 # Progress
 
-## Current status — Milestones 0, 1 and 3 approved; Milestone 2 gates green; Milestone 4 backend submitted for review
+## Current status — Milestones 0, 1 and 3 approved; Milestone 2 local gates green, GitHub shard run pending; Milestone 4 backend review gate in progress
 
-Specification sections 1–25 and owner rulings are recorded. Milestones 0 and 1 have the owner's reviewer approval, recorded in DECISIONS; the engine and C5/C6 lifecycle/termination rules are complete. Milestone 3 was also approved. Milestone 2's independent oracle repair and full scenario suite now pass locally and in GitHub Verify #8. Milestone 4 is proceeding under the owner's instruction; its acceptance gate remains pending.
+Specification sections 1–25 and owner rulings are recorded. Milestones 0 and 1 have the owner's reviewer approval, recorded in DECISIONS; the engine and C5/C6 lifecycle/termination rules are complete. Milestone 3 was also approved. Milestone 2's strengthened independent oracle and all 2,567 engine scenarios pass locally. Six-way deterministic sharding, timing budgets and complete-report merging are implemented; GitHub validation is pending because Verify #3 and #5 exceeded GitHub's 15-minute scenario-job limit. Milestone 4 is proceeding under the owner's instruction; its acceptance gate remains pending.
 
 Milestone 0 is **accepted** following fully green GitHub Actions Verify runs #2 and #4, including iPhone WebKit and iPad WebKit. Local Replit verification may skip those profiles only with the explicit notice `WebKit profiles run in CI`. Milestone 4's backend core passes local verification, but its full acceptance criteria remain open as listed in PLAN.
 
@@ -20,7 +20,7 @@ The earlier Milestone 2 sample reported zero failures across 2,566 games (942 co
 
 Milestone 3 adds the pure schedule planner: three estimates, UTC time windows with IANA-zone quiet hours across DST, departures, configuration warnings, odd half-cycles, ordered compression, and clear `STEP_CANNOT_FIT`/`WINDOW_TOO_SHORT` errors. Relaxed plans extend debates and add one extra mission only when it fits; planner options do not expose hidden roles or force recruitment outside its configured trigger. Its tests cover the §7 15-seat example, 5/40 seats, Quick/Day/Multi-day windows, mostly-blocked/too-short windows, departures, DST, recommendations, compression order and deterministic property checks.
 
-The last complete `pnpm run verify` before the oracle-repair batch passed after the visitor-projection correction: 130 unit tests, 12 property tests, PostgreSQL integration, scenario worker smoke, 2,566 engine scenarios, Pixel/desktop smoke, Lighthouse accessibility and audit with zero high or critical findings. Verify #6 later passed both WebKit profiles as well. The current sharding batch has passed its focused plan/matrix tests, scripts and test type-checks, and the 45-game fuzz/golden suite; the complete local verify is pending. Client bundle was 80.46 KB gzip. No release promotion, Vercel deployment, Replit publish or paid service has been enabled.
+The latest complete local `pnpm run verify` passed on 13 October 2026: 171 unit tests, 20 property tests, 20 PostgreSQL integration tests, 43 server-coverage tests with 86.11% lines, scenario worker smoke, 2,567 engine scenarios with zero failures, Pixel/desktop browser smoke, Lighthouse accessibility 100 on home and play, and zero high or critical audit findings. The local browser suite printed `WebKit profiles run in CI`; its dedicated Vite server verified the pre-launch response header. GitHub's four device profiles and six-shard timing/completeness gate remain pending on the next push. Client bundle was 80.46 KB gzip. No release promotion, Vercel deployment, Replit publish or paid service has been enabled.
 
 ### Reviewer projection correction — 13 October 2026
 
@@ -36,11 +36,11 @@ The earlier owner-authorised `GIT_URL` push was rejected for repository access o
 
 The five restored commits were pushed to `main` at `c39fc9899b6f31626c23b57012e192bae815d3aa`; `git fetch origin` confirmed `origin/main` matches. The remote and `.git/config` remain credential-free. GitHub Actions Verify run #2 for this commit completed successfully: static-checks, unit, property, integration, scenarios, audit, Lighthouse, iPhone WebKit, Pixel Chromium, iPad WebKit, desktop Chromium and required-checks all passed. Promote verified commit run #2 was skipped; no release promotion occurred.
 
-The separate documentation commit `3f9a3326a327b6ab996f0cbc394d25106486a411` was pushed next. Verify run #3's scenarios job reached its configured 15-minute job limit and was cancelled before the later push; `cancel-in-progress` did not cause it. All other reported jobs passed; the required-checks aggregator failed because the scenarios job did not complete. Promote run #3 was skipped.
+The separate documentation commit `3f9a3326a327b6ab996f0cbc394d25106486a411` was pushed next. Verify run #3's scenarios job exceeded its 15-minute maximum execution time (15m 25s) and GitHub cancelled it; `cancel-in-progress` did not cause the cancellation. All other reported jobs passed; the required-checks aggregator failed because scenarios did not complete. Promote run #3 was skipped.
 
 The visual-direction commit `2297844858932ab21d84f004e401cecbdced34c1` was then pushed separately. GitHub Actions Verify run #4 completed successfully: static-checks, unit, property, integration, scenarios, audit, Lighthouse, iPhone WebKit, Pixel Chromium, iPad WebKit, desktop Chromium and required-checks all passed. Promote run #4 was skipped and the `release` branch remains absent. The workflow mirror and drift-check files remain removed.
 
-GitHub Actions Verify run #5 (`38434899856`, commit `011d4dc`) passed static checks, unit, property, integration, audit, Lighthouse and all four browser profiles. Its scenarios job was cancelled at its configured 15-minute limit, so the required-checks aggregator did not pass. Milestone 2 remains subject to the reviewer’s differential-oracle rework and a fresh green scenario run.
+GitHub Actions Verify run #5 (`38434899856`, commit `011d4dc`) passed static checks, unit, property, integration, audit, Lighthouse and all four browser profiles. Its scenarios job exceeded GitHub's 15m 0s maximum execution time; the required-checks aggregator failed. This repeats the same workload limit seen in run #3 and is not a green Milestone 2 CI gate. Run #4 (`2297844`) succeeded across all jobs, including all four browser profiles; Milestone 0 approval stands.
 
 ### Milestone 2 differential-oracle repair — 13 October 2026
 

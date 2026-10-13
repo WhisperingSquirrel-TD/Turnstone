@@ -80,3 +80,34 @@ it('separates generated Markdown lists from their lead-in text', () => {
     'remain release gates for their planned milestones:\n\n- HTTP/socket scenarios — NOT RUN',
   );
 });
+
+it('reports measured per-game and seat-normalised runner timing', () => {
+  const markdown = formatScenarioReport({
+    mode: 'sample',
+    seed: 1,
+    startedAt: '2026-10-13T10:00:00.000Z',
+    durationMs: 1,
+    sweepCells: 1,
+    sweepGames: 10,
+    coveringRows: 0,
+    coveringGames: 0,
+    highSeatCoveringRows: 0,
+    highSeatCoveringGames: 0,
+    fuzzGames: 0,
+    goldenGames: 0,
+    failures: [],
+    failureSeeds: [],
+    pendingLayers: [],
+    gameProfiles: [
+      {
+        players: 5,
+        games: 10,
+        totalMs: 30,
+        maxMs: 7,
+      },
+    ],
+  } as ScenarioReport);
+
+  expect(markdown).toContain('5 seats: 10 games, 3 ms/game');
+  expect(markdown).toContain('0.12 ms/player²');
+});

@@ -760,7 +760,17 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Keep every generated pairwise row and the 15-minute limit. Split high-seat jobs into four deterministic shards of 198 games. Balance estimated work using each row's player count squared, keep the full pairwise coverage check in each shard, and test exact seed partitioning, row counts, workload balance and CI-matrix parity.
 
-**Consequence:** The full local scenario report remains unchanged. Commit `7594c18` passed Verify run #8 (`38458930078`) on 13 October 2026: all seven scenario entries, static/unit/property/integration/audit/Lighthouse checks, four browser profiles and required-checks succeeded. Milestone 2's differential and scenario gates are green; Milestone 4 proceeds under the owner's instruction.
+**Consequence:** The full local scenario report remained unchanged. Commit `7594c18` passed Verify run #8 (`38458930078`) on 13 October 2026: all seven scenario entries, static/unit/property/integration/audit/Lighthouse checks, four browser profiles and required-checks succeeded. This run does not close reviewer concerns subsequently raised about oracle mutation evidence and scenario-job flakiness; Milestone 2 is not reviewer-accepted. D48 supersedes this decision's four-entry-matrix choice.
+
+## D48 — Six-shard scenario CI with complete-report gate (resolved)
+
+**Context:** The owner’s reviewer confirmed that Verify #3 exceeded the scenario job limit at 15m25s and Verify #5 exceeded GitHub’s 15m00s maximum. The required-checks aggregator failed for incomplete scenario runs. This was workload exhaustion, not `cancel-in-progress`. The sample contains the complete core sweep, three-way array, high-seat pairwise rows, fuzz set and golden cases; removing rows or increasing the time limit would weaken the intended fast CI gate.
+
+**Options:** Raise the CI timeout; reduce or omit sample coverage; or split the same deterministic work across parallel shards and prove the complete union.
+
+**Choice:** Use six deterministic, cost-balanced shards. Keep every repeated game for one coverage row together; assign every generated row to exactly one shard. Each shard writes a partial report with coverage IDs, measured wall time and a per-seat-count game profile. A required merge job rejects missing/duplicate/unexpected rows, a missing shard, or actual/projected shard time over five minutes. The shard workflow has a ten-minute timeout only as a safety margin. Keep the plan-time projection conservative: 50 seconds for planning/start-up plus 0.70 ms per seat-square workload unit, calibrated above the observed 1.07-second 40-seat game and 44.8-second plan build. Upload the merged `SCENARIO_REPORT.md` as a short-lived CI artifact. Artifact actions are pinned by full commit SHA.
+
+**Consequence:** No sample row or suite is dropped. The report can compare actual per-seat and per-shard costs to the projection and expose any remaining scaling issue. The projected-budget, deterministic partition and coverage-union tests pass locally; the next GitHub run must confirm all six shards finish under five minutes, the merger proves 100% coverage, and every required job succeeds before Milestone 2 acceptance. This does not waive the separate differential-oracle mutation requirement.
 
 ## D47 — Milestone 4 backend infrastructure choices (resolved; acceptance pending)
 
@@ -771,3 +781,13 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 **Choice:** PostgreSQL is authoritative for append-only events, snapshots, idempotency, deadlines, active-game counts and pseudonymous rate-limit buckets. Use transactional optimistic versions and `FOR UPDATE SKIP LOCKED` deadline claims; use PostgreSQL notifications for cross-instance Socket.IO fan-out. Apply the 80%-of-configured-capacity refusal only to new-game creation. Keep the coverage gate at 85% lines for the declared API runtime modules, with bootstrap and test harness excluded. Keep reduced-scale performance evidence in `docs/CAPACITY.md`; do not extrapolate to production capacity.
 
 **Consequence:** No Redis, paid service, or Replit-only runtime feature was added. Local verification passed with 86.11% line coverage for the declared server-core modules. Commit `af78008b4294b74c7fc9a33cad8c7c3bb523635e` passed GitHub Verify run #9 (`38469104044`) with all 18 jobs green, including both WebKit profiles. The backend implementation does not complete production viewer authentication, guest PIN/device recovery, complete 5–40-player HTTP/socket fault games, or static-host/sibling-origin portability; those are still open PLAN criteria, so Milestone 4 is not recorded as accepted.
+
+## D49 — Browser smoke tests use a dedicated Vite server locally and in CI (resolved)
+
+**Context:** The local smoke run checked the pre-launch `X-Robots-Tag` but received no header because its base URL was `localhost:80`, the Replit preview proxy, and only CI started the test-owned Vite server. The assertion was correct; the local test target was not.
+
+**Options:** Weaken the header assertion; keep testing through the preview proxy; or have both local and CI Playwright runs start and test the same dedicated Vite server.
+
+**Choice:** Keep the assertion and configure Playwright's local and CI runs to launch the party-game Vite server on the dedicated test port. Local smoke continues to skip WebKit only with the explicit `WebKit profiles run in CI` notice; CI runs all four device profiles.
+
+**Consequence:** The regression test failed on the previous conditional configuration, then passed after the change. Both local browser profiles passed against the dedicated server, including the pre-launch header check; GitHub's four-profile result remains pending.

@@ -3,6 +3,13 @@ import { fileURLToPath } from 'node:url';
 
 const WORKSPACE_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 
+export type ScenarioGameProfile = {
+  players: number;
+  games: number;
+  totalMs: number;
+  maxMs: number;
+};
+
 export type ScenarioReport = {
   mode: 'sample' | 'full';
   seed: number;
@@ -19,6 +26,14 @@ export type ScenarioReport = {
   failures: string[];
   failureSeeds: number[];
   pendingLayers: string[];
+  gameProfiles?: ScenarioGameProfile[];
+  coverageRowIds?: string[];
+  projectedDurationMs?: number;
+  shardTimings?: {
+    shardIndex: number;
+    durationMs: number;
+    projectedDurationMs: number;
+  }[];
 };
 
 export function resolveScenarioReportPath(
@@ -38,6 +53,24 @@ export function formatScenarioReport(report: ScenarioReport): string {
   const pending = report.pendingLayers.length
     ? report.pendingLayers.map((layer) => `- ${layer} — NOT RUN`).join('\n')
     : '- none';
+  const shardTimings = report.shardTimings?.length
+    ? report.shardTimings
+        .map(
+          (timing) =>
+            `- Shard ${timing.shardIndex}: ${timing.durationMs} ms actual, ${timing.projectedDurationMs} ms projected`,
+        )
+        .join('\n')
+    : '- not sharded';
+  const gameProfiles = report.gameProfiles?.length
+    ? [...report.gameProfiles]
+        .sort((left, right) => left.players - right.players)
+        .map((profile) => {
+          const averageMs = profile.totalMs / profile.games;
+          const perSeatSquare = averageMs / profile.players ** 2;
+          return `- ${profile.players} seats: ${profile.games} games, ${Math.round(averageMs)} ms/game (${perSeatSquare.toFixed(2)} ms/player²; max ${profile.maxMs} ms)`;
+        })
+        .join('\n')
+    : '- no game timing data';
   return `# Scenario report
 
 Status: ${status}
@@ -57,6 +90,17 @@ Duration: ${report.durationMs} ms
 - High-seat pairwise games: ${report.highSeatCoveringGames}
 - Deterministic fault-fuzz games: ${report.fuzzGames}
 - YAML golden games: ${report.goldenGames}
+- Coverage rows verified: ${report.coverageRowIds?.length ?? 0}
+
+## Shard timings
+
+${shardTimings}
+
+## Engine game profile
+
+Per-seat-count timings include deterministic decision logic, projections, replay checks and the independent oracle.
+
+${gameProfiles}
 
 ## Results
 

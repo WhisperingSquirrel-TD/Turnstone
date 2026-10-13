@@ -13,6 +13,15 @@ describe('owner-approved delivery policy', () => {
       projects: ['Pixel', 'desktop'],
     });
   });
+  it('runs local and CI smoke tests against the dedicated Vite server', () => {
+    const playwrightConfig = readFileSync('playwright.config.ts', 'utf8');
+    expect(playwrightConfig).toContain(
+      "baseURL: process.env.TEST_BASE_URL ?? 'http://127.0.0.1:22814'",
+    );
+    expect(playwrightConfig).toContain(
+      "webServer: {\n    command: 'pnpm --filter @workspace/party-game run dev'",
+    );
+  });
   it('blocks inclusive freeze dates except exact security-tagged commits', () => {
     const dates = [{ start: '2026-12-24', end: '2026-12-26' }];
     expect(canPromote(dates, 'regular commit', '2026-12-24')).toBe(false);
@@ -165,6 +174,7 @@ describe('owner-approved delivery policy', () => {
       'property',
       'integration',
       'scenarios',
+      'merge-scenario-reports',
       'browsers',
       'lighthouse',
       'audit',
