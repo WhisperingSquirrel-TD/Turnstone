@@ -770,7 +770,7 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Use six deterministic, cost-balanced shards. Keep every repeated game for one coverage row together; assign every generated row to exactly one shard. Each shard writes a partial report with coverage IDs, measured wall time and a per-seat-count game profile. A required merge job rejects missing/duplicate/unexpected rows, a missing shard, or actual/projected shard time over five minutes. The shard workflow has a ten-minute timeout only as a safety margin. The initial plan-time projection is 50 seconds for planning/start-up plus 0.70 ms per seat-square workload unit. Upload the merged `SCENARIO_REPORT.md` as a short-lived CI artifact. Artifact actions are pinned by full commit SHA.
 
-**Consequence:** No sample row or suite is dropped. Verify #12 (`38480622636`, commit `d1ada52`) passed all 18 jobs, including the four browser profiles, six shards, the coverage merger and required-checks. The merger verified all 2,522 rows; shard actual times were 56,859, 84,126, 84,272, 76,661, 76,598 and 61,934 ms, against projections of 266,650, 264,437, 264,461, 264,458, 264,458 and 264,417 ms. Every shard stayed below five minutes; the maximum actual time was 84,272 ms, so the post-optimization projection is now conservative. The run's Node 20 artifact-action annotations are addressed in D51. This does not waive Milestone 2's differential-oracle review.
+**Consequence:** No sample row or suite is dropped. Verify #12 (`38480622636`, commit `d1ada52`) and #13 (`38482305521`, commit `a77497c`) each passed all 18 jobs, including the four browser profiles, six shards, the coverage merger and required-checks. Both mergers verified all 2,522 rows. Run #12 shard actual times were 56,859, 84,126, 84,272, 76,661, 76,598 and 61,934 ms; run #13 measured 62,489, 83,940, 78,129, 62,199, 84,404 and 78,430 ms. Projections remained 264,417–266,650 ms. Every shard stayed below five minutes; the maximum actual was 84,404 ms, so the post-optimization projection is conservative. Run #12's Node 20 artifact-action annotations are resolved in D51; run #13 had none. This does not waive Milestone 2's differential-oracle review.
 
 ## D47 — Milestone 4 backend infrastructure choices (resolved; acceptance pending)
 
@@ -800,9 +800,9 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Use event-level copy-on-write in `evolve`. Unchanged branches are shared; changed arrays, records and seat/task objects are copied before updates. Keep event-schema validation, prior-state immutability, full replay equality and the scenario checks.
 
-**Consequence:** A regression test first failed because `evolve` cloned an unchanged config branch. After the change it passed, along with the targeted engine/scenario tests and type-check. The same local 40-seat game completed in 456 ms, and `structuredClone` no longer appeared among the top CPU-profile frames. In GitHub Verify #12, the scenario profile measured 79 ms/game at 15 seats and 711 ms/game at 40 seats (maximum 2,112 ms), versus 163 ms and 2,982 ms respectively before the change: a 76% reduction at 40 seats. All 2,522 coverage rows and all six shards passed; the termination property and full local verification also passed. The engine's independent pot check remains explicitly pending Milestone 7.
+**Consequence:** A regression test first failed because `evolve` cloned an unchanged config branch. After the change it passed, along with the targeted engine/scenario tests and type-check. The same local 40-seat game completed in 456 ms, and `structuredClone` no longer appeared among the top CPU-profile frames. GitHub Verify #12 and #13 measured 40-seat averages of 711 and 729 ms/game (maximums 2,112 and 2,427 ms), versus 2,982 ms/game before the change: about a 75% reduction. The 15-seat averages were 79 and 80 ms/game. All 2,522 coverage rows and the termination property passed in both runs; full local verification also passed. The engine's independent pot check remains explicitly pending Milestone 7.
 
-## D51 — Pin Node 24 artifact actions (resolved; CI confirmation pending)
+## D51 — Pin Node 24 artifact actions (resolved; CI confirmed)
 
 **Context:** Verify #12 passed every required job, but its public annotations warned that the pinned upload/download artifact actions targeted Node 20 and were being forced to run on Node 24. The warning appeared on the six scenario shards and report merger; it did not fail verification.
 
@@ -810,4 +810,24 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Pin `actions/upload-artifact` v7.0.2 to `cf430e030ddbb5b0abf93d22962f4752f3646cd9` and `actions/download-artifact` v8.0.2 to `9000827ccba6bdab643e8b6fd33ac0654aef8333`. Their official `action.yml` files declare `runs.using: node24`. Add a pipeline test for the exact pins. The Verify #12 promotion check was skipped; this change does not enable deployment.
 
-**Consequence:** The new regression test failed against the prior pins, then passed after the update. Full local `pnpm run verify` is green. The next GitHub run must confirm the new pins remove the Node 20 warnings; no release promotion, deployment or paid service is authorised.
+**Consequence:** The new regression test failed against the prior pins, then passed after the update. Full local `pnpm run verify` is green. GitHub Verify #13 (`38482305521`, commit `a77497c`) passed all 18 jobs, and every public check run had zero annotations, confirming the Node 20 warnings are gone. The promotion run was skipped. No deployment or paid service is authorised.
+
+## D52 — Separate scenario bot randomness from engine randomness (resolved)
+
+**Context:** The new real-server replay test compared a deterministic scenario's event trace with the same commands sent through PostgreSQL and Socket.IO. Random endgame tie-breaks diverged even though the API used the same seed. Scenario bot decisions were consuming the engine's random stream, while a real server replay receives already-chosen bot commands and must not consume those extra draws.
+
+**Options:** Keep one shared random stream and accept that scenario command traces cannot replay through the server; change only the server's random position; or give bot behaviour and engine decisions separate deterministic streams.
+
+**Choice:** Keep the engine stream seeded directly for engine decisions and derive an independent deterministic stream for bot choices. Production game randomness remains cryptographically secure; only the test harness injects seeded sources.
+
+**Consequence:** Full 5-seat and 40-seat games now replay through real HTTP and sockets with exact persisted-event equality, private-view equality and a mid-game restart. Bot strategy choices no longer shift engine tie-breaks or deal randomness.
+
+## D53 — One-time presenter pairing credentials (resolved)
+
+**Context:** A TV or laptop presenter needs a public-info-only view without an account, while an uninvited visitor must not join a game's presenter room.
+
+**Options:** Reuse a static game code, persist a reusable pairing secret, or issue a short-lived one-use credential and exchange it for a game-scoped session.
+
+**Choice:** Generate a 256-bit random code, store only its SHA-256 digest, expire it after five minutes, and atomically permit one claim. Exchange it for a 30-day HttpOnly, Secure, SameSite=Lax, host-only session bound to that game. Return only the presenter projection and use generic failures for invalid or reused codes.
+
+**Consequence:** Pairing and session state are PostgreSQL-backed and rate-limited. Tests verify one-time use, hashed storage, cross-game isolation, the cookie attributes, and private Socket.IO room access; no presenter secret is placed in a URL or browser storage.

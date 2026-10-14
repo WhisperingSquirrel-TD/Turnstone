@@ -22,6 +22,27 @@
       "when": 1791923970413,
       "tag": "0002_api-rate-limits",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791933341314,
+      "tag": "0003_watery_sersi",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791933820898,
+      "tag": "0004_sticky_lake",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791936750136,
+      "tag": "0005_solid_risque",
+      "breakpoints": true
     }
   ]
 }

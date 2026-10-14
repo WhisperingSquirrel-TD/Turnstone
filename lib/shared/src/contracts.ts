@@ -257,3 +257,95 @@ export const gameChangedNotificationSchema = z
 export const csrfTokenResponseSchema = z
   .object({ csrfToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
   .strict();
+export const guestJoinRequestSchema = z
+  .object({
+    inviteToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+    name: z
+      .string()
+      .trim()
+      .min(2)
+      .max(20)
+      .refine((v) => !/\p{Cc}/u.test(v)),
+    pin: z.string().regex(/^\d{4,6}$/),
+    idempotencyKey: id,
+  })
+  .strict();
+export const gameInviteResponseSchema = z
+  .object({
+    gameId: id,
+    joinUrl: z.string().url(),
+    shortCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),
+  })
+  .strict();
+export const shortCodeJoinRequestSchema = z
+  .object({
+    shortCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),
+    name: z
+      .string()
+      .trim()
+      .min(2)
+      .max(20)
+      .refine((v) => !/\p{Cc}/u.test(v)),
+    pin: z.string().regex(/^\d{4,6}$/),
+    idempotencyKey: id,
+  })
+  .strict();
+export const seatRecoveryRequestSchema = z
+  .object({
+    shortCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),
+    name: z
+      .string()
+      .trim()
+      .min(2)
+      .max(20)
+      .refine((v) => !/\p{Cc}/u.test(v)),
+    pin: z.string().regex(/^\d{4,6}$/),
+  })
+  .strict();
+export const pendingJoinRequestsResponseSchema = z
+  .object({
+    requests: z.array(
+      z
+        .object({
+          id,
+          seatId: id,
+          name: z.string().min(2).max(20),
+          createdAt: z.number().int().nonnegative(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export const joinRequestDecisionSchema = z
+  .object({
+    decision: z.enum(['approve', 'reject']),
+    expectedVersion: z.number().int().nonnegative(),
+  })
+  .strict();
+export const joinRequestStatusResponseSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('pending') }).strict(),
+  z.object({ status: z.literal('rejected') }).strict(),
+  z
+    .object({
+      status: z.literal('approved'),
+      game: gameViewResponseSchema,
+    })
+    .strict(),
+]);
+export const presenterPairRequestSchema = z
+  .object({
+    gameId: id,
+    code: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  })
+  .strict();
+export const presenterPairingResponseSchema = z
+  .object({
+    code: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+    expiresAt: z.number().int().nonnegative(),
+  })
+  .strict();
+export const presenterPairResponseSchema = z
+  .object({
+    game: gameViewResponseSchema,
+  })
+  .strict();

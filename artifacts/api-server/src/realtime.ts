@@ -22,7 +22,10 @@ import {
 
 export type RealtimeOptions = {
   allowedOrigins: readonly string[];
-  resolveViewer: (headers: IncomingHttpHeaders) => Viewer | Promise<Viewer>;
+  resolveViewer: (
+    headers: IncomingHttpHeaders,
+    gameId?: string,
+  ) => Viewer | Promise<Viewer>;
   authoriseGame?: (
     viewer: Viewer,
     gameId: string,
@@ -82,10 +85,36 @@ export async function attachRealtime(
   async function publishLocal(gameId: string): Promise<void> {
     const state = await loadGameState(gameId);
     if (!state) return;
-    const sockets = await io.in(encodedGameRoom(gameId)).fetchSockets();
+    const room = encodedGameRoom(gameId);
+    const sockets = await io.in(room).fetchSockets();
     for (const socket of sockets) {
       if (socket.data.gameId !== gameId) continue;
-      const viewer = socket.data.viewer as Viewer;
+      if (
+        socket.data.authenticatedGameId &&
+        socket.data.authenticatedGameId !== gameId
+      ) {
+        await socket.leave(room);
+        socket.disconnect(true);
+        continue;
+      }
+      const viewer = await options.resolveViewer(
+        socket.handshake.headers,
+        gameId,
+      );
+      const seatAuthorised =
+        (viewer.kind === 'player' || viewer.kind === 'ghost') &&
+        Boolean(
+          viewer.seatId &&
+          state.seats.some((seat) => seat.id === viewer.seatId),
+        );
+      const gameAuthorised =
+        options.authoriseGame && (await options.authoriseGame(viewer, gameId));
+      if (viewer.kind === 'visitor' || (!seatAuthorised && !gameAuthorised)) {
+        await socket.leave(room);
+        socket.disconnect(true);
+        continue;
+      }
+      socket.data.viewer = viewer;
       const response = gameViewResponseSchema.parse({
         version: state.version,
         view: projectViewer(viewer, state),
@@ -144,13 +173,28 @@ export async function attachRealtime(
       next(new Error('Unauthorized'));
       return;
     }
-    void Promise.resolve(options.resolveViewer(socket.request.headers))
+    const rawGameId = socket.handshake.auth?.gameId as unknown;
+    if (
+      rawGameId !== undefined &&
+      (typeof rawGameId !== 'string' ||
+        rawGameId.length === 0 ||
+        rawGameId.length > 128)
+    ) {
+      next(new Error('Unauthorized'));
+      return;
+    }
+    const gameId = typeof rawGameId === 'string' ? rawGameId : undefined;
+    void Promise.resolve(options.resolveViewer(socket.request.headers, gameId))
       .then((viewer) => {
-        if (viewer.kind === 'visitor') {
+        if (
+          viewer.kind === 'visitor' ||
+          (viewer.kind === 'player' && !gameId)
+        ) {
           next(new Error('Unauthorized'));
           return;
         }
         socket.data.viewer = viewer;
+        socket.data.authenticatedGameId = gameId;
         next();
       })
       .catch(() => next(new Error('Unauthorized')));
@@ -167,7 +211,21 @@ export async function attachRealtime(
             return;
           }
           const gameId = parsed.data.gameId;
-          const viewer = socket.data.viewer as Viewer;
+          const authenticatedGameId = socket.data.authenticatedGameId as
+            string | undefined;
+          if (authenticatedGameId && authenticatedGameId !== gameId) {
+            acknowledgement?.({ error: 'Not found' });
+            return;
+          }
+          const viewer = await options.resolveViewer(
+            socket.handshake.headers,
+            gameId,
+          );
+          if (viewer.kind === 'visitor') {
+            acknowledgement?.({ error: 'Not found' });
+            socket.disconnect(true);
+            return;
+          }
           const state = await loadGameState(gameId);
           const seatId =
             viewer.kind === 'player' || viewer.kind === 'ghost'
@@ -177,8 +235,9 @@ export async function attachRealtime(
             seatId && state?.seats.some((seat) => seat.id === seatId),
           );
           const gameAuthorised =
-            options.authoriseGame &&
-            (await options.authoriseGame(viewer, gameId));
+            viewer.kind === 'presenter' ||
+            (options.authoriseGame &&
+              (await options.authoriseGame(viewer, gameId)));
           if (!state || (!seatAuthorised && !gameAuthorised)) {
             acknowledgement?.({ error: 'Not found' });
             return;

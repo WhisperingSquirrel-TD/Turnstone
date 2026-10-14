@@ -22,3 +22,4 @@ export const db = drizzle(pool, { schema });
 export type { PoolClient } from 'pg';
 
 export * from './schema';
+export * from './seat-access-store';

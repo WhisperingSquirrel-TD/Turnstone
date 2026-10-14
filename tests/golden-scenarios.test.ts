@@ -40,16 +40,19 @@ it('replays every implemented complete-game golden scenario exactly', () => {
       strategy: scenario.strategy,
       config: scenario.config,
     });
-    expect({
-      phase: result.state.phase,
-      winner: result.state.winner,
-      reason: result.state.reason,
-      alive: result.state.seats.filter((seat) => seat.status === 'alive')
-        .length,
-      eliminated:
-        result.state.seats.length -
-        result.state.seats.filter((seat) => seat.status === 'alive').length,
-    }).toEqual(scenario.expected);
+    expect(
+      {
+        phase: result.state.phase,
+        winner: result.state.winner,
+        reason: result.state.reason,
+        alive: result.state.seats.filter((seat) => seat.status === 'alive')
+          .length,
+        eliminated:
+          result.state.seats.length -
+          result.state.seats.filter((seat) => seat.status === 'alive').length,
+      },
+      scenario.id,
+    ).toEqual(scenario.expected);
     if (scenario.assertions?.shadowSplitAfterRevote)
       expect(hasSplitAfterShadowRevote(result.events), scenario.id).toBe(true);
   }

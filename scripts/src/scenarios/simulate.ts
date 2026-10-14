@@ -27,12 +27,19 @@ export type CompleteGameOptions = {
   strategy: BotStrategy;
   config: unknown;
   injectFaults?: boolean;
+  captureCommands?: boolean;
+};
+export type ScenarioCommandTraceEntry = {
+  command: Record<string, unknown>;
+  actor: Actor;
+  now: number;
 };
 export type CompleteGameResult = {
   seed: number;
   strategy: BotStrategy;
   state: State;
   events: Event[];
+  commands?: ScenarioCommandTraceEntry[];
   steps: number;
   checks: {
     referenceMatches: true;
@@ -83,7 +90,7 @@ function taskCatalog() {
   return items;
 }
 
-function makeRandom(seed: number): Context['random'] {
+export function scenarioRandom(seed: number): Context['random'] {
   let state = seed >>> 0;
   const next = () => {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
@@ -213,10 +220,13 @@ export function runCompleteGame(
   options: CompleteGameOptions,
 ): CompleteGameResult {
   const config = gameConfigSchema.parse(options.config);
+  // Bot choices use a separate stream so they cannot shift engine randomness;
+  // a captured command trace can therefore be replayed through the real server.
+  const botRandom = scenarioRandom(options.seed ^ 0x9e3779b9);
   const context: Context = {
     now: INITIAL_TIME,
     actor: { kind: 'coordinator' },
-    random: makeRandom(options.seed),
+    random: scenarioRandom(options.seed),
     taskCatalog: taskCatalog(),
   };
   const game: { state: State | null; events: Event[]; context: Context } = {
@@ -226,6 +236,7 @@ export function runCompleteGame(
   };
   let commandNumber = 0;
   let rejectedFaultCommands = 0;
+  const commandTrace: ScenarioCommandTraceEntry[] = [];
   const replayCursor: ReplayCursor = {
     state: null,
     eventCount: 0,
@@ -244,6 +255,13 @@ export function runCompleteGame(
         ? { expectedVersion: state.version }
         : {}),
     };
+    if (options.captureCommands) {
+      commandTrace.push({
+        command: { ...command },
+        actor: { ...actor },
+        now: context.now,
+      });
+    }
     const result = decide(state, command, { ...context, actor });
     if (!result.ok)
       throw new Error(
@@ -305,7 +323,7 @@ export function runCompleteGame(
       (state.cycle + seatIndex) % 2 === 0);
   const pickIndex = (count: number, state: State, seatIndex: number) =>
     options.strategy === 'random'
-      ? context.random.int(count)
+      ? botRandom.int(count)
       : (state.version + seatIndex) % count;
   const chooseVote = (state: State, seatIndex: number, seatId: string) => {
     const eligibleCandidates = state.seats.filter(
@@ -508,6 +526,7 @@ export function runCompleteGame(
     strategy: options.strategy,
     state: finalState,
     events: game.events,
+    ...(options.captureCommands ? { commands: commandTrace } : {}),
     steps: finalState.steps,
     checks: {
       referenceMatches: true,

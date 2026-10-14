@@ -1,5 +1,5 @@
 import { afterAll, expect, it } from 'vitest';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { db, pool } from '@workspace/db';
 import { io as socketIo, type Socket as ClientSocket } from 'socket.io-client';
@@ -9,6 +9,10 @@ import { createApp } from '../artifacts/api-server/src/app';
 import { decide, evolve, replay, replayFrom } from '../lib/engine/src';
 import { gameRandom } from '../lib/security/src/game-random';
 import { attachRealtime } from '../artifacts/api-server/src/realtime';
+import {
+  cookieNameForGame,
+  createSeatViewerResolver,
+} from '../artifacts/api-server/src/session-auth';
 import { createDeadlineScheduler } from '../artifacts/api-server/src/deadline-scheduler';
 import request from 'supertest';
 import {
@@ -27,6 +31,20 @@ import {
   consumeRateLimit,
   pruneExpiredRateLimits,
 } from '../lib/db/src/rate-limit';
+import {
+  createSeatAccess,
+  createViewerSession,
+  createGameInvite,
+  createGameJoinRequest,
+  findActiveGameInvite,
+  findGameJoinRequestByToken,
+  findViewerSession,
+  listPendingGameJoinRequests,
+  recordSeatPinFailure,
+  resolveGameJoinRequest,
+  revokeGameInvite,
+  revokeSeatViewerSessions,
+} from '../lib/db/src/seat-access-store';
 
 afterAll(async () => {
   await pool.end();
@@ -104,7 +122,11 @@ it('has the committed durable game, event, snapshot, idempotency, deadline and r
       to_regclass('public.game_snapshots')::text as game_snapshots,
       to_regclass('public.game_idempotency')::text as game_idempotency,
       to_regclass('public.game_deadlines')::text as game_deadlines,
-      to_regclass('public.api_rate_limits')::text as api_rate_limits
+      to_regclass('public.api_rate_limits')::text as api_rate_limits,
+      to_regclass('public.game_seat_access')::text as game_seat_access,
+      to_regclass('public.game_viewer_sessions')::text as game_viewer_sessions,
+      to_regclass('public.game_invites')::text as game_invites,
+      to_regclass('public.game_join_requests')::text as game_join_requests
   `);
 
   expect(result.rows[0]).toEqual({
@@ -114,7 +136,173 @@ it('has the committed durable game, event, snapshot, idempotency, deadline and r
     game_idempotency: 'game_idempotency',
     game_deadlines: 'game_deadlines',
     api_rate_limits: 'api_rate_limits',
+    game_seat_access: 'game_seat_access',
+    game_viewer_sessions: 'game_viewer_sessions',
+    game_invites: 'game_invites',
+    game_join_requests: 'game_join_requests',
   });
+});
+
+it('persists only hashed seat credentials and locks PIN attempts atomically', async () => {
+  const gameId = randomUUID();
+  const seatId = randomUUID();
+  const tokenHash = createHash('sha256')
+    .update('test-only-opaque-session')
+    .digest('hex');
+  const now = 100_000;
+  const createdEvent = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+
+  try {
+    await createGameWithEvent({
+      event: createdEvent,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'seat-access-create',
+      requestHash: 'seat-access-create',
+    });
+    await createSeatAccess({
+      gameId,
+      seatId,
+      pinSalt: 'a'.repeat(32),
+      pinHash: 'b'.repeat(64),
+    });
+    await createViewerSession({
+      tokenHash,
+      gameId,
+      seatId,
+      expiresAt: now + 60_000,
+    });
+
+    expect(await findViewerSession(tokenHash, gameId)).toEqual({
+      gameId,
+      seatId,
+      expiresAt: now + 60_000,
+      revokedAt: null,
+    });
+
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      expect(await recordSeatPinFailure(gameId, seatId, now)).toEqual({
+        failedPinAttempts: attempt,
+        lockedUntil: null,
+      });
+    }
+    expect(await recordSeatPinFailure(gameId, seatId, now)).toEqual({
+      failedPinAttempts: 5,
+      lockedUntil: now + 15 * 60_000,
+    });
+    expect(await recordSeatPinFailure(gameId, seatId, now)).toEqual({
+      failedPinAttempts: 5,
+      lockedUntil: now + 15 * 60_000,
+    });
+
+    await revokeSeatViewerSessions(gameId, seatId, now + 1);
+    expect(await findViewerSession(tokenHash, gameId)).toEqual({
+      gameId,
+      seatId,
+      expiresAt: now + 60_000,
+      revokedAt: now + 1,
+    });
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('stores only hashed invite credentials and exposes pending join requests to the coordinator', async () => {
+  const gameId = randomUUID();
+  const seatId = randomUUID();
+  const requestId = randomUUID();
+  const linkTokenHash = '1'.repeat(64);
+  const shortCodeHash = '2'.repeat(64);
+  const requestTokenHash = '3'.repeat(64);
+  const now = 100_000;
+  const createdEvent = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+
+  try {
+    await createGameWithEvent({
+      event: createdEvent,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'invite-store-create',
+      requestHash: 'invite-store-create',
+    });
+    await createGameInvite({
+      gameId,
+      linkTokenHash,
+      shortCodeHash,
+      expiresAt: now + 60_000,
+    });
+    expect(await findActiveGameInvite({ gameId, linkTokenHash }, now)).toEqual({
+      gameId,
+    });
+    expect(
+      await findActiveGameInvite(
+        { gameId, linkTokenHash: '4'.repeat(64) },
+        now,
+      ),
+    ).toBeNull();
+    expect(await findActiveGameInvite({ shortCodeHash }, now)).toEqual({
+      gameId,
+    });
+
+    await createSeatAccess({
+      gameId,
+      seatId,
+      pinSalt: 'a'.repeat(32),
+      pinHash: 'b'.repeat(64),
+    });
+    await createGameJoinRequest({
+      id: requestId,
+      gameId,
+      seatId,
+      requestTokenHash,
+      name: 'Guest player',
+      expiresAt: now + 60_000,
+    });
+    expect(await findGameJoinRequestByToken(requestTokenHash, now)).toEqual({
+      id: requestId,
+      gameId,
+      seatId,
+      name: 'Guest player',
+      status: 'pending',
+    });
+    expect(await listPendingGameJoinRequests(gameId, now)).toEqual([
+      {
+        id: requestId,
+        seatId,
+        name: 'Guest player',
+        createdAt: expect.any(Number),
+      },
+    ]);
+    expect(
+      await resolveGameJoinRequest(gameId, requestId, 'approved', now + 1),
+    ).toBe(true);
+    expect(
+      await findGameJoinRequestByToken(requestTokenHash, now + 2),
+    ).toMatchObject({
+      status: 'approved',
+    });
+    expect(
+      await resolveGameJoinRequest(gameId, requestId, 'rejected', now + 3),
+    ).toBe(false);
+    await revokeGameInvite(gameId, now + 4);
+    expect(
+      await findActiveGameInvite({ gameId, linkTokenHash }, now + 5),
+    ).toBeNull();
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
 });
 
 it('appends versioned events transactionally and deduplicates idempotent retries', async () => {
@@ -812,6 +1000,7 @@ it('pushes whole projected views only after an authenticated socket joins a serv
     client = socketIo(`http://127.0.0.1:${address.port}`, {
       transports: ['websocket'],
       extraHeaders: { origin: 'http://127.0.0.1' },
+      auth: { gameId },
       reconnection: false,
     });
     await new Promise<void>((resolve, reject) => {
@@ -946,6 +1135,7 @@ async function fanOutPlayerViews(seatCount: number): Promise<void> {
           origin: 'http://127.0.0.1',
           'x-seat': `seat-${index + 1}`,
         },
+        auth: { gameId },
         reconnection: false,
       });
       clients.push(client);
@@ -1138,3 +1328,1734 @@ it('requires explicit pairing for non-seat socket viewers and rejects malformed 
     await db.execute(sql`delete from games where id = ${gameId}`);
   }
 });
+
+it('authenticates Socket.IO with a game-scoped seat session and rejects cross-game watches', async () => {
+  const gameId = randomUUID();
+  const seatId = randomUUID();
+  const token = randomBytes(32).toString('base64url');
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const now = Date.now();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+  const joined = eventSchema.parse({
+    seq: 2,
+    at: now + 1,
+    schemaVersion: 1,
+    type: 'SeatJoined',
+    seatId,
+    name: 'A player',
+  });
+  const server = createServer(createApp(async () => {}));
+  const resolveSeatViewer = createSeatViewerResolver({
+    findSession: findViewerSession,
+    now: () => now,
+  });
+  const realtime = await attachRealtime(server, {
+    allowedOrigins: ['http://127.0.0.1'],
+    resolveViewer: (headers, requestedGameId) =>
+      requestedGameId
+        ? resolveSeatViewer({
+            gameId: requestedGameId,
+            cookieHeader: headers.cookie,
+          })
+        : { kind: 'visitor' },
+  });
+  let client: ClientSocket | undefined;
+
+  try {
+    await createGameWithEvent({
+      event: created,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'scoped-session-create',
+      requestHash: 'scoped-session-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'scoped-session-join',
+      requestHash: 'scoped-session-join',
+      events: [joined],
+    });
+    await createSeatAccess({
+      gameId,
+      seatId,
+      pinSalt: 'c'.repeat(32),
+      pinHash: 'd'.repeat(64),
+    });
+    await createViewerSession({
+      tokenHash,
+      gameId,
+      seatId,
+      expiresAt: now + 60_000,
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === 'string')
+      throw new Error('Test server did not bind a TCP port');
+    client = socketIo(`http://127.0.0.1:${address.port}`, {
+      transports: ['websocket'],
+      extraHeaders: {
+        origin: 'http://127.0.0.1',
+        cookie: `${cookieNameForGame(gameId)}=${token}`,
+      },
+      auth: { gameId },
+      reconnection: false,
+    });
+    await new Promise<void>((resolve, reject) => {
+      client!.once('connect', resolve);
+      client!.once('connect_error', reject);
+    });
+    const acknowledgement = await new Promise<{ ok?: boolean; error?: string }>(
+      (resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Socket watch acknowledgement timed out')),
+          2_000,
+        );
+        client!.emit(
+          'game:watch',
+          { gameId },
+          (result: { ok?: boolean; error?: string }) => {
+            clearTimeout(timeout);
+            resolve(result);
+          },
+        );
+      },
+    );
+    expect(acknowledgement).toEqual({ ok: true });
+    const otherGame = await new Promise<{ ok?: boolean; error?: string }>(
+      (resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Socket watch acknowledgement timed out')),
+          2_000,
+        );
+        client!.emit(
+          'game:watch',
+          { gameId: randomUUID() },
+          (result: { ok?: boolean; error?: string }) => {
+            clearTimeout(timeout);
+            resolve(result);
+          },
+        );
+      },
+    );
+    expect(otherGame).toEqual({ error: 'Not found' });
+    const disconnected = new Promise<string>((resolve) => {
+      client!.once('disconnect', resolve);
+    });
+    await revokeSeatViewerSessions(gameId, seatId, Date.now());
+    await realtime.publishGame(gameId);
+    const disconnectResult = await Promise.race([
+      disconnected,
+      new Promise<string>((resolve) =>
+        setTimeout(() => resolve('still-connected'), 1_000),
+      ),
+    ]);
+    expect(disconnectResult).not.toBe('still-connected');
+  } finally {
+    client?.disconnect();
+    await realtime.close();
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('projects the authenticated seat view over HTTP without treating the cookie as a visitor', async () => {
+  const gameId = randomUUID();
+  const seatId = randomUUID();
+  const token = randomBytes(32).toString('base64url');
+  const now = Date.now();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+
+  try {
+    await createGameWithEvent({
+      event: created,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'http-seat-session-create',
+      requestHash: 'http-seat-session-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'http-seat-session-join',
+      requestHash: 'http-seat-session-join',
+      events: [
+        eventSchema.parse({
+          seq: 2,
+          at: now + 1,
+          schemaVersion: 1,
+          type: 'SeatJoined',
+          seatId,
+          name: 'A player',
+        }),
+      ],
+    });
+    await createSeatAccess({
+      gameId,
+      seatId,
+      pinSalt: 'e'.repeat(32),
+      pinHash: 'f'.repeat(64),
+    });
+    await createViewerSession({
+      tokenHash: createHash('sha256').update(token).digest('hex'),
+      gameId,
+      seatId,
+      expiresAt: now + 60_000,
+    });
+
+    const resolveSeatViewer = createSeatViewerResolver({
+      findSession: findViewerSession,
+      now: () => now,
+    });
+    const app = createApp(async () => {}, {
+      resolveViewer: (requestContext) => {
+        const requestedGameId = requestContext.params.id;
+        return typeof requestedGameId === 'string'
+          ? resolveSeatViewer({
+              gameId: requestedGameId,
+              cookieHeader: requestContext.headers.cookie,
+            })
+          : { kind: 'visitor' };
+      },
+    });
+    const response = await request(app)
+      .get(`/api/games/${gameId}/view`)
+      .set('Cookie', `${cookieNameForGame(gameId)}=${token}`)
+      .expect(200);
+
+    expect(response.body.view).toMatchObject({
+      id: gameId,
+      seats: [{ id: seatId, name: 'A player', status: 'alive' }],
+    });
+    expect(response.body.view).not.toHaveProperty('exists');
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('creates a private invite and gives a joining guest a seat session', async () => {
+  const gameId = randomUUID();
+  const now = Date.now();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+
+  try {
+    await createGameWithEvent({
+      event: created,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'guest-invite-create',
+      requestHash: 'guest-invite-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'guest-invite-lobby',
+      requestHash: 'guest-invite-lobby',
+      events: [
+        eventSchema.parse({
+          seq: 2,
+          at: now + 1,
+          schemaVersion: 1,
+          type: 'PhaseChanged',
+          phase: 'LOBBY',
+          deadline: null,
+          shadowEndAt: null,
+          cycle: 0,
+        }),
+      ],
+    });
+
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-rate-limit-secret',
+      publicBaseUrl: 'https://turnstone.test',
+      secureCookies: true,
+      consumeRateLimit: async () => true,
+    });
+    const inviteResponse = await request(app)
+      .post(`/api/games/${gameId}/invites`)
+      .expect(201);
+    const missingBaseApp = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-rate-limit-secret',
+      consumeRateLimit: async () => true,
+    });
+    await request(missingBaseApp)
+      .post(`/api/games/${gameId}/invites`)
+      .expect(503, { error: 'Service unavailable' });
+    expect(inviteResponse.body.gameId).toBe(gameId);
+    expect(/^[A-HJ-NP-Z2-9]{6}$/.test(inviteResponse.body.shortCode)).toBe(
+      true,
+    );
+    const joinUrl = new URL(
+      inviteResponse.body.joinUrl,
+      'https://turnstone.test',
+    );
+    expect(joinUrl.pathname).toBe(`/join/${gameId}`);
+    const inviteToken = joinUrl.hash.slice(1);
+    expect(/^[A-Za-z0-9_-]{43}$/.test(inviteToken)).toBe(true);
+
+    const joined = await request(app)
+      .post(`/api/games/${gameId}/join`)
+      .send({
+        inviteToken,
+        name: 'Guest One',
+        pin: '1234',
+        idempotencyKey: 'guest-one-join',
+      })
+      .expect(201);
+    await request(app)
+      .post(`/api/games/${gameId}/join`)
+      .send({
+        inviteToken,
+        name: 'Guest One',
+        pin: '9999',
+        idempotencyKey: 'guest-one-join',
+      })
+      .expect(401, { error: 'Join could not be completed' });
+    await request(app)
+      .post(`/api/games/${gameId}/join`)
+      .send({
+        inviteToken,
+        name: 'Guest One',
+        pin: '4321',
+        idempotencyKey: 'guest-one-duplicate-name',
+      })
+      .expect(409, { error: 'Command rejected' });
+    const setCookieHeader = joined.headers['set-cookie'];
+    const setCookie = Array.isArray(setCookieHeader)
+      ? setCookieHeader
+      : [setCookieHeader ?? ''];
+    expect(setCookie.some((cookie) => cookie.includes('HttpOnly'))).toBe(true);
+    expect(setCookie.some((cookie) => cookie.includes('Secure'))).toBe(true);
+    expect(setCookie.some((cookie) => cookie.includes('SameSite=Lax'))).toBe(
+      true,
+    );
+    expect(setCookie.every((cookie) => !cookie.includes('1234'))).toBe(true);
+    expect(joined.body.view).toMatchObject({
+      id: gameId,
+      seats: [{ name: 'Guest One', status: 'alive' }],
+    });
+    const oldSeatCookie =
+      setCookie
+        .find((cookie) => cookie.startsWith('turnstone-seat-'))
+        ?.split(';')[0] ?? '';
+    const oldSessionToken = oldSeatCookie.split('=').slice(1).join('=');
+    const wrongNameRecovery = await request(app).post('/api/recover').send({
+      shortCode: inviteResponse.body.shortCode,
+      name: 'Unknown Guest',
+      pin: '1234',
+    });
+    expect(wrongNameRecovery.status).toBe(401);
+    expect(wrongNameRecovery.body).toEqual({
+      error: 'Recovery could not be completed',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 3,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'orphan-seat-add',
+      requestHash: 'orphan-seat-add',
+      events: [
+        eventSchema.parse({
+          seq: 4,
+          at: now + 2,
+          schemaVersion: 1,
+          type: 'SeatJoined',
+          seatId: 'orphan-seat',
+          name: 'Orphan Guest',
+        }),
+      ],
+    });
+    await request(app)
+      .post('/api/recover')
+      .send({
+        shortCode: inviteResponse.body.shortCode,
+        name: 'Orphan Guest',
+        pin: '1234',
+      })
+      .expect(401, { error: 'Recovery could not be completed' });
+    const recovery = await request(app)
+      .post('/api/recover')
+      .send({
+        shortCode: inviteResponse.body.shortCode,
+        name: 'Guest One',
+        pin: '1234',
+      })
+      .expect(200);
+    const recoveryCookieHeader = recovery.headers['set-cookie'];
+    const recoveryCookies = Array.isArray(recoveryCookieHeader)
+      ? recoveryCookieHeader
+      : [recoveryCookieHeader ?? ''];
+    const newSeatCookie =
+      recoveryCookies
+        .find((cookie) => cookie.startsWith('turnstone-seat-'))
+        ?.split(';')[0] ?? '';
+    const newSessionToken = newSeatCookie.split('=').slice(1).join('=');
+    expect(oldSessionToken.length > 0).toBe(true);
+    expect(newSessionToken.length > 0).toBe(true);
+    expect(newSessionToken !== oldSessionToken).toBe(true);
+    const oldSession = await findViewerSession(
+      createHash('sha256').update(oldSessionToken).digest('hex'),
+      gameId,
+    );
+    const newSession = await findViewerSession(
+      createHash('sha256').update(newSessionToken).digest('hex'),
+      gameId,
+    );
+    expect(oldSession?.revokedAt).not.toBeNull();
+    expect(newSession?.revokedAt).toBeNull();
+    expect(recovery.body.view.id).toBe(gameId);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('holds short-code joins for coordinator approval and returns a seat cookie after approval', async () => {
+  const gameId = randomUUID();
+  const now = Date.now();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+
+  try {
+    await createGameWithEvent({
+      event: created,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'code-approval-create',
+      requestHash: 'code-approval-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'code-approval-lobby',
+      requestHash: 'code-approval-lobby',
+      events: [
+        eventSchema.parse({
+          seq: 2,
+          at: now + 1,
+          schemaVersion: 1,
+          type: 'PhaseChanged',
+          phase: 'LOBBY',
+          deadline: null,
+          shadowEndAt: null,
+          cycle: 0,
+        }),
+      ],
+    });
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-rate-limit-secret',
+      publicBaseUrl: 'https://turnstone.test',
+      secureCookies: true,
+    });
+    const invite = await request(app)
+      .post(`/api/games/${gameId}/invites`)
+      .expect(201);
+    const shortCode = invite.body.shortCode as string;
+    expect(/^[A-HJ-NP-Z2-9]{6}$/.test(shortCode)).toBe(true);
+
+    const joinRequest = await request(app)
+      .post('/api/join')
+      .send({
+        shortCode,
+        name: 'Short Guest',
+        pin: '5678',
+        idempotencyKey: 'short-guest-join',
+      })
+      .expect(202);
+    expect(joinRequest.body.status).toBe('pending');
+    const requestId = joinRequest.body.requestId as string;
+    const cookieHeader = joinRequest.headers['set-cookie'];
+    const cookieLines = Array.isArray(cookieHeader)
+      ? cookieHeader
+      : [cookieHeader ?? ''];
+    const joinCookie = cookieLines.find((cookie) =>
+      cookie.startsWith('turnstone-join-'),
+    );
+    expect(typeof joinCookie).toBe('string');
+    expect(Boolean(joinCookie?.includes('HttpOnly'))).toBe(true);
+    expect(Boolean(joinCookie?.includes('Secure'))).toBe(true);
+
+    const pending = await request(app)
+      .get(`/api/games/${gameId}/join-requests`)
+      .expect(200);
+    expect(pending.body.requests).toHaveLength(1);
+    expect(pending.body.requests[0]).toMatchObject({
+      id: requestId,
+      name: 'Short Guest',
+    });
+    const seatId = pending.body.requests[0].seatId as string;
+    const approval = await request(app)
+      .post(`/api/games/${gameId}/join-requests/${requestId}/decision`)
+      .send({ decision: 'approve', expectedVersion: 2 })
+      .expect(200);
+    expect(approval.body.status).toBe('approved');
+    expect(approval.body.seatId).toBe(seatId);
+
+    const status = await request(app)
+      .get(`/api/join-requests/${requestId}`)
+      .set('Cookie', joinCookie?.split(';')[0] ?? '')
+      .expect(200);
+    expect(status.body.status).toBe('approved');
+    expect(status.body.game.view).toMatchObject({
+      id: gameId,
+      seats: [{ id: seatId, name: 'Short Guest', status: 'alive' }],
+    });
+    const sessionCookieHeader = status.headers['set-cookie'];
+    const sessionCookies = Array.isArray(sessionCookieHeader)
+      ? sessionCookieHeader
+      : [sessionCookieHeader ?? ''];
+    expect(
+      sessionCookies.some((cookie) => cookie.startsWith('turnstone-seat-')),
+    ).toBe(true);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('locks PIN recovery after five failed attempts without exposing whether the name exists', async () => {
+  const gameId = randomUUID();
+  const now = Date.now();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+
+  try {
+    await createGameWithEvent({
+      event: created,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'pin-lockout-create',
+      requestHash: 'pin-lockout-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'pin-lockout-lobby',
+      requestHash: 'pin-lockout-lobby',
+      events: [
+        eventSchema.parse({
+          seq: 2,
+          at: now + 1,
+          schemaVersion: 1,
+          type: 'PhaseChanged',
+          phase: 'LOBBY',
+          deadline: null,
+          shadowEndAt: null,
+          cycle: 0,
+        }),
+      ],
+    });
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-rate-limit-secret',
+      publicBaseUrl: 'https://turnstone.test',
+      secureCookies: true,
+      consumeRateLimit: async () => true,
+    });
+    const invite = await request(app).post(`/api/games/${gameId}/invites`);
+    expect(invite.status).toBe(201);
+    const joinUrl = new URL(invite.body.joinUrl);
+    const join = await request(app)
+      .post(`/api/games/${gameId}/join`)
+      .send({
+        inviteToken: joinUrl.hash.slice(1),
+        name: 'Locked Seat',
+        pin: '2468',
+        idempotencyKey: 'pin-lockout-seat',
+      });
+    expect(join.status).toBe(201);
+
+    const failures: number[] = [];
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const failed = await request(app).post('/api/recover').send({
+        shortCode: invite.body.shortCode,
+        name: 'Locked Seat',
+        pin: '1357',
+      });
+      failures.push(failed.status);
+      expect(failed.body.error).toBe('Recovery could not be completed');
+    }
+    expect(failures).toEqual([401, 401, 401, 401, 429]);
+
+    const correctPinWhileLocked = await request(app).post('/api/recover').send({
+      shortCode: invite.body.shortCode,
+      name: 'Locked Seat',
+      pin: '2468',
+    });
+    expect(correctPinWhileLocked.status).toBe(429);
+    expect(correctPinWhileLocked.body.error).toBe(
+      'Recovery could not be completed',
+    );
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('resyncs whole projected views after a dropped socket and server restart', async () => {
+  const gameId = randomUUID();
+  const seatId = randomUUID();
+  const token = randomBytes(32).toString('base64url');
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const now = Date.now();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+  const joined = eventSchema.parse({
+    seq: 2,
+    at: now + 1,
+    schemaVersion: 1,
+    type: 'SeatJoined',
+    seatId,
+    name: 'Reconnect player',
+  });
+  const resolveSeatViewer = createSeatViewerResolver({
+    findSession: findViewerSession,
+    now: () => now,
+  });
+  let activeRealtime: Awaited<ReturnType<typeof attachRealtime>> | undefined;
+  const app = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'coordinator' }),
+    publishGame: async (id) => {
+      await activeRealtime?.publishGame(id);
+    },
+  });
+  const servers: Array<{
+    server: ReturnType<typeof createServer>;
+    realtime: Awaited<ReturnType<typeof attachRealtime>>;
+  }> = [];
+  const clients: ClientSocket[] = [];
+
+  async function startServer() {
+    const server = createServer(app);
+    const realtime = await attachRealtime(server, {
+      allowedOrigins: ['http://127.0.0.1'],
+      resolveViewer: (headers, requestedGameId) =>
+        requestedGameId
+          ? resolveSeatViewer({
+              gameId: requestedGameId,
+              cookieHeader: headers.cookie,
+            })
+          : { kind: 'visitor' },
+    });
+    activeRealtime = realtime;
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, '127.0.0.1', resolve);
+    });
+    servers.push({ server, realtime });
+    return server;
+  }
+
+  async function connect(server: ReturnType<typeof createServer>) {
+    const address = server.address();
+    if (!address || typeof address === 'string')
+      throw new Error('Test server did not bind a TCP port');
+    const client = socketIo(`http://127.0.0.1:${address.port}`, {
+      transports: ['websocket'],
+      extraHeaders: {
+        origin: 'http://127.0.0.1',
+        cookie: `${cookieNameForGame(gameId)}=${token}`,
+      },
+      auth: { gameId },
+      reconnection: false,
+    });
+    clients.push(client);
+    await new Promise<void>((resolve, reject) => {
+      client.once('connect', resolve);
+      client.once('connect_error', reject);
+    });
+    return client;
+  }
+
+  async function watch(client: ClientSocket) {
+    return new Promise<{ version: number; view: { phase: string } }>(
+      (resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Socket resync timed out')),
+          2_000,
+        );
+        client.once('game:view', (view) => {
+          clearTimeout(timeout);
+          resolve(view);
+        });
+        client.emit(
+          'game:watch',
+          { gameId },
+          (acknowledgement: { ok?: boolean; error?: string }) => {
+            if (!acknowledgement.ok) {
+              clearTimeout(timeout);
+              reject(new Error(acknowledgement.error ?? 'Watch rejected'));
+            }
+          },
+        );
+      },
+    );
+  }
+
+  try {
+    await createGameWithEvent({
+      event: created,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'resync-create',
+      requestHash: 'resync-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'resync-seat',
+      requestHash: 'resync-seat',
+      events: [joined],
+    });
+    await createSeatAccess({
+      gameId,
+      seatId,
+      pinSalt: 'a'.repeat(32),
+      pinHash: 'b'.repeat(64),
+    });
+    await createViewerSession({
+      tokenHash,
+      gameId,
+      seatId,
+      expiresAt: now + 60_000,
+    });
+
+    const firstServer = await startServer();
+    const firstClient = await connect(firstServer);
+    expect(await watch(firstClient)).toMatchObject({
+      version: 2,
+      view: { phase: 'DRAFT' },
+    });
+    firstClient.disconnect();
+
+    const command = {
+      type: 'AdvancePhase',
+      expectedVersion: 2,
+      idempotencyKey: 'resync-advance',
+    };
+    const advance = await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .send(command);
+    expect(advance.status).toBe(200);
+    expect(advance.body.version).toBe(3);
+
+    await servers[0]?.realtime.close();
+    await new Promise<void>((resolve) => {
+      if (!firstServer.listening) {
+        resolve();
+        return;
+      }
+      firstServer.close(() => resolve());
+    });
+
+    const secondServer = await startServer();
+    const secondClient = await connect(secondServer);
+    expect(await watch(secondClient)).toMatchObject({
+      version: 3,
+      view: { phase: 'LOBBY' },
+    });
+
+    const retry = await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .send(command);
+    expect(retry.status).toBe(200);
+    expect(retry.body.version).toBe(3);
+    expect(await readGameEvents(gameId)).toHaveLength(3);
+  } finally {
+    for (const client of clients) client.disconnect();
+    for (const { realtime, server } of servers) {
+      await realtime.close();
+      if (server.listening) {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    }
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('rejects a short-code join without exposing more than its decision status', async () => {
+  const gameId = randomUUID();
+  const now = Date.now();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+
+  try {
+    await createGameWithEvent({
+      event: created,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'reject-join-create',
+      requestHash: 'reject-join-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'reject-join-lobby',
+      requestHash: 'reject-join-lobby',
+      events: [
+        eventSchema.parse({
+          seq: 2,
+          at: now + 1,
+          schemaVersion: 1,
+          type: 'PhaseChanged',
+          phase: 'LOBBY',
+          deadline: null,
+          shadowEndAt: null,
+          cycle: 0,
+        }),
+      ],
+    });
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-rate-limit-secret',
+      publicBaseUrl: 'https://turnstone.test',
+      secureCookies: true,
+      consumeRateLimit: async () => true,
+    });
+    const invite = await request(app)
+      .post(`/api/games/${gameId}/invites`)
+      .expect(201);
+    const join = await request(app)
+      .post('/api/join')
+      .send({
+        shortCode: invite.body.shortCode,
+        name: 'Declined Guest',
+        pin: '5678',
+        idempotencyKey: 'declined-guest-join',
+      })
+      .expect(202);
+    const requestId = join.body.requestId as string;
+    const cookieHeader = join.headers['set-cookie'];
+    const cookies = Array.isArray(cookieHeader)
+      ? cookieHeader
+      : [cookieHeader ?? ''];
+    const joinCookie = cookies.find((cookie) =>
+      cookie.startsWith('turnstone-join-'),
+    );
+    expect(joinCookie).toBeTruthy();
+
+    const pending = await request(app)
+      .get(`/api/join-requests/${requestId}`)
+      .set('Cookie', joinCookie?.split(';')[0] ?? '')
+      .expect(200);
+    expect(pending.body).toEqual({ status: 'pending' });
+    await request(app)
+      .post(`/api/games/${gameId}/join-requests/${requestId}/decision`)
+      .send({ decision: 'reject', expectedVersion: 1 })
+      .expect(409, { error: 'Command rejected' });
+    await request(app)
+      .post(`/api/games/${gameId}/join-requests/${'b'.repeat(32)}/decision`)
+      .send({ decision: 'reject', expectedVersion: 2 })
+      .expect(404, { error: 'Not found' });
+
+    const rejected = await request(app)
+      .post(`/api/games/${gameId}/join-requests/${requestId}/decision`)
+      .send({ decision: 'reject', expectedVersion: 2 })
+      .expect(200);
+    expect(rejected.body.status).toBe('rejected');
+
+    const finalStatus = await request(app)
+      .get(`/api/join-requests/${requestId}`)
+      .set('Cookie', joinCookie?.split(';')[0] ?? '')
+      .expect(200);
+    expect(finalStatus.body).toEqual({ status: 'rejected' });
+    const finalCookies = finalStatus.headers['set-cookie'];
+    const clearedCookies = Array.isArray(finalCookies)
+      ? finalCookies
+      : [finalCookies ?? ''];
+    expect(
+      clearedCookies.some((cookie) => cookie.startsWith('turnstone-join-')),
+    ).toBe(true);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('enforces the 80 per cent game-admission threshold without blocking existing games', async () => {
+  const acceptedGameId = randomUUID();
+  const busyGameId = randomUUID();
+  const options = (activeGames: number) => ({
+    resolveViewer: () => ({ kind: 'coordinator' as const }),
+    maxActiveGames: 10,
+    countActiveGames: async () => activeGames,
+    rateLimitSecret: 'integration-test-rate-limit-secret',
+    consumeRateLimit: async () => true,
+  });
+  const acceptedApp = createApp(async () => {}, options(8));
+  const busyApp = createApp(async () => {}, options(9));
+  const visitorApp = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'visitor' }),
+    rateLimitSecret: 'integration-test-rate-limit-secret',
+    consumeRateLimit: async () => true,
+  });
+  const createPayload = (id: string, idempotencyKey: string) => ({
+    type: 'CreateGame',
+    id,
+    idempotencyKey,
+    config: gameConfigSchema.parse({}),
+  });
+
+  try {
+    await request(acceptedApp)
+      .post('/api/games')
+      .send({ type: 'unknown' })
+      .expect(400);
+    await request(visitorApp)
+      .post('/api/games')
+      .send(createPayload(randomUUID(), 'visitor-create'))
+      .expect(401);
+
+    const accepted = await request(acceptedApp)
+      .post('/api/games')
+      .send(createPayload(acceptedGameId, 'capacity-boundary-create'))
+      .expect(201);
+    expect(accepted.body.version).toBe(1);
+
+    const busy = await request(busyApp)
+      .post('/api/games')
+      .send(createPayload(busyGameId, 'capacity-full-create'))
+      .expect(503);
+    expect(busy.body).toEqual({
+      error: 'Busy right now, try again in a few minutes',
+    });
+  } finally {
+    await db.execute(
+      sql`delete from games where id in (${acceptedGameId}, ${busyGameId})`,
+    );
+  }
+});
+
+it('enforces viewer authorization and handles malformed or unconfigured guest requests', async () => {
+  const gameId = randomUUID();
+  const requestId = 'a'.repeat(32);
+  const visitorApp = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'visitor' }),
+    rateLimitSecret: 'integration-test-rate-limit-secret',
+    publicBaseUrl: 'https://turnstone.test',
+    consumeRateLimit: async () => true,
+  });
+  const coordinatorWithoutSecret = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'coordinator' }),
+  });
+  const coordinatorApp = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'coordinator' }),
+    rateLimitSecret: 'integration-test-rate-limit-secret',
+    consumeRateLimit: async () => true,
+  });
+  const createCommand = {
+    type: 'CreateGame',
+    id: gameId,
+    idempotencyKey: 'unauthorised-create',
+    config: gameConfigSchema.parse({}),
+  };
+  const joinBody = {
+    shortCode: 'ABC234',
+    name: 'Guest player',
+    pin: '2468',
+    idempotencyKey: 'unconfigured-short-join',
+  };
+  const directJoinBody = {
+    inviteToken: 'A'.repeat(43),
+    name: 'Guest player',
+    pin: '2468',
+    idempotencyKey: 'unconfigured-direct-join',
+  };
+  const decisionBody = { decision: 'reject', expectedVersion: 1 };
+
+  await request(visitorApp)
+    .post('/api/games')
+    .send(createCommand)
+    .expect(401, { error: 'Authentication required' });
+  await request(visitorApp)
+    .post(`/api/games/${gameId}/invites`)
+    .expect(401, { error: 'Authentication required' });
+  await request(visitorApp)
+    .get(`/api/games/${gameId}/join-requests`)
+    .expect(401, { error: 'Authentication required' });
+  await request(visitorApp)
+    .post(`/api/games/${gameId}/join-requests/${requestId}/decision`)
+    .send(decisionBody)
+    .expect(401, { error: 'Authentication required' });
+  await request(visitorApp)
+    .post(`/api/games/${gameId}/commands`)
+    .send({
+      type: 'AdvancePhase',
+      expectedVersion: 1,
+      idempotencyKey: 'unauthorised-command',
+    })
+    .expect(401, { error: 'Authentication required' });
+  await request(coordinatorApp)
+    .post(`/api/games/${gameId}/commands`)
+    .send({
+      type: 'AdvancePhase',
+      expectedVersion: 1,
+      idempotencyKey: 'missing-game-command',
+    })
+    .expect(404, { error: 'Not found' });
+  await request(visitorApp)
+    .post('/api/join')
+    .send({ shortCode: 'bad' })
+    .expect(400, { error: 'Invalid request' });
+  await request(visitorApp)
+    .post('/api/join')
+    .send(joinBody)
+    .expect(404, { error: 'Not found' });
+  await request(visitorApp)
+    .post('/api/recover')
+    .send({ shortCode: 'ZZZZZZ', name: 'Unknown Guest', pin: '2468' })
+    .expect(401, { error: 'Recovery could not be completed' });
+  await request(visitorApp)
+    .post('/api/games/not-a-game/join')
+    .send(directJoinBody)
+    .expect(404, { error: 'Not found' });
+  await request(visitorApp)
+    .get(`/api/games/${gameId}/view`)
+    .expect(404, { error: 'Not found' });
+  await request(visitorApp)
+    .get(`/api/join-requests/${requestId}`)
+    .expect(404, { error: 'Not found' });
+  await request(visitorApp).get('/not-a-route').expect(404, {
+    error: 'Not found',
+  });
+
+  await request(coordinatorWithoutSecret)
+    .post('/api/join')
+    .send(joinBody)
+    .expect(503, { error: 'Service unavailable' });
+  await request(coordinatorWithoutSecret)
+    .post(`/api/games/${gameId}/join`)
+    .send(directJoinBody)
+    .expect(503, { error: 'Service unavailable' });
+  await request(coordinatorWithoutSecret)
+    .post('/api/recover')
+    .send({ shortCode: 'ABC234', name: 'Guest player', pin: '2468' })
+    .expect(400, { error: 'Invalid request' });
+  await request(coordinatorWithoutSecret)
+    .get(`/api/join-requests/${requestId}`)
+    .expect(503, { error: 'Service unavailable' });
+  await request(coordinatorWithoutSecret)
+    .post(`/api/games/${gameId}/join-requests/${requestId}/decision`)
+    .send(decisionBody)
+    .expect(503, { error: 'Service unavailable' });
+});
+
+it('applies rate limits before reading or mutating game data on every write route', async () => {
+  const gameId = randomUUID();
+  const requestId = 'c'.repeat(32);
+  const app = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'coordinator' }),
+    rateLimitSecret: 'integration-test-rate-limit-secret',
+    publicBaseUrl: 'https://turnstone.test',
+    consumeRateLimit: async () => false,
+  });
+  const createCommand = {
+    type: 'CreateGame',
+    id: gameId,
+    idempotencyKey: 'rate-limited-create',
+    config: gameConfigSchema.parse({}),
+  };
+  const directJoin = {
+    inviteToken: 'A'.repeat(43),
+    name: 'Rate limited',
+    pin: '2468',
+    idempotencyKey: 'rate-limited-direct-join',
+  };
+  const shortCodeJoin = {
+    shortCode: 'ABC234',
+    name: 'Rate limited',
+    pin: '2468',
+    idempotencyKey: 'rate-limited-short-join',
+  };
+  const decision = { decision: 'reject', expectedVersion: 1 };
+
+  await request(app)
+    .post('/api/games')
+    .send(createCommand)
+    .expect(429, { error: 'Too many requests' });
+  await request(app)
+    .post(`/api/games/${gameId}/invites`)
+    .expect(429, { error: 'Too many requests' });
+  await request(app)
+    .post('/api/join')
+    .send(shortCodeJoin)
+    .expect(429, { error: 'Too many requests' });
+  await request(app)
+    .get(`/api/games/${gameId}/join-requests`)
+    .expect(429, { error: 'Too many requests' });
+  await request(app)
+    .post(`/api/games/${gameId}/join-requests/${requestId}/decision`)
+    .send(decision)
+    .expect(429, { error: 'Too many requests' });
+  await request(app)
+    .post('/api/recover')
+    .send({ shortCode: 'ABC234', name: 'Rate limited', pin: '2468' })
+    .expect(429, { error: 'Recovery could not be completed' });
+  await request(app)
+    .post(`/api/games/${gameId}/join`)
+    .send(directJoin)
+    .expect(429, { error: 'Too many requests' });
+  await request(app)
+    .post(`/api/games/${gameId}/commands`)
+    .send({
+      type: 'AdvancePhase',
+      expectedVersion: 1,
+      idempotencyKey: 'rate-limited-command',
+    })
+    .expect(429, { error: 'Too many requests' });
+});
+
+it('rejects cookie-authenticated writes without a matching CSRF token', async () => {
+  const app = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'coordinator' }),
+    rateLimitSecret: 'integration-test-rate-limit-secret',
+    publicBaseUrl: 'https://turnstone.test',
+    consumeRateLimit: async () => true,
+  });
+  const csrfHeaders = { Origin: 'https://attacker.invalid' };
+
+  await request(app)
+    .post('/api/games')
+    .set(csrfHeaders)
+    .send({})
+    .expect(403, { error: 'Invalid request' });
+  await request(app)
+    .post('/api/games/test-game/invites')
+    .set(csrfHeaders)
+    .expect(403, { error: 'Invalid request' });
+  await request(app)
+    .post('/api/join')
+    .set(csrfHeaders)
+    .send({})
+    .expect(403, { error: 'Invalid request' });
+  await request(app)
+    .post('/api/games/test-game/join-requests/test-request/decision')
+    .set(csrfHeaders)
+    .send({})
+    .expect(403, { error: 'Invalid request' });
+  await request(app)
+    .post('/api/recover')
+    .set(csrfHeaders)
+    .send({})
+    .expect(403, { error: 'Invalid request' });
+  await request(app)
+    .post('/api/games/test-game/join')
+    .set(csrfHeaders)
+    .send({})
+    .expect(403, { error: 'Invalid request' });
+  await request(app)
+    .post('/api/games/test-game/commands')
+    .set(csrfHeaders)
+    .send({})
+    .expect(403, { error: 'Invalid request' });
+});
+
+it('issues a fresh CSRF token for malformed cookies and validates matching tokens', async () => {
+  const app = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'visitor' }),
+  });
+  const csrf = await request(app)
+    .get('/api/csrf')
+    .set('Cookie', 'unrelated=value; malformed')
+    .expect(200);
+  const cookieHeader = csrf.headers['set-cookie'];
+  const cookies = Array.isArray(cookieHeader)
+    ? cookieHeader
+    : [cookieHeader ?? ''];
+  const csrfCookie = cookies.find((cookie) =>
+    cookie.startsWith('turnstone-csrf='),
+  );
+  const token = csrf.body.csrfToken as string;
+  expect(token).toHaveLength(43);
+  expect(csrfCookie).toBeTruthy();
+
+  await request(app)
+    .post('/api/games')
+    .set('Cookie', csrfCookie?.split(';')[0] ?? '')
+    .set('X-CSRF-Token', 'x'.repeat(token.length))
+    .send({})
+    .expect(403, { error: 'Invalid request' });
+  await request(app)
+    .post('/api/games')
+    .set('Cookie', csrfCookie?.split(';')[0] ?? '')
+    .set('X-CSRF-Token', token)
+    .send({})
+    .expect(400, { error: 'Invalid request' });
+});
+
+it('pairs a presenter using a single-use game-scoped code stored only as a hash', async () => {
+  const gameId = randomUUID();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: Date.now(),
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+  await createGameWithEvent({
+    event: created,
+    actorId: 'coordinator:test',
+    idempotencyKey: 'presenter-pair-create',
+    requestHash: 'presenter-pair-create',
+  });
+
+  try {
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-rate-limit-secret',
+      consumeRateLimit: async () => true,
+      secureCookies: true,
+    });
+    const pairing = await request(app)
+      .post(`/api/games/${gameId}/presenter-pairings`)
+      .expect(201);
+    const code = pairing.body.code as string;
+    expect(code).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(JSON.stringify(pairing.body)).not.toContain(gameId);
+    const storedPairing = await db.execute(
+      sql`select code_hash from game_presenter_pairings where game_id = ${gameId}`,
+    );
+    expect(storedPairing.rows[0]?.code_hash).not.toBe(code);
+
+    const paired = await request(app)
+      .post('/api/presenter/pair')
+      .send({ gameId, code })
+      .expect(200);
+    expect(paired.body.game.view).toMatchObject({
+      phase: 'DRAFT',
+      private: null,
+      fairness: null,
+    });
+    const cookieHeader = paired.headers['set-cookie'];
+    const cookies = Array.isArray(cookieHeader)
+      ? cookieHeader
+      : [cookieHeader ?? ''];
+    const presenterCookie = cookies.find((cookie) =>
+      cookie.startsWith('turnstone-presenter-'),
+    );
+    expect(presenterCookie).toContain('HttpOnly');
+    expect(presenterCookie).toContain('Secure');
+
+    const [{ findPresenterSession }, { findViewerSession }] = await Promise.all(
+      [
+        import('@workspace/db/presenter-access-store'),
+        import('@workspace/db/seat-access-store'),
+      ],
+    );
+    const { createSeatViewerResolver } =
+      await import('../artifacts/api-server/src/session-auth');
+    const resolveSeatOrPresenter = createSeatViewerResolver({
+      findSession: findViewerSession,
+      findPresenterSession,
+    });
+    const cookie = presenterCookie!.split(';', 1)[0]!;
+    await expect(
+      resolveSeatOrPresenter({
+        gameId: 'a-different-game',
+        cookieHeader: cookie,
+      }),
+    ).resolves.toEqual({ kind: 'visitor' });
+    const presenterApp = createApp(async () => {}, {
+      resolveViewer: (request) =>
+        resolveSeatOrPresenter({
+          gameId: Array.isArray(request.params.id)
+            ? (request.params.id[0] ?? '')
+            : (request.params.id ?? ''),
+          cookieHeader: request.headers.cookie,
+        }),
+    });
+    const presenterView = await request(presenterApp)
+      .get(`/api/games/${gameId}/view`)
+      .set('Cookie', cookie)
+      .expect(200);
+    expect(presenterView.body.view).toMatchObject({
+      id: gameId,
+      private: null,
+      fairness: null,
+    });
+
+    const httpServer = createServer(presenterApp);
+    const realtime = await attachRealtime(httpServer, {
+      allowedOrigins: ['http://127.0.0.1'],
+      resolveViewer: (headers, requestedGameId) =>
+        requestedGameId
+          ? resolveSeatOrPresenter({
+              gameId: requestedGameId,
+              cookieHeader: headers.cookie,
+            })
+          : { kind: 'visitor' },
+    });
+    let client: ClientSocket | undefined;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        httpServer.once('error', reject);
+        httpServer.listen(0, '127.0.0.1', resolve);
+      });
+      const address = httpServer.address();
+      if (!address || typeof address === 'string')
+        throw new Error('Presenter test server did not bind a TCP port');
+      client = socketIo(`http://127.0.0.1:${address.port}`, {
+        transports: ['websocket'],
+        extraHeaders: { origin: 'http://127.0.0.1', cookie },
+        auth: { gameId },
+        reconnection: false,
+      });
+      await new Promise<void>((resolve, reject) => {
+        client!.once('connect', resolve);
+        client!.once('connect_error', reject);
+      });
+      const viewPromise = new Promise<{
+        version: number;
+        view: { id: string; private: unknown };
+      }>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Presenter watch timed out')),
+          2_000,
+        );
+        client!.once('game:view', (view) => {
+          clearTimeout(timeout);
+          resolve(view);
+        });
+        client!.emit(
+          'game:watch',
+          { gameId },
+          (acknowledgement: { ok?: boolean; error?: string }) => {
+            if (!acknowledgement.ok) {
+              clearTimeout(timeout);
+              reject(
+                new Error(
+                  acknowledgement.error ?? 'Presenter watch was rejected',
+                ),
+              );
+            }
+          },
+        );
+      });
+      await expect(viewPromise).resolves.toMatchObject({
+        view: { id: gameId, private: null },
+      });
+    } finally {
+      client?.disconnect();
+      await realtime.close();
+      if (httpServer.listening) {
+        await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+      }
+    }
+
+    await request(app)
+      .post('/api/presenter/pair')
+      .send({ gameId, code })
+      .expect(401, { error: 'Pairing could not be completed' });
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('captures deterministic commands for replay through the real server', async () => {
+  const [{ runCompleteGame }, { coreConfig }] = await Promise.all([
+    import('../scripts/src/scenarios/simulate'),
+    import('../scripts/src/scenarios/runner'),
+  ]);
+  const scenario = runCompleteGame({
+    seed: 1901,
+    strategy: 'random',
+    config: coreConfig(5, 1, 'quick'),
+    captureCommands: true,
+  });
+  expect(scenario.commands).toBeDefined();
+  expect(scenario.commands?.[0]).toMatchObject({
+    command: { type: 'CreateGame' },
+    actor: { kind: 'coordinator' },
+  });
+});
+
+it.each([5, 40])(
+  'plays a complete %i-seat game through HTTP and private sockets across a server restart',
+  async (playerCount) => {
+    const [{ runCompleteGame, scenarioRandom }, { coreConfig }, engine] =
+      await Promise.all([
+        import('../scripts/src/scenarios/simulate'),
+        import('../scripts/src/scenarios/runner'),
+        import('../lib/engine/src/index'),
+      ]);
+    const seed = 20261014 + playerCount;
+    const simulation = runCompleteGame({
+      seed,
+      strategy: 'random',
+      config: coreConfig(playerCount, playerCount === 5 ? 1 : 6, 'quick'),
+      captureCommands: true,
+    });
+    const commands = simulation.commands;
+    if (!commands) throw new Error('Scenario command trace was not captured');
+    const gameId = `scenario-${seed}`;
+    const publicOrigin = 'https://turnstone.stackstoneconsulting.co.uk';
+    await db.execute(sql`delete from games where id = ${gameId}`);
+    const statesByVersion = new Map<
+      number,
+      NonNullable<ReturnType<typeof engine.evolve>>
+    >();
+    let expectedState: ReturnType<typeof engine.evolve> | null = null;
+    for (const event of simulation.events) {
+      expectedState = engine.evolve(expectedState, event);
+      if (expectedState)
+        statesByVersion.set(expectedState.version, expectedState);
+    }
+    const canonicalJson = (value: unknown): string => {
+      if (Array.isArray(value))
+        return `[${value.map(canonicalJson).join(',')}]`;
+      if (value && typeof value === 'object') {
+        const entries = Object.entries(value as Record<string, unknown>).sort(
+          ([left], [right]) => left.localeCompare(right),
+        );
+        return `{${entries
+          .map(
+            ([key, child]) => `${JSON.stringify(key)}:${canonicalJson(child)}`,
+          )
+          .join(',')}}`;
+      }
+      return JSON.stringify(value) ?? 'undefined';
+    };
+
+    let now = commands[0]!.now;
+    const serverRandom = scenarioRandom(seed);
+    let activeRealtime: Awaited<ReturnType<typeof attachRealtime>> | undefined;
+    const socketClients: ClientSocket[] = [];
+    const projectionErrors: string[] = [];
+    const createRuntime = async () => {
+      const app = createApp(async () => {}, {
+        resolveViewer: (request) => {
+          const seatId = request.header('x-test-seat');
+          return seatId
+            ? { kind: 'player' as const, seatId }
+            : { kind: 'coordinator' as const };
+        },
+        publishGame: (publishedGameId) =>
+          activeRealtime?.publishGame(publishedGameId) ?? Promise.resolve(),
+        allowedOrigins: [publicOrigin],
+        rateLimitSecret: 'full-stack-test-rate-limit-secret',
+        consumeRateLimit: async () => true,
+        testOnlyNow: () => now,
+        testOnlyRandom: serverRandom,
+      });
+      const server = createServer(app);
+      const realtime = await attachRealtime(server, {
+        allowedOrigins: [publicOrigin],
+        resolveViewer: (headers) => {
+          const seatId = headers['x-test-seat'];
+          return typeof seatId === 'string'
+            ? { kind: 'player' as const, seatId }
+            : { kind: 'visitor' as const };
+        },
+      });
+      activeRealtime = realtime;
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(0, '127.0.0.1', resolve);
+      });
+      const address = server.address();
+      if (!address || typeof address === 'string')
+        throw new Error('Full-game test server did not bind a TCP port');
+      return { server, realtime, url: `http://127.0.0.1:${address.port}` };
+    };
+    const closeRuntime = async (
+      runtime: Awaited<ReturnType<typeof createRuntime>>,
+    ) => {
+      for (const client of socketClients.splice(0)) client.disconnect();
+      await runtime.realtime.close();
+      if (runtime.server.listening) {
+        await new Promise<void>((resolve) =>
+          runtime.server.close(() => resolve()),
+        );
+      }
+    };
+    const connectPlayers = async (
+      runtime: Awaited<ReturnType<typeof createRuntime>>,
+    ) => {
+      const seatIds = Array.from(
+        { length: Math.min(playerCount, 5) },
+        (_, index) => `seat-${index + 1}`,
+      );
+      await Promise.all(
+        seatIds.map(async (seatId) => {
+          const client = socketIo(runtime.url, {
+            transports: ['websocket'],
+            extraHeaders: {
+              origin: publicOrigin,
+              'x-test-seat': seatId,
+            },
+            auth: { gameId },
+            reconnection: false,
+          });
+          socketClients.push(client);
+          client.on(
+            'game:view',
+            (payload: { version: number; view: unknown }) => {
+              const state = statesByVersion.get(payload.version);
+              if (!state) {
+                projectionErrors.push(
+                  `Unknown view version ${payload.version}`,
+                );
+                return;
+              }
+              const expected = engine.viewFor(
+                { kind: 'player', seatId },
+                state,
+              );
+              if (canonicalJson(payload.view) !== canonicalJson(expected)) {
+                const actual = payload.view as Record<string, unknown>;
+                const expectedRecord = expected as Record<string, unknown>;
+                const fields = [
+                  ...new Set([
+                    ...Object.keys(actual),
+                    ...Object.keys(expectedRecord),
+                  ]),
+                ].filter(
+                  (key) =>
+                    JSON.stringify(actual[key]) !==
+                    JSON.stringify(expectedRecord[key]),
+                );
+                projectionErrors.push(
+                  `Projection mismatch for ${seatId} at ${payload.version}: ${fields.join(',')}`,
+                );
+              }
+            },
+          );
+          await new Promise<void>((resolve, reject) => {
+            client.once('connect', resolve);
+            client.once('connect_error', reject);
+          });
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(
+              () => reject(new Error(`Socket view timed out for ${seatId}`)),
+              3_000,
+            );
+            client.once('game:view', () => {
+              clearTimeout(timeout);
+              resolve();
+            });
+            client.emit(
+              'game:watch',
+              { gameId },
+              (acknowledgement: { ok?: boolean; error?: string }) => {
+                if (!acknowledgement.ok) {
+                  clearTimeout(timeout);
+                  reject(
+                    new Error(
+                      acknowledgement.error ?? `Watch rejected for ${seatId}`,
+                    ),
+                  );
+                }
+              },
+            );
+          });
+        }),
+      );
+    };
+
+    let runtime = await createRuntime();
+    let restarted = false;
+    let latencyInjected = false;
+    let lastResponse:
+      { version: number; view: Record<string, unknown> } | undefined;
+    try {
+      const csrfResponse = await request(runtime.url)
+        .get('/api/csrf')
+        .set('Origin', publicOrigin);
+      expect(csrfResponse.status).toBe(200);
+      const csrfToken = csrfResponse.body.csrfToken as string;
+      const browserHeaders = {
+        Origin: publicOrigin,
+        Cookie: `turnstone-csrf=${csrfToken}`,
+        'X-CSRF-Token': csrfToken,
+      };
+      for (let index = 0; index < commands.length; index++) {
+        const entry = commands[index]!;
+        const commandType = entry.command.type;
+        if (commandType === 'StartGame' && socketClients.length === 0)
+          await connectPlayers(runtime);
+        if (commandType === 'SubmitVote' && !restarted) {
+          await closeRuntime(runtime);
+          runtime = await createRuntime();
+          await connectPlayers(runtime);
+          restarted = true;
+        }
+        if (commandType === 'SubmitVote' && !latencyInjected) {
+          // Simulate a 2-second one-way connection stall before the request arrives.
+          await new Promise((resolve) => setTimeout(resolve, 2_000));
+          latencyInjected = true;
+        }
+        now = entry.now;
+        const actorHeader =
+          entry.actor.kind === 'player'
+            ? { 'x-test-seat': entry.actor.seatId }
+            : { 'x-test-coordinator': 'true' };
+        const path =
+          commandType === 'CreateGame'
+            ? '/api/games'
+            : `/api/games/${gameId}/commands`;
+        const response = await request(runtime.url)
+          .post(path)
+          .set({ ...browserHeaders, ...actorHeader })
+          .send(entry.command);
+        expect(response.status).toBeGreaterThanOrEqual(200);
+        expect(response.status).toBeLessThan(300);
+        expect(response.headers['access-control-allow-origin']).toBe(
+          publicOrigin,
+        );
+        expect(response.headers['access-control-allow-credentials']).toBe(
+          'true',
+        );
+        lastResponse = response.body as typeof lastResponse;
+        const expected = statesByVersion.get(response.body.version as number);
+        expect(expected).toBeDefined();
+        const viewer =
+          entry.actor.kind === 'player'
+            ? { kind: 'player' as const, seatId: entry.actor.seatId }
+            : { kind: 'coordinator' as const };
+        const expectedView = engine.viewFor(viewer, expected!);
+        if (canonicalJson(response.body.view) !== canonicalJson(expectedView)) {
+          const persisted = await readGameEvents(gameId);
+          const difference = persisted.findIndex(
+            (event, eventIndex) =>
+              canonicalJson(event) !==
+              canonicalJson(simulation.events[eventIndex]),
+          );
+          throw new Error(
+            `View mismatch at command ${index} (${String(commandType)}), version ${String(response.body.version)}; first event divergence ${difference}: ${JSON.stringify(persisted[difference] ?? null)} vs ${JSON.stringify(simulation.events[difference] ?? null)}`,
+          );
+        }
+
+        if (commandType === 'CreateGame') {
+          const duplicate = await request(runtime.url)
+            .post('/api/games')
+            .set({ ...browserHeaders, 'x-test-coordinator': 'true' })
+            .send(entry.command);
+          expect(duplicate.status).toBeGreaterThanOrEqual(200);
+          expect(duplicate.status).toBeLessThan(300);
+          expect(duplicate.body.version).toBe(response.body.version);
+        }
+        if (index === 0 && commands.length > 1) {
+          const nextCommand = commands[1]!.command;
+          const staleCommand = {
+            ...nextCommand,
+            idempotencyKey: 'reordered-stale-command',
+            expectedVersion: 0,
+          };
+          const stale = await request(runtime.url)
+            .post(`/api/games/${gameId}/commands`)
+            .set({ ...browserHeaders, 'x-test-coordinator': 'true' })
+            .send(staleCommand);
+          expect(stale.status).toBe(409);
+        }
+      }
+      expect(restarted).toBe(true);
+      expect(latencyInjected).toBe(true);
+      expect(lastResponse?.view.phase).toBe('FINISHED');
+      const persistedEvents = await readGameEvents(gameId);
+      const eventDifference = persistedEvents.findIndex(
+        (event, index) =>
+          canonicalJson(event) !== canonicalJson(simulation.events[index]),
+      );
+      if (
+        eventDifference >= 0 ||
+        persistedEvents.length !== simulation.events.length
+      ) {
+        throw new Error(
+          `Engine/API event divergence at ${eventDifference < 0 ? Math.min(persistedEvents.length, simulation.events.length) : eventDifference}: ${persistedEvents[eventDifference]?.type ?? 'missing'} vs ${simulation.events[eventDifference]?.type ?? 'missing'}`,
+        );
+      }
+      await Promise.all(
+        socketClients.map(
+          (client) =>
+            new Promise<void>((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                client.off('game:view', isCurrent);
+                reject(new Error('Socket did not resynchronise to FINISHED'));
+              }, 5_000);
+              const isCurrent = (payload: {
+                version: number;
+                view: unknown;
+              }) => {
+                if (payload.version >= simulation.state.version) {
+                  clearTimeout(timeout);
+                  client.off('game:view', isCurrent);
+                  resolve();
+                }
+              };
+              client.on('game:view', isCurrent);
+              client.emit(
+                'game:watch',
+                { gameId },
+                (acknowledgement: { ok?: boolean; error?: string }) => {
+                  if (!acknowledgement.ok) {
+                    clearTimeout(timeout);
+                    client.off('game:view', isCurrent);
+                    reject(
+                      new Error(
+                        acknowledgement.error ??
+                          'Final presenter/player watch was rejected',
+                      ),
+                    );
+                  }
+                },
+              );
+            }),
+        ),
+      );
+      expect(projectionErrors).toEqual([]);
+      expect(lastResponse?.view.winner).toBe(simulation.state.winner);
+    } finally {
+      await closeRuntime(runtime);
+      await db.execute(sql`delete from games where id = ${gameId}`);
+    }
+  },
+  120_000,
+);

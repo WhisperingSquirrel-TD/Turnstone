@@ -20,6 +20,14 @@ No Vercel connection, DNS change, Replit publish, GitHub push, paid plan or live
 - The separate promotion workflow has write permission only in its promotion job. Other jobs have read-only contents or no permissions. Third-party actions are pinned to full commits; no `pull_request_target` or credential printing.
 - A nightly `verify:full` workflow is deliberately absent until the Milestone 2 harness exists. Add it then with actual reporting and measured allowance use, not the currently unavailable placeholder.
 
+## Static site and game-server portability
+
+- The Vercel build targets only `@workspace/party-game` and emits the static shell under `artifacts/party-game/dist/public`; it does not build or run the API server. Keep public HTML and hashed assets static so any CDN can serve them without a Node request handler.
+- The API is a separate long-lived Node process (`pnpm --filter @workspace/api-server run dev` locally). It requires `DATABASE_URL`, `SESSION_SECRET`, `PORT`, `APP_BASE_URL` and `MAX_ACTIVE_GAMES` in production, validated at startup. PostgreSQL remains authoritative for events, snapshots, sessions, sockets and deadlines.
+- Set `VITE_API_ORIGIN` at web build time to the API origin for a sibling-host deployment, such as `https://live.turnstone.stackstoneconsulting.co.uk`. Leave it unset when the app and API share an origin. The API allows credentialed requests only from the configured public `APP_BASE_URL`; cookies remain Secure, HttpOnly, SameSite=Lax and host-only, and state-changing requests retain CSRF checks.
+- The static CSP permits same-origin connections and the planned sibling API's HTTPS/WebSocket origins. If the owner changes the API origin, update the Vercel CSP and its configuration test together. No Redis or Replit-only runtime service is required.
+- Integration coverage exercises the independent Node server, database-backed socket reconnect after a restart, exact-origin credentialed CORS, session cookies, CSRF and private viewer projections. This repository has not been connected to Vercel, hosted on a live API server, or published.
+
 ## Product release checklist
 
 - [ ] Every Must/accepted Should milestone and its gated tests complete.
