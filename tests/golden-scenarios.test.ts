@@ -1,5 +1,7 @@
 import { expect, it } from 'vitest';
 import type { Event } from '../lib/engine/src/index';
+import { viewFor } from '../lib/engine/src/index';
+import { gameConfigSchema } from '../lib/shared/src/index';
 import { runCompleteGame } from '../scripts/src/scenarios/simulate';
 import { loadGoldenScenarios } from '../scripts/src/scenarios/golden';
 
@@ -69,4 +71,28 @@ it('includes a complete-game golden where Traitors split after their re-vote', (
     config: scenario!.config,
   });
   expect(hasSplitAfterShadowRevote(result.events)).toBe(true);
+});
+
+it('finishes a golden game with identical public outcomes on player phones and no presenter', () => {
+  const scenario = loadGoldenScenarios().find(
+    (candidate) => !gameConfigSchema.parse(candidate.config).presenter.enabled,
+  );
+  expect(scenario).toBeDefined();
+  const result = runCompleteGame({
+    seed: scenario!.seed,
+    strategy: scenario!.strategy,
+    config: scenario!.config,
+  });
+  const phoneViews = result.state.seats.map((seat) =>
+    viewFor({ kind: 'player', seatId: seat.id }, result.state),
+  );
+
+  expect(result.state.phase).toBe('FINISHED');
+  expect(gameConfigSchema.parse(scenario!.config).presenter.enabled).toBe(
+    false,
+  );
+  expect(phoneViews[0]?.publicAnnouncement?.kind).toBe('finished');
+  expect(phoneViews.map((view) => view.publicAnnouncement)).toEqual(
+    phoneViews.map(() => phoneViews[0]?.publicAnnouncement),
+  );
 });

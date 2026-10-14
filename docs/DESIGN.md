@@ -251,3 +251,28 @@ Mobile, 320–414px                  Desktop, 1280px
 Public comparison stays category-based and uses the exact approved FAQ copy. The home page, `/faq`, `/compare`, `/llms.txt`, and FAQPage JSON-LD read their FAQ entries from one shared locale source. Keep the answer-first home content and fact block server-rendered; pre-launch noindex remains enabled. Do not add competitor product, maker or programme names.
 
 Acceptance checks: capture the home page at 320, 390, 768 and 1280px; also assert no horizontal overflow and at least 44px targets at 320, 375, 390, 414 and 768px. Check the glow and demo at every screenshot width; test each distinct mark fill against every surface on which the mark appears for at least 3:1 contrast. Run mobile Lighthouse for performance, accessibility, SEO and best practices, each at least 95.
+
+## M5 screen set 1 — phone day view and shared announcements
+
+Tokens: section 25's Charcoal, Hearth, Stone, Gilt, Candle and Ash; Playfair Display for the phase title and DM Sans for body and labels. Keep the 480px single-column width, safe-area padding and 56px action targets from the M5 brief.
+
+```text
++------------------------------+
+| Turnstone               mark |
+| The conversation       12:00 |
+| Shared announcement, if any  |
+| Prize pot                     |
+| 18 points                    |
+| Players                      |
+| Morgan             Playing   |
+| Alex                  Out    |
+| Latest updates               |
+| ... up to five public events |
+|                              |
+| [            Notes          ]|
++------------------------------+
+```
+
+Alignment: the same public announcement, player statuses, pot, timer and recent public activity appear on every seated phone; none depend on a presenter connection. Alive players have no role colour or role label. Use thin Stone dividers, not a stack of identical cards; keep the announcement as the strongest public element. The Notes action is the only entry to the same-shaped private notes/chat surface for either role. Hide this public room content during a private moment.
+
+Anti-template check: avoid dashboard cards, coloured player avatars, and any role-specific styling. At 320px and 200% text, names, statuses and the Notes action remain readable without horizontal scrolling; respect reduced motion and do not animate ordinary status updates.

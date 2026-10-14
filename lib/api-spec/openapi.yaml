@@ -17,18 +17,18 @@ paths:
       tags: [health]
       summary: Database and schema readiness
       responses:
-        "200":
+        '200':
           description: Ready
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReadinessStatus"
-        "503":
+                $ref: '#/components/schemas/ReadinessStatus'
+        '503':
           description: Unavailable
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReadinessStatus"
+                $ref: '#/components/schemas/ReadinessStatus'
   /healthz:
     get:
       operationId: healthCheck
@@ -36,12 +36,12 @@ paths:
       summary: Health check
       description: Returns server health status
       responses:
-        "200":
+        '200':
           description: Healthy
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthStatus"
+                $ref: '#/components/schemas/HealthStatus'
   /rehearsals:
     post:
       operationId: startRehearsal
@@ -52,26 +52,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RehearsalInput"
+              $ref: '#/components/schemas/RehearsalInput'
       responses:
-        "201":
+        '201':
           description: Rehearsal created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GameViewResponse"
-        "400":
+                $ref: '#/components/schemas/GameViewResponse'
+        '400':
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
-        "429":
+                $ref: '#/components/schemas/ApiError'
+        '429':
           description: Rate limit exceeded
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /games:
     post:
       operationId: createGame
@@ -82,26 +82,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GameCommandInput"
+              $ref: '#/components/schemas/GameCommandInput'
       responses:
-        "201":
+        '201':
           description: Game created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GameViewResponse"
-        "400":
+                $ref: '#/components/schemas/GameViewResponse'
+        '400':
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
-        "409":
+                $ref: '#/components/schemas/ApiError'
+        '409':
           description: Command rejected
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/invites:
     post:
       operationId: createGameInvite
@@ -116,18 +116,18 @@ paths:
             minLength: 1
             maxLength: 128
       responses:
-        "201":
+        '201':
           description: Invite created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GameInviteResponse"
-        "401":
+                $ref: '#/components/schemas/GameInviteResponse'
+        '401':
           description: Coordinator capability required
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/join:
     post:
       operationId: requestToJoinByInvite
@@ -146,20 +146,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GuestJoinRequest"
+              $ref: '#/components/schemas/GuestJoinRequest'
       responses:
-        "202":
+        '202':
           description: Join request awaits approval
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JoinRequestResponse"
-        "400":
+                $ref: '#/components/schemas/JoinRequestResponse'
+        '400':
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/join-requests:
     get:
       operationId: getPendingJoinRequests
@@ -174,18 +174,18 @@ paths:
             minLength: 1
             maxLength: 128
       responses:
-        "200":
+        '200':
           description: Pending requests
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PendingJoinRequestsResponse"
-        "401":
+                $ref: '#/components/schemas/PendingJoinRequestsResponse'
+        '401':
           description: Coordinator capability required
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/join-requests/{requestId}/decision:
     post:
       operationId: decideGameJoinRequest
@@ -211,20 +211,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/JoinRequestDecisionInput"
+              $ref: '#/components/schemas/JoinRequestDecisionInput'
       responses:
-        "200":
+        '200':
           description: Request resolved
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JoinRequestDecisionResponse"
-        "401":
+                $ref: '#/components/schemas/JoinRequestDecisionResponse'
+        '401':
           description: Coordinator capability required
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /join-requests/{requestId}:
     get:
       operationId: getJoinRequestStatus
@@ -239,18 +239,18 @@ paths:
             minLength: 1
             maxLength: 128
       responses:
-        "200":
+        '200':
           description: Current request status
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JoinRequestStatusResponse"
-        "404":
+                $ref: '#/components/schemas/JoinRequestStatusResponse'
+        '404':
           description: Request not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /join:
     post:
       operationId: requestToJoinGame
@@ -261,32 +261,32 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/JoinRequestInput"
+              $ref: '#/components/schemas/JoinRequestInput'
       responses:
-        "202":
+        '202':
           description: Join request is awaiting coordinator approval
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/JoinRequestResponse"
-        "400":
+                $ref: '#/components/schemas/JoinRequestResponse'
+        '400':
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
-        "404":
+                $ref: '#/components/schemas/ApiError'
+        '404':
           description: Game not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
-        "429":
+                $ref: '#/components/schemas/ApiError'
+        '429':
           description: Rate limit exceeded
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/view:
     get:
       operationId: getGameView
@@ -301,18 +301,18 @@ paths:
             minLength: 1
             maxLength: 128
       responses:
-        "200":
+        '200':
           description: Allow-listed game view
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GameViewResponse"
-        "404":
+                $ref: '#/components/schemas/GameViewResponse'
+        '404':
           description: Game not found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/private-view:
     post:
       operationId: revealPrivateView
@@ -326,25 +326,31 @@ paths:
             type: string
             minLength: 1
             maxLength: 128
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivateViewRequest'
       responses:
-        "200":
+        '200':
           description: Allow-listed view with the current player's private data
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GameViewResponse"
-        "401":
+                $ref: '#/components/schemas/GameViewResponse'
+        '401':
           description: Player authentication required
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
-        "403":
+                $ref: '#/components/schemas/ApiError'
+        '403':
           description: Request rejected
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/commands:
     post:
       operationId: submitGameCommand
@@ -363,32 +369,32 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GameCommandInput"
+              $ref: '#/components/schemas/GameCommandInput'
       responses:
-        "200":
+        '200':
           description: Updated viewer projection
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GameViewResponse"
-        "400":
+                $ref: '#/components/schemas/GameViewResponse'
+        '400':
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
-        "401":
+                $ref: '#/components/schemas/ApiError'
+        '401':
           description: Authentication required
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
-        "409":
+                $ref: '#/components/schemas/ApiError'
+        '409':
           description: Command rejected
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiError"
+                $ref: '#/components/schemas/ApiError'
 components:
   schemas:
     ReadinessStatus:
@@ -448,7 +454,7 @@ components:
       properties:
         inviteToken:
           type: string
-          pattern: "^[A-Za-z0-9_-]{43}$"
+          pattern: '^[A-Za-z0-9_-]{43}$'
         name:
           type: string
           minLength: 2
@@ -474,7 +480,7 @@ components:
           format: uri
         shortCode:
           type: string
-          pattern: "^[A-HJ-NP-Z2-9]{6}$"
+          pattern: '^[A-HJ-NP-Z2-9]{6}$'
     PendingJoinRequestsResponse:
       type: object
       additionalProperties: false
@@ -549,7 +555,7 @@ components:
               type: string
               const: approved
             game:
-              $ref: "#/components/schemas/GameViewResponse"
+              $ref: '#/components/schemas/GameViewResponse'
     JoinRequestInput:
       type: object
       additionalProperties: false
@@ -557,7 +563,7 @@ components:
       properties:
         shortCode:
           type: string
-          pattern: "^[A-HJ-NP-Z2-9]{6}$"
+          pattern: '^[A-HJ-NP-Z2-9]{6}$'
         name:
           type: string
           minLength: 2
@@ -593,6 +599,14 @@ components:
           minLength: 1
           maxLength: 128
       additionalProperties: true
+    PrivateViewRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        purpose:
+          type: string
+          enum: [phase, notes]
+          default: phase
     GameViewResponse:
       type: object
       additionalProperties: false
@@ -603,8 +617,8 @@ components:
           minimum: 0
         view:
           oneOf:
-            - $ref: "#/components/schemas/VisitorView"
-            - $ref: "#/components/schemas/FullView"
+            - $ref: '#/components/schemas/VisitorView'
+            - $ref: '#/components/schemas/FullView'
     VisitorView:
       type: object
       additionalProperties: false
@@ -614,7 +628,7 @@ components:
           type: boolean
           const: true
         phase:
-          $ref: "#/components/schemas/Phase"
+          $ref: '#/components/schemas/Phase'
         lobbyOpen:
           type: boolean
         seatCount:
@@ -655,11 +669,11 @@ components:
         version:
           type: integer
         phase:
-          $ref: "#/components/schemas/Phase"
+          $ref: '#/components/schemas/Phase'
         paused:
           type: boolean
         deadline:
-          type: [integer, "null"]
+          type: [integer, 'null']
         coordinatorPlays:
           type: boolean
         cycle:
@@ -673,9 +687,9 @@ components:
         seats:
           type: array
           items:
-            $ref: "#/components/schemas/SeatView"
+            $ref: '#/components/schemas/SeatView'
         commitment:
-          type: [string, "null"]
+          type: [string, 'null']
         progress:
           type: object
           additionalProperties: false
@@ -693,8 +707,8 @@ components:
             type: string
         winner:
           oneOf:
-            - $ref: "#/components/schemas/Role"
-            - type: "null"
+            - $ref: '#/components/schemas/Role'
+            - type: 'null'
         publicAnnouncement:
           oneOf:
             - type: object
@@ -740,7 +754,7 @@ components:
                     name:
                       type: string
                     role:
-                      $ref: "#/components/schemas/Role"
+                      $ref: '#/components/schemas/Role'
             - type: object
               additionalProperties: false
               required: [kind, winner]
@@ -748,24 +762,24 @@ components:
                 kind:
                   const: finished
                 winner:
-                  $ref: "#/components/schemas/Role"
-            - type: "null"
+                  $ref: '#/components/schemas/Role'
+            - type: 'null'
         private:
           oneOf:
-            - $ref: "#/components/schemas/PrivateView"
-            - type: "null"
+            - $ref: '#/components/schemas/PrivateView'
+            - type: 'null'
         publicLog:
           type: array
           items:
-            $ref: "#/components/schemas/PublicLogEntry"
+            $ref: '#/components/schemas/PublicLogEntry'
         coordinatorAlerts:
           type: array
           items:
-            $ref: "#/components/schemas/CoordinatorAlert"
+            $ref: '#/components/schemas/CoordinatorAlert'
         fairness:
           oneOf:
-            - $ref: "#/components/schemas/FairnessView"
-            - type: "null"
+            - $ref: '#/components/schemas/FairnessView'
+            - type: 'null'
     SeatView:
       type: object
       additionalProperties: false
@@ -781,7 +795,7 @@ components:
           type: string
           enum: [alive, banished, murdered, departed]
         role:
-          $ref: "#/components/schemas/Role"
+          $ref: '#/components/schemas/Role'
     PrivateView:
       type: object
       additionalProperties: false
@@ -789,8 +803,8 @@ components:
       properties:
         role:
           oneOf:
-            - $ref: "#/components/schemas/Role"
-            - type: "null"
+            - $ref: '#/components/schemas/Role'
+            - type: 'null'
         team:
           type: array
           items:
@@ -800,7 +814,7 @@ components:
             properties:
               id: { type: string }
               name: { type: string }
-              role: { $ref: "#/components/schemas/Role" }
+              role: { $ref: '#/components/schemas/Role' }
         options:
           type: array
           items:
@@ -836,9 +850,9 @@ components:
                   oneOf:
                     - type: string
                       enum: [assigned, done, missed, void]
-                    - type: "null"
+                    - type: 'null'
                 murderLost: { type: boolean }
-            - type: "null"
+            - type: 'null'
         minimumDurationMs:
           type: integer
           minimum: 0
@@ -872,9 +886,9 @@ components:
         roles:
           type: object
           additionalProperties:
-            $ref: "#/components/schemas/Role"
+            $ref: '#/components/schemas/Role'
         sleeper:
-          type: [string, "null"]
+          type: [string, 'null']
         tasks:
           type: array
           items:
@@ -884,7 +898,7 @@ components:
             properties:
               seatId: { type: string }
               cycle: { type: integer, minimum: 1 }
-              taskId: { type: [string, "null"] }
+              taskId: { type: [string, 'null'] }
               text: { type: string }
               report:
                 type: string
@@ -921,4 +935,3 @@ components:
         - FINAL_BANISH
         - FINISHED
         - ARCHIVED
-

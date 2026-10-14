@@ -18,6 +18,31 @@ function eventFor(
 }
 
 describe('shared public announcements', () => {
+  it('shows the lobby code to seated viewers but never to a visitor', () => {
+    const game = fixture(5);
+    const projectWithLobbyCode = viewFor as unknown as (
+      viewer:
+        | { kind: 'player'; seatId: string }
+        | { kind: 'visitor' },
+      state: typeof game.state,
+      context: { lobbyCode: string | null },
+    ) => Record<string, unknown>;
+
+    const player = projectWithLobbyCode(
+      { kind: 'player', seatId: game.state.seats[0]!.id },
+      game.state,
+      { lobbyCode: 'ABC234' },
+    );
+    const visitor = projectWithLobbyCode(
+      { kind: 'visitor' },
+      game.state,
+      { lobbyCode: 'ABC234' },
+    );
+
+    expect(player).toHaveProperty('lobbyCode', 'ABC234');
+    expect(visitor).not.toHaveProperty('lobbyCode');
+  });
+
   it('projects the same dawn result to every seated viewer without disclosing why nobody was taken', () => {
     const game = fixture(5);
     const protectedSeat = game.state.seats[0]!;
@@ -45,6 +70,10 @@ describe('shared public announcements', () => {
     const coordinator = viewFor({ kind: 'coordinator' }, state);
     const presenter = viewFor({ kind: 'presenter' }, state);
     const visitor = viewFor({ kind: 'visitor' }, state);
+    const phoneAnnouncements = game.state.seats.map(
+      (seat) =>
+        viewFor({ kind: 'player', seatId: seat.id }, state).publicAnnouncement,
+    );
 
     expect(faithful.publicAnnouncement).toEqual({
       kind: 'dawn',
@@ -53,6 +82,9 @@ describe('shared public announcements', () => {
     });
     expect(coordinator.publicAnnouncement).toEqual(faithful.publicAnnouncement);
     expect(presenter.publicAnnouncement).toEqual(faithful.publicAnnouncement);
+    expect(phoneAnnouncements).toEqual(
+      game.state.seats.map(() => faithful.publicAnnouncement),
+    );
     expect(visitor).not.toHaveProperty('publicAnnouncement');
     expect(JSON.stringify(faithful.publicAnnouncement)).not.toContain(
       protectedSeat.id,
@@ -102,6 +134,13 @@ describe('shared public announcements', () => {
     expect(viewFor({ kind: 'coordinator' }, state).publicAnnouncement).toEqual(
       viewFor({ kind: 'player', seatId: game.state.seats[0]!.id }, state)
         .publicAnnouncement,
+    );
+    const phoneAnnouncements = game.state.seats.map(
+      (seat) =>
+        viewFor({ kind: 'player', seatId: seat.id }, state).publicAnnouncement,
+    );
+    expect(phoneAnnouncements).toEqual(
+      game.state.seats.map(() => phoneAnnouncements[0]),
     );
   });
 });

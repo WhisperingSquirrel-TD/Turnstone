@@ -32,6 +32,7 @@ import type {
   JoinRequestResponse,
   JoinRequestStatusResponse,
   PendingJoinRequestsResponse,
+  PrivateViewRequest,
   ReadinessStatus,
   RehearsalInput
 } from './api.schemas';
@@ -978,14 +979,29 @@ export const getRevealPrivateViewUrl = (id: string,) => {
 /**
  * @summary Request the current player's private projection while holding
  */
-export const revealPrivateView = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<GameViewResponse> => {
+export const revealPrivateView = async (id: string,
+    privateViewRequest?: PrivateViewRequest, options?: Parameters<typeof customFetch>[1]): Promise<GameViewResponse> => {
 
-  return customFetch<GameViewResponse>(getRevealPrivateViewUrl(id),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<GameViewResponse>(getRevealPrivateViewUrl(id),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(privateViewRequest)
   }
 );}
 
@@ -1010,9 +1026,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof revealPrivateView>>, RevealPrivateViewMutationVariables> = (props) => {
-          const {id} = props ?? {};
+          const {id,data} = props ?? {};
 
-          return  revealPrivateView(id,requestOptions)
+          return  revealPrivateView(id,data,requestOptions)
         }
 
 
@@ -1023,9 +1039,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type RevealPrivateViewMutationResult = NonNullable<Awaited<ReturnType<typeof revealPrivateView>>>
-
+    export type RevealPrivateViewMutationBody = BodyType<PrivateViewRequest> | undefined
     export type RevealPrivateViewMutationError = ErrorType<ApiError>
-    export type RevealPrivateViewMutationVariables = {id: string}
+    export type RevealPrivateViewMutationVariables = {id: string;data?: BodyType<PrivateViewRequest>}
 
     /**
  * @summary Request the current player's private projection while holding

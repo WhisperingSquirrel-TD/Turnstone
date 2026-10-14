@@ -459,3 +459,15 @@ export interface GameCommandInput {
   [key: string]: unknown;
  }
 
+export type PrivateViewRequestPurpose = typeof PrivateViewRequestPurpose[keyof typeof PrivateViewRequestPurpose];
+
+
+export const PrivateViewRequestPurpose = {
+  phase: 'phase',
+  notes: 'notes',
+} as const;
+
+export interface PrivateViewRequest {
+  purpose?: PrivateViewRequestPurpose;
+}
+

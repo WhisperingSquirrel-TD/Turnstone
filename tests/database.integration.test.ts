@@ -1227,7 +1227,7 @@ it('returns only the allow-listed visitor projection from the HTTP game endpoint
   }
 });
 
-it('runs a server-backed rehearsal to completion and only reveals private data on hold', async () => {
+it('runs a server-backed rehearsal to completion with held reveals and zero presenter connections', async () => {
   const gameId = randomUUID();
   // Keep test deadlines ahead of the live managed scheduler's wall clock.
   let now = Date.now() + 24 * 60 * 60 * 1_000;
@@ -1343,9 +1343,30 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
       shadowChoices: number;
       votes: number;
     }[] = [];
+    let notesProjectionVerified = false;
     for (let step = 0; step < 50; step += 1) {
       const state = await currentGame();
       if (state.phase === 'FINISHED') break;
+      const livingMorgan = state.seats.find(
+        (seat) => seat.name === 'Morgan' && seat.status === 'alive',
+      );
+      if (
+        ['MISSION', 'DEBATE', 'VERDICT', 'DAWN', 'ENDGAME'].includes(
+          state.phase,
+        ) &&
+        livingMorgan &&
+        !notesProjectionVerified
+      ) {
+        const notesView = await request(app)
+          .post(`/api/games/${gameId}/private-view`)
+          .set('Cookie', shieldedCookie)
+          .set('X-CSRF-Token', csrfToken)
+          .send({ purpose: 'notes' });
+        expect(notesView.status).toBe(200);
+        expect(notesView.body.view.private.role).toBe(livingMorgan.role);
+        expect(notesView.body.view.private).not.toHaveProperty('otherRoles');
+        notesProjectionVerified = true;
+      }
       if (state.phase === 'SHADOW' && state.shadowRound === 1) {
         const activeDeadline = await db.execute(sql`
           select due_at
@@ -1444,6 +1465,15 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
     expect(finished.phase, JSON.stringify(progress.slice(-10))).toBe(
       'FINISHED',
     );
+    expect(notesProjectionVerified).toBe(true);
+    const pairings = await db.execute(
+      sql`select count(*) as count from game_presenter_pairings where game_id = ${gameId}`,
+    );
+    const presenterSessions = await db.execute(
+      sql`select count(*) as count from game_presenter_sessions where game_id = ${gameId}`,
+    );
+    expect(Number(pairings.rows[0]?.count)).toBe(0);
+    expect(Number(presenterSessions.rows[0]?.count)).toBe(0);
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }

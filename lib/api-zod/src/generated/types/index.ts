@@ -37,6 +37,8 @@ export * from './privateView';
 export * from './privateViewChatItem';
 export * from './privateViewChoices';
 export * from './privateViewOptionsItem';
+export * from './privateViewRequest';
+export * from './privateViewRequestPurpose';
 export * from './privateViewTask';
 export * from './privateViewTaskKind';
 export * from './privateViewTaskReport';

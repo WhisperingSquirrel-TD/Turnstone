@@ -569,6 +569,9 @@ function PlayerGame() {
   const [wakeLockFallback, setWakeLockFallback] = useState(false);
   const [fullscreenMessage, setFullscreenMessage] = useState('');
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [notesStatus, setNotesStatus] = useState('');
   const heldRef = useRef(false);
   const holdVersion = useRef(0);
   const privateResult = useRef<PrivateView | null>(null);
@@ -594,9 +597,13 @@ function PlayerGame() {
   const visitor = view && !isFullView(view) ? (view as VisitorView) : null;
   const eligibleSeats =
     full?.seats.filter((seat) => seat.status === 'alive') ?? [];
-  const inPrivateMoment = Boolean(
-    full && !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
+  const phaseIsPrivate = Boolean(
+    full &&
+    ['DEAL', 'VOTE', 'SHADOW', 'FINAL_VOTE', 'FINAL_BANISH'].includes(
+      full.phase,
+    ),
   );
+  const inPrivateMoment = Boolean(full && (phaseIsPrivate || notesOpen));
   const isActionPhase = Boolean(
     full &&
     ['VOTE', 'SHADOW', 'FINAL_VOTE', 'FINAL_BANISH'].includes(full.phase),
@@ -657,6 +664,7 @@ function PlayerGame() {
       setSelected('');
       setConfirmChoice(false);
       setCommandMessage('');
+      setNotesStatus('');
       setHoldMessage('');
       if (revealTimer.current) clearTimeout(revealTimer.current);
       if (limitTimer.current) clearTimeout(limitTimer.current);
@@ -669,7 +677,7 @@ function PlayerGame() {
   );
   const cancelPrivate = useCallback(() => clearPrivate(), [clearPrivate]);
   const privateStepKey = full
-    ? `${full.phase}:${full.cycle}:${full.deadline ?? 'manual'}`
+    ? `${full.phase}:${full.cycle}:${full.deadline ?? 'manual'}:${notesOpen ? 'notes' : 'phase'}`
     : 'none';
   const activeGame = Boolean(
     full && !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
@@ -793,6 +801,11 @@ function PlayerGame() {
 
   async function acknowledge() {
     if (!token || shieldPending || shieldCountdown > 0) return;
+    if (notesOpen && !phaseIsPrivate) {
+      setShielded(true);
+      setHoldMessage('');
+      return;
+    }
     setShieldPending(true);
     setHoldMessage('');
     try {
@@ -833,7 +846,12 @@ function PlayerGame() {
     }, 500);
     limitTimer.current = setTimeout(clearPrivate, 10_000);
     void reveal
-      .mutateAsync({ id })
+      .mutateAsync({
+        id,
+        ...(notesOpen && !phaseIsPrivate
+          ? { data: { purpose: 'notes' as const } }
+          : {}),
+      })
       .then((response) => {
         const view = response.view;
         const privateData = isFullView(view) ? view.private : null;
@@ -911,6 +929,32 @@ function PlayerGame() {
     }
   }
 
+  async function saveNotes() {
+    const text = notesDraft.trim();
+    if (!privateView || !held || !notesOpen || text.length === 0) return;
+    setNotesStatus('');
+    if (privateView.role === 'traitor') {
+      try {
+        await command.mutateAsync({
+          id,
+          data: {
+            type: 'PostTraitorMessage',
+            text,
+            idempotencyKey: idempotencyKey(),
+          },
+        });
+        command.reset();
+        setNotesDraft('');
+        setNotesStatus(en.game.notesSent);
+      } catch {
+        command.reset();
+        setNotesStatus(en.game.notesFailed);
+      }
+      return;
+    }
+    setNotesStatus(en.game.notesSaved);
+  }
+
   async function installApp() {
     try {
       const outcome = await install.install();
@@ -926,7 +970,7 @@ function PlayerGame() {
 
   return (
     <Shell isPlayer>
-      <section className="mx-auto w-full max-w-2xl">
+      <section className="mx-auto w-full max-w-[480px]">
         {gameQuery.isLoading && (
           <div
             aria-label={en.game.loadingLabel}
@@ -1064,18 +1108,9 @@ function PlayerGame() {
                   </h2>
                 )}
                 {full.publicAnnouncement.kind === 'verdict' && (
-                  <>
-                    <h2 className="display text-2xl">
-                      {en.game.banished(full.publicAnnouncement.seat.name)}
-                    </h2>
-                    {full.publicAnnouncement.seat.role && (
-                      <p className="mt-2 text-ash">
-                        {en.game.banishedRole(
-                          full.publicAnnouncement.seat.role,
-                        )}
-                      </p>
-                    )}
-                  </>
+                  <h2 className="display text-2xl">
+                    {en.game.banished(full.publicAnnouncement.seat.name)}
+                  </h2>
                 )}
                 {full.publicAnnouncement.kind === 'finished' && (
                   <h2 className="display text-2xl">
@@ -1089,7 +1124,10 @@ function PlayerGame() {
 
             {!inPrivateMoment && full.phase === 'VERDICT' && (
               <section className="mt-6" aria-label={en.game.voteResults}>
-                <ul className="divide-y divide-stone">
+                <ul
+                  className="divide-y divide-stone"
+                  data-testid="list-vote-reveal"
+                >
                   {Object.entries(full.ballots).map(([voterId, targetId]) => {
                     const voter = full.seats.find(
                       (seat) => seat.id === voterId,
@@ -1190,103 +1228,178 @@ function PlayerGame() {
                       className="mt-6 min-h-[12rem] text-left"
                       aria-live="polite"
                     >
-                      {privateView && held && (
-                        <div className="enter border-t border-stone pt-5">
-                          <p className="text-sm text-ash">
-                            {en.game.privateRole}
-                          </p>
-                          <h2 className="display mt-1 text-3xl">
-                            {privateView.role === 'traitor'
-                              ? en.game.roleTraitor
-                              : privateView.role === 'faithful'
-                                ? en.game.roleFaithful
-                                : en.game.roleUnknown}
-                          </h2>
-                          {privateView.task && (
-                            <p className="mt-4 text-candle">
-                              {privateView.task.instruction}
+                      {privateView &&
+                        held &&
+                        (notesOpen && !phaseIsPrivate ? (
+                          <div
+                            className="enter border-t border-stone pt-5"
+                            data-testid="private-notes-content"
+                          >
+                            <h2 className="display text-2xl">
+                              {en.game.notesHeading}
+                            </h2>
+                            <p className="mt-2 text-sm text-ash">
+                              {en.game.notesPrivateIntro}
                             </p>
-                          )}
-                          {isActionPhase && (
-                            <div className="mt-5">
-                              <p className="text-sm text-ash">
-                                {full.phase === 'VOTE' ||
-                                full.phase === 'FINAL_BANISH'
-                                  ? en.game.choosePlayer
-                                  : full.phase === 'SHADOW'
-                                    ? en.game.chooseOption
-                                    : en.game.finalDecision}
-                              </p>
-                              <div className="mt-3 grid gap-2">
-                                {choices.map((choice) => (
-                                  <button
-                                    key={choice.id}
-                                    type="button"
-                                    className="choice-action"
-                                    aria-pressed={selected === choice.id}
-                                    onClick={() => {
-                                      setSelected(choice.id);
-                                      setConfirmChoice(false);
-                                      setCommandMessage('');
-                                    }}
-                                  >
-                                    {choice.name}
-                                  </button>
-                                ))}
-                              </div>
-                              {selected && !confirmChoice && (
-                                <button
-                                  type="button"
-                                  className="quiet-action mt-4 w-full"
-                                  onClick={() => setConfirmChoice(true)}
-                                >
-                                  {en.game.reviewChoice}
-                                </button>
-                              )}
-                              {selected && confirmChoice && (
-                                <div className="mt-4 border-t border-stone pt-4">
-                                  <p className="text-candle">
-                                    {en.game.confirmChoice}
-                                  </p>
-                                  <div className="mt-3 flex flex-wrap gap-3">
-                                    <button
-                                      type="button"
-                                      className="primary-action flex-1"
-                                      disabled={command.isPending || !token}
-                                      onClick={() => void submitAction()}
-                                    >
-                                      {command.isPending
-                                        ? en.game.recording
-                                        : en.game.confirm}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="quiet-action flex-1"
-                                      onClick={() => setConfirmChoice(false)}
-                                    >
-                                      {en.game.chooseAgain}
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                              {commandMessage && (
-                                <p
-                                  role="status"
-                                  className="mt-4 text-sm text-ash"
-                                >
-                                  {commandMessage}
-                                </p>
-                              )}
+                            <div
+                              className="mt-4 h-24 overflow-y-auto whitespace-pre-wrap border-y border-stone py-3 text-sm text-ash"
+                              aria-live="polite"
+                            >
+                              {privateView.role === 'traitor'
+                                ? privateView.chat
+                                    .slice()
+                                    .sort((a, b) => a.seq - b.seq)
+                                    .map((message) => {
+                                      const author = full.seats.find(
+                                        (seat) => seat.id === message.seatId,
+                                      )?.name;
+                                      return author
+                                        ? `${author}: ${message.text}`
+                                        : message.text;
+                                    })
+                                    .join('\n') || en.game.notesTeamEmpty
+                                : en.game.notesPrivateIntro}
                             </div>
-                          )}
-                        </div>
-                      )}
+                            <label className="mt-4 block text-sm text-ash">
+                              <span>{en.game.notesLabel}</span>
+                              <textarea
+                                className="mt-2 min-h-24 w-full resize-y border border-stone bg-hearth p-3 text-base text-candle"
+                                aria-label={en.game.notesLabel}
+                                maxLength={500}
+                                value={notesDraft}
+                                onChange={(event) =>
+                                  setNotesDraft(event.target.value)
+                                }
+                              />
+                            </label>
+                            <button
+                              className="primary-action mt-4 w-full"
+                              type="button"
+                              disabled={!notesDraft.trim() || command.isPending}
+                              onClick={() => void saveNotes()}
+                            >
+                              {privateView.role === 'traitor'
+                                ? en.game.notesSend
+                                : en.game.notesSave}
+                            </button>
+                            {notesStatus && (
+                              <p
+                                role="status"
+                                className="mt-3 text-sm text-ash"
+                              >
+                                {notesStatus}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="enter border-t border-stone pt-5">
+                            <p className="text-sm text-ash">
+                              {en.game.privateRole}
+                            </p>
+                            <h2 className="display mt-1 text-3xl">
+                              {privateView.role === 'traitor'
+                                ? en.game.roleTraitor
+                                : privateView.role === 'faithful'
+                                  ? en.game.roleFaithful
+                                  : en.game.roleUnknown}
+                            </h2>
+                            {privateView.task && (
+                              <p className="mt-4 text-candle">
+                                {privateView.task.instruction}
+                              </p>
+                            )}
+                            {isActionPhase && (
+                              <div className="mt-5">
+                                <p className="text-sm text-ash">
+                                  {full.phase === 'VOTE' ||
+                                  full.phase === 'FINAL_BANISH'
+                                    ? en.game.choosePlayer
+                                    : full.phase === 'SHADOW'
+                                      ? en.game.chooseOption
+                                      : en.game.finalDecision}
+                                </p>
+                                <div className="mt-3 grid gap-2">
+                                  {choices.map((choice) => (
+                                    <button
+                                      key={choice.id}
+                                      type="button"
+                                      className="choice-action"
+                                      aria-pressed={selected === choice.id}
+                                      onClick={() => {
+                                        setSelected(choice.id);
+                                        setConfirmChoice(false);
+                                        setCommandMessage('');
+                                      }}
+                                    >
+                                      {choice.name}
+                                    </button>
+                                  ))}
+                                </div>
+                                {selected && !confirmChoice && (
+                                  <button
+                                    type="button"
+                                    className="quiet-action mt-4 w-full"
+                                    onClick={() => setConfirmChoice(true)}
+                                  >
+                                    {en.game.reviewChoice}
+                                  </button>
+                                )}
+                                {selected && confirmChoice && (
+                                  <div className="mt-4 border-t border-stone pt-4">
+                                    <p className="text-candle">
+                                      {en.game.confirmChoice}
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap gap-3">
+                                      <button
+                                        type="button"
+                                        className="primary-action flex-1"
+                                        disabled={command.isPending || !token}
+                                        onClick={() => void submitAction()}
+                                      >
+                                        {command.isPending
+                                          ? en.game.recording
+                                          : en.game.confirm}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="quiet-action flex-1"
+                                        onClick={() => setConfirmChoice(false)}
+                                      >
+                                        {en.game.chooseAgain}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                                {commandMessage && (
+                                  <p
+                                    role="status"
+                                    className="mt-4 text-sm text-ash"
+                                  >
+                                    {commandMessage}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       {!privateView && holdMessage && (
                         <p role="status" className="pt-5 text-sm text-ash">
                           {holdMessage}
                         </p>
                       )}
                     </div>
+                    {notesOpen && !phaseIsPrivate && (
+                      <button
+                        className="quiet-action mt-4 w-full"
+                        type="button"
+                        onClick={() => {
+                          clearPrivate();
+                          setNotesOpen(false);
+                        }}
+                      >
+                        {en.game.notesDone}
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -1295,14 +1408,91 @@ function PlayerGame() {
             {!inPrivateMoment && (
               <div className="mt-12 border-t border-stone pt-6">
                 <h2 className="display text-2xl">{en.game.roomHeading}</h2>
-                <p className="mt-2 text-ash">
-                  {en.game.potSummary(
-                    eligibleSeats.length,
-                    full.unit,
-                    full.pot,
-                  )}
-                </p>
-                <p className="mt-5 text-sm text-ash">{en.game.roomNote}</p>
+                <section
+                  className="mt-5 border-y border-stone py-4"
+                  aria-label={en.game.prizePot(full.pot, full.unit)}
+                >
+                  <p className="text-sm text-ash">{en.game.prizePotLabel}</p>
+                  <p
+                    className="mt-1 text-xl font-medium tabular-nums text-candle"
+                    data-testid="status-prize-pot"
+                  >
+                    {en.game.prizePot(full.pot, full.unit)}
+                  </p>
+                </section>
+
+                <section className="mt-7" aria-labelledby="players-heading">
+                  <h2 id="players-heading" className="display text-2xl">
+                    {en.game.playersHeading}
+                  </h2>
+                  <ul className="mt-2 divide-y divide-stone">
+                    {full.seats.map((seat) => {
+                      const isAlive = seat.status === 'alive';
+                      return (
+                        <li
+                          key={seat.id}
+                          className="flex min-h-14 items-center justify-between gap-4 py-3"
+                          data-testid={`player-seat-${seat.id}`}
+                        >
+                          <span className="min-w-0 break-words text-candle">
+                            {seat.name}
+                          </span>
+                          <span
+                            className={`shrink-0 text-sm ${isAlive ? 'text-candle' : 'text-ash'}`}
+                          >
+                            {isAlive
+                              ? en.game.playerPlaying
+                              : en.game.playerOut}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+
+                <section className="mt-7" aria-labelledby="public-log-heading">
+                  <h2 id="public-log-heading" className="display text-2xl">
+                    {en.game.latestUpdates}
+                  </h2>
+                  <ul
+                    className="mt-2 divide-y divide-stone"
+                    data-testid="list-public-log"
+                  >
+                    {full.publicLog
+                      .slice()
+                      .sort((a, b) => a.seq - b.seq)
+                      .slice(-5)
+                      .reverse()
+                      .map((entry) => (
+                        <li
+                          key={entry.seq}
+                          className="py-3 text-sm text-ash"
+                          data-testid={`public-log-entry-${entry.seq}`}
+                        >
+                          {entry.action === 'device_recovered'
+                            ? en.game.publicLogDeviceRecovered(entry.name)
+                            : en.game.publicLogPinReset(entry.name)}
+                        </li>
+                      ))}
+                    {full.publicLog.length === 0 && (
+                      <li className="py-3 text-sm text-ash">
+                        {en.game.noPublicUpdates}
+                      </li>
+                    )}
+                  </ul>
+                </section>
+                <p className="mt-7 text-sm text-ash">{en.game.roomNote}</p>
+                <button
+                  className="primary-action mt-6 w-full"
+                  type="button"
+                  data-testid="button-open-notes"
+                  onClick={() => {
+                    setNotesStatus('');
+                    setNotesOpen(true);
+                  }}
+                >
+                  {en.game.notesButton}
+                </button>
               </div>
             )}
           </div>
@@ -1355,6 +1545,18 @@ function PlayerGame() {
                     ? en.game.shieldConfirming
                     : en.game.shieldConfirm}
                 </button>
+                {notesOpen && !phaseIsPrivate && (
+                  <button
+                    className="quiet-action mt-3 w-full"
+                    type="button"
+                    onClick={() => {
+                      clearPrivate();
+                      setNotesOpen(false);
+                    }}
+                  >
+                    {en.game.notesDone}
+                  </button>
+                )}
               </div>
             </div>
           </dialog>

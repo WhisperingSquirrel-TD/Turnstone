@@ -33,6 +33,7 @@ import {
   joinRequestDecisionSchema,
   joinRequestStatusResponseSchema,
   pendingJoinRequestsResponseSchema,
+  privateViewRequestSchema,
   presenterPairRequestSchema,
   presenterPairResponseSchema,
   presenterPairingResponseSchema,
@@ -1550,6 +1551,13 @@ export function createApp(
         sendError(response, 403, 'Invalid request');
         return;
       }
+      const parsedRequest = privateViewRequestSchema.safeParse(
+        request.body ?? {},
+      );
+      if (!parsedRequest.success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
       const gameId = request.params.id ?? '';
       const state = await loadGameState(gameId);
       if (!state) {
@@ -1574,8 +1582,8 @@ export function createApp(
       if (
         !seat ||
         seat.status !== 'alive' ||
-        !privatePhases.has(state.phase) ||
-        !state.acks.includes(seat.id)
+        (parsedRequest.data.purpose === 'phase' &&
+          (!privatePhases.has(state.phase) || !state.acks.includes(seat.id)))
       ) {
         sendError(response, 409, 'Private view unavailable');
         return;

@@ -867,6 +867,12 @@ export const RevealPrivateViewParams = zod.object({
   "id": zod.coerce.string().min(1).max(revealPrivateViewPathIdMax)
 })
 
+export const revealPrivateViewBodyPurposeDefault = `phase`;
+
+export const RevealPrivateViewBody = zod.object({
+  "purpose": zod.enum(['phase', 'notes']).default(revealPrivateViewBodyPurposeDefault)
+})
+
 export const revealPrivateViewResponseVersionMin = 0;
 
 export const revealPrivateViewResponseViewOneSeatCountMin = 0;

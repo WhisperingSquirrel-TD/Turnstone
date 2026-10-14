@@ -190,6 +190,11 @@ export const privateViewSchema = z
     minimumDurationMs: z.number(),
   })
   .strict();
+export const privateViewRequestSchema = z
+  .object({
+    purpose: z.enum(['phase', 'notes']).default('phase'),
+  })
+  .strict();
 export const fullViewSchema = z
   .object({
     id,
