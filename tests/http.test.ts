@@ -64,21 +64,8 @@ describe('health and readiness', () => {
     ).toBe(PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined);
   });
 
-  it('fails closed for game creation and commands without an authenticated viewer', async () => {
+  it('fails closed for game commands without an authenticated viewer', async () => {
     const app = createApp(async () => {});
-    const createResponse = await request(app)
-      .post('/api/games')
-      .send({
-        type: 'CreateGame',
-        id: 'not-authorised',
-        idempotencyKey: 'create-key',
-        config: gameConfigSchema.parse({}),
-      });
-    expect(createResponse.status).toBe(401);
-    expect(createResponse.body).toEqual({
-      error: 'Authentication required',
-    });
-
     const commandResponse = await request(app)
       .post('/api/games/not-authorised/commands')
       .send({
@@ -186,15 +173,14 @@ describe('health and readiness', () => {
     expect(denied.body).toEqual({ error: 'Invalid request' });
 
     const allowed = await request(app)
-      .post('/api/games')
+      .post('/api/games/csrf-game/commands')
       .set('Origin', origin)
       .set('Cookie', setCookie.split(';')[0]!)
       .set('X-CSRF-Token', tokenResponse.body.csrfToken)
       .send({
-        type: 'CreateGame',
-        id: 'csrf-game',
+        type: 'AdvancePhase',
+        expectedVersion: 0,
         idempotencyKey: 'csrf-request',
-        config: gameConfigSchema.parse({}),
       });
     expect(allowed.status).toBe(401);
     expect(allowed.body).toEqual({ error: 'Authentication required' });
@@ -224,7 +210,7 @@ describe('health and readiness', () => {
     expect(bucketHashes[0]).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it('checks both pseudonymous buckets before applying admission control', async () => {
+  it('checks the pseudonymous IP bucket before applying admission control', async () => {
     const bucketHashes: string[] = [];
     const limits: number[] = [];
     const app = createApp(async () => {}, {
@@ -247,9 +233,9 @@ describe('health and readiness', () => {
         config: gameConfigSchema.parse({}),
       });
     expect(response.status).toBe(503);
-    expect(bucketHashes).toHaveLength(2);
-    expect(new Set(bucketHashes).size).toBe(2);
-    expect(limits).toEqual([5, 5]);
+    expect(bucketHashes).toHaveLength(1);
+    expect(bucketHashes[0]).toMatch(/^[a-f0-9]{64}$/);
+    expect(limits).toEqual([5]);
   });
 
   it('uses the tighter rate limit for private Traitor chat', async () => {

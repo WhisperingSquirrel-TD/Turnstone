@@ -70,6 +70,7 @@ export async function attachRealtime(
   const notificationChannel = 'turnstone_game_changed';
   const instanceId = randomUUID();
   let notificationClient: PoolClient | null = null;
+  let notificationErrorHandler: (() => void) | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let closed = false;
   const io = new Server(httpServer, {
@@ -108,7 +109,10 @@ export async function attachRealtime(
           state.seats.some((seat) => seat.id === viewer.seatId),
         );
       const gameAuthorised =
-        options.authoriseGame && (await options.authoriseGame(viewer, gameId));
+        viewer.kind === 'coordinator' ||
+        viewer.kind === 'presenter' ||
+        (options.authoriseGame &&
+          (await options.authoriseGame(viewer, gameId)));
       if (viewer.kind === 'visitor' || (!seatAuthorised && !gameAuthorised)) {
         await socket.leave(room);
         socket.disconnect(true);
@@ -147,9 +151,12 @@ export async function attachRealtime(
       await client.query(`LISTEN ${notificationChannel}`);
       notificationClient = client;
       client.on('notification', onNotification);
-      client.on('error', () => {
+      const onError = () => {
         if (notificationClient !== client) return;
         notificationClient = null;
+        client?.removeListener('notification', onNotification);
+        client?.removeListener('error', onError);
+        notificationErrorHandler = null;
         client?.release(new Error('PostgreSQL notification connection failed'));
         options.onError?.();
         if (!closed) {
@@ -157,7 +164,9 @@ export async function attachRealtime(
             void connectNotificationClient().catch(() => options.onError?.());
           }, 1_000);
         }
-      });
+      };
+      notificationErrorHandler = onError;
+      client.on('error', onError);
     } catch {
       client?.release(new Error('PostgreSQL notification setup failed'));
       options.onError?.();
@@ -236,6 +245,7 @@ export async function attachRealtime(
           );
           const gameAuthorised =
             viewer.kind === 'presenter' ||
+            viewer.kind === 'coordinator' ||
             (options.authoriseGame &&
               (await options.authoriseGame(viewer, gameId)));
           if (!state || (!seatAuthorised && !gameAuthorised)) {
@@ -272,7 +282,13 @@ export async function attachRealtime(
     close(): Promise<void> {
       closed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      notificationClient?.release();
+      if (notificationClient) {
+        notificationClient.removeListener('notification', onNotification);
+        if (notificationErrorHandler)
+          notificationClient.removeListener('error', notificationErrorHandler);
+        notificationErrorHandler = null;
+        notificationClient.release();
+      }
       notificationClient = null;
       return new Promise((resolve) => io.close(() => resolve()));
     },

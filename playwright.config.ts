@@ -11,7 +11,7 @@ export default defineConfig({
     ],
   ],
   use: {
-    baseURL: process.env.TEST_BASE_URL ?? 'http://127.0.0.1:22814',
+    baseURL: process.env.TEST_BASE_URL ?? 'http://127.0.0.1:3000',
     trace: 'off',
     screenshot: 'off',
     video: 'off',
@@ -38,8 +38,8 @@ export default defineConfig({
   ],
   webServer: {
     command: 'pnpm --filter @workspace/party-game run dev',
-    url: 'http://127.0.0.1:22814',
+    url: 'http://127.0.0.1:3000',
     reuseExistingServer: false,
-    env: { PORT: '22814', BASE_PATH: '/' },
+    env: { PORT: '3000', BASE_PATH: '/' },
   },
 });

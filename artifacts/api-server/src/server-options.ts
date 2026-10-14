@@ -11,6 +11,9 @@ type ServerEnvironment = {
 type ServerAppOptionsInput = {
   environment: ServerEnvironment;
   resolveViewer: NonNullable<AppOptions['resolveViewer']>;
+  resolveCoordinatorViewer?: NonNullable<
+    AppOptions['resolveCoordinatorViewer']
+  >;
   publishGame: NonNullable<AppOptions['publishGame']>;
   countActiveGames: NonNullable<AppOptions['countActiveGames']>;
 };
@@ -18,6 +21,7 @@ type ServerAppOptionsInput = {
 export function createServerAppOptions({
   environment,
   resolveViewer,
+  resolveCoordinatorViewer,
   publishGame,
   countActiveGames,
 }: ServerAppOptionsInput): AppOptions {
@@ -27,6 +31,12 @@ export function createServerAppOptions({
 
   return {
     resolveViewer: (request: Request) => resolveViewer(request),
+    ...(resolveCoordinatorViewer
+      ? {
+          resolveCoordinatorViewer: (request: Request) =>
+            resolveCoordinatorViewer(request),
+        }
+      : {}),
     publishGame,
     allowedOrigins,
     maxActiveGames: environment.MAX_ACTIVE_GAMES,

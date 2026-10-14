@@ -16,7 +16,7 @@ describe('owner-approved delivery policy', () => {
   it('runs local and CI smoke tests against the dedicated Vite server', () => {
     const playwrightConfig = readFileSync('playwright.config.ts', 'utf8');
     expect(playwrightConfig).toContain(
-      "baseURL: process.env.TEST_BASE_URL ?? 'http://127.0.0.1:22814'",
+      "baseURL: process.env.TEST_BASE_URL ?? 'http://127.0.0.1:3000'",
     );
     expect(playwrightConfig).toContain(
       "webServer: {\n    command: 'pnpm --filter @workspace/party-game run dev'",
@@ -76,6 +76,14 @@ describe('owner-approved delivery policy', () => {
     expect(packageManifest.scripts['verify:full']).not.toContain(
       'verify-full.mjs',
     );
+  });
+  it('runs database integration once inside the server coverage gate', () => {
+    const scripts = JSON.parse(readFileSync('package.json', 'utf8')).scripts;
+    expect(scripts['test:server-coverage']).toContain(
+      'tests/database.integration.test.ts',
+    );
+    expect(scripts.verify).toContain('pnpm run test:server-coverage');
+    expect(scripts.verify).not.toContain('pnpm run test:integration');
   });
   it('keeps Vercel pre-launch and static security headers aligned with config', () => {
     const settings = JSON.parse(readFileSync('vercel.json', 'utf8'));

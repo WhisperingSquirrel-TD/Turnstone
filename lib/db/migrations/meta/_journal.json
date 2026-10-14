@@ -43,6 +43,20 @@
       "when": 1791936750136,
       "tag": "0005_solid_risque",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791956873485,
+      "tag": "0006_coordinator_capabilities",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791957119101,
+      "tag": "0007_coordinator_handoffs",
+      "breakpoints": true
     }
   ]
 }

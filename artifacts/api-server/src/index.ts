@@ -11,20 +11,39 @@ const { countActiveGames } = await import('@workspace/db/game-store');
 const { findViewerSession } = await import('@workspace/db/seat-access-store');
 const { findPresenterSession } =
   await import('@workspace/db/presenter-access-store');
+const { findCoordinatorSession } =
+  await import('@workspace/db/coordinator-access-store');
 const { sql } = await import('drizzle-orm');
-const { createSeatViewerResolver } = await import('./session-auth');
+const { createCoordinatorViewerResolver, createSeatViewerResolver } =
+  await import('./session-auth');
 const resolveSeatViewer = createSeatViewerResolver({
   findSession: findViewerSession,
   findPresenterSession,
+  findCoordinatorSession,
+});
+const resolveCoordinatorViewer = createCoordinatorViewerResolver({
+  findSession: findCoordinatorSession,
 });
 
 let publishGame: (gameId: string) => Promise<void> = async () => {};
 const serverOptions = createServerAppOptions({
   environment,
   resolveViewer: (request) => {
-    const gameId = request.params.id;
+    const gameId =
+      request.params.id ??
+      (typeof request.body?.gameId === 'string'
+        ? request.body.gameId
+        : undefined);
     if (typeof gameId !== 'string') return { kind: 'visitor' };
     return resolveSeatViewer({
+      gameId,
+      cookieHeader: request.headers.cookie,
+    });
+  },
+  resolveCoordinatorViewer: (request) => {
+    const gameId = request.params.id;
+    if (typeof gameId !== 'string') return { kind: 'visitor' };
+    return resolveCoordinatorViewer({
       gameId,
       cookieHeader: request.headers.cookie,
     });

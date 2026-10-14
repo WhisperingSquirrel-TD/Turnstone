@@ -9,7 +9,8 @@
     "./game-store": "./src/game-store.ts",
     "./rate-limit": "./src/rate-limit.ts",
     "./seat-access-store": "./src/seat-access-store.ts",
-    "./presenter-access-store": "./src/presenter-access-store.ts"
+    "./presenter-access-store": "./src/presenter-access-store.ts",
+    "./coordinator-access-store": "./src/coordinator-access-store.ts"
   },
   "scripts": {
     "push": "drizzle-kit push --config ./drizzle.config.ts",

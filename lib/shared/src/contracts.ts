@@ -64,6 +64,12 @@ const event = <T extends string, S extends z.ZodRawShape>(type: T, shape: S) =>
 export const eventSchema = z.discriminatedUnion('type', [
   event('GameCreated', { id, config: gameConfigSchema }),
   event('SeatJoined', { seatId: id, name: z.string() }),
+  event('SeatPinLocked', {
+    seatId: id,
+    lockedUntil: z.number().int().nonnegative(),
+  }),
+  event('SeatPinReset', { seatId: id }),
+  event('DeviceRecovered', { seatId: id }),
   event('PhaseChanged', {
     phase: phaseSchema,
     deadline: z.number().nullable(),
@@ -195,6 +201,29 @@ export const fullViewSchema = z
     ballots: z.record(id),
     winner: roleSchema.nullable(),
     private: privateViewSchema.nullable(),
+    publicLog: z.array(
+      z
+        .object({
+          seq: z.number().int().positive(),
+          at: z.number().int().nonnegative(),
+          action: z.enum(['seat_pin_reset', 'device_recovered']),
+          seatId: id,
+          name: z.string(),
+        })
+        .strict(),
+    ),
+    coordinatorAlerts: z.array(
+      z
+        .object({
+          seq: z.number().int().positive(),
+          at: z.number().int().nonnegative(),
+          code: z.literal('seat_pin_locked'),
+          seatId: id,
+          name: z.string(),
+          lockedUntil: z.number().int().nonnegative(),
+        })
+        .strict(),
+    ),
     fairness: z
       .object({
         salt: z.string(),
@@ -244,6 +273,21 @@ export const gameViewResponseSchema = z
     version: z.number().int().nonnegative(),
     view: viewSchema,
   })
+  .strict();
+export const coordinatorHandoffCreateRequestSchema = z
+  .object({ targetSeatId: id })
+  .strict();
+export const coordinatorHandoffClaimRequestSchema = z
+  .object({
+    gameId: id,
+    code: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+  })
+  .strict();
+export const coordinatorHandoffResponseSchema = z
+  .object({ code: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
+  .strict();
+export const coordinatorHandoffClaimResponseSchema = z
+  .object({ status: z.literal('transferred') })
   .strict();
 export const apiErrorResponseSchema = z
   .object({
@@ -300,6 +344,12 @@ export const seatRecoveryRequestSchema = z
       .max(20)
       .refine((v) => !/\p{Cc}/u.test(v)),
     pin: z.string().regex(/^\d{4,6}$/),
+  })
+  .strict();
+export const seatPinResetRequestSchema = z
+  .object({
+    expectedVersion: z.number().int().nonnegative(),
+    newPin: z.string().regex(/^\d{4,6}$/),
   })
   .strict();
 export const pendingJoinRequestsResponseSchema = z

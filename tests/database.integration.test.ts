@@ -11,6 +11,7 @@ import { gameRandom } from '../lib/security/src/game-random';
 import { attachRealtime } from '../artifacts/api-server/src/realtime';
 import {
   cookieNameForGame,
+  createCoordinatorViewerResolver,
   createSeatViewerResolver,
 } from '../artifacts/api-server/src/session-auth';
 import { createDeadlineScheduler } from '../artifacts/api-server/src/deadline-scheduler';
@@ -45,9 +46,493 @@ import {
   revokeGameInvite,
   revokeSeatViewerSessions,
 } from '../lib/db/src/seat-access-store';
+import { findCoordinatorSession } from '../lib/db/src/coordinator-access-store';
+
+type AppRequest = Parameters<
+  NonNullable<NonNullable<Parameters<typeof createApp>[1]>['resolveViewer']>
+>[0];
+
+function requestGameId(request: AppRequest): string {
+  const routeId = Array.isArray(request.params.id)
+    ? request.params.id[0]
+    : request.params.id;
+  if (routeId) return routeId;
+  return typeof request.body?.gameId === 'string' ? request.body.gameId : '';
+}
+
+function cookieValues(header: string | string[] | undefined): string[] {
+  return Array.isArray(header) ? header : header ? [header] : [];
+}
 
 afterAll(async () => {
   await pool.end();
+});
+
+it('creates a game with a hashed, game-scoped coordinator capability cookie', async () => {
+  const gameId = randomUUID();
+  const resolveCoordinator = createCoordinatorViewerResolver({
+    findSession: findCoordinatorSession,
+  });
+  const app = createApp(
+    async () => {
+      await db.execute(sql`select version from foundation_meta where id = 1`);
+    },
+    {
+      secureCookies: true,
+      resolveViewer: (request) =>
+        resolveCoordinator({
+          gameId: requestGameId(request),
+          cookieHeader: request.headers.cookie,
+        }),
+      resolveCoordinatorViewer: (request) =>
+        resolveCoordinator({
+          gameId: requestGameId(request),
+          cookieHeader: request.headers.cookie,
+        }),
+    },
+  );
+  try {
+    const response = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        id: gameId,
+        config: gameConfigSchema.parse({}),
+        idempotencyKey: randomUUID(),
+      });
+    expect(response.status).toBe(201);
+    expect(response.body.view.id).toBe(gameId);
+    expect(response.body.view.private).toBeNull();
+    expect(response.body.view.fairness).toBeNull();
+
+    const coordinatorCookie = cookieValues(response.headers['set-cookie']).find(
+      (cookie) => cookie.startsWith('turnstone-coordinator-'),
+    );
+    expect(coordinatorCookie).toBeDefined();
+    expect(coordinatorCookie).toMatch(
+      /^turnstone-coordinator-[a-f0-9]{24}=[A-Za-z0-9_-]{43}; /,
+    );
+    expect(coordinatorCookie).toContain('Path=/');
+    expect(coordinatorCookie).toContain('Max-Age=');
+    expect(coordinatorCookie).toContain('HttpOnly');
+    expect(coordinatorCookie).toContain('Secure');
+    expect(coordinatorCookie).toContain('SameSite=Lax');
+    expect(coordinatorCookie).not.toContain('Domain=');
+    const token = coordinatorCookie?.match(/=([A-Za-z0-9_-]{43});/)?.[1];
+    expect(token).toBeDefined();
+    expect(JSON.stringify(response.body)).not.toContain(token);
+
+    const stored = await db.execute(sql`
+      select token_hash from game_coordinator_capabilities
+      where game_id = ${gameId}
+    `);
+    expect(stored.rows).toEqual([
+      {
+        token_hash: createHash('sha256').update(token!).digest('hex'),
+      },
+    ]);
+    const view = await request(app)
+      .get(`/api/games/${gameId}/view`)
+      .set('Cookie', coordinatorCookie!.split(';')[0]!);
+    expect(view.status).toBe(200);
+    expect(view.body.view.id).toBe(gameId);
+    expect(view.body.view.private).toBeNull();
+    expect(view.body.view.fairness).toBeNull();
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('transfers coordinator capability once to an authenticated target seat', async () => {
+  const gameId = randomUUID();
+  const targetSeatId = randomUUID();
+  const coordinatorResolver = createCoordinatorViewerResolver({
+    findSession: findCoordinatorSession,
+  });
+  const seatResolver = createSeatViewerResolver({
+    findSession: findViewerSession,
+    findCoordinatorSession,
+  });
+  const resolveForRequest = (request: AppRequest) => {
+    const gameId = requestGameId(request);
+    return seatResolver({
+      gameId,
+      cookieHeader: request.headers.cookie,
+    });
+  };
+  const app = createApp(
+    async () => {
+      await db.execute(sql`select version from foundation_meta where id = 1`);
+    },
+    {
+      secureCookies: true,
+      resolveViewer: resolveForRequest,
+      resolveCoordinatorViewer: (request) =>
+        coordinatorResolver({
+          gameId: requestGameId(request),
+          cookieHeader: request.headers.cookie,
+        }),
+    },
+  );
+  try {
+    const created = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        id: gameId,
+        config: gameConfigSchema.parse({}),
+        idempotencyKey: randomUUID(),
+      });
+    const coordinatorCookie = cookieValues(created.headers['set-cookie']).find(
+      (cookie) => cookie.startsWith('turnstone-coordinator-'),
+    );
+    expect(created.status).toBe(201);
+    expect(coordinatorCookie).toBeDefined();
+
+    const state = replay(await readGameEvents(gameId));
+    const now = Date.now();
+    const joinEvent = eventSchema.parse({
+      seq: state.version + 1,
+      at: now,
+      schemaVersion: 1,
+      type: 'SeatJoined',
+      seatId: targetSeatId,
+      name: 'Co-coordinator',
+    });
+    const nextState = evolve(state, joinEvent);
+    const append = await appendGameEvents({
+      gameId,
+      actorId: 'test-coordinator-handoff',
+      idempotencyKey: randomUUID(),
+      requestHash: randomUUID(),
+      expectedVersion: state.version,
+      events: [joinEvent],
+      snapshot: { seq: nextState.version, state: nextState },
+      deadline: { kind: nextState.phase, dueAt: nextState.deadline },
+    });
+    expect(append.ok).toBe(true);
+    const noAccessSeatId = randomUUID();
+    const noAccessEvent = eventSchema.parse({
+      seq: nextState.version + 1,
+      at: now,
+      schemaVersion: 1,
+      type: 'SeatJoined',
+      seatId: noAccessSeatId,
+      name: 'Unpaired co-coordinator',
+    });
+    const afterNoAccessSeat = evolve(nextState, noAccessEvent);
+    const appendNoAccessSeat = await appendGameEvents({
+      gameId,
+      actorId: 'test-coordinator-handoff',
+      idempotencyKey: randomUUID(),
+      requestHash: randomUUID(),
+      expectedVersion: nextState.version,
+      events: [noAccessEvent],
+      snapshot: {
+        seq: afterNoAccessSeat.version,
+        state: afterNoAccessSeat,
+      },
+      deadline: {
+        kind: afterNoAccessSeat.phase,
+        dueAt: afterNoAccessSeat.deadline,
+      },
+    });
+    expect(appendNoAccessSeat.ok).toBe(true);
+    await createSeatAccess({
+      gameId,
+      seatId: targetSeatId,
+      pinSalt: 'a'.repeat(32),
+      pinHash: 'b'.repeat(64),
+    });
+    const seatToken = randomBytes(32).toString('base64url');
+    await createViewerSession({
+      tokenHash: createHash('sha256').update(seatToken).digest('hex'),
+      gameId,
+      seatId: targetSeatId,
+      expiresAt: now + 60 * 60_000,
+    });
+    const seatCookieName = cookieNameForGame(gameId);
+    const seatCookie = `${seatCookieName}=${seatToken}`;
+
+    const coordinatorCsrf = await request(app).get('/api/csrf');
+    const coordinatorCsrfCookie = cookieValues(
+      coordinatorCsrf.headers['set-cookie'],
+    ).find((cookie) => cookie.startsWith('turnstone-csrf='));
+    const coordinatorCookiePair = coordinatorCookie!.split(';')[0]!;
+    const coordinatorRequestCookie = `${coordinatorCookiePair}; ${coordinatorCsrfCookie!.split(';')[0]}`;
+    await request(app)
+      .post(`/api/games/${gameId}/seats/${noAccessSeatId}/pin/reset`)
+      .set('Cookie', coordinatorRequestCookie)
+      .set('X-CSRF-Token', coordinatorCsrf.body.csrfToken)
+      .send({
+        expectedVersion: afterNoAccessSeat.version,
+        newPin: '8642',
+      })
+      .expect(503, { error: 'Service unavailable' });
+    const missingSeatHandoff = await request(app)
+      .post(`/api/games/${gameId}/coordinator-handoffs`)
+      .set('Cookie', coordinatorRequestCookie)
+      .set('X-CSRF-Token', coordinatorCsrf.body.csrfToken)
+      .send({ targetSeatId: randomUUID() });
+    expect(missingSeatHandoff.status).toBe(409);
+    const unpairedSeatHandoff = await request(app)
+      .post(`/api/games/${gameId}/coordinator-handoffs`)
+      .set('Cookie', coordinatorRequestCookie)
+      .set('X-CSRF-Token', coordinatorCsrf.body.csrfToken)
+      .send({ targetSeatId: noAccessSeatId });
+    expect(unpairedSeatHandoff.status).toBe(409);
+    const handoff = await request(app)
+      .post(`/api/games/${gameId}/coordinator-handoffs`)
+      .set('Cookie', coordinatorRequestCookie)
+      .set('X-CSRF-Token', coordinatorCsrf.body.csrfToken)
+      .send({ targetSeatId });
+    expect(handoff.status).toBe(201);
+    const handoffCode = handoff.body.code as string;
+    expect(handoffCode).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    const recipientCsrf = await request(app)
+      .get('/api/csrf')
+      .set('Cookie', seatCookie);
+    const recipientCsrfCookie = cookieValues(
+      recipientCsrf.headers['set-cookie'],
+    ).find((cookie) => cookie.startsWith('turnstone-csrf='));
+    const recipientCookie = `${seatCookie}; ${recipientCsrfCookie!.split(';')[0]}`;
+    const claim = await request(app)
+      .post('/api/coordinator-handoffs/claim')
+      .set('Cookie', recipientCookie)
+      .set('X-CSRF-Token', recipientCsrf.body.csrfToken)
+      .send({ gameId, code: handoffCode });
+    expect(claim.status).toBe(200);
+    const newCoordinatorCookie = cookieValues(claim.headers['set-cookie']).find(
+      (cookie) => cookie.startsWith('turnstone-coordinator-'),
+    );
+    expect(newCoordinatorCookie).toBeDefined();
+    expect(claim.body.code).toBeUndefined();
+
+    const formerCoordinator = await request(app)
+      .get(`/api/games/${gameId}/join-requests`)
+      .set('Cookie', coordinatorCookiePair);
+    const newCoordinator = await request(app)
+      .get(`/api/games/${gameId}/join-requests`)
+      .set('Cookie', newCoordinatorCookie!.split(';')[0]!);
+    expect(formerCoordinator.status).toBe(401);
+    expect(newCoordinator.status).toBe(200);
+
+    const httpServer = createServer(app);
+    const realtime = await attachRealtime(httpServer, {
+      allowedOrigins: ['http://127.0.0.1'],
+      resolveViewer: (headers, requestedGameId) =>
+        requestedGameId
+          ? seatResolver({
+              gameId: requestedGameId,
+              cookieHeader: headers.cookie,
+            })
+          : { kind: 'visitor' },
+    });
+    let socket: ClientSocket | undefined;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        httpServer.once('error', reject);
+        httpServer.listen(0, '127.0.0.1', resolve);
+      });
+      const address = httpServer.address();
+      if (!address || typeof address === 'string')
+        throw new Error('Coordinator socket test did not bind a port');
+      socket = socketIo(`http://127.0.0.1:${address.port}`, {
+        transports: ['websocket'],
+        extraHeaders: {
+          origin: 'http://127.0.0.1',
+          cookie: newCoordinatorCookie!.split(';')[0]!,
+        },
+        auth: { gameId },
+        reconnection: false,
+      });
+      await new Promise<void>((resolve, reject) => {
+        socket!.once('connect', resolve);
+        socket!.once('connect_error', reject);
+      });
+      const firstView = new Promise<{
+        version: number;
+        view: { id: string; private: unknown; fairness: unknown };
+      }>((resolve, reject) => {
+        const timeout = setTimeout(
+          () => reject(new Error('Coordinator socket watch timed out')),
+          2_000,
+        );
+        socket!.once('game:view', (view) => {
+          clearTimeout(timeout);
+          resolve(view);
+        });
+        socket!.emit(
+          'game:watch',
+          { gameId },
+          (acknowledgement: { ok?: boolean; error?: string }) => {
+            if (!acknowledgement.ok) {
+              clearTimeout(timeout);
+              reject(
+                new Error(
+                  acknowledgement.error ?? 'Coordinator watch was rejected',
+                ),
+              );
+            }
+          },
+        );
+      });
+      await expect(firstView).resolves.toMatchObject({
+        view: { id: gameId, private: null, fairness: null },
+      });
+      const invalidWatch = await new Promise<unknown>((resolve) => {
+        socket!.emit('game:watch', { gameId: [] }, resolve);
+      });
+      expect(invalidWatch).toEqual({ error: 'Invalid request' });
+      const wrongGameWatch = await new Promise<unknown>((resolve) => {
+        socket!.emit('game:watch', { gameId: 'another-game' }, resolve);
+      });
+      expect(wrongGameWatch).toEqual({ error: 'Not found' });
+      await realtime.publishGame(gameId);
+      expect(socket.connected).toBe(true);
+
+      const unauthenticatedSocket = socketIo(
+        `http://127.0.0.1:${address.port}`,
+        {
+          transports: ['websocket'],
+          extraHeaders: { origin: 'http://127.0.0.1' },
+          auth: { gameId },
+          reconnection: false,
+        },
+      );
+      try {
+        await new Promise<void>((resolve, reject) => {
+          unauthenticatedSocket.once('connect_error', () => resolve());
+          unauthenticatedSocket.once('connect', () =>
+            reject(new Error('Visitor socket unexpectedly authenticated')),
+          );
+        });
+        expect(unauthenticatedSocket.connected).toBe(false);
+      } finally {
+        unauthenticatedSocket.disconnect();
+      }
+    } finally {
+      socket?.disconnect();
+      await realtime.close();
+      if (httpServer.listening) {
+        await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+      }
+    }
+
+    const replayedClaim = await request(app)
+      .post('/api/coordinator-handoffs/claim')
+      .set('Cookie', recipientCookie)
+      .set('X-CSRF-Token', recipientCsrf.body.csrfToken)
+      .send({ gameId, code: handoffCode });
+    expect(replayedClaim.status).toBe(401);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('rejects malformed, unauthorised, rate-limited and failing coordinator handoffs', async () => {
+  const visitor = createApp(async () => {});
+  const createUrl = '/api/games/test-game/coordinator-handoffs';
+  await request(visitor)
+    .post(createUrl)
+    .set('Origin', 'https://turnstone.example')
+    .send({ targetSeatId: randomUUID() })
+    .expect(403, { error: 'Invalid request' });
+  await request(visitor)
+    .post(createUrl)
+    .send({})
+    .expect(400, { error: 'Invalid request' });
+  await request(visitor)
+    .post(createUrl)
+    .send({ targetSeatId: randomUUID() })
+    .expect(401, { error: 'Authentication required' });
+
+  const resetUrl = `/api/games/test-game/seats/${randomUUID()}/pin/reset`;
+  await request(visitor)
+    .post(resetUrl)
+    .set('Origin', 'https://turnstone.example')
+    .send({ expectedVersion: 0, newPin: '8642' })
+    .expect(403, { error: 'Invalid request' });
+  await request(visitor)
+    .post(resetUrl)
+    .send({})
+    .expect(400, { error: 'Invalid request' });
+  await request(visitor)
+    .post(resetUrl)
+    .send({ expectedVersion: 0, newPin: '8642' })
+    .expect(401, { error: 'Authentication required' });
+
+  const rateLimited = createApp(async () => {}, {
+    resolveCoordinatorViewer: () => ({ kind: 'coordinator' }),
+    rateLimitSecret: 'integration-test-rate-limit-secret',
+    consumeRateLimit: async () => false,
+  });
+  await request(rateLimited)
+    .post(createUrl)
+    .send({ targetSeatId: randomUUID() })
+    .expect(429, { error: 'Too many requests' });
+  await request(rateLimited)
+    .post(resetUrl)
+    .send({ expectedVersion: 0, newPin: '8642' })
+    .expect(429, { error: 'Too many requests' });
+
+  const failingResolver = createApp(async () => {}, {
+    resolveCoordinatorViewer: async () => {
+      throw new Error('private resolver detail');
+    },
+    resolveViewer: async () => {
+      throw new Error('private resolver detail');
+    },
+  });
+  await request(failingResolver)
+    .post(createUrl)
+    .send({ targetSeatId: randomUUID() })
+    .expect(503, { error: 'Service unavailable' });
+  await request(visitor)
+    .post('/api/coordinator-handoffs/claim')
+    .set('Origin', 'https://turnstone.example')
+    .send({
+      gameId: randomUUID(),
+      code: randomBytes(32).toString('base64url'),
+    })
+    .expect(403, { error: 'Invalid request' });
+  await request(visitor)
+    .post('/api/coordinator-handoffs/claim')
+    .send({})
+    .expect(400, { error: 'Invalid request' });
+  await request(visitor)
+    .post('/api/coordinator-handoffs/claim')
+    .send({ gameId: randomUUID(), code: randomBytes(32).toString('base64url') })
+    .expect(401, { error: 'Transfer could not be completed' });
+  await request(failingResolver)
+    .post('/api/coordinator-handoffs/claim')
+    .send({ gameId: randomUUID(), code: randomBytes(32).toString('base64url') })
+    .expect(503, { error: 'Service unavailable' });
+
+  const rateLimitedClaim = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'player', seatId: 'seat-1' }),
+    rateLimitSecret: 'integration-test-rate-limit-secret',
+    consumeRateLimit: async () => false,
+  });
+  await request(rateLimitedClaim)
+    .post('/api/coordinator-handoffs/claim')
+    .send({ gameId: randomUUID(), code: randomBytes(32).toString('base64url') })
+    .expect(429, { error: 'Too many requests' });
+  const unownedGameClaim = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'player', seatId: 'seat-1' }),
+  });
+  await request(unownedGameClaim)
+    .post('/api/coordinator-handoffs/claim')
+    .send({ gameId: randomUUID(), code: randomBytes(32).toString('base64url') })
+    .expect(401, { error: 'Transfer could not be completed' });
+  const coordinatorWithoutRateLimit = createApp(async () => {}, {
+    resolveCoordinatorViewer: () => ({ kind: 'coordinator' }),
+  });
+  await request(coordinatorWithoutRateLimit)
+    .post(resetUrl)
+    .send({ expectedVersion: 0, newPin: '8642' })
+    .expect(404, { error: 'Not found' });
 });
 
 it('uses real PostgreSQL with the committed foundation migration', async () => {
@@ -530,7 +1015,7 @@ it('claims due database deadlines once, reclaims expired work, and completes it 
 
 it('advances an overdue phase from PostgreSQL and remains correct across repeated polls', async () => {
   const gameId = randomUUID();
-  const now = Date.now();
+  const now = Date.now() + 60 * 24 * 60 * 60_000;
   const createdEvent = eventSchema.parse({
     seq: 1,
     at: now - 2_000,
@@ -598,9 +1083,10 @@ it('starts and stops the durable deadline poller idempotently', async () => {
 
 it('keeps paused deadlines dormant and resumes them correctly after a worker restart', async () => {
   const gameId = randomUUID();
+  const initialTime = Date.UTC(2030, 0, 1);
   const createdEvent = eventSchema.parse({
     seq: 1,
-    at: 500,
+    at: initialTime,
     schemaVersion: 1,
     type: 'GameCreated',
     id: gameId,
@@ -608,11 +1094,11 @@ it('keeps paused deadlines dormant and resumes them correctly after a worker res
   });
   const phaseEvent = eventSchema.parse({
     seq: 2,
-    at: 750,
+    at: initialTime + 250,
     schemaVersion: 1,
     type: 'PhaseChanged',
     phase: 'DRAFT',
-    deadline: 1_500,
+    deadline: initialTime + 1_500,
     shadowEndAt: null,
     cycle: 0,
   });
@@ -630,7 +1116,7 @@ it('keeps paused deadlines dormant and resumes them correctly after a worker res
       idempotencyKey: 'paused-scheduler-deadline',
       requestHash: 'paused-scheduler-deadline',
       events: [phaseEvent],
-      deadline: { kind: 'DRAFT', dueAt: 1_500 },
+      deadline: { kind: 'DRAFT', dueAt: initialTime + 1_500 },
     });
 
     const beforePause = replay(await readGameEvents(gameId));
@@ -642,7 +1128,7 @@ it('keeps paused deadlines dormant and resumes them correctly after a worker res
         idempotencyKey: 'paused-scheduler-pause',
       },
       {
-        now: 1_000,
+        now: initialTime + 1_000,
         actor: { kind: 'coordinator' },
         random: gameRandom,
       },
@@ -659,7 +1145,9 @@ it('keeps paused deadlines dormant and resumes them correctly after a worker res
       deadline: { kind: 'DRAFT', dueAt: null },
     });
 
-    await createDeadlineScheduler({ now: () => 2_000 }).runOnce();
+    await createDeadlineScheduler({
+      now: () => initialTime + 2_000,
+    }).runOnce();
     expect(replay(await readGameEvents(gameId)).paused).toBe(true);
 
     const pausedState = replay(await readGameEvents(gameId));
@@ -671,7 +1159,7 @@ it('keeps paused deadlines dormant and resumes them correctly after a worker res
         idempotencyKey: 'paused-scheduler-resume',
       },
       {
-        now: 2_000,
+        now: initialTime + 2_000,
         actor: { kind: 'coordinator' },
         random: gameRandom,
       },
@@ -689,9 +1177,13 @@ it('keeps paused deadlines dormant and resumes them correctly after a worker res
       deadline: { kind: resumedState.phase, dueAt: resumedState.deadline },
     });
 
-    await createDeadlineScheduler({ now: () => 2_499 }).runOnce();
+    await createDeadlineScheduler({
+      now: () => initialTime + 2_499,
+    }).runOnce();
     expect(replay(await readGameEvents(gameId)).phase).toBe('DRAFT');
-    await createDeadlineScheduler({ now: () => 2_500 }).runOnce();
+    await createDeadlineScheduler({
+      now: () => initialTime + 2_500,
+    }).runOnce();
     expect(replay(await readGameEvents(gameId)).phase).toBe('LOBBY');
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
@@ -1923,6 +2415,59 @@ it('locks PIN recovery after five failed attempts without exposing whether the n
     expect(correctPinWhileLocked.body.error).toBe(
       'Recovery could not be completed',
     );
+
+    const coordinatorView = await request(app)
+      .get(`/api/games/${gameId}/view`)
+      .expect(200);
+    const seatId = join.body.view.seats.find(
+      (seat: { name: string }) => seat.name === 'Locked Seat',
+    )?.id;
+    expect(seatId).toBeTruthy();
+    expect(coordinatorView.body.view.coordinatorAlerts).toContainEqual(
+      expect.objectContaining({ code: 'seat_pin_locked', seatId }),
+    );
+    const playerView = await request(
+      createApp(async () => {}, {
+        resolveViewer: () => ({ kind: 'player', seatId }),
+      }),
+    )
+      .get(`/api/games/${gameId}/view`)
+      .expect(200);
+    expect(playerView.body.view.coordinatorAlerts).toEqual([]);
+
+    const replacementPin = '8642';
+    const pinReset = await request(app)
+      .post(`/api/games/${gameId}/seats/${seatId}/pin/reset`)
+      .send({
+        expectedVersion: coordinatorView.body.version,
+        newPin: replacementPin,
+      });
+    expect(pinReset.status).toBe(200);
+    const afterReset = await request(app)
+      .get(`/api/games/${gameId}/view`)
+      .expect(200);
+    expect(afterReset.body.view.publicLog).toContainEqual(
+      expect.objectContaining({ action: 'seat_pin_reset', seatId }),
+    );
+    expect(JSON.stringify(afterReset.body.view.publicLog)).not.toContain(
+      replacementPin,
+    );
+    await request(app)
+      .post(`/api/games/${gameId}/seats/${seatId}/pin/reset`)
+      .send({
+        expectedVersion: coordinatorView.body.version,
+        newPin: '1357',
+      })
+      .expect(409, { error: 'Command rejected' });
+    const recoveredWithResetPin = await request(app).post('/api/recover').send({
+      shortCode: invite.body.shortCode,
+      name: 'Locked Seat',
+      pin: replacementPin,
+    });
+    expect(recoveredWithResetPin.status).toBe(200);
+    expect(recoveredWithResetPin.body.view.publicLog).toContainEqual(
+      expect.objectContaining({ action: 'device_recovered', seatId }),
+    );
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }
@@ -2222,6 +2767,7 @@ it('rejects a short-code join without exposing more than its decision status', a
 it('enforces the 80 per cent game-admission threshold without blocking existing games', async () => {
   const acceptedGameId = randomUUID();
   const busyGameId = randomUUID();
+  const visitorGameId = randomUUID();
   const options = (activeGames: number) => ({
     resolveViewer: () => ({ kind: 'coordinator' as const }),
     maxActiveGames: 10,
@@ -2250,8 +2796,12 @@ it('enforces the 80 per cent game-admission threshold without blocking existing 
       .expect(400);
     await request(visitorApp)
       .post('/api/games')
-      .send(createPayload(randomUUID(), 'visitor-create'))
-      .expect(401);
+      .send(createPayload(visitorGameId, 'visitor-create'))
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body.view.id).toBe(visitorGameId);
+        expect(body.view.private).toBeNull();
+      });
 
     const accepted = await request(acceptedApp)
       .post('/api/games')
@@ -2268,13 +2818,14 @@ it('enforces the 80 per cent game-admission threshold without blocking existing 
     });
   } finally {
     await db.execute(
-      sql`delete from games where id in (${acceptedGameId}, ${busyGameId})`,
+      sql`delete from games where id in (${acceptedGameId}, ${busyGameId}, ${visitorGameId})`,
     );
   }
 });
 
 it('enforces viewer authorization and handles malformed or unconfigured guest requests', async () => {
   const gameId = randomUUID();
+  const missingGameId = randomUUID();
   const requestId = 'a'.repeat(32);
   const visitorApp = createApp(async () => {}, {
     resolveViewer: () => ({ kind: 'visitor' }),
@@ -2310,10 +2861,12 @@ it('enforces viewer authorization and handles malformed or unconfigured guest re
   };
   const decisionBody = { decision: 'reject', expectedVersion: 1 };
 
-  await request(visitorApp)
+  const createdByVisitor = await request(visitorApp)
     .post('/api/games')
     .send(createCommand)
-    .expect(401, { error: 'Authentication required' });
+    .expect(201);
+  expect(createdByVisitor.body.view.id).toBe(gameId);
+  expect(createdByVisitor.body.view.private).toBeNull();
   await request(visitorApp)
     .post(`/api/games/${gameId}/invites`)
     .expect(401, { error: 'Authentication required' });
@@ -2333,7 +2886,7 @@ it('enforces viewer authorization and handles malformed or unconfigured guest re
     })
     .expect(401, { error: 'Authentication required' });
   await request(coordinatorApp)
-    .post(`/api/games/${gameId}/commands`)
+    .post(`/api/games/${missingGameId}/commands`)
     .send({
       type: 'AdvancePhase',
       expectedVersion: 1,
@@ -2356,9 +2909,15 @@ it('enforces viewer authorization and handles malformed or unconfigured guest re
     .post('/api/games/not-a-game/join')
     .send(directJoinBody)
     .expect(404, { error: 'Not found' });
-  await request(visitorApp)
+  const visitorView = await request(visitorApp)
     .get(`/api/games/${gameId}/view`)
-    .expect(404, { error: 'Not found' });
+    .expect(200);
+  expect(visitorView.body.view).toEqual({
+    exists: true,
+    phase: 'DRAFT',
+    lobbyOpen: false,
+    seatCount: 0,
+  });
   await request(visitorApp)
     .get(`/api/join-requests/${requestId}`)
     .expect(404, { error: 'Not found' });
@@ -2370,6 +2929,7 @@ it('enforces viewer authorization and handles malformed or unconfigured guest re
     .post('/api/join')
     .send(joinBody)
     .expect(503, { error: 'Service unavailable' });
+  await db.execute(sql`delete from games where id = ${gameId}`);
   await request(coordinatorWithoutSecret)
     .post(`/api/games/${gameId}/join`)
     .send(directJoinBody)

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { Viewer } from '@workspace/engine';
 
 const seatCookiePrefix = 'turnstone-seat-';
+const coordinatorCookiePrefix = 'turnstone-coordinator-';
 const opaqueTokenPattern = /^[A-Za-z0-9_-]{43}$/;
 
 export type SeatSessionRecord = {
@@ -17,6 +18,12 @@ export type PresenterSessionRecord = {
   revokedAt: number | null;
 };
 
+export type CoordinatorSessionRecord = {
+  gameId: string;
+  expiresAt: number;
+  revokedAt: number | null;
+};
+
 type SeatViewerResolverOptions = {
   findSession: (
     tokenHash: string,
@@ -26,11 +33,22 @@ type SeatViewerResolverOptions = {
     tokenHash: string,
     gameId: string,
   ) => Promise<PresenterSessionRecord | null>;
+  findCoordinatorSession?: (
+    tokenHash: string,
+    gameId: string,
+  ) => Promise<CoordinatorSessionRecord | null>;
   now?: () => number;
 };
 
 export function cookieNameForGame(gameId: string): string {
   return `${seatCookiePrefix}${createHash('sha256')
+    .update(gameId)
+    .digest('hex')
+    .slice(0, 24)}`;
+}
+
+export function cookieNameForCoordinatorGame(gameId: string): string {
+  return `${coordinatorCookiePrefix}${createHash('sha256')
     .update(gameId)
     .digest('hex')
     .slice(0, 24)}`;
@@ -93,6 +111,28 @@ export function createSeatViewerResolver(options: SeatViewerResolverOptions) {
         return { kind: 'player', seatId: session.seatId };
     }
 
+    const coordinatorToken = cookieValue(
+      input.cookieHeader,
+      cookieNameForCoordinatorGame(input.gameId),
+    );
+    if (
+      coordinatorToken &&
+      opaqueTokenPattern.test(coordinatorToken) &&
+      options.findCoordinatorSession
+    ) {
+      const session = await options.findCoordinatorSession(
+        createHash('sha256').update(coordinatorToken).digest('hex'),
+        input.gameId,
+      );
+      if (
+        session &&
+        session.gameId === input.gameId &&
+        session.expiresAt > now &&
+        session.revokedAt === null
+      )
+        return { kind: 'coordinator' };
+    }
+
     const presenterToken = cookieValue(
       input.cookieHeader,
       cookieNameForPresenterGame(input.gameId),
@@ -111,5 +151,37 @@ export function createSeatViewerResolver(options: SeatViewerResolverOptions) {
         return { kind: 'presenter' };
     }
     return { kind: 'visitor' };
+  };
+}
+
+export function createCoordinatorViewerResolver(options: {
+  findSession: (
+    tokenHash: string,
+    gameId: string,
+  ) => Promise<CoordinatorSessionRecord | null>;
+  now?: () => number;
+}) {
+  return async (input: {
+    gameId: string;
+    cookieHeader?: string;
+  }): Promise<Viewer> => {
+    if (!input.gameId || input.gameId.length > 128) return { kind: 'visitor' };
+    const token = cookieValue(
+      input.cookieHeader,
+      cookieNameForCoordinatorGame(input.gameId),
+    );
+    if (!token || !opaqueTokenPattern.test(token)) return { kind: 'visitor' };
+    const session = await options.findSession(
+      createHash('sha256').update(token).digest('hex'),
+      input.gameId,
+    );
+    if (
+      !session ||
+      session.gameId !== input.gameId ||
+      session.expiresAt <= (options.now?.() ?? Date.now()) ||
+      session.revokedAt !== null
+    )
+      return { kind: 'visitor' };
+    return { kind: 'coordinator' };
   };
 }

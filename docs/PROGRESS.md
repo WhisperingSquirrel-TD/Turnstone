@@ -1,10 +1,21 @@
+# Status for reviewer
+
+- Updated: 14 October 2026, 06:44 UTC.
+- Current milestone/step: Milestone 4 — guest capabilities, PIN recovery and realtime fault coverage; local `pnpm run verify` is green, preparing the push and public CI check.
+- Last pushed commit/CI: `a77497c`, GitHub Verify #13 — Success, all 18 jobs; all six scenario shards, four browser profiles and coverage merger passed with no annotations. The current M4 changes have not been pushed yet.
+- Local branch: `main`; `HEAD` is `ff84619`, one commit ahead of `origin/main`, with additional M4 implementation and documentation changes in the working tree.
+- Latest local verify: green. 190 unit tests, 20 property tests, 64 server/HTTP/DB coverage tests at 85.28% lines, 2,567 scenarios with zero failures, Pixel/desktop smoke, Lighthouse accessibility 1.0 on home and play, and zero high or critical audit findings. WebKit printed `WebKit profiles run in CI`.
+- Open questions: none.
+- Provisional decisions: none. Coordinator handoff uses a single-use code claimed on the target’s authenticated game seat.
+- Risks: M4 is not accepted or pushed until local verify and GitHub CI are green. Milestone 5 ends with a real-phone rehearsal review; pre-launch noindex remains on.
+
 # Progress
 
-## Current status — Milestones 0, 1 and 3 approved; Milestone 2 local and GitHub sample gates green, reviewer acceptance pending; Milestone 4 acceptance open
+## Current status — Milestones 0–3 accepted; Milestone 4 in progress (local gate green, push/CI pending); Milestone 5 not started
 
-Specification sections 1–25 and owner rulings are recorded. Milestones 0 and 1 have the owner's reviewer approval, recorded in DECISIONS; the engine and C5/C6 lifecycle/termination rules are complete. Milestone 3 was also approved. The Milestone 2 oracle and all 2,567 engine scenarios pass locally; reviewer acceptance remains open. GitHub Verify #13 for commit `a77497c` passed all 18 jobs, including all six scenario shards, exact coverage merging, four browser profiles and required-checks. Its report verified all 2,522 rows; the slowest shard took 84,404 ms against a 266,650 ms projection. The 40-seat engine profile averaged 729 ms/game, down from 2,982 ms before the reducer fix. Every check run had zero annotations after upgrading artifact actions to Node 24. Milestone 4 acceptance remains open.
+Specification sections 1–25 and owner rulings are recorded. Milestones 0–3 are accepted, including Milestone 2 based on reviewer confirmation and GitHub Verify #8, #9 and #13. The independent oracle’s two engine defect regressions remain permanent. The Milestone 2 sample passes all 2,567 local scenarios; Verify #13 passed all 18 jobs, all six scenario shards, the exact 2,522-row coverage merger and all four browser profiles with no annotations. The 40-seat engine profile averaged 729 ms/game; the slowest shard was 84,404 ms against a 266,650 ms projection. Milestone 4's local gate is now green; its push and GitHub CI result are pending.
 
-Milestone 0 is **accepted** following fully green GitHub Actions Verify runs #2 and #4, including iPhone WebKit and iPad WebKit. Local Replit verification may skip those profiles only with the explicit notice `WebKit profiles run in CI`. Milestone 4's backend core passes local verification, but its full acceptance criteria remain open as listed in PLAN.
+Milestone 0 is **accepted** following fully green GitHub Actions Verify runs #2 and #4, including iPhone WebKit and iPad WebKit. Local Replit verification may skip those profiles only with the explicit notice `WebKit profiles run in CI`. The latest Milestone 4 local verification passes the 85% server line-coverage gate at 85.28%; full Milestone 4 acceptance awaits the required push and green public CI run.
 
 The earlier Milestone 2 sample reported zero failures across 2,566 games (942 core sweep cells, 788 three-way rows, 792 high-seat pairwise rows, 32 fuzz games and 12 golden games; 395.4 seconds). That result does not meet the reviewer's differential-oracle requirement and is not acceptance evidence. The two fuzz failures from the first full run were reproduced at fixed seeds and traced to the test driver issuing `AdvancePhase` after a bot action had already finished the game; a regression test guards that terminal state.
 
@@ -54,7 +65,7 @@ The full local `pnpm run verify` passed on 13 October 2026: 149 unit tests, 20 p
 
 Completed with strict TDD: planner tests were observed failing before implementation for the missing planner, unsupported half-cycle, incomplete schedules, balance warnings and the spare-time mission extension. The local verify gate passed after implementation. The planner remains a pure estimate; actual server scheduling and user-facing timetable UI are later milestones.
 
-### Milestone 4 backend implementation — 13 October 2026
+### Milestone 4 backend foundation — 13 October 2026 (historical checkpoint; superseded below)
 
 The full local `pnpm run verify` passed: 165 unit tests, 20 property tests, 20 PostgreSQL integration tests, 43 server-coverage tests, the scenario worker check, and 2,567 complete engine scenarios with zero failures. The production web build passed; Pixel and desktop browser smoke passed, Lighthouse accessibility scored 100 on home and play, and the dependency audit found zero high or critical advisories with no exceptions. Local browser output explicitly said `WebKit profiles run in CI`; iPhone and iPad WebKit remain GitHub CI profiles. The app-server workflow restarted cleanly; `/healthz` returned `ok` and `/readyz` returned `ready`.
 
@@ -62,7 +73,15 @@ Commit `af78008b4294b74c7fc9a33cad8c7c3bb523635e` was pushed to `main`. GitHub V
 
 Implemented and exercised: PostgreSQL event persistence, replay/snapshots, idempotent versioned HTTP commands, security headers and CSRF, pseudonymous database-backed rate limits, 80%-capacity admission control for new games only, durable UTC deadline claims with `SKIP LOCKED`, and PostgreSQL-backed cross-instance Socket.IO notifications. The server-core coverage gate reports 86.11% lines across its declared runtime modules. Reduced-scale checks cover a 1,045-byte 15-seat view and 5/40-client realtime fan-out; `docs/CAPACITY.md` explicitly avoids production or p95 claims.
 
-Milestone 4 is **not yet accepted**. Production viewer identity is still visitor-only pending the real account/session work; guest invite approval, PIN lockout/recovery/device migration, full games through real HTTP and sockets with injected disconnect/latency/restart faults, and the complete sibling-origin/static-host portability tests remain unchecked in PLAN. No placeholder identity or security bypass was added. Continue only after the reviewer confirms this scope or the remaining server work is completed.
+At that 13 October checkpoint, production viewer identity was still visitor-only and guest PIN/device recovery, injected-fault full games, and portability checks remained open. The owner then directed game-scoped capabilities before accounts; the current implementation and test status are recorded below and in D58.
+
+### Milestone 4 guest identity and recovery — 14 October 2026
+
+Implemented the owner-directed game-scoped seat and coordinator capabilities. Capability material is cryptographically random, stored hashed, delivered only in host-only HttpOnly/Secure/SameSite=Lax cookies, and the coordinator capability authorises logistics only. Coordinator transfer is one-use and rotates the capability. Seat recovery revokes prior device sessions. Five failed PIN attempts trigger a 15-minute lock and a coordinator-only alert; coordinator PIN reset is logged publicly without logging or revealing the PIN.
+
+Milestone 4 integration coverage now includes capability handoff, unauthorised/stale operations, PIN lockout/reset/recovery and public/private projection checks. The existing 5-seat and 40-seat HTTP/socket games retain disconnect, duplicate/stale command, reordering, two-second delay and mid-game restart coverage; static-host, sibling-origin and independent server startup checks remain enabled in Task 4.
+
+The full local `pnpm run verify` passed on 14 October 2026: 190 unit tests, 20 property tests, 64 server/HTTP/DB coverage tests at 85.28% server lines, 2,567 scenario games with zero failures, Pixel and desktop smoke, Lighthouse accessibility 100 on home and play, and zero high or critical audit findings. The smoke test printed `WebKit profiles run in CI`; GitHub must run both WebKit profiles. The API Server workflow restarted cleanly and listened on port 8080. M4 remains in progress until the push and public GitHub CI run succeed; no deployment or paid service was used.
 
 ## Historical record before Amendment 6 (superseded acceptance state)
 

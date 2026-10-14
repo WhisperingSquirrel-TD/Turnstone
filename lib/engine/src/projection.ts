@@ -36,6 +36,8 @@ export const VIEW_ALLOW_LIST = [
   'ballots',
   'winner',
   'private',
+  'publicLog',
+  'coordinatorAlerts',
   'fairness',
 ] as const;
 
@@ -104,6 +106,25 @@ export function viewFor(viewer: Viewer, state: State): View {
     },
     ballots,
     winner: state.winner,
+    publicLog: (state.publicLog ?? []).map((entry) => ({
+      seq: entry.seq,
+      at: entry.at,
+      action: entry.action,
+      seatId: entry.seatId,
+      name: state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
+    })),
+    coordinatorAlerts:
+      viewer.kind === 'coordinator'
+        ? (state.coordinatorAlerts ?? []).map((alert) => ({
+            seq: alert.seq,
+            at: alert.at,
+            code: alert.code,
+            seatId: alert.seatId,
+            name:
+              state.seats.find((seat) => seat.id === alert.seatId)?.name ?? '',
+            lockedUntil: alert.lockedUntil,
+          }))
+        : [],
     private: reveal
       ? {
           role: own?.role ?? null,

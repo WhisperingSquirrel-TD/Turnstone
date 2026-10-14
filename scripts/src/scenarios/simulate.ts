@@ -59,7 +59,7 @@ export function scenarioTransitionLimit(seatCount: number, maxCycles: number) {
   return 10 + maxCycles * (seatCount + 8) + Math.max(0, seatCount - 2) * 3;
 }
 
-const INITIAL_TIME = Date.parse('2026-10-13T09:00:00.000Z');
+const INITIAL_TIME = Date.parse('2030-01-01T09:00:00.000Z');
 const taskTags = [
   'family',
   'office',

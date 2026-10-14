@@ -10,6 +10,15 @@ import {
   gameSnapshots,
   games,
 } from './schema/game-runtime';
+import {
+  gameCoordinatorCapabilities,
+  insertGameCoordinatorCapabilitySchema,
+} from './schema/coordinator-access';
+import {
+  gameSeatAccess,
+  gameViewerSessions,
+  insertGameViewerSessionSchema,
+} from './schema';
 
 export type GameStoreResult =
   | { ok: true; version: number; duplicate: boolean }
@@ -19,7 +28,8 @@ export type GameStoreResult =
         | 'GAME_EXISTS'
         | 'GAME_NOT_FOUND'
         | 'IDEMPOTENCY_CONFLICT'
-        | 'VERSION_CONFLICT';
+        | 'VERSION_CONFLICT'
+        | 'SEAT_ACCESS_NOT_FOUND';
       currentVersion?: number;
     };
 
@@ -47,6 +57,10 @@ type CreateGameInput = Omit<IdempotencyInput, 'gameId'> & {
   event: Event;
   snapshot?: SnapshotInput;
   deadline?: DeadlineInput;
+  coordinatorCapability?: {
+    tokenHash: string;
+    expiresAt: Date;
+  };
 };
 
 type AppendEventsInput = IdempotencyInput & {
@@ -54,6 +68,17 @@ type AppendEventsInput = IdempotencyInput & {
   events: Event[];
   snapshot?: SnapshotInput;
   deadline?: DeadlineInput;
+  seatPinUpdate?: {
+    seatId: string;
+    pinSalt: string;
+    pinHash: string;
+  };
+  seatSessionReplacement?: {
+    seatId: string;
+    tokenHash: string;
+    expiresAt: number;
+    revokedAt: number;
+  };
 };
 
 async function findIdempotency(
@@ -170,6 +195,12 @@ export async function createGameWithEvent(
   if (!event || event.type !== 'GameCreated' || event.seq !== 1)
     throw new Error('Initial game event must be GameCreated at sequence 1');
   validateSnapshot(input.snapshot, event.seq);
+  const coordinatorCapability = input.coordinatorCapability
+    ? insertGameCoordinatorCapabilitySchema.parse({
+        gameId: event.id,
+        ...input.coordinatorCapability,
+      })
+    : null;
   const idempotencyInput = { ...input, gameId: event.id };
 
   return db.transaction(async (transaction) => {
@@ -200,6 +231,10 @@ export async function createGameWithEvent(
       return duplicateAfterConflict ?? { ok: false, code: 'GAME_EXISTS' };
     }
 
+    if (coordinatorCapability)
+      await transaction
+        .insert(gameCoordinatorCapabilities)
+        .values(coordinatorCapability);
     await transaction.insert(gameEvents).values({
       gameId: event.id,
       seq: event.seq,
@@ -241,6 +276,20 @@ export async function appendGameEvents(
         code: 'VERSION_CONFLICT',
         currentVersion: game.version,
       };
+    if (input.seatPinUpdate) {
+      const [seatAccess] = await transaction
+        .select({ seatId: gameSeatAccess.seatId })
+        .from(gameSeatAccess)
+        .where(
+          and(
+            eq(gameSeatAccess.gameId, input.gameId),
+            eq(gameSeatAccess.seatId, input.seatPinUpdate.seatId),
+          ),
+        )
+        .for('update')
+        .limit(1);
+      if (!seatAccess) return { ok: false, code: 'SEAT_ACCESS_NOT_FOUND' };
+    }
 
     for (const [index, event] of events.entries()) {
       if (event.seq !== input.expectedVersion + index + 1)
@@ -258,6 +307,50 @@ export async function appendGameEvents(
         recordedAt: new Date(event.at),
       })),
     );
+    if (input.seatPinUpdate) {
+      await transaction
+        .update(gameSeatAccess)
+        .set({
+          pinSalt: input.seatPinUpdate.pinSalt,
+          pinHash: input.seatPinUpdate.pinHash,
+          failedPinAttempts: 0,
+          lockedUntil: null,
+        })
+        .where(
+          and(
+            eq(gameSeatAccess.gameId, input.gameId),
+            eq(gameSeatAccess.seatId, input.seatPinUpdate.seatId),
+          ),
+        );
+    }
+    if (input.seatSessionReplacement) {
+      const session = insertGameViewerSessionSchema.parse({
+        tokenHash: input.seatSessionReplacement.tokenHash,
+        gameId: input.gameId,
+        seatId: input.seatSessionReplacement.seatId,
+        expiresAt: new Date(input.seatSessionReplacement.expiresAt),
+      });
+      await transaction
+        .update(gameSeatAccess)
+        .set({ failedPinAttempts: 0, lockedUntil: null })
+        .where(
+          and(
+            eq(gameSeatAccess.gameId, input.gameId),
+            eq(gameSeatAccess.seatId, input.seatSessionReplacement.seatId),
+          ),
+        );
+      await transaction
+        .update(gameViewerSessions)
+        .set({ revokedAt: new Date(input.seatSessionReplacement.revokedAt) })
+        .where(
+          and(
+            eq(gameViewerSessions.gameId, input.gameId),
+            eq(gameViewerSessions.seatId, input.seatSessionReplacement.seatId),
+            isNull(gameViewerSessions.revokedAt),
+          ),
+        );
+      await transaction.insert(gameViewerSessions).values(session);
+    }
     await transaction
       .update(games)
       .set({

@@ -25,6 +25,10 @@ const coordinatorCommands = new Set([
   'ExtendPhase',
   'EndGameEarly',
 ]);
+
+export function isCoordinatorCommand(commandType: string): boolean {
+  return coordinatorCommands.has(commandType);
+}
 const cycle: Phase[] = [
   'MISSION',
   'DEBATE',

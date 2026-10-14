@@ -667,7 +667,7 @@ The Relaxed option lengthens debates and adds one extra mission only when the fu
 
 **Consequence:** Milestone 0's WebKit gate is satisfied. Milestone 3 needs no further work. Milestone 2 remains unaccepted until its differential reference implementation meets the reviewer's findings and the sample is rerun green.
 
-## D42 — Independent scenario oracle review correction (in progress)
+## D42 — Independent scenario oracle review correction (resolved; pot check pending Milestone 7)
 
 **Context:** The reviewer found that the first reference model trusted engine elimination events and could not detect incorrect votes, murders, shields, missed-task handling or parity. The report also must not claim an independent pot comparison before missions exist.
 
@@ -675,7 +675,7 @@ The Relaxed option lengthens debates and adds one extra mission only when the fu
 
 **Choice:** Replace the outcome-only replay with an independent model that tallies ballots, validates exact random candidate sets and choices, resolves shadow picks, shields, task cancellation, sleeper activation/D12, recruitment trigger eligibility, parity and terminal events. Random choices are now recorded in events. A scripts-only fault-injection seam tests five required engine faults plus an incorrect random candidate set. The report labels pot validation `pending Milestone 7`; it does not compare the model's pot placeholder with engine state.
 
-**Consequence:** These focused oracle and fault-injection tests pass locally. The full scenario sample, complete `pnpm run verify`, GitHub push and CI run are still pending. Recruitment offer/response outcomes cannot be compared until the engine has those events; recruitment trigger conditions are independently derived. Do not claim Milestone 2 acceptance or start Milestone 4 yet.
+**Consequence:** The reviewer accepted Milestone 2 based on GitHub Verify runs #8, #9 and #13; the deterministic sample and oracle mutation checks are green. Pot validation remains explicitly pending Milestone 7. Recruitment offer/response outcomes will be added to the oracle when those engine events exist; this deferred comparison does not block the accepted Milestone 2 scope.
 
 ## D43 — Unanimous Traitor decision after its re-vote (resolved)
 
@@ -780,17 +780,17 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** PostgreSQL is authoritative for append-only events, snapshots, idempotency, deadlines, active-game counts and pseudonymous rate-limit buckets. Use transactional optimistic versions and `FOR UPDATE SKIP LOCKED` deadline claims; use PostgreSQL notifications for cross-instance Socket.IO fan-out. Apply the 80%-of-configured-capacity refusal only to new-game creation. Keep the coverage gate at 85% lines for the declared API runtime modules, with bootstrap and test harness excluded. Keep reduced-scale performance evidence in `docs/CAPACITY.md`; do not extrapolate to production capacity.
 
-**Consequence:** No Redis, paid service, or Replit-only runtime feature was added. Local verification passed with 86.11% line coverage for the declared server-core modules. Commit `af78008b4294b74c7fc9a33cad8c7c3bb523635e` passed GitHub Verify run #9 (`38469104044`) with all 18 jobs green, including both WebKit profiles. The backend implementation does not complete production viewer authentication, guest PIN/device recovery, complete 5–40-player HTTP/socket fault games, or static-host/sibling-origin portability; those are still open PLAN criteria, so Milestone 4 is not recorded as accepted.
+**Consequence:** No Redis, paid service, or Replit-only runtime feature was added. The initial backend commit passed GitHub Verify run #9 (`38469104044`) with all 18 jobs green, including both WebKit profiles. At that 13 October checkpoint, capability identity, PIN/device recovery, fault games and portability remained open; the 14 October implementation and local verification are recorded in D58 and the current Milestone 4 progress section. Milestone 4 still awaits its new public CI run.
 
 ## D49 — Browser smoke tests use a dedicated Vite server locally and in CI (resolved)
 
-**Context:** The local smoke run checked the pre-launch `X-Robots-Tag` but received no header because its base URL was `localhost:80`, the Replit preview proxy, and only CI started the test-owned Vite server. The assertion was correct; the local test target was not.
+**Context:** The local smoke run checked the pre-launch `X-Robots-Tag` but received no header because its base URL was `localhost:80`, the Replit preview proxy, and only CI started the test-owned Vite server. After both environments used the dedicated server, Replit's app preview occupied port 22814 and prevented the test server from starting. The assertions were correct; the local test target needed its own port.
 
 **Options:** Weaken the header assertion; keep testing through the preview proxy; or have both local and CI Playwright runs start and test the same dedicated Vite server.
 
-**Choice:** Keep the assertion and configure Playwright's local and CI runs to launch the party-game Vite server on the dedicated test port. Local smoke continues to skip WebKit only with the explicit `WebKit profiles run in CI` notice; CI runs all four device profiles.
+**Choice:** Keep the assertions and configure Playwright's local and CI runs to launch the party-game Vite server on dedicated port 3000. Local smoke continues to skip WebKit only with the explicit `WebKit profiles run in CI` notice; CI runs all four device profiles.
 
-**Consequence:** The regression test failed on the previous conditional configuration, then passed after the change. Both local browser profiles passed against the dedicated server, including the pre-launch header check. GitHub Verify #12 passed Pixel Chromium, desktop Chromium, iPhone WebKit and iPad WebKit. The run also confirmed the reducer performance fix; its non-blocking artifact-action runtime warnings are recorded in D51.
+**Consequence:** The regression test failed on the previous conditional configuration, then passed after the change. A pipeline test now guards the dedicated port against the running Replit preview. Both local browser profiles passed against the dedicated server, including the pre-launch header check. GitHub Verify #12 passed Pixel Chromium, desktop Chromium, iPhone WebKit and iPad WebKit. The run also confirmed the reducer performance fix; its non-blocking artifact-action runtime warnings are recorded in D51.
 
 ## D50 — Event reducer uses copy-on-write (resolved; CI confirmed)
 
@@ -831,3 +831,57 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 **Choice:** Generate a 256-bit random code, store only its SHA-256 digest, expire it after five minutes, and atomically permit one claim. Exchange it for a 30-day HttpOnly, Secure, SameSite=Lax, host-only session bound to that game. Return only the presenter projection and use generic failures for invalid or reused codes.
 
 **Consequence:** Pairing and session state are PostgreSQL-backed and rate-limited. Tests verify one-time use, hashed storage, cross-game isolation, the cookie attributes, and private Socket.IO room access; no presenter secret is placed in a URL or browser storage.
+
+## D54 — Milestone 2 accepted by reviewer (resolved)
+
+**Context:** The owner’s reviewer accepted the scenario harness after the independent oracle, mutation checks, deterministic CI sharding and sample gates passed.
+
+**Choice:** Record Milestone 2 as accepted based on GitHub Verify runs #8, #9 and #13, including all scenario shards. Keep the oracle-detected multi-murder/terminal-dawn engine regressions as permanent tests; do not weaken or remove them.
+
+**Consequence:** Milestone 2 is closed. Continue from Milestone 4 under the owner’s autopilot rules; the incomplete 40-case §17 golden matrix and Milestone 7 pot check remain explicitly pending.
+
+## D55 — Autopilot and review gates (resolved)
+
+**Context:** The owner instructed continuous milestone work without waiting for review between steps.
+
+**Choice:** Complete milestones in order with strict TDD and a green local `pnpm run verify` before each push. After every push, inspect the public GitHub Actions run for that commit, including job results and annotations; a red or cancelled run blocks the next milestone. Keep the “Status for reviewer” block at the top of `docs/PROGRESS.md` and update it at every push. Record questions in `docs/QUESTIONS.md` with a recommended answer and reasoning; use provisional, feature-scoped defaults only when safe.
+
+**Hard stops:** Stop after Milestone 5 for the owner’s real-phone rehearsal review, and for payment, publishing, deployment, DNS/Vercel work, or any change to §3 security, privacy or secrecy principles. Stay on the free tier; use only `TURNSTONE_GITHUB_TOKEN` through the established one-off credential helper.
+
+**Consequence:** No milestone is considered complete from local checks alone; its public CI result must also be green before work advances.
+
+## D56 — Game-scoped coordinator capability (resolved)
+
+**Context:** Milestone 4 must work before account/passkey sign-in exists, without giving the blind coordinator access to hidden game state.
+
+**Choice:** Create a separate 256-bit opaque coordinator capability at game creation. Deliver it in a host-only, HttpOnly, Secure, SameSite=Lax, game-scoped cookie; persist only its SHA-256 hash and expiry. It authorises logistics commands and the coordinator allow-list projection only. Keep a nullable account-binding column so Milestone 8 can attach passkey identity additively. For transfer, use a short-lived, single-use handoff code claimed from the target’s already authenticated seat device; rotate the capability and revoke the prior token only when the target claims it.
+
+**Consequence:** Coordinator identity is independent of guest seat identity. Handoff codes and raw capabilities never enter URLs or logs; the recipient must prove control of the selected game seat. The cookie/token lifetime follows the existing 30-day session default until the owner changes it.
+
+## D57 — Rehearsal brought forward to Milestone 5 (resolved)
+
+**Context:** The owner wants a playable phone experience as soon as possible.
+
+**Choice:** Milestone 5 includes rehearsal: one real player on a phone, bots filling the remaining seats, fast timers, and all game commands/views flowing through the real server. Apply the confirmed Stackstone talk-slide style, self-hosted Playfair Display and DM Sans, and the role-uniform gold-seal hold-to-reveal. The previous Milestone 7 rehearsal item is moved here.
+
+**Consequence:** At Milestone 5 completion, pause for the owner to play a full rehearsal game on a real phone via the Replit development URL. Keep the pre-launch noindex flag enabled; this is not permission to publish, deploy or enable a paid service.
+
+## D58 — Guest capability, PIN lockout and device recovery (resolved)
+
+**Context:** The owner required production game-scoped identity in Milestone 4 before account/passkey sign-in, while preserving the blind coordinator and no-secret logging rules.
+
+**Options:** Use a test-only identity until Milestone 8; reuse one credential for seats and coordinator; or issue distinct game-scoped capabilities with separate viewer allow-lists.
+
+**Choice:** Keep seat and coordinator credentials separate. Issue cryptographically random opaque capabilities, store only hashes, and deliver them in game-scoped host-only HttpOnly, Secure, SameSite=Lax cookies. Coordinator capability authorises logistics only. Five failed seat-PIN attempts lock recovery for 15 minutes and add a coordinator-only alert. Coordinator reset is publicly logged without recording the PIN. Successful recovery revokes all earlier device sessions and logs the move.
+
+**Consequence:** Integration tests cover capability transfer, lockout/alert separation, reset without PIN disclosure, stale PIN rejection and old-device revocation. The full local `pnpm run verify` is green at 85.28% server line coverage; the M4 push and public CI result remain pending.
+
+## D59 — Single execution of integration tests in aggregate verify (resolved)
+
+**Context:** `pnpm run verify` exceeded the local command budget because it ran `tests/database.integration.test.ts` once through `test:integration` and a second time inside `test:server-coverage`.
+
+**Options:** Keep the duplicate run; remove the integration tests from the coverage gate; or retain both standalone commands while running the shared integration suite once in aggregate verify.
+
+**Choice:** Keep `test:integration` available as a standalone command. The aggregate `verify` runs `test:server-coverage` once, which includes the database integration, HTTP and environment suites and enforces the same 85% server-line threshold. A pipeline regression test guards this composition.
+
+**Consequence:** Integration coverage is not reduced or omitted; the full local `pnpm run verify` now completes within the available run budget and passes.

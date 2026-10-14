@@ -49,12 +49,19 @@ export function evolve(previous: State | null, input: unknown): State {
       taskAssignments: [],
       taskReports: [],
       taskMurderCancelledCycles: [],
+      publicLog: [],
+      coordinatorAlerts: [],
     };
   }
   if (!previous) throw new Error('First event must create a game');
   // State is immutable. Copy only the branch changed by this event rather
   // than cloning every seat, ballot, task and chat message on every replay.
-  const state: State = { ...previous, version: event.seq };
+  const state: State = {
+    ...previous,
+    version: event.seq,
+    publicLog: previous.publicLog ?? [],
+    coordinatorAlerts: previous.coordinatorAlerts ?? [],
+  };
   switch (event.type) {
     case 'SeatJoined':
       state.seats = [
@@ -68,6 +75,38 @@ export function evolve(previous: State | null, input: unknown): State {
           traitorSince: null,
         },
       ];
+      break;
+    case 'SeatPinLocked':
+      state.coordinatorAlerts = [
+        ...state.coordinatorAlerts,
+        {
+          seq: event.seq,
+          at: event.at,
+          code: 'seat_pin_locked',
+          seatId: event.seatId,
+          lockedUntil: event.lockedUntil,
+        },
+      ];
+      break;
+    case 'SeatPinReset':
+    case 'DeviceRecovered':
+      state.publicLog = [
+        ...state.publicLog,
+        {
+          seq: event.seq,
+          at: event.at,
+          action:
+            event.type === 'SeatPinReset'
+              ? 'seat_pin_reset'
+              : 'device_recovered',
+          seatId: event.seatId,
+        },
+      ];
+      if (event.type === 'SeatPinReset') {
+        state.coordinatorAlerts = state.coordinatorAlerts.filter(
+          (alert) => alert.seatId !== event.seatId,
+        );
+      }
       break;
     case 'RolesDealt':
       state.deal = {

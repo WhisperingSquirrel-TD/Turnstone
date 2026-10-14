@@ -91,6 +91,19 @@ export type State = {
     cancelled: boolean;
     traitors: string[];
   }[];
+  publicLog: {
+    seq: number;
+    at: number;
+    action: 'seat_pin_reset' | 'device_recovered';
+    seatId: string;
+  }[];
+  coordinatorAlerts: {
+    seq: number;
+    at: number;
+    code: 'seat_pin_locked';
+    seatId: string;
+    lockedUntil: number;
+  }[];
 };
 export type Result =
   { ok: true; events: Event[] } | { ok: false; code: string };

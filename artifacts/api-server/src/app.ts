@@ -2,6 +2,7 @@ import {
   createHash,
   createHmac,
   randomBytes,
+  randomUUID,
   timingSafeEqual,
 } from 'node:crypto';
 import express, {
@@ -18,7 +19,12 @@ import {
 import {
   apiErrorResponseSchema,
   commandSchema,
+  coordinatorHandoffClaimRequestSchema,
+  coordinatorHandoffClaimResponseSchema,
+  coordinatorHandoffCreateRequestSchema,
+  coordinatorHandoffResponseSchema,
   csrfTokenResponseSchema,
+  eventSchema,
   gameInviteResponseSchema,
   guestJoinRequestSchema,
   gameViewResponseSchema,
@@ -28,11 +34,13 @@ import {
   presenterPairRequestSchema,
   presenterPairResponseSchema,
   presenterPairingResponseSchema,
+  seatPinResetRequestSchema,
   seatRecoveryRequestSchema,
   shortCodeJoinRequestSchema,
 } from '@workspace/shared';
 import {
   decide,
+  isCoordinatorCommand,
   replay,
   replayFrom,
   viewFor,
@@ -44,6 +52,7 @@ import {
 import { hashSeatPin, verifySeatPin } from '@workspace/security/seat-pin';
 import { gameRandom } from '@workspace/security/game-random';
 import {
+  cookieNameForCoordinatorGame,
   cookieNameForGame,
   cookieNameForJoinRequest,
   cookieNameForPresenterGame,
@@ -52,6 +61,7 @@ import { security } from './middlewares/security';
 
 export type AppOptions = {
   resolveViewer?: (request: Request) => Viewer | Promise<Viewer>;
+  resolveCoordinatorViewer?: (request: Request) => Viewer | Promise<Viewer>;
   /** Test-only deterministic clock; the production server never supplies it. */
   testOnlyNow?: () => number;
   /** Test-only deterministic randomness; production always uses Web Crypto. */
@@ -72,6 +82,7 @@ export type AppOptions = {
 
 const csrfCookieName = 'turnstone-csrf';
 const seatSessionDurationMs = 30 * 24 * 60 * 60 * 1_000;
+const coordinatorHandoffDurationMs = 5 * 60 * 1_000;
 const joinRequestCookieDurationMs = 30 * 24 * 60 * 60 * 1_000;
 const joinCodeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -208,6 +219,59 @@ export function createApp(
     }
     return true;
   }
+  async function appendServerEvent(
+    state: State,
+    event: ReturnType<typeof eventSchema.parse>,
+    actor: string,
+    sideEffects?: {
+      seatPinUpdate?: {
+        seatId: string;
+        pinSalt: string;
+        pinHash: string;
+      };
+      seatSessionReplacement?: {
+        seatId: string;
+        tokenHash: string;
+        expiresAt: number;
+        revokedAt: number;
+      };
+    },
+  ): Promise<State | null> {
+    const nextState = replayFrom(state, [event]);
+    const { appendGameEvents } = await import('@workspace/db/game-store');
+    const result = await appendGameEvents({
+      gameId: state.id,
+      actorId: actor,
+      idempotencyKey: randomUUID(),
+      requestHash: requestHash(event),
+      expectedVersion: state.version,
+      events: [event],
+      snapshot: { seq: nextState.version, state: nextState },
+      deadline: {
+        kind: state.phase,
+        dueAt: state.phase === 'SHADOW' ? state.shadowEndAt : state.deadline,
+      },
+      ...sideEffects,
+    });
+    if (!result.ok) {
+      if (result.code === 'VERSION_CONFLICT') return null;
+      throw new Error('Unable to append game event');
+    }
+    await options.publishGame?.(state.id);
+    return nextState;
+  }
+  async function viewerForRequest(request: Request): Promise<Viewer> {
+    return options.resolveViewer
+      ? options.resolveViewer(request)
+      : { kind: 'visitor' };
+  }
+  async function coordinatorViewerForRequest(
+    request: Request,
+  ): Promise<Viewer> {
+    return options.resolveCoordinatorViewer
+      ? options.resolveCoordinatorViewer(request)
+      : viewerForRequest(request);
+  }
   app.get(['/api/healthz', '/healthz'], (_req, res) => {
     res.json(HealthCheckResponse.parse({ status: 'ok' }));
   });
@@ -248,15 +312,9 @@ export function createApp(
         sendError(response, 400, 'Invalid request');
         return;
       }
-      const viewer = options.resolveViewer
-        ? await options.resolveViewer(request)
-        : { kind: 'visitor' as const };
-      const actor = actorFor(viewer);
-      if (actor?.kind !== 'coordinator') {
-        sendError(response, 401, 'Authentication required');
-        return;
-      }
-      if (!(await checkRateLimit(request, 'create-game', actorId(actor), 5))) {
+      const viewer = await coordinatorViewerForRequest(request);
+      const actor: Actor = { kind: 'coordinator' };
+      if (!(await checkRateLimit(request, 'create-game', undefined, 5))) {
         sendError(response, 429, 'Too many requests');
         return;
       }
@@ -273,8 +331,11 @@ export function createApp(
           return;
         }
       }
+      const now = options.testOnlyNow?.() ?? Date.now();
+      const coordinatorToken = randomBytes(32).toString('base64url');
+      const coordinatorExpiresAt = now + seatSessionDurationMs;
       const result = decide(null, parsed.data, {
-        now: options.testOnlyNow?.() ?? Date.now(),
+        now,
         actor,
         random: options.testOnlyRandom ?? gameRandom,
       });
@@ -291,6 +352,12 @@ export function createApp(
         idempotencyKey: parsed.data.idempotencyKey,
         requestHash: requestHash(parsed.data),
         snapshot: { seq: initialState.version, state: initialState },
+        coordinatorCapability: {
+          tokenHash: createHash('sha256')
+            .update(coordinatorToken)
+            .digest('hex'),
+          expiresAt: new Date(coordinatorExpiresAt),
+        },
         deadline: {
           kind: initialState.phase,
           dueAt: initialState.deadline,
@@ -300,15 +367,36 @@ export function createApp(
         sendError(response, 409, 'Command rejected');
         return;
       }
+      if (stored.duplicate && actorFor(viewer)?.kind !== 'coordinator') {
+        sendError(response, 409, 'Command rejected');
+        return;
+      }
       const state = await loadGameState(parsed.data.id);
       if (!state) {
         sendError(response, 404, 'Not found');
         return;
       }
       await options.publishGame?.(parsed.data.id);
+      if (!stored.duplicate)
+        response.cookie(
+          cookieNameForCoordinatorGame(parsed.data.id),
+          coordinatorToken,
+          {
+            httpOnly: true,
+            secure: options.secureCookies ?? false,
+            sameSite: 'lax',
+            path: '/',
+            maxAge: seatSessionDurationMs,
+          },
+        );
       response
         .status(stored.duplicate ? 200 : 201)
-        .json(projectState(state, viewer));
+        .json(
+          projectState(
+            state,
+            stored.duplicate ? viewer : { kind: 'coordinator' },
+          ),
+        );
     } catch {
       sendError(response, 503, 'Service unavailable');
     }
@@ -319,9 +407,7 @@ export function createApp(
         sendError(response, 403, 'Invalid request');
         return;
       }
-      const viewer = options.resolveViewer
-        ? await options.resolveViewer(request)
-        : { kind: 'visitor' as const };
+      const viewer = await coordinatorViewerForRequest(request);
       const actor = actorFor(viewer);
       if (actor?.kind !== 'coordinator') {
         sendError(response, 401, 'Authentication required');
@@ -500,9 +586,7 @@ export function createApp(
   });
   app.get('/api/games/:id/join-requests', async (request, response) => {
     try {
-      const viewer = options.resolveViewer
-        ? await options.resolveViewer(request)
-        : { kind: 'visitor' as const };
+      const viewer = await coordinatorViewerForRequest(request);
       const actor = actorFor(viewer);
       if (actor?.kind !== 'coordinator') {
         sendError(response, 401, 'Authentication required');
@@ -540,9 +624,7 @@ export function createApp(
           sendError(response, 400, 'Invalid request');
           return;
         }
-        const viewer = options.resolveViewer
-          ? await options.resolveViewer(request)
-          : { kind: 'visitor' as const };
+        const viewer = await coordinatorViewerForRequest(request);
         const actor = actorFor(viewer);
         if (actor?.kind !== 'coordinator') {
           sendError(response, 401, 'Authentication required');
@@ -770,13 +852,8 @@ export function createApp(
         return;
       }
       const now = Date.now();
-      const {
-        clearSeatPinFailures,
-        findActiveGameInvite,
-        getSeatAccess,
-        recordSeatPinFailure,
-        replaceSeatViewerSession,
-      } = await import('@workspace/db/seat-access-store');
+      const { findActiveGameInvite, getSeatAccess, recordSeatPinFailure } =
+        await import('@workspace/db/seat-access-store');
       const invite = await findActiveGameInvite(
         { shortCodeHash: codeHash },
         now,
@@ -812,6 +889,24 @@ export function createApp(
         !(await verifySeatPin(parsed.data.pin, access.pinSalt, access.pinHash))
       ) {
         const failure = await recordSeatPinFailure(invite.gameId, seat.id, now);
+        if (failure?.failedPinAttempts === 5 && failure.lockedUntil !== null) {
+          const latestState = await loadGameState(invite.gameId);
+          if (!latestState) throw new Error('Game disappeared during lockout');
+          const lockEvent = eventSchema.parse({
+            seq: latestState.version + 1,
+            at: now,
+            schemaVersion: 1,
+            type: 'SeatPinLocked',
+            seatId: seat.id,
+            lockedUntil: failure.lockedUntil,
+          });
+          const lockedState = await appendServerEvent(
+            latestState,
+            lockEvent,
+            'system:seat-pin-lockout',
+          );
+          if (!lockedState) throw new Error('Could not record PIN lockout');
+        }
         sendError(
           response,
           failure?.lockedUntil !== null && failure?.lockedUntil !== undefined
@@ -821,15 +916,31 @@ export function createApp(
         );
         return;
       }
-      await clearSeatPinFailures(invite.gameId, seat.id);
       const sessionToken = randomBytes(32).toString('base64url');
-      await replaceSeatViewerSession({
-        tokenHash: createHash('sha256').update(sessionToken).digest('hex'),
-        gameId: invite.gameId,
+      const recoveredEvent = eventSchema.parse({
+        seq: state.version + 1,
+        at: now,
+        schemaVersion: 1,
+        type: 'DeviceRecovered',
         seatId: seat.id,
-        expiresAt: now + seatSessionDurationMs,
-        revokedAt: now,
       });
+      const recoveredState = await appendServerEvent(
+        state,
+        recoveredEvent,
+        'system:device-recovery',
+        {
+          seatSessionReplacement: {
+            tokenHash: createHash('sha256').update(sessionToken).digest('hex'),
+            seatId: seat.id,
+            expiresAt: now + seatSessionDurationMs,
+            revokedAt: now,
+          },
+        },
+      );
+      if (!recoveredState) {
+        sendError(response, 409, 'Recovery could not be completed');
+        return;
+      }
       response.cookie(cookieNameForGame(invite.gameId), sessionToken, {
         httpOnly: true,
         secure: options.secureCookies ?? false,
@@ -837,8 +948,9 @@ export function createApp(
         path: '/',
         maxAge: seatSessionDurationMs,
       });
-      await options.publishGame?.(invite.gameId);
-      response.json(projectState(state, { kind: 'player', seatId: seat.id }));
+      response.json(
+        projectState(recoveredState, { kind: 'player', seatId: seat.id }),
+      );
     } catch {
       sendError(response, 503, 'Service unavailable');
     }
@@ -993,6 +1105,149 @@ export function createApp(
       sendError(response, 503, 'Service unavailable');
     }
   });
+  app.post('/api/games/:id/coordinator-handoffs', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const parsed = coordinatorHandoffCreateRequestSchema.safeParse(
+        request.body,
+      );
+      if (!parsed.success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
+      const viewer = await coordinatorViewerForRequest(request);
+      const actor = actorFor(viewer);
+      if (actor?.kind !== 'coordinator') {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      if (
+        !(await checkRateLimit(
+          request,
+          'coordinator-handoff-create',
+          actorId(actor),
+          5,
+        ))
+      ) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      const state = await loadGameState(gameId);
+      const target = state?.seats.find(
+        (seat) =>
+          seat.id === parsed.data.targetSeatId && seat.status === 'alive',
+      );
+      if (
+        !state ||
+        state.phase === 'ARCHIVED' ||
+        state.config.basics.coCoordinators < 1 ||
+        !target
+      ) {
+        sendError(response, 409, 'Transfer could not be completed');
+        return;
+      }
+      const { getSeatAccess } = await import('@workspace/db/seat-access-store');
+      if (!(await getSeatAccess(gameId, target.id))) {
+        sendError(response, 409, 'Transfer could not be completed');
+        return;
+      }
+      const code = randomBytes(32).toString('base64url');
+      const now = Date.now();
+      const { createCoordinatorHandoff } =
+        await import('@workspace/db/coordinator-access-store');
+      await createCoordinatorHandoff({
+        id: randomUUID(),
+        gameId,
+        targetSeatId: target.id,
+        codeHash: createHash('sha256').update(code).digest('hex'),
+        expiresAt: new Date(now + coordinatorHandoffDurationMs),
+      });
+      response
+        .status(201)
+        .json(coordinatorHandoffResponseSchema.parse({ code }));
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.post('/api/coordinator-handoffs/claim', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const parsed = coordinatorHandoffClaimRequestSchema.safeParse(
+        request.body,
+      );
+      if (!parsed.success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
+      const viewer = await viewerForRequest(request);
+      if (viewer.kind !== 'player' || !viewer.seatId) {
+        sendError(response, 401, 'Transfer could not be completed');
+        return;
+      }
+      if (
+        !(await checkRateLimit(
+          request,
+          'coordinator-handoff-claim',
+          actorId({ kind: 'player', seatId: viewer.seatId }),
+          5,
+        ))
+      ) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      const state = await loadGameState(parsed.data.gameId);
+      const seat = state?.seats.find(
+        (candidate) =>
+          candidate.id === viewer.seatId && candidate.status === 'alive',
+      );
+      if (
+        !state ||
+        state.phase === 'ARCHIVED' ||
+        state.config.basics.coCoordinators < 1 ||
+        !seat
+      ) {
+        sendError(response, 401, 'Transfer could not be completed');
+        return;
+      }
+      const now = Date.now();
+      const token = randomBytes(32).toString('base64url');
+      const { claimCoordinatorHandoff } =
+        await import('@workspace/db/coordinator-access-store');
+      const claimed = await claimCoordinatorHandoff({
+        gameId: parsed.data.gameId,
+        targetSeatId: viewer.seatId,
+        codeHash: createHash('sha256').update(parsed.data.code).digest('hex'),
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        sessionExpiresAt: now + seatSessionDurationMs,
+        now,
+      });
+      if (!claimed) {
+        sendError(response, 401, 'Transfer could not be completed');
+        return;
+      }
+      response.cookie(cookieNameForCoordinatorGame(parsed.data.gameId), token, {
+        httpOnly: true,
+        secure: options.secureCookies ?? false,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: seatSessionDurationMs,
+      });
+      response.status(200).json(
+        coordinatorHandoffClaimResponseSchema.parse({
+          status: 'transferred',
+        }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
   app.get('/api/games/:id/view', async (request, response) => {
     try {
       const state = await loadGameState(request.params.id ?? '');
@@ -1000,9 +1255,7 @@ export function createApp(
         sendError(response, 404, 'Not found');
         return;
       }
-      const viewer = options.resolveViewer
-        ? await options.resolveViewer(request)
-        : { kind: 'visitor' as const };
+      const viewer = await viewerForRequest(request);
       response.json(projectState(state, viewer));
     } catch {
       sendError(response, 503, 'Service unavailable');
@@ -1014,9 +1267,7 @@ export function createApp(
         sendError(response, 403, 'Invalid request');
         return;
       }
-      const viewer = options.resolveViewer
-        ? await options.resolveViewer(request)
-        : { kind: 'visitor' as const };
+      const viewer = await coordinatorViewerForRequest(request);
       if (viewer.kind !== 'coordinator' && viewer.kind !== 'host') {
         sendError(response, 401, 'Authentication required');
         return;
@@ -1109,6 +1360,73 @@ export function createApp(
       sendError(response, 503, 'Service unavailable');
     }
   });
+  app.post(
+    '/api/games/:id/seats/:seatId/pin/reset',
+    async (request, response) => {
+      try {
+        if (!hasValidCsrf(request)) {
+          sendError(response, 403, 'Invalid request');
+          return;
+        }
+        const parsed = seatPinResetRequestSchema.safeParse(request.body);
+        if (!parsed.success) {
+          sendError(response, 400, 'Invalid request');
+          return;
+        }
+        const viewer = await coordinatorViewerForRequest(request);
+        if (viewer.kind !== 'coordinator') {
+          sendError(response, 401, 'Authentication required');
+          return;
+        }
+        if (
+          !(await checkRateLimit(request, 'seat-pin-reset', 'coordinator', 10))
+        ) {
+          sendError(response, 429, 'Too many requests');
+          return;
+        }
+        const gameId = request.params.id ?? '';
+        const seatId = request.params.seatId ?? '';
+        const state = await loadGameState(gameId);
+        if (
+          !state ||
+          state.phase === 'ARCHIVED' ||
+          !state.seats.some(
+            (seat) => seat.id === seatId && seat.status !== 'departed',
+          )
+        ) {
+          sendError(response, 404, 'Not found');
+          return;
+        }
+        if (state.version !== parsed.data.expectedVersion) {
+          sendError(response, 409, 'Command rejected');
+          return;
+        }
+        const pin = await hashSeatPin(parsed.data.newPin);
+        const now = Date.now();
+        const event = eventSchema.parse({
+          seq: state.version + 1,
+          at: now,
+          schemaVersion: 1,
+          type: 'SeatPinReset',
+          seatId,
+        });
+        const nextState = await appendServerEvent(state, event, 'coordinator', {
+          seatPinUpdate: {
+            seatId,
+            pinSalt: pin.salt,
+            pinHash: pin.hash,
+          },
+        });
+        if (!nextState) {
+          sendError(response, 409, 'Command rejected');
+          return;
+        }
+        response.json(projectState(nextState, viewer));
+      } catch {
+        sendError(response, 503, 'Service unavailable');
+      }
+    },
+  );
   app.post('/api/games/:id/commands', async (request, response) => {
     try {
       if (!hasValidCsrf(request)) {
@@ -1120,9 +1438,9 @@ export function createApp(
         sendError(response, 400, 'Invalid request');
         return;
       }
-      const viewer = options.resolveViewer
-        ? await options.resolveViewer(request)
-        : { kind: 'visitor' as const };
+      const viewer = isCoordinatorCommand(parsed.data.type)
+        ? await coordinatorViewerForRequest(request)
+        : await viewerForRequest(request);
       const actor = actorFor(viewer);
       if (!actor) {
         sendError(response, 401, 'Authentication required');
