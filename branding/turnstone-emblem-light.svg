@@ -5,14 +5,12 @@
     .seat { fill: #3D3A38; }
     .seat-accent { fill: #9A672B; }
   </style>
-  <g>
-    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4)"/>
-    <rect class="seat seat-accent" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(45 28 28)"/>
-    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(90 28 28)"/>
-    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(135 28 28)"/>
-    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(180 28 28)"/>
-    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(225 28 28)"/>
-    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(270 28 28)"/>
-    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(315 28 28)"/>
-  </g>
+  <rect class="seat" x="24" y="5" width="8" height="12" rx="4" transform="rotate(0 28 28)"/>
+  <rect class="seat seat-accent" x="24" y="5" width="8" height="12" rx="4" transform="rotate(45 28 28)"/>
+  <rect class="seat" x="24" y="5" width="8" height="12" rx="4" transform="rotate(90 28 28)"/>
+  <rect class="seat" x="24" y="5" width="8" height="12" rx="4" transform="rotate(135 28 28)"/>
+  <rect class="seat" x="24" y="5" width="8" height="12" rx="4" transform="rotate(180 28 28)"/>
+  <rect class="seat" x="24" y="5" width="8" height="12" rx="4" transform="rotate(225 28 28)"/>
+  <rect class="seat" x="24" y="5" width="8" height="12" rx="4" transform="rotate(270 28 28)"/>
+  <rect class="seat" x="24" y="5" width="8" height="12" rx="4" transform="rotate(315 28 28)"/>
 </svg>

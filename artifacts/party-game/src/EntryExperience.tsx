@@ -7,6 +7,7 @@ import {
   type ClipboardEvent,
   type ReactNode,
 } from 'react';
+import { Link } from 'react-router-dom';
 import { recommended } from '@workspace/shared';
 import './EntryExperience.css';
 
@@ -86,6 +87,7 @@ export interface EntryExperienceCopy {
   brandDescriptor: string;
   footer: string;
   markAlt: string;
+  turnstoneHomeLink: string;
   headlineFirst: string;
   headlineSecond: string;
   subtitle: string;
@@ -179,9 +181,11 @@ export interface EntryExperienceProps {
   joinCode: string;
   shareUrl: string;
   qrCode: ReactNode;
-  markSrc: string;
-  markHref: string;
-  markNewTab: boolean;
+  gameLogoSrc: string;
+  gameLogoHref: string;
+  stackstoneMarkSrc: string;
+  stackstoneHref: string;
+  stackstoneNewTab: boolean;
   players: EntryPlayer[];
   requiredPlayerCount?: number;
   pendingJoiners: EntryJoiner[];
@@ -226,9 +230,11 @@ export function EntryExperience({
   joinCode,
   shareUrl,
   qrCode,
-  markSrc,
-  markHref,
-  markNewTab,
+  gameLogoSrc,
+  gameLogoHref,
+  stackstoneMarkSrc,
+  stackstoneHref,
+  stackstoneNewTab,
   players,
   requiredPlayerCount = 5,
   pendingJoiners,
@@ -446,16 +452,14 @@ export function EntryExperience({
           <span>{copy.brand.slice(0, -copy.brandGoldSuffix.length)}</span>
           <span className="entry-gilt">{copy.brandGoldSuffix}</span>
         </span>
-        <a
+        <Link
           className="entry-brand-mark-link"
-          href={markHref}
-          target={markNewTab ? '_blank' : undefined}
-          rel={markNewTab ? 'noopener noreferrer' : undefined}
-          aria-label={copy.markAlt}
-          data-testid="link-stackstone-mark"
+          to={gameLogoHref}
+          aria-label={copy.turnstoneHomeLink}
+          data-testid="link-turnstone-mark"
         >
-          <img className="entry-brand-mark" src={markSrc} alt="" />
-        </a>
+          <img className="entry-brand-mark" src={gameLogoSrc} alt="" />
+        </Link>
       </header>
 
       <main
@@ -1256,13 +1260,13 @@ export function EntryExperience({
         <span>{copy.footer}</span>
         <a
           className="entry-footer-mark-link"
-          href={markHref}
-          target={markNewTab ? '_blank' : undefined}
-          rel={markNewTab ? 'noopener noreferrer' : undefined}
+          href={stackstoneHref}
+          target={stackstoneNewTab ? '_blank' : undefined}
+          rel={stackstoneNewTab ? 'noopener noreferrer' : undefined}
           aria-label={copy.markAlt}
           data-testid="link-stackstone-footer-mark"
         >
-          <img className="entry-footer-mark" src={markSrc} alt="" />
+          <img className="entry-footer-mark" src={stackstoneMarkSrc} alt="" />
         </a>
       </footer>
     </div>

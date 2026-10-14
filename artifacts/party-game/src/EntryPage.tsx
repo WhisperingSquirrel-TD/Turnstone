@@ -663,7 +663,8 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       <QRCode value={shareUrl} />
     </Suspense>
   ) : null;
-  const markSrc = `${import.meta.env.BASE_URL}${config.appIconPath}`;
+  const gameLogoSrc = `${import.meta.env.BASE_URL}${config.appIconPath}`;
+  const stackstoneMarkSrc = `${import.meta.env.BASE_URL}${config.stackstoneIconPath}`;
 
   return (
     <EntryExperience
@@ -699,9 +700,11 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       joinCode={joinCode}
       shareUrl={shareUrl}
       qrCode={qrCode}
-      markSrc={markSrc}
-      markHref={config.organisation.url}
-      markNewTab={false}
+      gameLogoSrc={gameLogoSrc}
+      gameLogoHref={config.routes.home}
+      stackstoneMarkSrc={stackstoneMarkSrc}
+      stackstoneHref={config.organisation.url}
+      stackstoneNewTab
       players={playerList}
       requiredPlayerCount={
         Number(new URLSearchParams(location.search).get('players')) ||

@@ -29,7 +29,8 @@ export const config = {
   plannedApiOrigin: 'https://live.turnstone.stackstoneconsulting.co.uk',
   apiOrigin: configuredApiOrigin,
   brandMarkPath: 'brand/stackstone-logo-dark-outlined.svg',
-  appIconPath: 'brand/stackstone-icon-dark-outlined.svg',
+  stackstoneIconPath: 'brand/stackstone-icon-dark-outlined.svg',
+  appIconPath: 'brand/turnstone-emblem-dark.svg',
   socialLinks: [] as const,
   preLaunch: PRE_LAUNCH_NOINDEX,
   organisation: {

@@ -283,19 +283,18 @@ function Shell({
             </div>
           </details>
         )}
-        <a
-          href={config.organisation.url}
-          target={isPlayer ? '_blank' : undefined}
-          rel={isPlayer ? 'noopener noreferrer' : undefined}
-          aria-label={en.app.brandLink}
+        <Link
+          to={config.routes.home}
+          aria-label={en.app.turnstoneHomeLink}
           className="public-home-brand-mark inline-flex min-h-11 min-w-11 items-center justify-center"
+          data-testid="link-turnstone-mark"
         >
           <img
             className="brand-mark-small"
             src={`${import.meta.env.BASE_URL}${config.appIconPath}`}
             alt=""
           />
-        </a>
+        </Link>
       </header>
       <main
         id="main"
@@ -315,7 +314,7 @@ function Shell({
         >
           <img
             className="brand-mark-small"
-            src={`${import.meta.env.BASE_URL}${config.appIconPath}`}
+            src={`${import.meta.env.BASE_URL}${config.stackstoneIconPath}`}
             alt=""
           />
         </a>

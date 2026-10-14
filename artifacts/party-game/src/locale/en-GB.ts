@@ -14,6 +14,7 @@ export const en = {
     refresh: 'Refresh',
     brandName: 'Stackstone Consulting',
     brandLink: 'Visit Stackstone Consulting',
+    turnstoneHomeLink: 'Go to Turnstone home',
   },
   home: {
     eyebrow: 'A game for everyone',
@@ -197,6 +198,7 @@ export const en = {
     brandDescriptor: 'Turnstone',
     footer: 'A Stackstone game',
     markAlt: 'Visit Stackstone Consulting',
+    turnstoneHomeLink: 'Go to Turnstone home',
     headlineFirst: 'Turnstone',
     headlineSecond: '',
     subtitle: 'A game of traitors and faithful.',

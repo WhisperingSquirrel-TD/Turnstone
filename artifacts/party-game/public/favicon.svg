@@ -1,3 +1,12 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Eight-stone circle favicon</title>
+  <rect width="64" height="64" rx="14" fill="#3D3A38"/>
+  <rect x="24" y="5" width="8" height="12" rx="4" fill="#FAFAF5" transform="rotate(0 28 28)"/>
+  <rect x="24" y="5" width="8" height="12" rx="4" fill="#C8944A" transform="rotate(45 28 28)"/>
+  <rect x="24" y="5" width="8" height="12" rx="4" fill="#FAFAF5" transform="rotate(90 28 28)"/>
+  <rect x="24" y="5" width="8" height="12" rx="4" fill="#FAFAF5" transform="rotate(135 28 28)"/>
+  <rect x="24" y="5" width="8" height="12" rx="4" fill="#FAFAF5" transform="rotate(180 28 28)"/>
+  <rect x="24" y="5" width="8" height="12" rx="4" fill="#FAFAF5" transform="rotate(225 28 28)"/>
+  <rect x="24" y="5" width="8" height="12" rx="4" fill="#FAFAF5" transform="rotate(270 28 28)"/>
+  <rect x="24" y="5" width="8" height="12" rx="4" fill="#FAFAF5" transform="rotate(315 28 28)"/>
 </svg>

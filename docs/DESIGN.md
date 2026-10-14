@@ -2,7 +2,7 @@
 
 ## Design authority and shared tokens
 
-Section 25 of `docs/SPEC.md` is the source of truth for colour, typography, motion and visual restrictions. The one token file is `artifacts/party-game/src/theme.css`; do not copy token values into components, prose or test fixtures. Use self-hosted, subsetted Latin WOFF2 files for Playfair Display and DM Sans, with their SIL Open Font Licence files; keep the pair within 80 KB total. Do not load fonts from Google. Reuse only approved, outlined Stackstone marks.
+Section 25 of `docs/SPEC.md` is the source of truth for colour, typography, motion and visual restrictions. The one token file is `artifacts/party-game/src/theme.css`; do not copy token values into components, prose or test fixtures. Use self-hosted, subsetted Latin WOFF2 files for Playfair Display and DM Sans, with their SIL Open Font Licence files; keep the pair within 80 KB total. Do not load fonts from Google. Use the Turnstone emblem in public-site and game headers; use Stackstone marks for Stackstone Consulting links.
 
 Palette: Charcoal `#3D3A38`, Hearth `#2E2B29`, Stone `#55504B`, Gilt `#C8944A`, Candle `#FAFAF5` and Ash `#D4CDC4`. Use one soft diagonal lift towards Stone in the far corner. Use Candle for primary text and Ash for secondary text on the dark surfaces. Gilt is for large text, icons and borders only, including key headline words, focus rings and main actions; never use it for small text on Charcoal.
 
@@ -58,7 +58,7 @@ The first player-screen set makes the real game reachable on a phone without acc
 
 The active-player screen is one fixed frame for every living role. A public phase/countdown sits above the private shield interaction; the same card, pad bounds, typography, controls and status area remain in place before and after a reveal. The hold seal warms only while pressed and snaps dark immediately on release. Role-specific text is removed from the DOM on every cancellation path. Use the real API view and socket updates; do not simulate game state in the browser. The rehearsal path is a real server game with a single human seat, server-controlled practice players and shortened phase deadlines, and it must be labelled as practice before joining.
 
-Self-review against generic defaults: do not use the usual centred gradient hero, stack of rounded cards, oversized feature tiles or repeated shadows. Use the supplied talk-slide type hierarchy, the single approved diagonal lift, restrained gold rules and a compact, direct player flow. The Stackstone mark uses its outlined local asset and stays at the same safe-area position, size and colour for every role. Check 320 px width, 200% text, reduced motion, screen-reader labels, touch targets and home-indicator clearance before visual acceptance.
+Self-review against generic defaults: do not use the usual centred gradient hero, stack of rounded cards, oversized feature tiles or repeated shadows. Use the supplied talk-slide type hierarchy, the single approved diagonal lift, restrained gold rules and a compact, direct player flow. The Turnstone emblem stays in the top-right header at the same safe-area position, size and colour across public and game screens; it links internally to Turnstone home. Stackstone Consulting links continue to use the Stackstone mark and `https://stackstoneconsulting.co.uk/`. Check 320 px width, 200% text, reduced motion, screen-reader labels, touch targets and home-indicator clearance before visual acceptance.
 
 ### Amendment 9 — E1–E4 entry screens and phone-first play
 
@@ -66,7 +66,7 @@ Use the established tokens only: Charcoal `#3D3A38`, Hearth `#2E2B29`, Stone `#5
 
 Owner clarification: Turnstone logo assets contain the standalone symbol only. Render “Turnstone” as separate UI text using the supplied title reference; do not embed the name or a separator dot in an SVG mark. In the shared-table concept, all eight seats are the same size; one gold/brown seat sits at about 1:30. Use Gilt on Charcoal and a darker gold-brown on Candle to preserve contrast.
 
-E1 is a title card with no fields. E2 is a single prompt per screen; code entry is skipped when a valid link/code is already in memory. E3 puts the organiser into the same player roster and then exposes only logistics. E4 rehearsal uses one real seat and server bots. Use safe-area padding and keep all primary actions in the lower thumb zone without moving the fixed Stackstone mark.
+E1 is a title card with no fields. E2 is a single prompt per screen; code entry is skipped when a valid link/code is already in memory. E3 puts the organiser into the same player roster and then exposes only logistics. E4 rehearsal uses one real seat and server bots. Use safe-area padding and keep all primary actions in the lower thumb zone without moving the fixed Turnstone emblem.
 
 ```text
 E1 — /play choice
@@ -196,7 +196,7 @@ FOUNDATIONS
 - Type: Display is Playfair 400 40/44. Title is Playfair 30/36. Subtitle is Playfair 22/30 in Ash. Body is DM Sans 400 17/26. Label is DM Sans 500 15/20. Meta is DM Sans 400 14/20 in Ash. Never all caps. Every title has one key phrase in Gilt (written below as _word_).
 - Colour: background Charcoal, with one subtle 135-degree lift to Stone at the bottom right; surfaces Hearth; Stone 1px dividers; Candle text; Ash secondary text; Gilt for key phrases, 2px focus rings with a 2px offset, progress and primary buttons.
 - Buttons: Primary is a Gilt fill with Hearth text (passes AA). Secondary is transparent with a 1px Gilt border and Candle text. Disabled is a Stone fill with Ash text.
-- Header on every screen and identical for every role: "Turnstone" in Playfair 20 Candle on the left; the outlined Stackstone mark (24px) on the right, linking per section 23. Rehearsal games add a small Meta tag, "Rehearsal".
+- Header on every screen and identical for every role: "Turnstone" in Playfair 20 Candle on the left; the Turnstone emblem (24px) on the right, linking to Turnstone home. Stackstone Consulting links remain separate and point to its website. Rehearsal games add a small Meta tag, "Rehearsal".
 - Motion: 200ms fade between screens and nothing else, except the seal glow, dawn reveal and verdict reveal. With reduced motion, no animation at all.
 
 PRIVATEMOMENT COMPONENT (one component for the deal, votes, shadow, tasks, recruitment and endgame)
@@ -226,7 +226,7 @@ ACCEPTANCE: Playwright screenshots of every screen on iPhone, Pixel and iPad, sa
 
 ## Amendment 10 — responsive home page and public comparison
 
-Keep section 25's Charcoal, Hearth, Stone, Gilt, Candle and Ash tokens, Playfair Display/DM Sans hierarchy, and outlined Stackstone assets. This is a responsive refinement, not a new visual system. Use only one radial Gilt glow behind the hero title text; it must fade to transparent before reaching the hero boundary. Remove box shadows or pseudo-elements that create visible rectangular edges, including on the role demo.
+Keep section 25's Charcoal, Hearth, Stone, Gilt, Candle and Ash tokens, Playfair Display/DM Sans hierarchy, and outlined brand assets. The Turnstone emblem is used in game headers; Stackstone marks remain for Stackstone links. This is a responsive refinement, not a new visual system. Use only one radial Gilt glow behind the hero title text; it must fade to transparent before reaching the hero boundary. Remove box shadows or pseudo-elements that create visible rectangular edges, including on the role demo.
 
 Mobile priorities: the first viewport contains the separate Turnstone title text and tagline, all three entry actions in the lower thumb zone, and the beginning of the demo directly below the title card. Keep the header compact, safe-area aware and non-overlapping at 320px. Buttons and links have at least 44px targets. Use `clamp()` for fluid type and prevent horizontal overflow. At wider widths, place the title card and live hold demo side by side without removing any entry action.
 

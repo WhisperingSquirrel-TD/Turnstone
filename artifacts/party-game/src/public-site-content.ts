@@ -48,11 +48,15 @@ function renderPublicHeader(basePath: string): string {
           <a href="${escapeHtml(`${basePath}play`)}">${escapeHtml(en.nav.play)}</a>
         </div>
       </details>
-      <a class="public-home-brand-mark" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.entry.markAlt)}">
+      <a class="public-home-brand-mark" href="${escapeHtml(basePath)}" aria-label="${escapeHtml(en.app.turnstoneHomeLink)}">
         <img src="${escapeHtml(`${basePath}${config.appIconPath}`)}" alt="" width="32" height="32">
       </a>
     </header>
   `;
+}
+
+function renderStackstoneFooterLink(basePath: string): string {
+  return `<a class="inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.stackstoneIconPath}`)}" alt="" width="32" height="32"></a>`;
 }
 
 function renderFaqDetails(
@@ -235,7 +239,7 @@ export function renderPublicHomeHtml(basePath = '/'): string {
         <a class="public-page-link" href="${escapeHtml(`${base}faq`)}">${escapeHtml(en.publicSite.seeAllQuestions)}</a>
       </section>
     </main>
-    <footer class="public-home-footer">${escapeHtml(en.entry.footer)} <a href="${escapeHtml(`${base}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a></footer>
+    <footer class="public-home-footer"><span>${escapeHtml(en.entry.footer)}</span>${renderStackstoneFooterLink(base)}<a href="${escapeHtml(`${base}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a></footer>
     <span class="sr-only">${appName}</span>
   `;
 }
@@ -252,7 +256,7 @@ export function renderPublicFaqHtml(basePath = '/'): string {
       </section>
       ${renderFactsBlock('public-faq-facts-heading')}
     </main>
-    <footer class="public-home-footer">${escapeHtml(en.entry.footer)}</footer>
+    <footer class="public-home-footer"><span>${escapeHtml(en.entry.footer)}</span>${renderStackstoneFooterLink(base)}</footer>
   `;
 }
 
@@ -281,7 +285,7 @@ export function renderPublicCompareHtml(basePath = '/'): string {
         <div class="public-home-faq">${renderFaqDetails(en.publicSite.faq.slice(-3))}</div>
       </section>
     </main>
-    <footer class="public-home-footer">${escapeHtml(en.entry.footer)}</footer>
+    <footer class="public-home-footer"><span>${escapeHtml(en.entry.footer)}</span>${renderStackstoneFooterLink(base)}</footer>
   `;
 }
 

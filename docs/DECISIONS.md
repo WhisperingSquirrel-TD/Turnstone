@@ -968,3 +968,11 @@ remain mandatory; no deployment or indexing change is authorised.
 **Choice:** Keep logo SVGs symbol-only. For the shared-table concept, use eight equal-sized seats, with one gold/brown seat at about 1:30; remove the separate lockup dot. Use Gilt on Charcoal and a darker gold-brown on Candle for contrast. The refined concept is not integrated into production until the owner approves it.
 
 **Consequence:** The product title remains independent from the logo artwork, and future logo exports must not include the name or a separate separator dot.
+
+## D68 — Turnstone emblem in game headers (resolved)
+
+**Context:** The owner approved the symbol-only Turnstone emblem for use in the product and clarified from the public-home screenshot that every top-right site and game header should identify Turnstone, not Stackstone Consulting.
+
+**Choice:** Use the Turnstone emblem in public-site, game and entry headers, linking internally to Turnstone home. Keep Stackstone marks for Stackstone Consulting links in footers and other explicit builder links; those links continue to target `https://stackstoneconsulting.co.uk/`. Public-site Stackstone links open in the same tab; in-game Stackstone links open a new tab with `noopener noreferrer`.
+
+**Consequence:** The product emblem and builder mark have separate assets and destinations. The Turnstone favicon, app icon and all top-right headers use the game emblem; Stackstone footer links retain their original website destination.
