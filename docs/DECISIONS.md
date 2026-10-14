@@ -958,3 +958,13 @@ noindex. Ask the owner to confirm this interpretation.
 **Consequence:** The SEO score describes launch-ready page content, not the
 unindexable pre-launch preview. The normal production-header and robots tests
 remain mandatory; no deployment or indexing change is authorised.
+
+## D67 — Turnstone symbol-only logo (resolved)
+
+**Context:** The owner selected the shared-table direction and clarified that the logo should contain only the symbol. The product title will always be rendered as text, matching the supplied reference image.
+
+**Options:** Embed the product name in a combined wordmark, or keep a standalone emblem and render the title separately.
+
+**Choice:** Keep logo SVGs symbol-only. For the shared-table concept, use eight equal-sized seats, with one gold/brown seat at about 1:30; remove the separate lockup dot. Use Gilt on Charcoal and a darker gold-brown on Candle for contrast. The refined concept is not integrated into production until the owner approves it.
+
+**Consequence:** The product title remains independent from the logo artwork, and future logo exports must not include the name or a separate separator dot.

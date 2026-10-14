@@ -1,18 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="360" height="88" viewBox="0 0 360 88" class="theme-dark" role="img" aria-labelledby="title desc">
-  <title id="title">Turnstone — The shared table</title>
-  <desc id="desc">Eight equal stones form an open circle around shared negative space, beside the Turnstone wordmark.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" class="theme-dark" role="img" aria-labelledby="title desc">
+  <title id="title">The shared-table emblem</title>
+  <desc id="desc">Seven equal stones and one slightly larger gold seat form an open circle around shared negative space.</desc>
   <style>
     .theme-dark { --ink: #FAFAF5; --accent: #C8944A; }
-    .theme-light { --ink: #3D3A38; --accent: #C8944A; }
+    .theme-light { --ink: #3D3A38; --accent: #9A672B; }
     .mono-dark { --ink: #FAFAF5; --accent: #FAFAF5; }
     .mono-light { --ink: #3D3A38; --accent: #3D3A38; }
     .stone { fill: var(--ink); }
-    .wordmark { fill: var(--ink); }
-    .accent { fill: var(--accent); }
+    .gold-seat { fill: var(--accent); }
   </style>
-  <g transform="translate(8 12)">
+  <g transform="translate(4 4)">
+    <rect class="gold-seat" x="23" y="-4" width="10" height="15" rx="5"/>
     <g class="stone">
-      <rect x="24" y="1" width="8" height="12" rx="4"/>
       <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(45 28 32)"/>
       <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(90 28 32)"/>
       <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(135 28 32)"/>
@@ -22,6 +21,4 @@
       <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(315 28 32)"/>
     </g>
   </g>
-  <circle class="accent" cx="82" cy="44" r="2.5"/>
-  <text class="wordmark" x="99" y="56" font-family="Georgia, 'Times New Roman', serif" font-size="39" font-weight="400" letter-spacing="-1.2">Turnstone</text>
 </svg>

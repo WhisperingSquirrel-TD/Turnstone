@@ -62,7 +62,9 @@ Self-review against generic defaults: do not use the usual centred gradient hero
 
 ### Amendment 9 — E1–E4 entry screens and phone-first play
 
-Use the established tokens only: Charcoal `#3D3A38`, Hearth `#2E2B29`, Stone `#55504B`, Gilt `#C8944A`, Candle `#FAFAF5`, Ash `#D4CDC4`. Headlines/subtitles use Playfair Display 400; controls and body use DM Sans 400/500. Keep the 3rem display, 2.25rem screen-title, 1.5rem section-title, 1rem body and 0.875rem supporting scale. E1 alone adds the single specified soft Gilt candle glow behind the wordmark; do not add other gradients, card walls or generic corporate forms.
+Use the established tokens only: Charcoal `#3D3A38`, Hearth `#2E2B29`, Stone `#55504B`, Gilt `#C8944A`, Candle `#FAFAF5`, Ash `#D4CDC4`. Headlines/subtitles use Playfair Display 400; controls and body use DM Sans 400/500. Keep the 3rem display, 2.25rem screen-title, 1.5rem section-title, 1rem body and 0.875rem supporting scale. E1 alone adds the single specified soft Gilt candle glow behind the separate title text; do not add other gradients, card walls or generic corporate forms.
+
+Owner clarification: Turnstone logo assets contain the standalone symbol only. Render “Turnstone” as separate UI text using the supplied title reference; do not embed the name or a separator dot in an SVG mark. In the shared-table concept, all eight seats are the same size; one gold/brown seat sits at about 1:30. Use Gilt on Charcoal and a darker gold-brown on Candle to preserve contrast.
 
 E1 is a title card with no fields. E2 is a single prompt per screen; code entry is skipped when a valid link/code is already in memory. E3 puts the organiser into the same player roster and then exposes only logistics. E4 rehearsal uses one real seat and server bots. Use safe-area padding and keep all primary actions in the lower thumb zone without moving the fixed Stackstone mark.
 
@@ -136,9 +138,9 @@ E4 — rehearsal setup
 +----------------------------------+
 ```
 
-Alignment and interaction: title and description stay centred with the wordmark at about 56 px and the three E1 choices in the lower thumb zone. E2 shows exactly three progress dots and one decision at a time; six code boxes accept paste and auto-advance. Options expose tap instead of hold, larger text and simple language without adding a role tell. E3 QR/code/approvals share one stable lobby surface; loading and approval updates arrive through realtime state, not a polling loop. E4 has no PIN field. Every public announcement uses one shared projection across player phones, including dawn, verdict, visible ballot reveals, timer, pot, endgame and results; no TV is required. Presenter creation remains disabled by default.
+Alignment and interaction: title and description stay centred with the separate title text at about 56 px and the three E1 choices in the lower thumb zone. E2 shows exactly three progress dots and one decision at a time; six code boxes accept paste and auto-advance. Options expose tap instead of hold, larger text and simple language without adding a role tell. E3 QR/code/approvals share one stable lobby surface; loading and approval updates arrive through realtime state, not a polling loop. E4 has no PIN field. Every public announcement uses one shared projection across player phones, including dawn, verdict, visible ballot reveals, timer, pot, endgame and results; no TV is required. Presenter creation remains disabled by default.
 
-For the wordmark entrance, animate once over 600 ms and breathe the Gilt glow once, then remain still. `prefers-reduced-motion: reduce` removes both animations. The join-wait seal may breathe slowly; all other routine updates remain still. Error copy tells the player what action to take in plain English and never displays backend diagnostics or security tokens.
+For the title-text entrance, animate once over 600 ms and breathe the Gilt glow once, then remain still. `prefers-reduced-motion: reduce` removes both animations. The join-wait seal may breathe slowly; all other routine updates remain still. Error copy tells the player what action to take in plain English and never displays backend diagnostics or security tokens.
 
 ## Milestone 6 — coordinator console and presenter
 
@@ -224,9 +226,9 @@ ACCEPTANCE: Playwright screenshots of every screen on iPhone, Pixel and iPad, sa
 
 ## Amendment 10 — responsive home page and public comparison
 
-Keep section 25's Charcoal, Hearth, Stone, Gilt, Candle and Ash tokens, Playfair Display/DM Sans hierarchy, and outlined Stackstone assets. This is a responsive refinement, not a new visual system. Use only one radial Gilt glow behind the hero wordmark; it must fade to transparent before reaching the hero boundary. Remove box shadows or pseudo-elements that create visible rectangular edges, including on the role demo.
+Keep section 25's Charcoal, Hearth, Stone, Gilt, Candle and Ash tokens, Playfair Display/DM Sans hierarchy, and outlined Stackstone assets. This is a responsive refinement, not a new visual system. Use only one radial Gilt glow behind the hero title text; it must fade to transparent before reaching the hero boundary. Remove box shadows or pseudo-elements that create visible rectangular edges, including on the role demo.
 
-Mobile priorities: the first viewport contains the Turnstone wordmark and tagline, all three entry actions in the lower thumb zone, and the beginning of the demo directly below the title card. Keep the header compact, safe-area aware and non-overlapping at 320px. Buttons and links have at least 44px targets. Use `clamp()` for fluid type and prevent horizontal overflow. At wider widths, place the title card and live hold demo side by side without removing any entry action.
+Mobile priorities: the first viewport contains the separate Turnstone title text and tagline, all three entry actions in the lower thumb zone, and the beginning of the demo directly below the title card. Keep the header compact, safe-area aware and non-overlapping at 320px. Buttons and links have at least 44px targets. Use `clamp()` for fluid type and prevent horizontal overflow. At wider widths, place the title card and live hold demo side by side without removing any entry action.
 
 ```text
 Mobile, 320–414px                  Desktop, 1280px

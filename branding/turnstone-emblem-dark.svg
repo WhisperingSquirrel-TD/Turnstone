@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Eight-stone circle mark</title>
+  <desc id="desc">Eight equal rounded stones form a circle, with one gold stone at about one-thirty.</desc>
+  <style>
+    .seat { fill: #FAFAF5; }
+    .seat-accent { fill: #C8944A; }
+  </style>
+  <g>
+    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4)"/>
+    <rect class="seat seat-accent" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(45 28 28)"/>
+    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(90 28 28)"/>
+    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(135 28 28)"/>
+    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(180 28 28)"/>
+    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(225 28 28)"/>
+    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(270 28 28)"/>
+    <rect class="seat" x="24" y="1" width="8" height="12" rx="4" transform="translate(4 4) rotate(315 28 28)"/>
+  </g>
+</svg>

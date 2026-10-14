@@ -28,3 +28,31 @@ mtime_ms = 1791992607856
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:4e06c17d-98e7-4362-92dc-8f7452853539/0e560851-7e69-41c7-bfde-874c13b0b864/b7b2675c-cac0-4d2a-a7aa-ca32b3d706f6"
 storage_version_token = "1791992730455109"
 content_type = "text/html"
+
+[[outputs]]
+id = "d8SvGuSxSdCgKXXiWfwzm"
+uri = "file://branding/turnstone-brand-assets.zip"
+type = "unspecified"
+title = "Turnstone branding assets"
+description = "ZIP with symbol-only dark/light SVGs, two-background PNG previews, and SVG/PNG/ICO favicon files."
+logical_id = "5285fe9f-33b9-4620-bf8e-181c2af21963"
+content_hash = "sha256:7b940caff86286e46a9fc68784bc2e209799fcda9d86c3649c7dafc5026a3fe4"
+size = 68977
+mtime_ms = 1791993743212
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:4e06c17d-98e7-4362-92dc-8f7452853539/5285fe9f-33b9-4620-bf8e-181c2af21963/bad9f713-1f8c-415a-bb28-f3db653cd742"
+storage_version_token = "1791993771352635"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "JfcsnaHeWWrEvd7AH2qUa"
+uri = "file://branding/turnstone-emblem-preview.png"
+type = "image"
+title = "Turnstone emblem on two backgrounds"
+description = "The same eight-seat symbol on Charcoal and Candle backgrounds, with the gold seat at about 1:30."
+logical_id = "ca0ca273-1185-4bc4-9811-c4ea1f19123c"
+content_hash = "sha256:5ff5d6a66e6fc3fc4e5eea94d923adf9ee8f1e4200079ff3410c94546ecbc173"
+size = 32733
+mtime_ms = 1791993743067
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:4e06c17d-98e7-4362-92dc-8f7452853539/ca0ca273-1185-4bc4-9811-c4ea1f19123c/cd1817b2-7ada-4231-bf9a-39fa55d25dd5"
+storage_version_token = "1791993772012154"
+content_type = "image/png"
