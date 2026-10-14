@@ -8,11 +8,38 @@ test('mobile join and rehearsal stay enabled after the same-origin CSRF handshak
     'CSRF mobile regression runs on Pixel and iPhone profiles',
   );
 
+  const csrfRequests: string[] = [];
+  const csrfFailures: string[] = [];
+  const pageErrors: string[] = [];
+  const redact = (value: string) =>
+    value
+      .replace(/https?:\/\/[^\s)]+/g, '[url]')
+      .replace(/[A-Za-z0-9_-]{32,}/g, '[redacted]');
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === '/api/csrf')
+      csrfRequests.push(`${request.method()} ${url.origin}${url.pathname}`);
+  });
+  page.on('requestfailed', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === '/api/csrf') {
+      csrfFailures.push(
+        `${url.origin}${url.pathname}: ${request.failure()?.errorText ?? 'failed'}`,
+      );
+    }
+  });
+  page.on('pageerror', (error) =>
+    pageErrors.push(redact(`${error.name}: ${error.message.split('\n')[0]}`)),
+  );
   const csrfResponsePromise = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/api/csrf',
   );
   await page.goto('/play');
-  const csrfResponse = await csrfResponsePromise;
+  const csrfResponse = await csrfResponsePromise.catch(() => {
+    throw new Error(
+      `CSRF bootstrap timed out. Requests: ${csrfRequests.join(', ') || 'none'}; failures: ${csrfFailures.join(', ') || 'none'}; page errors: ${pageErrors.join(', ') || 'none'}`,
+    );
+  });
 
   expect(csrfResponse.ok()).toBe(true);
   expect(csrfResponse.headers()['content-type']).toContain('application/json');

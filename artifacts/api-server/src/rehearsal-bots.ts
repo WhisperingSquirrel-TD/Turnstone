@@ -1,10 +1,4 @@
 import { createHash } from 'node:crypto';
-import {
-  appendGameEvents,
-  readGameEvents,
-  readGameEventsAfter,
-  readLatestGameSnapshot,
-} from '@workspace/db/game-store';
 import { decide, replay, replayFrom, type State } from '@workspace/engine';
 import { commandSchema } from '@workspace/shared';
 import { gameRandom } from '@workspace/security/game-random';
@@ -14,6 +8,8 @@ function commandHash(command: unknown): string {
 }
 
 async function loadState(gameId: string): Promise<State | null> {
+  const { readGameEvents, readGameEventsAfter, readLatestGameSnapshot } =
+    await import('@workspace/db/game-store');
   const snapshot = await readLatestGameSnapshot(gameId);
   if (!snapshot) {
     const events = await readGameEvents(gameId);
@@ -105,6 +101,7 @@ export function createRehearsalBotRunner(
   async function processGame(gameId: string): Promise<void> {
     let state = await loadState(gameId);
     if (!state || !state.config.rehearsal.enabled || state.winner) return;
+    const { appendGameEvents } = await import('@workspace/db/game-store');
     let changed = false;
     for (let step = 0; step < 100; step += 1) {
       const next = state.config.rehearsal.botSeatIds

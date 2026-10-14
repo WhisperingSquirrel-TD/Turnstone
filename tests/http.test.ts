@@ -258,6 +258,7 @@ describe('health and readiness', () => {
   it('returns the same not-found response for malformed join request IDs', async () => {
     const app = createApp(async () => {}, {
       rateLimitSecret: 'unit-test-secret',
+      consumeRateLimit: async () => true,
     });
     const response = await request(app).get('/api/join-requests/not-a-token');
     expect(response.status).toBe(404);

@@ -14,6 +14,11 @@ test('home and play are accessible, reloadable and responsive', async ({
     'A Stackstone game',
   );
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  const firstFaqQuestion = page.locator('.public-home-faq summary').first();
+  await expect(firstFaqQuestion).toHaveCSS('min-height', '52px');
+  await expect
+    .poll(async () => (await firstFaqQuestion.boundingBox())?.height ?? 0)
+    .toBeGreaterThanOrEqual(44);
   expect(
     (
       await new AxeBuilder({ page })

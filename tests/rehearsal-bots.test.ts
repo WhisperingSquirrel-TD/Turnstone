@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { nextRehearsalBotCommand } from '../artifacts/api-server/src/rehearsal-bots';
+import { describe, expect, it, vi } from 'vitest';
 import type { State } from '../lib/engine/src/index';
 import { command, advance, fixture } from './support/engine';
+
+async function loadBotPolicy() {
+  return import('../artifacts/api-server/src/rehearsal-bots');
+}
 
 function rehearsalGame(): ReturnType<typeof fixture> {
   const game = fixture(5, {
@@ -15,14 +18,28 @@ function rehearsalGame(): ReturnType<typeof fixture> {
 }
 
 describe('server rehearsal bot policy', () => {
-  it('acknowledges the private deal before any bot receives a choice', () => {
+  it('loads deterministic bot policy without a database URL', async () => {
+    vi.stubEnv('DATABASE_URL', '');
+    vi.resetModules();
+    try {
+      const policy = await loadBotPolicy();
+      expect(policy.nextRehearsalBotCommand).toBeTypeOf('function');
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
+  it('acknowledges the private deal before any bot receives a choice', async () => {
+    const { nextRehearsalBotCommand } = await loadBotPolicy();
     const game = rehearsalGame();
     expect(nextRehearsalBotCommand(game.state, 's1')).toMatchObject({
       type: 'AcknowledgePrivate',
     });
   });
 
-  it('acknowledges a private vote, then selects another living seat', () => {
+  it('acknowledges a private vote, then selects another living seat', async () => {
+    const { nextRehearsalBotCommand } = await loadBotPolicy();
     const game = rehearsalGame();
     advance(game, 'VOTE');
     expect(nextRehearsalBotCommand(game.state, 's1')).toMatchObject({
@@ -42,7 +59,8 @@ describe('server rehearsal bot policy', () => {
     }
   });
 
-  it('uses the same shadow-choice command for Traitors and decoy players', () => {
+  it('uses the same shadow-choice command for Traitors and decoy players', async () => {
+    const { nextRehearsalBotCommand } = await loadBotPolicy();
     const game = rehearsalGame();
     advance(game, 'SHADOW');
     const bot = game.state.seats.find(
