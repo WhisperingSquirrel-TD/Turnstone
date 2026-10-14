@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Turnstone logo exploration</title>
+  <style>
+    :root {
+      --charcoal: #3D3A38;
+      --hearth: #2E2B29;
+      --stone: #55504B;
+      --gilt: #C8944A;
+      --candle: #FAFAF5;
+      --ash: #D4CDC4;
+      --display: Georgia, "Times New Roman", serif;
+      --body: "DM Sans", "Avenir Next", Avenir, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--candle);
+      background: var(--hearth);
+      font-family: var(--body);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    .board {
+      width: min(1180px, 100%);
+      margin-inline: auto;
+      padding: clamp(24px, 5vw, 68px) clamp(18px, 4vw, 48px) 36px;
+    }
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 24px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--stone);
+    }
+    .kicker {
+      margin: 0 0 9px;
+      color: var(--gilt);
+      font-size: 13px;
+      letter-spacing: .04em;
+    }
+    h1 {
+      margin: 0;
+      font: 400 clamp(34px, 5vw, 58px)/1.03 var(--display);
+      letter-spacing: -.04em;
+    }
+    .intro {
+      max-width: 440px;
+      margin: 14px 0 0;
+      color: var(--ash);
+    }
+    .explore-note {
+      align-self: center;
+      max-width: 185px;
+      color: var(--ash);
+      font-size: 13px;
+      text-align: right;
+    }
+    .concept {
+      display: grid;
+      grid-template-columns: minmax(185px, .78fr) minmax(0, 1.6fr);
+      gap: clamp(22px, 4vw, 50px);
+      padding: 34px 0;
+      border-bottom: 1px solid var(--stone);
+    }
+    .concept-copy { align-self: center; }
+    .concept-index {
+      margin: 0 0 8px;
+      color: var(--gilt);
+      font-size: 13px;
+    }
+    h2 {
+      margin: 0 0 10px;
+      font: 400 clamp(24px, 3vw, 32px)/1.12 var(--display);
+    }
+    .hypothesis {
+      margin: 0;
+      color: var(--candle);
+    }
+    .tradeoff {
+      margin: 15px 0 0;
+      padding-left: 13px;
+      border-left: 2px solid var(--gilt);
+      color: var(--ash);
+      font-size: 14px;
+    }
+    .tradeoff strong { color: var(--candle); font-weight: 500; }
+    .tests {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      min-width: 0;
+    }
+    .test {
+      min-width: 0;
+      min-height: 164px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-radius: 3px;
+    }
+    .test.dark { background: var(--charcoal); }
+    .test.light { background: var(--candle); color: var(--charcoal); }
+    .test-label {
+      margin: 0;
+      color: var(--ash);
+      font-size: 12px;
+    }
+    .light .test-label { color: var(--stone); }
+    .full-logo {
+      display: block;
+      width: min(100%, 360px);
+      height: auto;
+      overflow: visible;
+    }
+    .icon-test {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .icon-size {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--ash);
+      font-size: 12px;
+    }
+    .light .icon-size { color: var(--stone); }
+    .icon-32 { width: 32px; height: 32px; display: block; }
+    .mono-test { opacity: .88; }
+    .mono-test svg { width: 24px; height: 24px; display: block; }
+    .mono-label { font-size: 11px; }
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 32px;
+      padding-top: 28px;
+      color: var(--ash);
+      font-size: 14px;
+    }
+    .recommendation {
+      max-width: 680px;
+      margin: 0;
+      color: var(--candle);
+    }
+    .recommendation strong { color: var(--gilt); font-weight: 500; }
+    .footer-note { margin: 0; text-align: right; }
+    svg { flex: none; }
+    .theme-dark { --ink: var(--candle); --accent: var(--gilt); }
+    .theme-light { --ink: var(--charcoal); --accent: var(--gilt); }
+    .mono-dark { --ink: var(--candle); --accent: var(--candle); }
+    .mono-light { --ink: var(--charcoal); --accent: var(--charcoal); }
+    .stone-mark { fill: var(--ink); }
+    .wordmark { fill: var(--ink); }
+    .separator { fill: var(--accent); }
+    @media (max-width: 720px) {
+      header { grid-template-columns: 1fr; align-items: start; gap: 12px; }
+      .explore-note { max-width: none; text-align: left; }
+      .concept { grid-template-columns: 1fr; gap: 20px; }
+      .tests { gap: 8px; }
+      .test { min-height: 138px; padding: 13px; }
+      footer { display: block; }
+      .footer-note { margin-top: 13px; text-align: left; }
+    }
+    @media (max-width: 420px) {
+      .tests { grid-template-columns: 1fr; }
+      .test { min-height: 150px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <header>
+      <div>
+        <p class="kicker">Identity study · not a production mark</p>
+        <h1>Three ways to gather.</h1>
+        <p class="intro">A small visual exploration of the Turnstone icon and wordmark. The palette, role neutrality and existing serif wordmark direction stay fixed; the metaphor and small-size construction change.</p>
+      </div>
+      <p class="explore-note">Large lockup and 32 px icon tested on both Charcoal and Candle. Miniature one-colour proof included.</p>
+    </header>
+
+    <section class="concept" aria-labelledby="shared-title">
+      <div class="concept-copy">
+        <p class="concept-index">Concept A</p>
+        <h2 id="shared-title">The shared table</h2>
+        <p class="hypothesis">Eight equal stones make a complete circle around open space: every player has a place, and no seat carries a tell.</p>
+        <p class="tradeoff"><strong>Trade-off:</strong> the most literal social signal, but the repeated small stones can merge at a glance.</p>
+      </div>
+      <div class="tests">
+        <div class="test dark">
+          <p class="test-label">Charcoal · large lockup</p>
+          <svg class="full-logo theme-dark" viewBox="0 0 360 88" role="img" aria-label="The shared table logo on Charcoal">
+            <g transform="translate(8 12)" class="stone-mark">
+              <rect x="24" y="1" width="8" height="12" rx="4"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(45 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(90 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(135 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(180 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(225 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(270 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(315 28 32)"/>
+            </g>
+            <circle class="separator" cx="82" cy="44" r="2.5"/>
+            <text class="wordmark" x="99" y="56" font-family="Georgia, 'Times New Roman', serif" font-size="39" letter-spacing="-1.2">Turnstone</text>
+          </svg>
+          <div class="icon-test">
+            <div class="icon-size">
+              <svg class="icon-32 theme-dark" viewBox="0 0 64 64" aria-hidden="true">
+                <g transform="translate(4 4)" class="stone-mark">
+                  <rect x="24" y="1" width="8" height="12" rx="4"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(45 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(90 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(135 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(180 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(225 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(270 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(315 28 28)"/>
+                </g>
+              </svg>
+              <span>32 px icon</span>
+            </div>
+            <div class="icon-size mono-test"><svg class="mono-dark" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="24" y="1" width="8" height="12" rx="4"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(45 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(90 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(135 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(180 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(225 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(270 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(315 28 28)"/></g></svg><span class="mono-label">one colour</span></div>
+          </div>
+        </div>
+        <div class="test light">
+          <p class="test-label">Candle · large lockup</p>
+          <svg class="full-logo theme-light" viewBox="0 0 360 88" role="img" aria-label="The shared table logo on Candle">
+            <g transform="translate(8 12)" class="stone-mark">
+              <rect x="24" y="1" width="8" height="12" rx="4"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(45 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(90 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(135 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(180 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(225 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(270 28 32)"/>
+              <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(315 28 32)"/>
+            </g>
+            <circle class="separator" cx="82" cy="44" r="2.5"/>
+            <text class="wordmark" x="99" y="56" font-family="Georgia, 'Times New Roman', serif" font-size="39" letter-spacing="-1.2">Turnstone</text>
+          </svg>
+          <div class="icon-test">
+            <div class="icon-size">
+              <svg class="icon-32 theme-light" viewBox="0 0 64 64" aria-hidden="true">
+                <g transform="translate(4 4)" class="stone-mark">
+                  <rect x="24" y="1" width="8" height="12" rx="4"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(45 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(90 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(135 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(180 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(225 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(270 28 28)"/>
+                  <rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(315 28 28)"/>
+                </g>
+              </svg>
+              <span>32 px icon</span>
+            </div>
+            <div class="icon-size mono-test"><svg class="mono-light" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="24" y="1" width="8" height="12" rx="4"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(45 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(90 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(135 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(180 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(225 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(270 28 28)"/><rect x="24" y="1" width="8" height="12" rx="4" transform="rotate(315 28 28)"/></g></svg><span class="mono-label">one colour</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="concept" aria-labelledby="standing-title">
+      <div class="concept-copy">
+        <p class="concept-index">Concept B</p>
+        <h2 id="standing-title">The standing-stone circle</h2>
+        <p class="hypothesis">Four matching monoliths gather around a low round table, giving the mark a more atmospheric game-night presence.</p>
+        <p class="tradeoff"><strong>Trade-off:</strong> the clearest ritual mood, with more enclosed detail and less breathing room at favicon scale.</p>
+      </div>
+      <div class="tests">
+        <div class="test dark">
+          <p class="test-label">Charcoal · large lockup</p>
+          <svg class="full-logo theme-dark" viewBox="0 0 360 88" role="img" aria-label="The standing-stone circle logo on Charcoal">
+            <g transform="translate(8 12)" class="stone-mark"><rect x="24" y="1" width="8" height="17" rx="4"/><rect x="24" y="45" width="8" height="17" rx="4"/><rect x="1" y="23" width="8" height="17" rx="4"/><rect x="47" y="23" width="8" height="17" rx="4"/><circle cx="28" cy="32" r="7"/></g>
+            <circle class="separator" cx="82" cy="44" r="2.5"/>
+            <text class="wordmark" x="99" y="56" font-family="Georgia, 'Times New Roman', serif" font-size="39" letter-spacing="-1.2">Turnstone</text>
+          </svg>
+          <div class="icon-test">
+            <div class="icon-size"><svg class="icon-32 theme-dark" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="24" y="1" width="8" height="17" rx="4"/><rect x="24" y="45" width="8" height="17" rx="4"/><rect x="1" y="23" width="8" height="17" rx="4"/><rect x="47" y="23" width="8" height="17" rx="4"/><circle cx="28" cy="32" r="7"/></g></svg><span>32 px icon</span></div>
+            <div class="icon-size mono-test"><svg class="mono-dark" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="24" y="1" width="8" height="17" rx="4"/><rect x="24" y="45" width="8" height="17" rx="4"/><rect x="1" y="23" width="8" height="17" rx="4"/><rect x="47" y="23" width="8" height="17" rx="4"/><circle cx="28" cy="32" r="7"/></g></svg><span class="mono-label">one colour</span></div>
+          </div>
+        </div>
+        <div class="test light">
+          <p class="test-label">Candle · large lockup</p>
+          <svg class="full-logo theme-light" viewBox="0 0 360 88" role="img" aria-label="The standing-stone circle logo on Candle">
+            <g transform="translate(8 12)" class="stone-mark"><rect x="24" y="1" width="8" height="17" rx="4"/><rect x="24" y="45" width="8" height="17" rx="4"/><rect x="1" y="23" width="8" height="17" rx="4"/><rect x="47" y="23" width="8" height="17" rx="4"/><circle cx="28" cy="32" r="7"/></g>
+            <circle class="separator" cx="82" cy="44" r="2.5"/>
+            <text class="wordmark" x="99" y="56" font-family="Georgia, 'Times New Roman', serif" font-size="39" letter-spacing="-1.2">Turnstone</text>
+          </svg>
+          <div class="icon-test">
+            <div class="icon-size"><svg class="icon-32 theme-light" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="24" y="1" width="8" height="17" rx="4"/><rect x="24" y="45" width="8" height="17" rx="4"/><rect x="1" y="23" width="8" height="17" rx="4"/><rect x="47" y="23" width="8" height="17" rx="4"/><circle cx="28" cy="32" r="7"/></g></svg><span>32 px icon</span></div>
+            <div class="icon-size mono-test"><svg class="mono-light" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="24" y="1" width="8" height="17" rx="4"/><rect x="24" y="45" width="8" height="17" rx="4"/><rect x="1" y="23" width="8" height="17" rx="4"/><rect x="47" y="23" width="8" height="17" rx="4"/><circle cx="28" cy="32" r="7"/></g></svg><span class="mono-label">one colour</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="concept" aria-labelledby="token-title">
+      <div class="concept-copy">
+        <p class="concept-index">Concept C</p>
+        <h2 id="token-title">The turnstone token</h2>
+        <p class="hypothesis">Three equal stepping stones pivot around a quiet centre, translating the existing stacked-stone language into a compact game token.</p>
+        <p class="tradeoff"><strong>Trade-off:</strong> the sharpest 32 px silhouette and closest brand link, but the gathering metaphor is less literal.</p>
+      </div>
+      <div class="tests">
+        <div class="test dark">
+          <p class="test-label">Charcoal · large lockup</p>
+          <svg class="full-logo theme-dark" viewBox="0 0 360 88" role="img" aria-label="The turnstone token logo on Charcoal">
+            <g transform="translate(8 12)" class="stone-mark"><rect x="20" y="2" width="16" height="9" rx="4.5"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(120 28 32)"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(240 28 32)"/></g>
+            <circle class="separator" cx="82" cy="44" r="2.5"/>
+            <text class="wordmark" x="99" y="56" font-family="Georgia, 'Times New Roman', serif" font-size="39" letter-spacing="-1.2">Turnstone</text>
+          </svg>
+          <div class="icon-test">
+            <div class="icon-size"><svg class="icon-32 theme-dark" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="20" y="2" width="16" height="9" rx="4.5"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(120 28 28)"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(240 28 28)"/></g></svg><span>32 px icon</span></div>
+            <div class="icon-size mono-test"><svg class="mono-dark" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="20" y="2" width="16" height="9" rx="4.5"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(120 28 28)"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(240 28 28)"/></g></svg><span class="mono-label">one colour</span></div>
+          </div>
+        </div>
+        <div class="test light">
+          <p class="test-label">Candle · large lockup</p>
+          <svg class="full-logo theme-light" viewBox="0 0 360 88" role="img" aria-label="The turnstone token logo on Candle">
+            <g transform="translate(8 12)" class="stone-mark"><rect x="20" y="2" width="16" height="9" rx="4.5"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(120 28 32)"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(240 28 32)"/></g>
+            <circle class="separator" cx="82" cy="44" r="2.5"/>
+            <text class="wordmark" x="99" y="56" font-family="Georgia, 'Times New Roman', serif" font-size="39" letter-spacing="-1.2">Turnstone</text>
+          </svg>
+          <div class="icon-test">
+            <div class="icon-size"><svg class="icon-32 theme-light" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="20" y="2" width="16" height="9" rx="4.5"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(120 28 28)"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(240 28 28)"/></g></svg><span>32 px icon</span></div>
+            <div class="icon-size mono-test"><svg class="mono-light" viewBox="0 0 64 64" aria-hidden="true"><g transform="translate(4 4)" class="stone-mark"><rect x="20" y="2" width="16" height="9" rx="4.5"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(120 28 28)"/><rect x="20" y="2" width="16" height="9" rx="4.5" transform="rotate(240 28 28)"/></g></svg><span class="mono-label">one colour</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <footer>
+      <p class="recommendation"><strong>Recommendation:</strong> take Concept A forward. Its clear ring of equal seats honours the owner’s stone-circle idea directly, while the open centre keeps the silhouette less crowded than the standing-stone version at small sizes. Concept C is the fallback if the 32 px icon proves to be the dominant touchpoint.</p>
+      <p class="footer-note">Exploration only<br>SVG source files sit beside this board.</p>
+    </footer>
+  </main>
+</body>
+</html>

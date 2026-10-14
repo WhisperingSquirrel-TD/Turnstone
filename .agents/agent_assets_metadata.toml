@@ -14,3 +14,17 @@ mtime_ms = 1791836587823
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:4e06c17d-98e7-4362-92dc-8f7452853539/c9731f8a-08bd-48f3-adc2-3c18c556e0a2/3247b244-cb54-486c-81e0-8c69517a2b95"
 storage_version_token = "1791837083871414"
 content_type = "image/svg+xml"
+
+[[outputs]]
+id = "MP4vFgQejdzQdr5pgO1XF"
+uri = "file://docs/brand/turnstone-logo-exploration/index.html"
+type = "html"
+title = "Turnstone logo concepts"
+description = "Three role-neutral logo directions based on the Stackstone stone mark, shown on dark and light backgrounds with 32 px and one-colour checks."
+logical_id = "0e560851-7e69-41c7-bfde-874c13b0b864"
+content_hash = "sha256:c861a5e5ceced186bb9c0f83ac0485d9ca1e3b417b22e16297cdc665542b0b0b"
+size = 20578
+mtime_ms = 1791992607856
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:4e06c17d-98e7-4362-92dc-8f7452853539/0e560851-7e69-41c7-bfde-874c13b0b864/b7b2675c-cac0-4d2a-a7aa-ca32b3d706f6"
+storage_version_token = "1791992730455109"
+content_type = "text/html"
