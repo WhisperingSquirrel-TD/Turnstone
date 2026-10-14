@@ -175,9 +175,11 @@ function CsrfProvider({ children }: { children: ReactNode }) {
 function Shell({
   children,
   isPlayer = false,
+  privateMode = false,
 }: {
   children: ReactNode;
   isPlayer?: boolean;
+  privateMode?: boolean;
 }) {
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(
@@ -205,7 +207,9 @@ function Shell({
     return () => displayMode.removeEventListener('change', updateDisplayMode);
   }, []);
   return (
-    <div className="safe-page flex min-h-[100dvh] flex-col">
+    <div
+      className={`safe-page flex min-h-[100dvh] flex-col${privateMode ? ' private-moment-shell' : ''}`}
+    >
       <a
         href="#main"
         className="absolute left-3 top-3 z-10 -translate-y-20 rounded-sm bg-candle px-3 py-2 font-medium text-charcoal focus:translate-y-0"
@@ -321,26 +325,28 @@ function Shell({
       <main
         id="main"
         tabIndex={-1}
-        className="mx-auto w-full max-w-5xl flex-1 py-10 sm:py-16"
+        className={`mx-auto w-full max-w-5xl flex-1 py-10 sm:py-16${privateMode ? ' private-moment-main' : ''}`}
       >
         {children}
       </main>
-      <footer className="mx-auto mt-8 flex w-full max-w-5xl items-center justify-between border-t border-stone py-5 text-sm text-ash">
-        <small>{config.byline}</small>
-        <a
-          href={config.organisation.url}
-          target={isPlayer ? '_blank' : undefined}
-          rel={isPlayer ? 'noopener noreferrer' : undefined}
-          aria-label={en.app.brandLink}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center"
-        >
-          <img
-            className="brand-mark-small"
-            src={`${import.meta.env.BASE_URL}${config.appIconPath}`}
-            alt=""
-          />
-        </a>
-      </footer>
+      {!privateMode && (
+        <footer className="mx-auto mt-8 flex w-full max-w-5xl items-center justify-between border-t border-stone py-5 text-sm text-ash">
+          <small>{config.byline}</small>
+          <a
+            href={config.organisation.url}
+            target={isPlayer ? '_blank' : undefined}
+            rel={isPlayer ? 'noopener noreferrer' : undefined}
+            aria-label={en.app.brandLink}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center"
+          >
+            <img
+              className="brand-mark-small"
+              src={`${import.meta.env.BASE_URL}${config.appIconPath}`}
+              alt=""
+            />
+          </a>
+        </footer>
+      )}
     </div>
   );
 }
@@ -584,12 +590,15 @@ function PlayerGame() {
   const [shielded, setShielded] = useState(false);
   const [shieldPending, setShieldPending] = useState(false);
   const [held, setHeld] = useState(false);
+  const [roleSeen, setRoleSeen] = useState(false);
   const [shieldCountdown, setShieldCountdown] = useState(5);
   const [holdProgress, setHoldProgress] = useState(0);
   const [privateView, setPrivateView] = useState<PrivateView | null>(null);
+  const [privateCovered, setPrivateCovered] = useState(false);
   const [holdMessage, setHoldMessage] = useState('');
   const [selected, setSelected] = useState('');
   const [confirmChoice, setConfirmChoice] = useState(false);
+  const [actionDone, setActionDone] = useState(false);
   const [commandMessage, setCommandMessage] = useState('');
   const [installMessage, setInstallMessage] = useState('');
   const [wakeLockFallback, setWakeLockFallback] = useState(false);
@@ -630,6 +639,10 @@ function PlayerGame() {
     ),
   );
   const inPrivateMoment = Boolean(full && (phaseIsPrivate || notesOpen));
+  const shieldRequired = Boolean(
+    full &&
+    (['DEAL', 'SHADOW', 'FINAL_VOTE'].includes(full.phase) || notesOpen),
+  );
   const isActionPhase = Boolean(
     full &&
     ['VOTE', 'SHADOW', 'FINAL_VOTE', 'FINAL_BANISH'].includes(full.phase),
@@ -638,7 +651,9 @@ function PlayerGame() {
   const privateOptions = privateView?.options ?? [];
   const choices =
     full?.phase === 'VOTE' || full?.phase === 'FINAL_BANISH'
-      ? eligibleSeats.map(({ id: seatId, name }) => ({ id: seatId, name }))
+      ? eligibleSeats
+          .filter((seat) => seat.id !== full.viewerSeatId)
+          .map(({ id: seatId, name }) => ({ id: seatId, name }))
       : full?.phase === 'SHADOW'
         ? privateOptions
         : full?.phase === 'FINAL_VOTE'
@@ -689,6 +704,7 @@ function PlayerGame() {
       privateResult.current = null;
       setSelected('');
       setConfirmChoice(false);
+      setActionDone(false);
       setCommandMessage('');
       setNotesStatus('');
       setHoldMessage('');
@@ -708,7 +724,10 @@ function PlayerGame() {
   const activeGame = Boolean(
     full && !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
   );
-  const showShieldCard = Boolean(full && inPrivateMoment && !shielded);
+  const isDealPhase = full?.phase === 'DEAL';
+  const showShieldCard = Boolean(
+    full && inPrivateMoment && shieldRequired && !shielded,
+  );
 
   useEffect(() => {
     if (!inPrivateMoment) {
@@ -717,15 +736,18 @@ function PlayerGame() {
       return;
     }
     clearPrivate();
-    setShielded(false);
-    setShieldCountdown(5);
+    setShielded(!shieldRequired);
+    setRoleSeen(false);
+    setPrivateCovered(false);
+    setShieldCountdown(shieldRequired ? 5 : 0);
+    if (!shieldRequired) return;
     const startedAt = Date.now();
     const timer = window.setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
       setShieldCountdown(Math.max(0, 5 - elapsedSeconds));
     }, 100);
     return () => window.clearInterval(timer);
-  }, [privateStepKey, inPrivateMoment, clearPrivate]);
+  }, [privateStepKey, inPrivateMoment, shieldRequired, clearPrivate]);
 
   useEffect(() => {
     const dialog = shieldDialog.current;
@@ -733,6 +755,19 @@ function PlayerGame() {
     if (showShieldCard && !dialog.open) dialog.showModal();
     if (!showShieldCard && dialog.open) dialog.close();
   }, [showShieldCard]);
+
+  useEffect(() => {
+    if (!held) return;
+    const root = document.documentElement;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    root.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      root.style.overflow = previousRootOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [held]);
 
   useEffect(() => {
     if (!activeGame) {
@@ -776,8 +811,11 @@ function PlayerGame() {
     };
     const coverPrivate = () => {
       cancelPrivate();
-      setShielded(false);
-      setShieldCountdown(5);
+      const requiresDealReshield = shieldRequired && isDealPhase;
+      setShielded(!requiresDealReshield);
+      setShieldCountdown(requiresDealReshield ? 5 : 0);
+      setRoleSeen(false);
+      setPrivateCovered(Boolean(inPrivateMoment && !isDealPhase));
     };
     const onVisibility = () => {
       if (document.visibilityState === 'visible') refetch();
@@ -804,7 +842,48 @@ function PlayerGame() {
       window.removeEventListener('pagehide', coverPrivate);
       cancelPrivate();
     };
-  }, [id, queryClient, cancelPrivate]);
+  }, [
+    id,
+    queryClient,
+    cancelPrivate,
+    shieldRequired,
+    inPrivateMoment,
+    isDealPhase,
+  ]);
+
+  useEffect(() => {
+    if (
+      !inPrivateMoment ||
+      !shielded ||
+      !privateView ||
+      isDealPhase ||
+      actionDone
+    )
+      return;
+    let timer: number;
+    const resetIdleTimer = () => {
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        cancelPrivate();
+        setPrivateCovered(true);
+      }, 30_000);
+    };
+    resetIdleTimer();
+    window.addEventListener('pointerdown', resetIdleTimer, true);
+    window.addEventListener('keydown', resetIdleTimer);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointerdown', resetIdleTimer, true);
+      window.removeEventListener('keydown', resetIdleTimer);
+    };
+  }, [
+    inPrivateMoment,
+    shielded,
+    privateView,
+    isDealPhase,
+    actionDone,
+    cancelPrivate,
+  ]);
 
   useEffect(() => {
     document.title = config.appName;
@@ -826,31 +905,91 @@ function PlayerGame() {
   }, [gameQuery.data]);
 
   async function acknowledge() {
-    if (!token || shieldPending || shieldCountdown > 0) return;
-    if (notesOpen && !phaseIsPrivate) {
+    if (!token || shieldPending || shieldCountdown > 0 || !shieldRequired)
+      return;
+    setShieldPending(true);
+    setHoldMessage('');
+    try {
+      if (full?.phase === 'DEAL') {
+        await command.mutateAsync({
+          id,
+          data: {
+            type: 'AcknowledgePrivate',
+            idempotencyKey: idempotencyKey(),
+          },
+        });
+        command.reset();
+      }
       setShielded(true);
-      setHoldMessage('');
+      if (full?.phase !== 'DEAL') {
+        const response = await reveal.mutateAsync({
+          id,
+          ...(notesOpen && !phaseIsPrivate
+            ? { data: { purpose: 'notes' as const } }
+            : {}),
+        });
+        const privateData = isFullView(response.view)
+          ? response.view.private
+          : null;
+        if (!privateData) {
+          setHoldMessage(en.game.privateUnavailable);
+        } else {
+          setPrivateView(privateData);
+        }
+      }
+    } catch {
+      command.reset();
+      reveal.reset();
+      setShielded(false);
+      setHoldMessage(en.game.shieldRetry);
+    } finally {
+      setShieldPending(false);
+      reveal.reset();
+    }
+  }
+
+  async function restorePrivate() {
+    if (!full || !token || !inPrivateMoment || !privateCovered) return;
+    if (full.phase === 'VOTE' || full.phase === 'FINAL_BANISH') {
+      setPrivateCovered(false);
       return;
     }
     setShieldPending(true);
     setHoldMessage('');
     try {
-      await command.mutateAsync({
+      const response = await reveal.mutateAsync({
         id,
-        data: { type: 'AcknowledgePrivate', idempotencyKey: idempotencyKey() },
+        ...(notesOpen && !phaseIsPrivate
+          ? { data: { purpose: 'notes' as const } }
+          : {}),
       });
-      command.reset();
-      setShielded(true);
+      const privateData = isFullView(response.view)
+        ? response.view.private
+        : null;
+      if (!privateData) {
+        setHoldMessage(en.game.privateUnavailable);
+      } else {
+        setPrivateView(privateData);
+        setPrivateCovered(false);
+      }
     } catch {
-      command.reset();
-      setHoldMessage(en.game.shieldRetry);
+      setHoldMessage(en.game.privateUnavailable);
     } finally {
       setShieldPending(false);
+      reveal.reset();
     }
   }
 
   function beginHold() {
-    if (!shielded || !token || heldRef.current || reveal.isPending) return;
+    if (
+      !shielded ||
+      full?.phase !== 'DEAL' ||
+      notesOpen ||
+      !token ||
+      heldRef.current ||
+      reveal.isPending
+    )
+      return;
     heldRef.current = true;
     const version = ++holdVersion.current;
     focusTime.current = Date.now();
@@ -866,6 +1005,7 @@ function PlayerGame() {
         privateResult.current
       ) {
         setPrivateView(privateResult.current);
+        setRoleSeen(true);
         setHoldProgress(100);
         if (progressTimer.current) clearInterval(progressTimer.current);
       }
@@ -890,6 +1030,7 @@ function PlayerGame() {
           privateResult.current = privateData;
           if (Date.now() - focusTime.current >= 500) {
             setPrivateView(privateData);
+            setRoleSeen(true);
             setHoldProgress(100);
             if (progressTimer.current) clearInterval(progressTimer.current);
           }
@@ -943,9 +1084,19 @@ function PlayerGame() {
     try {
       await command.mutateAsync({ id, data: payload });
       command.reset();
-      setCommandMessage(en.game.recorded);
+      await command.mutateAsync({
+        id,
+        data: {
+          type: 'AcknowledgePrivate',
+          idempotencyKey: idempotencyKey(),
+        },
+      });
+      command.reset();
+      setActionDone(true);
+      setCommandMessage(en.game.waitingForEveryone);
       setSelected('');
       setConfirmChoice(false);
+      setPrivateView(null);
       await gameQuery.refetch();
     } catch {
       command.reset();
@@ -955,9 +1106,38 @@ function PlayerGame() {
     }
   }
 
+  async function moveOn() {
+    if (!full?.canAdvancePhase || command.isPending) return;
+    setCommandMessage('');
+    try {
+      await command.mutateAsync({
+        id,
+        data: {
+          type: 'AdvancePhase',
+          expectedVersion: full.version,
+          idempotencyKey: idempotencyKey(),
+        },
+      });
+      command.reset();
+      setActionDone(false);
+      setPrivateView(null);
+      setSelected('');
+      setConfirmChoice(false);
+      await gameQuery.refetch();
+    } catch {
+      command.reset();
+      const refreshed = await gameQuery.refetch();
+      setCommandMessage(
+        refreshed.data?.view.phase === full.phase
+          ? en.game.moveOnFailed
+          : '',
+      );
+    }
+  }
+
   async function saveNotes() {
     const text = notesDraft.trim();
-    if (!privateView || !held || !notesOpen || text.length === 0) return;
+    if (!privateView || !notesOpen || text.length === 0) return;
     setNotesStatus('');
     if (privateView.role === 'traitor') {
       try {
@@ -995,8 +1175,14 @@ function PlayerGame() {
   }
 
   return (
-    <Shell isPlayer>
-      <section className="mx-auto w-full max-w-[480px]">
+    <Shell isPlayer privateMode={inPrivateMoment}>
+      <section
+        className={
+          inPrivateMoment
+            ? 'private-player-stage'
+            : 'mx-auto w-full max-w-[480px]'
+        }
+      >
         {gameQuery.isLoading && (
           <div
             aria-label={en.game.loadingLabel}
@@ -1037,7 +1223,13 @@ function PlayerGame() {
           </div>
         )}
         {full && (
-          <div>
+          <div
+            className={full.canAdvancePhase && activeGame ? 'pb-24' : ''}
+            data-testid="player-game"
+            data-phase={full.phase}
+            data-progress-done={full.progress.done}
+            data-progress-total={full.progress.total}
+          >
             {full.phase === 'LOBBY' && (
               <section className="status-rule mb-7 pt-5">
                 {install.available && (
@@ -1063,59 +1255,50 @@ function PlayerGame() {
                 )}
               </section>
             )}
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h1 className="display mt-2 text-4xl leading-tight sm:text-5xl">
-                  {phaseLabel(full.phase)}
-                </h1>
-              </div>
-              {secondsLeft !== null && (
-                <p
-                  className="text-sm text-ash"
-                  aria-label={en.game.secondsRemaining(secondsLeft)}
-                >
-                  {en.game.timeLeft}{' '}
-                  <span className="gold ml-2 font-medium tabular-nums">
-                    {Math.floor(secondsLeft / 60)}:
-                    {String(secondsLeft % 60).padStart(2, '0')}
-                  </span>
-                </p>
-              )}
-            </div>
-            {activeGame && (
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                {typeof document !== 'undefined' &&
-                  typeof document.documentElement.requestFullscreen ===
-                    'function' && (
-                    <button
-                      className="quiet-action"
-                      type="button"
-                      onClick={() => void enterFullScreen()}
-                    >
-                      {en.game.fullscreen}
-                    </button>
-                  )}
-                {wakeLockFallback && (
-                  <p role="status" className="text-sm text-ash">
-                    {en.game.wakeLockFallback}
-                  </p>
-                )}
-                {fullscreenMessage && (
-                  <p role="status" className="text-sm text-ash">
-                    {fullscreenMessage}
+            {!inPrivateMoment && (
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <h1 className="display mt-2 text-4xl leading-tight sm:text-5xl">
+                    {phaseLabel(full.phase)}
+                  </h1>
+                </div>
+                {secondsLeft !== null && (
+                  <p
+                    className="text-sm text-ash"
+                    aria-label={
+                      secondsLeft === 0
+                        ? en.game.movingOn
+                        : en.game.secondsRemaining(secondsLeft)
+                    }
+                    role={secondsLeft === 0 ? 'status' : undefined}
+                  >
+                    {secondsLeft === 0 ? (
+                      en.game.movingOn
+                    ) : (
+                      <>
+                        {en.game.timeLeft}{' '}
+                        <span className="gold ml-2 font-medium tabular-nums">
+                          {Math.floor(secondsLeft / 60)}:
+                          {String(secondsLeft % 60).padStart(2, '0')}
+                        </span>
+                      </>
+                    )}
                   </p>
                 )}
               </div>
             )}
-            <div className="status-rule mt-6 pt-6">
+            {activeGame && !inPrivateMoment && wakeLockFallback && (
+              <p role="status" className="mt-4 text-sm text-ash">
+                {en.game.wakeLockFallback}
+              </p>
+            )}
+            {!inPrivateMoment && <div className="status-rule mt-6 pt-6">
               <p className="max-w-xl text-ash">
                 {full.paused
                   ? en.game.paused
-                  : inPrivateMoment
-                    ? en.game.privateScreen
-                    : en.game.progress(full.progress.done, full.progress.total)}
+                  : en.game.progress(full.progress.done, full.progress.total)}
               </p>
-            </div>
+            </div>}
 
             {!inPrivateMoment && full.publicAnnouncement && (
               <section
@@ -1172,41 +1355,50 @@ function PlayerGame() {
             )}
 
             {inPrivateMoment && (
-              <div className="mx-auto mt-7 max-w-md text-center">
-                {!shielded ? (
-                  <div className="enter">
-                    <p className="display text-2xl">{en.game.shieldHeading}</p>
-                    <p className="mt-2 text-sm text-ash">
-                      {en.game.shieldDetail}
-                    </p>
-                    <p
-                      className="mt-4 text-2xl tabular-nums text-candle"
-                      aria-live="polite"
-                    >
-                      {shieldCountdown > 0
-                        ? en.game.countdown(shieldCountdown)
-                        : en.game.shieldReady}
-                    </p>
-                    <button
-                      className="primary-action mt-5 w-full"
-                      type="button"
-                      onClick={() => void acknowledge()}
-                      disabled={!token || shieldPending || shieldCountdown > 0}
-                    >
-                      {shieldPending
-                        ? en.game.shieldConfirming
-                        : en.game.shieldConfirm}
-                    </button>
-                  </div>
-                ) : (
+              <div className="private-moment-panel">
+                {shieldRequired && !shielded ? null : privateCovered ? (
                   <>
-                    <p className="display text-2xl">{en.game.holdHeading}</p>
-                    <p
-                      className="mt-2 min-h-6 text-sm text-ash"
-                      aria-live="polite"
+                    <button
+                      className="primary-action w-full"
+                      type="button"
+                      onClick={() => void restorePrivate()}
+                      disabled={shieldPending || !token}
                     >
-                      {held ? en.game.holdPending : en.game.holdRelease}
-                    </p>
+                      {en.game.privateRestore}
+                    </button>
+                    {holdMessage && (
+                      <p role="status" className="text-sm text-ash">
+                        {holdMessage}
+                      </p>
+                    )}
+                  </>
+                ) : full.phase === 'DEAL' && !notesOpen ? (
+                  <>
+                    <div
+                      className="private-role-slot"
+                      aria-live="polite"
+                      data-testid="private-role-content"
+                    >
+                      {held && privateView && (
+                        <div className="private-role-card">
+                          <p className="text-sm text-ash">
+                            {en.game.privateRole}
+                          </p>
+                          <h2 className="display mt-1 text-3xl">
+                            {privateView.role === 'traitor'
+                              ? en.game.roleTraitor
+                              : privateView.role === 'faithful'
+                                ? en.game.roleFaithful
+                                : en.game.roleUnknown}
+                          </h2>
+                          {privateView.task && (
+                            <p className="mt-2 text-candle">
+                              {privateView.task.instruction}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <button
                       className="hold-seal"
                       type="button"
@@ -1243,22 +1435,38 @@ function PlayerGame() {
                     >
                       <span className="seal-inner">
                         <span className="seal-copy">
-                          {held ? en.game.holdKeep : en.game.holdHeading}
+                          {held ? en.game.holdKeep : en.game.holdText}
                         </span>
                       </span>
                     </button>
-                    <p id="hold-instructions" className="mt-3 text-sm text-ash">
+                    <p id="hold-instructions" className="text-sm text-ash">
                       {en.game.holdInstructions}
                     </p>
+                    {roleSeen && !held && (
+                      <button
+                        className="primary-action w-full"
+                        type="button"
+                        onClick={() => {
+                          setRoleSeen(false);
+                          setActionDone(true);
+                          setCommandMessage(en.game.waitingForEveryone);
+                        }}
+                      >
+                        {en.game.notesDone}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
                     <div
-                      className="mt-6 min-h-[12rem] text-left"
+                      className="private-action-content"
                       aria-live="polite"
+                      data-testid="private-choice-content"
                     >
-                      {privateView &&
-                        held &&
-                        (notesOpen && !phaseIsPrivate ? (
+                      {notesOpen && !phaseIsPrivate ? (
+                        privateView ? (
                           <div
-                            className="enter border-t border-stone pt-5"
+                            className="enter"
                             data-testid="private-notes-content"
                           >
                             <h2 className="display text-2xl">
@@ -1318,105 +1526,137 @@ function PlayerGame() {
                             )}
                           </div>
                         ) : (
-                          <div className="enter border-t border-stone pt-5">
-                            <p className="text-sm text-ash">
-                              {en.game.privateRole}
+                          <p role="status" className="text-sm text-ash">
+                            {holdMessage || en.game.privateLoading}
+                          </p>
+                        )
+                      ) : actionDone ? (
+                        <p
+                          role="status"
+                          className="text-center text-ash"
+                          data-testid="waiting-for-everyone"
+                        >
+                          {en.game.waitingForEveryone}
+                        </p>
+                      ) : isActionPhase &&
+                        (full.phase === 'VOTE' ||
+                          full.phase === 'FINAL_BANISH' ||
+                          privateView) ? (
+                        <div className="enter">
+                          {full.phase === 'SHADOW' && privateView?.task && (
+                            <p className="mb-4 text-left text-candle">
+                              {privateView.task.instruction}
                             </p>
-                            <h2 className="display mt-1 text-3xl">
-                              {privateView.role === 'traitor'
-                                ? en.game.roleTraitor
-                                : privateView.role === 'faithful'
-                                  ? en.game.roleFaithful
-                                  : en.game.roleUnknown}
-                            </h2>
-                            {privateView.task && (
-                              <p className="mt-4 text-candle">
-                                {privateView.task.instruction}
-                              </p>
-                            )}
-                            {isActionPhase && (
-                              <div className="mt-5">
-                                <p className="text-sm text-ash">
-                                  {full.phase === 'VOTE' ||
-                                  full.phase === 'FINAL_BANISH'
-                                    ? en.game.choosePlayer
-                                    : full.phase === 'SHADOW'
-                                      ? en.game.chooseOption
-                                      : en.game.finalDecision}
-                                </p>
-                                <div className="mt-3 grid gap-2">
-                                  {choices.map((choice) => (
-                                    <button
-                                      key={choice.id}
-                                      type="button"
-                                      className="choice-action"
-                                      aria-pressed={selected === choice.id}
-                                      onClick={() => {
-                                        setSelected(choice.id);
-                                        setConfirmChoice(false);
-                                        setCommandMessage('');
-                                      }}
-                                    >
-                                      {choice.name}
-                                    </button>
-                                  ))}
-                                </div>
-                                {selected && !confirmChoice && (
-                                  <button
-                                    type="button"
-                                    className="quiet-action mt-4 w-full"
-                                    onClick={() => setConfirmChoice(true)}
-                                  >
-                                    {en.game.reviewChoice}
-                                  </button>
-                                )}
-                                {selected && confirmChoice && (
-                                  <div className="mt-4 border-t border-stone pt-4">
-                                    <p className="text-candle">
-                                      {en.game.confirmChoice}
-                                    </p>
-                                    <div className="mt-3 flex flex-wrap gap-3">
-                                      <button
-                                        type="button"
-                                        className="primary-action flex-1"
-                                        disabled={command.isPending || !token}
-                                        onClick={() => void submitAction()}
-                                      >
-                                        {command.isPending
-                                          ? en.game.recording
-                                          : en.game.confirm}
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="quiet-action flex-1"
-                                        onClick={() => setConfirmChoice(false)}
-                                      >
-                                        {en.game.chooseAgain}
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-                                {commandMessage && (
-                                  <p
-                                    role="status"
-                                    className="mt-4 text-sm text-ash"
-                                  >
-                                    {commandMessage}
-                                  </p>
-                                )}
-                              </div>
-                            )}
+                          )}
+                          <p className="display text-2xl">
+                            {full.phase === 'VOTE' ||
+                            full.phase === 'FINAL_BANISH'
+                              ? en.game.votePrompt
+                              : full.phase === 'SHADOW'
+                                ? privateView?.role === 'traitor'
+                                  ? en.game.shadowTraitorPrompt
+                                  : en.game.shadowFaithfulPrompt
+                                : en.game.finalDecision}
+                          </p>
+                          {full.phase === 'SHADOW' && (
+                            <p
+                              className="mt-2 h-12 overflow-y-auto whitespace-pre-wrap text-left text-sm text-ash"
+                              data-testid="shadow-status"
+                              aria-live="polite"
+                            >
+                              {privateView?.role === 'traitor'
+                                ? Object.entries(privateView.choices)
+                                    .flatMap(([seatId, targetId]) => {
+                                      const picker = full.seats.find(
+                                        (seat) => seat.id === seatId,
+                                      );
+                                      const target = full.seats.find(
+                                        (seat) => seat.id === targetId,
+                                      );
+                                      return picker && target
+                                        ? [
+                                            en.game.shadowPick(
+                                              picker.name,
+                                              target.name,
+                                            ),
+                                          ]
+                                        : [];
+                                    })
+                                    .join('\n') || en.game.shadowWaiting
+                                : en.game.shadowFaithfulStatus}
+                            </p>
+                          )}
+                          <div
+                            className="mt-3 grid gap-2"
+                            data-testid="private-choice-list"
+                          >
+                            {choices.map((choice) => (
+                              <button
+                                key={choice.id}
+                                type="button"
+                                className="choice-action"
+                                aria-pressed={selected === choice.id}
+                                onClick={() => {
+                                  setSelected(choice.id);
+                                  setConfirmChoice(false);
+                                  setActionDone(false);
+                                  setCommandMessage('');
+                                }}
+                              >
+                                {choice.name}
+                              </button>
+                            ))}
                           </div>
-                        ))}
-                      {!privateView && holdMessage && (
-                        <p role="status" className="pt-5 text-sm text-ash">
-                          {holdMessage}
+                          {selected && !confirmChoice && (
+                            <button
+                              className="quiet-action mt-4 w-full"
+                              type="button"
+                              onClick={() => setConfirmChoice(true)}
+                            >
+                              {en.game.reviewChoice}
+                            </button>
+                          )}
+                          {selected && confirmChoice && (
+                            <div className="mt-4 border-t border-stone pt-4">
+                              <p className="text-candle">
+                                {en.game.confirmChoice}
+                              </p>
+                              <div className="mt-3 flex flex-wrap gap-3">
+                                <button
+                                  type="button"
+                                  className="primary-action flex-1"
+                                  disabled={command.isPending || !token}
+                                  onClick={() => void submitAction()}
+                                >
+                                  {command.isPending
+                                    ? en.game.recording
+                                    : en.game.confirm}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="quiet-action flex-1"
+                                  onClick={() => setConfirmChoice(false)}
+                                >
+                                  {en.game.chooseAgain}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          {commandMessage && !actionDone && (
+                            <p role="status" className="mt-4 text-sm text-ash">
+                              {commandMessage}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p role="status" className="text-sm text-ash">
+                          {holdMessage || en.game.privateLoading}
                         </p>
                       )}
                     </div>
                     {notesOpen && !phaseIsPrivate && (
                       <button
-                        className="quiet-action mt-4 w-full"
+                        className="primary-action w-full"
                         type="button"
                         onClick={() => {
                           clearPrivate();
@@ -1468,6 +1708,22 @@ function PlayerGame() {
                         />
                       </span>
                     </Suspense>
+                    {typeof document !== 'undefined' &&
+                      typeof document.documentElement.requestFullscreen ===
+                        'function' && (
+                        <button
+                          className="quiet-action"
+                          type="button"
+                          onClick={() => void enterFullScreen()}
+                        >
+                          {en.game.fullscreen}
+                        </button>
+                      )}
+                    {fullscreenMessage && (
+                      <p role="status" className="text-sm text-ash">
+                        {fullscreenMessage}
+                      </p>
+                    )}
                   </section>
                 )}
                 <section
@@ -1543,7 +1799,9 @@ function PlayerGame() {
                     )}
                   </ul>
                 </section>
-                <p className="mt-7 text-sm text-ash">{en.game.roomNote}</p>
+                {!full.canAdvancePhase && (
+                  <p className="mt-7 text-sm text-ash">{en.game.roomNote}</p>
+                )}
                 <button
                   className="primary-action mt-6 w-full"
                   type="button"
@@ -1557,6 +1815,29 @@ function PlayerGame() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+        {full?.canAdvancePhase && activeGame && !showShieldCard && (
+          <div
+            className="fixed inset-x-0 bottom-0 z-30 border-t border-stone bg-hearth px-6 pt-3"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+            data-testid="rehearsal-action-bar"
+          >
+            <div className="mx-auto w-full max-w-[480px]">
+              {commandMessage && (
+                <p role="status" className="mb-2 text-sm text-ash">
+                  {commandMessage}
+                </p>
+              )}
+              <button
+                className="primary-action w-full"
+                type="button"
+                disabled={command.isPending}
+                onClick={() => void moveOn()}
+              >
+                {en.game.moveOn}
+              </button>
+            </div>
           </div>
         )}
         {showShieldCard && (
@@ -1607,6 +1888,16 @@ function PlayerGame() {
                     ? en.game.shieldConfirming
                     : en.game.shieldConfirm}
                 </button>
+                {full?.canAdvancePhase && activeGame && (
+                  <button
+                    className="quiet-action mt-3 w-full"
+                    type="button"
+                    disabled={command.isPending}
+                    onClick={() => void moveOn()}
+                  >
+                    {en.game.moveOn}
+                  </button>
+                )}
                 {notesOpen && !phaseIsPrivate && (
                   <button
                     className="quiet-action mt-3 w-full"

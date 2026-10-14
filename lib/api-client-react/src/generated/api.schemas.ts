@@ -378,6 +378,12 @@ export interface FullView {
      * @maxLength 128
      */
   id: string;
+  canAdvancePhase: boolean;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  viewerSeatId?: string;
   /**
      * @minLength 1
      * @maxLength 60

@@ -22,6 +22,8 @@ export const VISITOR_VIEW_ALLOW_LIST = [
 ] as const;
 export const VIEW_ALLOW_LIST = [
   'id',
+  'viewerSeatId',
+  'canAdvancePhase',
   'gameName',
   'lobbyCode',
   'version',
@@ -90,6 +92,13 @@ export function viewFor(
       : undefined;
   const reveal = Boolean(viewer.reveal && (player || host || spectator));
   const isTraitor = player && own?.role === 'traitor';
+  const rehearsalOrganizer =
+    (viewer.kind === 'player' || viewer.kind === 'ghost') &&
+    Boolean(
+      own &&
+      state.config.rehearsal.enabled &&
+      !state.config.rehearsal.botSeatIds.includes(own.id),
+    );
   const ballots =
     state.phase === 'VERDICT'
       ? Object.fromEntries(
@@ -131,6 +140,8 @@ export function viewFor(
   }
   return fullViewSchema.parse({
     id: state.id,
+    ...(player && own ? { viewerSeatId: own.id } : {}),
+    canAdvancePhase: rehearsalOrganizer,
     ...(state.config.basics.gameName
       ? { gameName: state.config.basics.gameName }
       : {}),

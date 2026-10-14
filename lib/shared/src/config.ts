@@ -209,6 +209,7 @@ export const gameConfigSchema = z
       .object({
         enabled: z.boolean().default(false),
         botSeatIds: z.array(z.string().min(1).max(128)).max(39).default([]),
+        speed: z.enum(['fast', 'normal']).default('normal'),
       })
       .strict()
       .default({}),

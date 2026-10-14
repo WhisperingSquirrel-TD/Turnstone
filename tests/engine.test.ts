@@ -40,6 +40,39 @@ describe('Milestone 1 deterministic engine', () => {
       gameConfigSchema.parse({ basics: { unexpected: 'secret' } }),
     ).toThrow();
   });
+  it('supports fast rehearsal timing without shortening the private hold window', () => {
+    const botSeatIds = Array.from({ length: 4 }, (_, index) => `bot-${index}`);
+    const normalConfig = gameConfigSchema.parse({
+      players: { count: 5 },
+      rehearsal: { enabled: true, botSeatIds },
+    });
+    expect(normalConfig.rehearsal.speed).toBe('normal');
+
+    const fast = fixture(5, {
+      privacy: { holdMs: 500, shieldSeconds: 3 },
+      rehearsal: { enabled: true, botSeatIds, speed: 'fast' },
+    });
+    command(fast, { type: 'StartGame' });
+    expect(fast.state.phase).toBe('DEAL');
+    expect(fast.state.deadline! - fast.state.phaseStarted).toBe(5_000);
+
+    advance(fast, 'SHADOW');
+    expect(fast.state.deadline! - fast.state.phaseStarted).toBe(4_000);
+    expect(fast.state.shadowEndAt! - fast.state.phaseStarted).toBe(8_000);
+
+    const longerShield = fixture(5, {
+      privacy: { holdMs: 1_000, shieldSeconds: 10 },
+      rehearsal: { enabled: true, botSeatIds, speed: 'fast' },
+    });
+    command(longerShield, { type: 'StartGame' });
+    expect(
+      longerShield.state.deadline! - longerShield.state.phaseStarted,
+    ).toBeGreaterThanOrEqual(11_500);
+    advance(longerShield, 'SHADOW');
+    expect(
+      longerShield.state.deadline! - longerShield.state.phaseStarted,
+    ).toBeGreaterThanOrEqual(11_500);
+  });
   it('deals the exact configured number, publishes only the commitment and replays exactly', () => {
     const game = fixture(15);
     command(game, { type: 'StartGame' });
@@ -170,6 +203,59 @@ describe('Milestone 1 deterministic engine', () => {
     expect(
       viewFor({ kind: 'host', reveal: true }, game.state).private,
     ).toBeNull();
+  });
+  it('identifies a living player only in that seat’s own view', () => {
+    const game = fixture(5);
+    command(game, { type: 'StartGame' });
+    const own = game.state.seats[0]!;
+    expect(
+      viewFor({ kind: 'player', seatId: own.id }, game.state).viewerSeatId,
+    ).toBe(own.id);
+    expect(viewFor({ kind: 'coordinator' }, game.state)).not.toHaveProperty(
+      'viewerSeatId',
+    );
+    expect(viewFor({ kind: 'presenter' }, game.state)).not.toHaveProperty(
+      'viewerSeatId',
+    );
+    expect(viewFor({ kind: 'visitor' }, game.state)).not.toHaveProperty(
+      'viewerSeatId',
+    );
+  });
+  it('exposes move-on permission only to the human seat in a rehearsal', () => {
+    const game = fixture(6, {
+      rehearsal: {
+        enabled: true,
+        botSeatIds: ['s1', 's2', 's3', 's4', 's5'],
+      },
+    });
+    command(game, { type: 'StartGame' });
+
+    expect(
+      viewFor({ kind: 'player', seatId: 's0' }, game.state).canAdvancePhase,
+    ).toBe(true);
+    expect(
+      viewFor({ kind: 'player', seatId: 's1' }, game.state).canAdvancePhase,
+    ).toBe(false);
+    expect(viewFor({ kind: 'coordinator' }, game.state).canAdvancePhase).toBe(
+      false,
+    );
+    expect(viewFor({ kind: 'visitor' }, game.state)).not.toHaveProperty(
+      'canAdvancePhase',
+    );
+  });
+  it('keeps the human rehearsal organiser able to move on as a ghost', () => {
+    const game = fixture(6, {
+      rehearsal: {
+        enabled: true,
+        botSeatIds: ['s1', 's2', 's3', 's4', 's5'],
+      },
+    });
+    command(game, { type: 'StartGame' });
+    game.state.seats[0]!.status = 'banished';
+
+    expect(
+      viewFor({ kind: 'ghost', seatId: 's0' }, game.state).canAdvancePhase,
+    ).toBe(true);
   });
   it('supports announced all-seeing hosts but never unfinished admin secrets', () => {
     const game = fixture(5, { basics: { coordinatorPlays: false } });

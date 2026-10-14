@@ -1,12 +1,12 @@
 # Status for reviewer
 
-- Updated: 14 October 2026, 18:04 UTC.
-- Current milestone/step: Milestone 5 — step 1, lobby-code visibility and QR joins. GitHub Verify #23 failed in desktop Chromium because the bare `zod` optimizer entry could not resolve in clean CI. The include now uses the linked shared package's nested dependency syntax; clean-cache `pnpm run verify` is green locally. The correction is ready for push. Do not retry rehearsal until the pushed Verify run is green.
-- Last pushed commit/CI: `dfddfd6`; GitHub Verify #23 (`38610030728`) — Failure. Desktop Chromium and required-checks failed; all other jobs passed, including Pixel Chromium, iPhone and iPad WebKit, static checks and Gitleaks, audit, integration, Lighthouse, unit/property and all six scenario shards plus report merge. The desktop annotation was a generic exit-code failure; job logs show the unresolved `zod` optimizer entry and the no-reload regression failing. Promotion was skipped; no release or deployment occurred.
+- Updated: 14 October 2026, 18:12 UTC.
+- Current milestone/step: Milestone 5 — step 2, rehearsal recovery and private-screen behaviour, under TDD. Step 1 is green locally and on GitHub; the real-server rehearsal test and round-2 rules are next. Do not ask the owner to retry until step 2 passes.
+- Last pushed commit/CI: `86bdabc`; GitHub Verify #24 (`38612447320`) — Success, all jobs passed with no annotations: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38612447320. Pixel, desktop, iPhone and iPad browser jobs, all six scenario shards and report merge passed. The separate promotion run (`38612875038`) was skipped because `TURNSTONE_PROMOTION_ENABLED` is unset; `release` was not advanced and no deployment occurred.
 - Latest local verification: clean-cache `pnpm run verify` exited 0 after the nested-dependency correction. It passed type-check, test type-check, lint, formatting, production build, 246 unit tests, 20 property tests, 85.18% server line coverage, 2,567 scenarios with zero failures, and 24 browser smoke tests with 4 profile-specific skips and the explicit `WebKit profiles run in CI` notice. Lighthouse scores were 1.0 for home mobile performance, accessibility, best practices and SEO, and play accessibility; audit found 0 high or critical advisories.
 - Open questions: none. Q1 is resolved; the launch-mode Lighthouse fixture remains test-only and real builds stay noindex.
 - Provisional decisions: none.
-- Risks: Step 1's corrective change is locally green and ready to trigger Verify #24; do not proceed until that run succeeds. Rehearsal blockers and the owner-approved round-2 rehearsal requirements remain queued for step 2; do not ask the owner to retry yet. The Turnstone logo assets remain unintegrated and the ZIP is excluded from the current tree. `PRE_LAUNCH_NOINDEX` remains on. No deployment or paid service is authorised.
+- Risks: Step 2 still needs the complete real-server rehearsal and private-screen regressions to pass before the owner's phone retry. The attached rehearsal note is being used as requirements but remains uncommitted. The Turnstone logo assets remain unintegrated and the ZIP is excluded from the current tree. `PRE_LAUNCH_NOINDEX` remains on. No deployment or paid service is authorised.
 
 # Progress
 

@@ -639,6 +639,7 @@ components:
       additionalProperties: false
       required:
         - id
+        - canAdvancePhase
         - version
         - phase
         - paused
@@ -659,6 +660,12 @@ components:
         - fairness
       properties:
         id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        canAdvancePhase:
+          type: boolean
+        viewerSeatId:
           type: string
           minLength: 1
           maxLength: 128

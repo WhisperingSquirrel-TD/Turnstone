@@ -198,6 +198,8 @@ export const privateViewRequestSchema = z
 export const fullViewSchema = z
   .object({
     id,
+    viewerSeatId: id.optional(),
+    canAdvancePhase: z.boolean(),
     gameName: z.string().trim().min(1).max(60).optional(),
     lobbyCode: z
       .string()

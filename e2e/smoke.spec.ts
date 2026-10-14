@@ -139,7 +139,9 @@ test('private role is requested only during a hold and is removed on release', a
   });
   await shieldConfirmation.click();
 
-  const holdPad = page.getByRole('button', { name: /hold to reveal/i });
+  const holdPad = page.getByRole('button', {
+    name: /hold the seal to see your role/i,
+  });
   await expect(holdPad).toBeVisible();
   await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
   expect(privateRequests).toBe(0);
@@ -167,4 +169,122 @@ test('private role is requested only during a hold and is removed on release', a
     local: '{}',
     session: '{}',
   });
+});
+
+test('the revealed role stays above the seal and inside small phone viewports', async ({
+  page,
+}) => {
+  const gameId = 'role-viewport-fit';
+  let privateRequests = 0;
+  const publicView = {
+    id: gameId,
+    version: 3,
+    phase: 'DEAL',
+    paused: false,
+    deadline: null,
+    coordinatorPlays: true,
+    cycle: 0,
+    pot: 0,
+    unit: 'points',
+    seats: [{ id: 'human-seat', name: 'Morgan', status: 'alive' }],
+    commitment: null,
+    progress: { done: 0, total: 5 },
+    ballots: {},
+    winner: null,
+    private: null,
+    publicLog: [],
+    coordinatorAlerts: [],
+    fairness: null,
+  };
+
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      status: 200,
+      headers: {
+        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+      },
+      json: { csrfToken: 'test-csrf' },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, (route) =>
+    route.fulfill({
+      status: 200,
+      json: { version: 4, view: publicView },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({ status: 200, json: { version: 3, view: publicView } }),
+  );
+  await page.route(`**/api/games/${gameId}/private-view`, (route) =>
+    {
+      privateRequests += 1;
+      return route.fulfill({
+        status: 200,
+        json: {
+          version: 3,
+          view: { ...publicView, private: { role: 'faithful' } },
+        },
+      });
+    },
+  );
+
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ]) {
+    privateRequests = 0;
+    await page.setViewportSize(viewport);
+    await page.goto(`/game/${gameId}`);
+
+    const shieldDialog = page.getByRole('dialog', {
+      name: 'Shield your screen',
+    });
+    const shieldConfirmation = shieldDialog.getByRole('button', {
+      name: /i’m shielded/i,
+    });
+    await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
+      timeout: 6500,
+    });
+    await shieldConfirmation.click();
+
+    const seal = page.getByTestId('button-hold-reveal');
+    const sealBounds = await seal.boundingBox();
+    if (!sealBounds) throw new Error('Hold seal has no visible bounds');
+    expect(sealBounds.y).toBeGreaterThanOrEqual(0);
+    expect(sealBounds.y + sealBounds.height).toBeLessThanOrEqual(
+      viewport.height,
+    );
+    await page.mouse.move(
+      sealBounds.x + sealBounds.width / 2,
+      sealBounds.y + sealBounds.height / 2,
+    );
+    await page.mouse.down();
+    await expect.poll(() => privateRequests).toBe(1);
+
+    const roleLabel = page.getByText('Your private role', { exact: true });
+    const role = page.getByRole('heading', { name: 'Faithful', exact: true });
+    await expect(role).toBeVisible({ timeout: 2000 });
+    const [labelBounds, roleBounds, revealedSealBounds] = await Promise.all([
+      roleLabel.boundingBox(),
+      role.boundingBox(),
+      seal.boundingBox(),
+    ]);
+    expect(labelBounds).not.toBeNull();
+    expect(roleBounds).not.toBeNull();
+    expect(revealedSealBounds).not.toBeNull();
+    for (const bounds of [labelBounds!, roleBounds!]) {
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.y).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(viewport.height);
+    }
+    expect(roleBounds!.y + roleBounds!.height).toBeLessThan(
+      revealedSealBounds!.y,
+    );
+    await page.mouse.wheel(0, 400);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    await page.mouse.up();
+  }
 });

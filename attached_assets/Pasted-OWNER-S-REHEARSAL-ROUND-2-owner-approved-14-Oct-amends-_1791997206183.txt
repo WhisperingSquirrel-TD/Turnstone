@@ -1,0 +1,18 @@
+OWNER'S REHEARSAL, ROUND 2 (owner-approved 14 Oct; amends SPEC §3 and §10). Do these as part of the rehearsal bug fixes (step 2 of RESUME ORDER), under TDD.
+
+A. Moving on
+1. In solo rehearsal the player is the organiser and gets the organiser's controls, including "Move on" on every step. Never show "The organiser will move the game forward" to the organiser.
+2. A timed step ends as soon as every player who must act has acted; bots act immediately. Secret steps still respect their minimum private duration, so timing reveals nothing. Debate has nothing to complete: it ends at its timer or when the organiser taps "Move on".
+3. With several real players plus bots, a step waits only for the real players.
+
+B. Voting without holding
+4. The banishment vote is an ordinary screen: no shield, no hold. Tap a name, confirm, done. Do not show the player's role on it; the screen is identical for everyone.
+5. Choice lists never include the player themselves or anyone who is out.
+6. Private choices (night pick and Faithful decoys, recruitment, Notes and Traitor chat): keep "Shield your screen" and "I'm shielded", then show the choice screen without holding. It hides on Done, when the app goes to the background, and after 30 seconds without a tap; one tap brings it back. Layout and timing stay identical for every role. Choices fit inside the viewport from 320x568 up; long lists scroll within the screen.
+7. Hold-to-reveal stays only for seeing your role at the deal.
+8. Shields: secret shield holders stay selectable at night (marking them would reveal who holds one). A publicly won shield shows "Shielded" beside that name at night, still selectable. Shields never affect the banishment vote.
+
+C. Check
+9. On wider screens the top-right icon looks like a loading spinner that never stops; on a narrow phone the Stackstone mark sits there instead. Find out which is intended and fix.
+
+The full-rehearsal end-to-end test must reach the results screen using "Move on" and early step endings, with no screen left waiting on a timer the player cannot affect.

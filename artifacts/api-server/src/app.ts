@@ -587,7 +587,7 @@ export function createApp(
         },
         privacy: { holdMs: 500, shieldSeconds: 3 },
         tasks: { enabled: false },
-        rehearsal: { enabled: true, botSeatIds },
+        rehearsal: { enabled: true, botSeatIds, speed },
       });
       const createCommand = commandSchema.parse({
         type: 'CreateGame',
@@ -1808,20 +1808,60 @@ export function createApp(
         sendError(response, 400, 'Invalid request');
         return;
       }
-      const viewer = isCoordinatorCommand(parsed.data.type)
+      let viewer = isCoordinatorCommand(parsed.data.type)
         ? await coordinatorViewerForRequest(request)
         : await viewerForRequest(request);
-      const actor = actorFor(viewer);
+      let actor = actorFor(viewer);
+      const gameId = request.params.id ?? '';
+      let state: State | null = null;
+      let rehearsalSeatId: string | undefined;
+
+      if (parsed.data.type === 'AdvancePhase' && !actor) {
+        const playerViewer = await viewerForRequest(request);
+        const playerActor = actorFor(playerViewer);
+        if (playerActor?.kind === 'player' && playerActor.seatId) {
+          viewer = playerViewer;
+          actor = playerActor;
+        } else if (playerViewer.kind === 'ghost' && playerViewer.seatId) {
+          viewer = playerViewer;
+          actor = { kind: 'player', seatId: playerViewer.seatId };
+        }
+      }
+
+      if (
+        parsed.data.type === 'AdvancePhase' &&
+        actor?.kind === 'player' &&
+        actor.seatId
+      ) {
+        state = await loadGameState(gameId);
+        if (!state) {
+          sendError(response, 404, 'Not found');
+          return;
+        }
+        if (
+          !state.config.rehearsal.enabled ||
+          state.config.rehearsal.botSeatIds.includes(actor.seatId)
+        ) {
+          sendError(response, 401, 'Authentication required');
+          return;
+        }
+        rehearsalSeatId = actor.seatId;
+        actor = { kind: 'coordinator' };
+      }
+
       if (!actor) {
         sendError(response, 401, 'Authentication required');
         return;
       }
+      const commandActorId = rehearsalSeatId
+        ? `seat:${rehearsalSeatId}`
+        : actorId(actor);
       const commandLimit = parsed.data.type === 'PostTraitorMessage' ? 30 : 60;
       if (
         !(await checkRateLimit(
           request,
           `command-${parsed.data.type}`,
-          actorId(actor),
+          commandActorId,
           commandLimit,
         ))
       ) {
@@ -1829,10 +1869,9 @@ export function createApp(
         return;
       }
 
-      const gameId = request.params.id ?? '';
       const idempotency = {
         gameId,
-        actorId: actorId(actor),
+        actorId: commandActorId,
         idempotencyKey: parsed.data.idempotencyKey,
         requestHash: requestHash(parsed.data),
       };
@@ -1844,7 +1883,7 @@ export function createApp(
         return;
       }
 
-      const state = await loadGameState(gameId);
+      state ??= await loadGameState(gameId);
       if (!state) {
         sendError(response, 404, 'Not found');
         return;

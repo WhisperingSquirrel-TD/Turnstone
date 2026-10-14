@@ -175,10 +175,10 @@ h2,
   font-size: 0.9rem;
 }
 .hold-seal {
-  width: min(68vw, 248px);
+  width: min(168px, calc(100vw - 48px));
   aspect-ratio: 1;
-  min-width: 184px;
-  min-height: 184px;
+  min-width: 168px;
+  min-height: 168px;
   display: grid;
   place-items: center;
   margin: 1rem auto 0;
@@ -194,6 +194,62 @@ h2,
   user-select: none;
   -webkit-user-select: none;
   cursor: pointer;
+}
+.private-moment-shell {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+.private-moment-main {
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.private-player-stage {
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: center;
+  margin-inline: auto;
+  overflow: hidden;
+}
+.private-moment-panel {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  overflow: hidden;
+  text-align: center;
+}
+.private-role-slot {
+  display: grid;
+  width: 100%;
+  min-height: 5.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+}
+.private-role-card {
+  max-width: 100%;
+  padding-inline: 0.5rem;
+}
+.private-action-content {
+  width: 100%;
+  min-height: 0;
+  max-height: 36dvh;
+  flex: 0 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  text-align: left;
 }
 .seal-inner {
   width: 76%;

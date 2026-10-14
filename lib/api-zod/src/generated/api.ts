@@ -54,6 +54,8 @@ export const startRehearsalResponseViewOneSeatCountMin = 0;
 
 export const startRehearsalResponseViewTwoIdMax = 128;
 
+export const startRehearsalResponseViewTwoViewerSeatIdMax = 128;
+
 export const startRehearsalResponseViewTwoGameNameMax = 60;
 
 export const startRehearsalResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
@@ -98,6 +100,8 @@ export const StartRehearsalResponse = zod.object({
   "seatCount": zod.number().int().min(startRehearsalResponseViewOneSeatCountMin)
 }),zod.object({
   "id": zod.string().min(1).max(startRehearsalResponseViewTwoIdMax),
+  "canAdvancePhase": zod.boolean(),
+  "viewerSeatId": zod.string().min(1).max(startRehearsalResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(startRehearsalResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(startRehearsalResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
@@ -222,6 +226,8 @@ export const createGameResponseViewOneSeatCountMin = 0;
 
 export const createGameResponseViewTwoIdMax = 128;
 
+export const createGameResponseViewTwoViewerSeatIdMax = 128;
+
 export const createGameResponseViewTwoGameNameMax = 60;
 
 export const createGameResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
@@ -266,6 +272,8 @@ export const CreateGameResponse = zod.object({
   "seatCount": zod.number().int().min(createGameResponseViewOneSeatCountMin)
 }),zod.object({
   "id": zod.string().min(1).max(createGameResponseViewTwoIdMax),
+  "canAdvancePhase": zod.boolean(),
+  "viewerSeatId": zod.string().min(1).max(createGameResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(createGameResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(createGameResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
@@ -513,6 +521,8 @@ export const getJoinRequestStatusResponseThreeGameViewOneSeatCountMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoIdMax = 128;
 
+export const getJoinRequestStatusResponseThreeGameViewTwoViewerSeatIdMax = 128;
+
 export const getJoinRequestStatusResponseThreeGameViewTwoGameNameMax = 60;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
@@ -563,6 +573,8 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
   "seatCount": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewOneSeatCountMin)
 }),zod.object({
   "id": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoIdMax),
+  "canAdvancePhase": zod.boolean(),
+  "viewerSeatId": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(getJoinRequestStatusResponseThreeGameViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
@@ -715,6 +727,8 @@ export const getGameViewResponseViewOneSeatCountMin = 0;
 
 export const getGameViewResponseViewTwoIdMax = 128;
 
+export const getGameViewResponseViewTwoViewerSeatIdMax = 128;
+
 export const getGameViewResponseViewTwoGameNameMax = 60;
 
 export const getGameViewResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
@@ -759,6 +773,8 @@ export const GetGameViewResponse = zod.object({
   "seatCount": zod.number().int().min(getGameViewResponseViewOneSeatCountMin)
 }),zod.object({
   "id": zod.string().min(1).max(getGameViewResponseViewTwoIdMax),
+  "canAdvancePhase": zod.boolean(),
+  "viewerSeatId": zod.string().min(1).max(getGameViewResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(getGameViewResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(getGameViewResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
@@ -887,6 +903,8 @@ export const revealPrivateViewResponseViewOneSeatCountMin = 0;
 
 export const revealPrivateViewResponseViewTwoIdMax = 128;
 
+export const revealPrivateViewResponseViewTwoViewerSeatIdMax = 128;
+
 export const revealPrivateViewResponseViewTwoGameNameMax = 60;
 
 export const revealPrivateViewResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
@@ -931,6 +949,8 @@ export const RevealPrivateViewResponse = zod.object({
   "seatCount": zod.number().int().min(revealPrivateViewResponseViewOneSeatCountMin)
 }),zod.object({
   "id": zod.string().min(1).max(revealPrivateViewResponseViewTwoIdMax),
+  "canAdvancePhase": zod.boolean(),
+  "viewerSeatId": zod.string().min(1).max(revealPrivateViewResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(revealPrivateViewResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(revealPrivateViewResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
@@ -1063,6 +1083,8 @@ export const submitGameCommandResponseViewOneSeatCountMin = 0;
 
 export const submitGameCommandResponseViewTwoIdMax = 128;
 
+export const submitGameCommandResponseViewTwoViewerSeatIdMax = 128;
+
 export const submitGameCommandResponseViewTwoGameNameMax = 60;
 
 export const submitGameCommandResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
@@ -1107,6 +1129,8 @@ export const SubmitGameCommandResponse = zod.object({
   "seatCount": zod.number().int().min(submitGameCommandResponseViewOneSeatCountMin)
 }),zod.object({
   "id": zod.string().min(1).max(submitGameCommandResponseViewTwoIdMax),
+  "canAdvancePhase": zod.boolean(),
+  "viewerSeatId": zod.string().min(1).max(submitGameCommandResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(submitGameCommandResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(submitGameCommandResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),

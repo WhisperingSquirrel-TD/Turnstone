@@ -216,6 +216,22 @@ export function decide(
   };
   const duration = (phase: Phase) => {
     const c = state!.config;
+    if (c.rehearsal.enabled && c.rehearsal.speed === 'fast') {
+      const privateMinimum =
+        c.privacy.shieldSeconds * 1_000 + c.privacy.holdMs + 500;
+      const rehearsalMilliseconds: Partial<Record<Phase, number>> = {
+        DEAL: Math.max(5_000, privateMinimum),
+        MISSION: 2_000,
+        DEBATE: 2_000,
+        VOTE: Math.max(5_000, privateMinimum),
+        FINAL_BANISH: Math.max(5_000, privateMinimum),
+        VERDICT: 2_000,
+        SHADOW: Math.max(8_000, privateMinimum * 2),
+        DAWN: 2_000,
+        FINAL_VOTE: Math.max(5_000, privateMinimum),
+      };
+      return rehearsalMilliseconds[phase] ?? 2_000;
+    }
     const value: Partial<Record<Phase, number>> = {
       DEAL:
         c.schedule.format === 'quick'

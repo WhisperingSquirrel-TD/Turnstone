@@ -1367,6 +1367,7 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
     expect(created.body.view.phase).toBe('DEAL');
     expect(created.body.view.seats).toHaveLength(6);
     expect(created.body.view.private).toBeNull();
+    expect(created.body.view.canAdvancePhase).toBe(true);
     expect(created.body.view.progress.done).toBe(5);
     const { listActiveRehearsalGameIds } =
       await import('@workspace/db/game-store');
@@ -1429,6 +1430,34 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
     expect(JSON.stringify(ordinaryView.body)).not.toContain(
       revealed.body.view.private.role,
     );
+
+    now += 6_000;
+    const movedOn = await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .set('Cookie', shieldedCookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({
+        type: 'AdvancePhase',
+        expectedVersion: acknowledgement.body.version,
+        idempotencyKey: randomUUID(),
+      });
+    expect(movedOn.status).toBe(200);
+    expect(movedOn.body.view.phase).toBe('DEBATE');
+    expect(movedOn.body.view.canAdvancePhase).toBe(true);
+    const rehearsalCannotPause = await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .set('Cookie', shieldedCookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({
+        type: 'Pause',
+        expectedVersion: movedOn.body.version,
+        idempotencyKey: randomUUID(),
+      });
+    expect(rehearsalCannotPause.status).toBe(409);
+    const afterRejectedPause = await request(app)
+      .get(`/api/games/${gameId}/view`)
+      .set('Cookie', cookie);
+    expect(afterRejectedPause.body.view.paused).toBe(false);
 
     const visitor = await request(app).post(
       `/api/games/${gameId}/private-view`,
