@@ -1,12 +1,12 @@
 # Status for reviewer
 
-- Updated: 14 October 2026, 17:09 UTC.
-- Current milestone/step: Milestone 5 — step 1, lobby-code visibility and QR joins. Full local `pnpm run verify` is green; preparing the step-1 commit and push. Do not retry rehearsal until step 2 fixes the blocking rehearsal bugs.
+- Updated: 14 October 2026, 17:11 UTC.
+- Current milestone/step: Milestone 5 — step 1, lobby-code visibility and QR joins. Commit `3447409` is ready to push after a green full local verify. Do not retry rehearsal until step 2 fixes the blocking rehearsal bugs.
 - Last pushed commit/CI: `b78dffb`; GitHub Verify #21 (`38581869029`) — Success, all 18 verification jobs passed, including iPhone and iPad WebKit, with zero annotations. The promotion job was skipped as intended; no release or deployment occurred. Verify #20's iPhone-only race is fixed by isolating each direct-route browser test.
 - Latest local verification: `pnpm run verify` exited 0 — type-check, test type-check, lint, formatting and production build passed; 246 unit tests, 20 property tests, 72 server tests, 2,567 scenarios with zero failures; 23 browser smoke tests passed with 3 profile-specific skips and the explicit `WebKit profiles run in CI` notice; Lighthouse home scores were 100 for performance, accessibility, best practices and SEO, play accessibility was 100, and the dependency audit found 0 high or critical advisories.
 - Open questions: none. Q1 is resolved; the launch-mode Lighthouse fixture remains test-only and real builds stay noindex.
 - Provisional decisions: none.
-- Risks: Rehearsal blockers remain open; do not ask the owner to retry yet. The Turnstone logo assets remain unintegrated and the ZIP is excluded from this push. `PRE_LAUNCH_NOINDEX` remains on. No deployment or paid service is authorised.
+- Risks: Rehearsal blockers and the owner-approved round-2 rehearsal requirements remain queued for step 2; do not ask the owner to retry yet. The Turnstone logo assets remain unintegrated and the ZIP is excluded from this push. `PRE_LAUNCH_NOINDEX` remains on. No deployment or paid service is authorised.
 
 # Progress
 
