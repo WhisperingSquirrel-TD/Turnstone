@@ -18,16 +18,18 @@ describe('secure production entropy and owner domains', () => {
       spy.mockRestore();
     }
   });
-  it('keeps owner-confirmed canonical domain/RP ID and planned API origin in config', () => {
+  it('keeps the canonical site/RP ID and uses same-origin API paths', () => {
     const spec = readFileSync('docs/SPEC.md', 'utf8');
     const site = /Domain: public site and app shell at (\S+) on Vercel/.exec(
       spec,
     )?.[1];
-    const live = /planned as (\S+) on an always-on/.exec(spec)?.[1];
+    const selectedOrigin = /from the single origin `([^`]+)`/.exec(spec)?.[1];
     expect(site).toBeTruthy();
-    expect(live).toBeTruthy();
+    expect(selectedOrigin).toBeTruthy();
     expect(config.siteOrigin).toBe(site);
-    expect(config.plannedApiOrigin).toBe(live);
+    expect(config.siteOrigin).toBe(selectedOrigin);
+    expect(config.apiOrigin).toBeNull();
+    expect('plannedApiOrigin' in config).toBe(false);
     expect(config.productionRpId).toBe(new URL(site!).hostname);
   });
 });

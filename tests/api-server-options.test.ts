@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { createServerAppOptions } from '../artifacts/api-server/src/server-options';
+import { parseEnvironment } from '../artifacts/api-server/src/config/env';
 
 it('wires the configured public origin into invite links and credentialed CORS', () => {
   const environment = {
@@ -19,4 +20,23 @@ it('wires the configured public origin into invite links and credentialed CORS',
   expect(options.allowedOrigins).toEqual([environment.APP_BASE_URL]);
   expect(options.secureCookies).toBe(true);
   expect(options.rateLimitSecret).toBe(environment.SESSION_SECRET);
+});
+
+it('uses the managed Replit dev domain as the development origin when no base URL is configured', () => {
+  const environment = parseEnvironment({
+    DATABASE_URL: 'postgresql://localhost/turnstone',
+    SESSION_SECRET: 's'.repeat(32),
+    PORT: '8080',
+    NODE_ENV: 'development',
+    REPLIT_DEV_DOMAIN: 'turnstone.replit.dev',
+  });
+  const options = createServerAppOptions({
+    environment,
+    resolveViewer: () => ({ kind: 'visitor' }),
+    publishGame: async () => {},
+    countActiveGames: async () => 0,
+  });
+
+  expect(options.allowedOrigins).toEqual(['https://turnstone.replit.dev']);
+  expect(options.publicBaseUrl).toBe('https://turnstone.replit.dev');
 });

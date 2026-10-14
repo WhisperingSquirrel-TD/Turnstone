@@ -12,6 +12,11 @@ const environmentSchema = z
       .enum(['development', 'production', 'test'])
       .default('development'),
     APP_BASE_URL: z.string().url().optional(),
+    REPLIT_DEV_DOMAIN: z
+      .string()
+      .max(253)
+      .regex(/^[a-z\d.-]+$/i)
+      .optional(),
     MAX_ACTIVE_GAMES: z.coerce.number().int().min(1).optional(),
   })
   .superRefine((environment, context) => {

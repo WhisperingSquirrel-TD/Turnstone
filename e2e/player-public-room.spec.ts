@@ -13,6 +13,9 @@ function createPublicView(gameId: string): FullView {
     deadline: Date.now() + 60_000,
     coordinatorPlays: true,
     cycle: 2,
+    shadowRound: 0,
+    missionsEnabled: true,
+    rehearsal: false,
     pot: 18,
     unit: 'points',
     seats: [
@@ -351,22 +354,24 @@ test('banishment voting is a shield-free tap flow and excludes self and out seat
   await expect(page.locator('dialog.privacy-shield')).not.toBeVisible();
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   await expect(page.getByText('Your private role')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Morgan', exact: true })).toHaveCount(
-    0,
-  );
-  await expect(page.getByRole('button', { name: 'Alex', exact: true })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole('button', { name: 'Morgan', exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Alex', exact: true }),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Jamie', exact: true }).click();
   await page.getByRole('button', { name: 'Review this choice' }).click();
   await page.getByRole('button', { name: 'Confirm', exact: true }).click();
 
-  await expect.poll(() => submittedCommands).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ type: 'SubmitVote', target: 'seat-jamie' }),
-      expect.objectContaining({ type: 'AcknowledgePrivate' }),
-    ]),
-  );
+  await expect
+    .poll(() => submittedCommands)
+    .toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'SubmitVote', target: 'seat-jamie' }),
+        expect.objectContaining({ type: 'AcknowledgePrivate' }),
+      ]),
+    );
   await expect(
     page.getByText('Thanks. Waiting for everyone.', { exact: true }),
   ).toBeVisible();
@@ -443,21 +448,23 @@ test('shadow choices appear after shielding without a hold and complete privatel
   await expect(
     page.getByText('Who do you suspect most right now?', { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Morgan', exact: true })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole('button', { name: 'Morgan', exact: true }),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Jamie', exact: true }).click();
   await page.getByRole('button', { name: 'Review this choice' }).click();
   await page.getByRole('button', { name: 'Confirm', exact: true }).click();
-  await expect.poll(() => submittedCommands).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        type: 'SubmitShadowChoice',
-        choice: 'seat-jamie',
-      }),
-      expect.objectContaining({ type: 'AcknowledgePrivate' }),
-    ]),
-  );
+  await expect
+    .poll(() => submittedCommands)
+    .toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'SubmitShadowChoice',
+          choice: 'seat-jamie',
+        }),
+        expect.objectContaining({ type: 'AcknowledgePrivate' }),
+      ]),
+    );
   await expect(
     page.getByText('Thanks. Waiting for everyone.', { exact: true }),
   ).toBeVisible();
@@ -638,7 +645,5 @@ test('the lobby code and join QR are shared on each seated player phone', async 
 
   await expect(page.getByTestId('lobby-room-code')).toHaveText('ABC234');
   await expect(page.getByTestId('lobby-join-qr')).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Full screen' }),
-  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Full screen' })).toBeVisible();
 });

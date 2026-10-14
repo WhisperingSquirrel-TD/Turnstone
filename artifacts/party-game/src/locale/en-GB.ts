@@ -369,6 +369,15 @@ export const en = {
     paused: 'The game is paused. Keep this screen private.',
     progress: (done: number, total: number) =>
       `${done} of ${total} players have completed this part.`,
+    playerOutcome: (
+      winner: 'traitor' | 'faithful',
+      role: 'traitor' | 'faithful',
+    ) => {
+      const roleLabel = role === 'traitor' ? 'a Traitor' : 'a Faithful';
+      if (winner === role) return `You won as ${roleLabel}.`;
+      const winningTeam = winner === 'traitor' ? 'Traitors' : 'Faithful';
+      return `The ${winningTeam} won. You were ${roleLabel}.`;
+    },
     secondsRemaining: (seconds: number) => `${seconds} seconds remaining`,
     timeLeft: 'Time left',
     roomHeading: 'Your room',
@@ -382,6 +391,15 @@ export const en = {
     latestUpdates: 'Latest updates',
     publicLogDeviceRecovered: (name: string) => `${name} moved to a new device`,
     publicLogPinReset: (name: string) => `${name}’s PIN was reset`,
+    publicLogDawn: (victims: string[]) =>
+      victims.length
+        ? victims.map((name) => `${name} was taken in the night.`).join(' ')
+        : 'No one was taken.',
+    publicLogBanishment: (name: string) => `${name} was banished.`,
+    publicLogFinished: (winner: 'traitor' | 'faithful') =>
+      `The ${winner === 'traitor' ? 'Traitors' : 'Faithful'} won.`,
+    rehearseAgain: 'Rehearse again',
+    backToStart: 'Back to start',
     noPublicUpdates: 'No public updates yet.',
     notesButton: 'Notes',
     notesHeading: 'Notes',

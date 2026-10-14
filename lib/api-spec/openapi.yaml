@@ -646,6 +646,9 @@ components:
         - deadline
         - coordinatorPlays
         - cycle
+        - shadowRound
+        - missionsEnabled
+        - rehearsal
         - pot
         - unit
         - seats
@@ -689,6 +692,14 @@ components:
         cycle:
           type: integer
           minimum: 0
+        shadowRound:
+          type: integer
+          minimum: 0
+          maximum: 2
+        missionsEnabled:
+          type: boolean
+        rehearsal:
+          type: boolean
         pot:
           type: number
           minimum: 0
@@ -867,15 +878,64 @@ components:
           type: integer
           minimum: 0
     PublicLogEntry:
-      type: object
-      additionalProperties: false
-      required: [seq, at, action, seatId, name]
-      properties:
-        seq: { type: integer, minimum: 1 }
-        at: { type: integer, minimum: 0 }
-        action: { type: string, enum: [seat_pin_reset, device_recovered] }
-        seatId: { type: string }
-        name: { type: string }
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, seatId, name]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: seat_pin_reset }
+            seatId: { type: string }
+            name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, seatId, name]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: device_recovered }
+            seatId: { type: string }
+            name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, victims]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: dawn }
+            victims:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [id, name]
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, seat]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: banishment }
+            seat:
+              type: object
+              additionalProperties: false
+              required: [id, name]
+              properties:
+                id: { type: string }
+                name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, winner]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: finished }
+            winner:
+              $ref: '#/components/schemas/Role'
     CoordinatorAlert:
       type: object
       additionalProperties: false

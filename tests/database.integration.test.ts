@@ -1382,6 +1382,15 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
         await botRunner.processGame(id);
       },
     });
+    const rehearsalErrors: string[] = [];
+    await createDeadlineScheduler({
+      now: () => now,
+      processRehearsalGame: async () => {
+        throw new Error('test-only rehearsal processor failure');
+      },
+      onError: () => rehearsalErrors.push('reported'),
+    }).runOnce();
+    expect(rehearsalErrors.length).toBeGreaterThan(0);
     await scheduler.runOnce();
     expect(recoveredGames).toContain(gameId);
 
@@ -1623,6 +1632,9 @@ it('creates and advances a game through authenticated HTTP with idempotent repla
       published.push(id);
     },
   });
+  const playerApp = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'player', seatId: 'seat-not-in-game' }),
+  });
   try {
     const created = await request(app)
       .post('/api/games')
@@ -1634,6 +1646,15 @@ it('creates and advances a game through authenticated HTTP with idempotent repla
       });
     expect(created.status).toBe(201);
     expect(created.body.version).toBe(1);
+    const playerAdvance = await request(playerApp)
+      .post(`/api/games/${gameId}/commands`)
+      .send({
+        type: 'AdvancePhase',
+        expectedVersion: 1,
+        idempotencyKey: 'unauthorised-player-advance',
+      });
+    expect(playerAdvance.status).toBe(401);
+    expect(playerAdvance.body).toEqual({ error: 'Authentication required' });
     const createRetry = await request(app)
       .post('/api/games')
       .send({
@@ -2254,13 +2275,14 @@ it('authenticates Socket.IO with a game-scoped seat session and rejects cross-ga
     seatId,
     name: 'A player',
   });
+  const allowedOrigins = ['http://127.0.0.1'];
   const server = createServer(createApp(async () => {}));
   const resolveSeatViewer = createSeatViewerResolver({
     findSession: findViewerSession,
     now: () => now,
   });
   const realtime = await attachRealtime(server, {
-    allowedOrigins: ['http://127.0.0.1'],
+    allowedOrigins,
     resolveViewer: (headers, requestedGameId) =>
       requestedGameId
         ? resolveSeatViewer({
@@ -2270,6 +2292,7 @@ it('authenticates Socket.IO with a game-scoped seat session and rejects cross-ga
         : { kind: 'visitor' },
   });
   let client: ClientSocket | undefined;
+  let invalidClient: ClientSocket | undefined;
 
   try {
     await createGameWithEvent({
@@ -2306,10 +2329,10 @@ it('authenticates Socket.IO with a game-scoped seat session and rejects cross-ga
     const address = server.address();
     if (!address || typeof address === 'string')
       throw new Error('Test server did not bind a TCP port');
+    allowedOrigins[0] = `http://127.0.0.1:${address.port}`;
     client = socketIo(`http://127.0.0.1:${address.port}`, {
-      transports: ['websocket'],
+      transports: ['polling'],
       extraHeaders: {
-        origin: 'http://127.0.0.1',
         cookie: `${cookieNameForGame(gameId)}=${token}`,
       },
       auth: { gameId },
@@ -2336,6 +2359,21 @@ it('authenticates Socket.IO with a game-scoped seat session and rejects cross-ga
       },
     );
     expect(acknowledgement).toEqual({ ok: true });
+    invalidClient = socketIo(`http://127.0.0.1:${address.port}`, {
+      transports: ['polling'],
+      extraHeaders: {
+        cookie: `${cookieNameForGame(gameId)}=${token}`,
+      },
+      auth: { gameId: 'x'.repeat(129) },
+      reconnection: false,
+    });
+    const invalidGameError = await new Promise<Error>((resolve, reject) => {
+      invalidClient!.once('connect_error', resolve);
+      invalidClient!.once('connect', () =>
+        reject(new Error('Malformed game id was accepted')),
+      );
+    });
+    expect(invalidGameError.message).toBe('Unauthorized');
     const otherGame = await new Promise<{ ok?: boolean; error?: string }>(
       (resolve, reject) => {
         const timeout = setTimeout(
@@ -2367,6 +2405,7 @@ it('authenticates Socket.IO with a game-scoped seat session and rejects cross-ga
     expect(disconnectResult).not.toBe('still-connected');
   } finally {
     client?.disconnect();
+    invalidClient?.disconnect();
     await realtime.close();
     await db.execute(sql`delete from games where id = ${gameId}`);
   }

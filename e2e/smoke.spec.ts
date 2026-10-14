@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import type { FullView } from '../lib/shared/src/contracts';
 import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
 
 test('home and play are accessible, reloadable and responsive', async ({
@@ -73,14 +74,19 @@ test('private role is requested only during a hold and is removed on release', a
 }) => {
   let privateRequests = 0;
   const gameId = 'rehearsal-id';
-  const publicView = {
+  const publicView: FullView = {
     id: gameId,
+    viewerSeatId: 'human-seat',
+    canAdvancePhase: false,
     version: 3,
     phase: 'DEAL',
     paused: false,
     deadline: null,
     coordinatorPlays: true,
     cycle: 0,
+    shadowRound: 0,
+    missionsEnabled: false,
+    rehearsal: false,
     pot: 0,
     unit: 'points',
     seats: [{ id: 'human-seat', name: 'Morgan', status: 'alive' }],
@@ -88,6 +94,7 @@ test('private role is requested only during a hold and is removed on release', a
     progress: { done: 0, total: 5 },
     ballots: {},
     winner: null,
+    publicAnnouncement: null,
     private: null,
     publicLog: [],
     coordinatorAlerts: [],
@@ -176,14 +183,19 @@ test('the revealed role stays above the seal and inside small phone viewports', 
 }) => {
   const gameId = 'role-viewport-fit';
   let privateRequests = 0;
-  const publicView = {
+  const publicView: FullView = {
     id: gameId,
+    viewerSeatId: 'human-seat',
+    canAdvancePhase: false,
     version: 3,
     phase: 'DEAL',
     paused: false,
     deadline: null,
     coordinatorPlays: true,
     cycle: 0,
+    shadowRound: 0,
+    missionsEnabled: false,
+    rehearsal: false,
     pot: 0,
     unit: 'points',
     seats: [{ id: 'human-seat', name: 'Morgan', status: 'alive' }],
@@ -191,6 +203,7 @@ test('the revealed role stays above the seal and inside small phone viewports', 
     progress: { done: 0, total: 5 },
     ballots: {},
     winner: null,
+    publicAnnouncement: null,
     private: null,
     publicLog: [],
     coordinatorAlerts: [],
@@ -215,18 +228,16 @@ test('the revealed role stays above the seal and inside small phone viewports', 
   await page.route(`**/api/games/${gameId}/view`, (route) =>
     route.fulfill({ status: 200, json: { version: 3, view: publicView } }),
   );
-  await page.route(`**/api/games/${gameId}/private-view`, (route) =>
-    {
-      privateRequests += 1;
-      return route.fulfill({
-        status: 200,
-        json: {
-          version: 3,
-          view: { ...publicView, private: { role: 'faithful' } },
-        },
-      });
-    },
-  );
+  await page.route(`**/api/games/${gameId}/private-view`, (route) => {
+    privateRequests += 1;
+    return route.fulfill({
+      status: 200,
+      json: {
+        version: 3,
+        view: { ...publicView, private: { role: 'faithful' } },
+      },
+    });
+  });
 
   for (const viewport of [
     { width: 320, height: 568 },

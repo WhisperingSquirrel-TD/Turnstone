@@ -43,6 +43,13 @@ export interface FullView {
   coordinatorPlays: boolean;
   /** @minimum 0 */
   cycle: number;
+  /**
+     * @minimum 0
+     * @maximum 2
+     */
+  shadowRound: number;
+  missionsEnabled: boolean;
+  rehearsal: boolean;
   /** @minimum 0 */
   pot: number;
   unit: string;

@@ -32,6 +32,9 @@ export const VIEW_ALLOW_LIST = [
   'deadline',
   'coordinatorPlays',
   'cycle',
+  'shadowRound',
+  'missionsEnabled',
+  'rehearsal',
   'pot',
   'unit',
   'seats',
@@ -77,6 +80,8 @@ export function viewFor(
 
   const own = state.seats.find((seat) => seat.id === viewer.seatId);
   const ended = state.phase === 'FINISHED';
+  const ownSeatViewer =
+    (viewer.kind === 'player' || viewer.kind === 'ghost') && own ? own : null;
   const host = viewer.kind === 'host' && !state.config.basics.coordinatorPlays;
   const spectator =
     viewer.kind === 'ghost' &&
@@ -140,7 +145,7 @@ export function viewFor(
   }
   return fullViewSchema.parse({
     id: state.id,
-    ...(player && own ? { viewerSeatId: own.id } : {}),
+    ...(ownSeatViewer ? { viewerSeatId: ownSeatViewer.id } : {}),
     canAdvancePhase: rehearsalOrganizer,
     ...(state.config.basics.gameName
       ? { gameName: state.config.basics.gameName }
@@ -152,6 +157,9 @@ export function viewFor(
     deadline: state.phase === 'SHADOW' ? state.shadowEndAt : state.deadline,
     coordinatorPlays: state.config.basics.coordinatorPlays,
     cycle: state.cycle,
+    shadowRound: state.shadowRound,
+    missionsEnabled: state.config.missions.enabled,
+    rehearsal: state.config.rehearsal.enabled,
     pot: state.pot,
     unit: state.config.missions.potUnit,
     seats: state.seats.map((seat) => {
@@ -172,13 +180,47 @@ export function viewFor(
     ballots,
     winner: state.winner,
     publicAnnouncement,
-    publicLog: (state.publicLog ?? []).map((entry) => ({
-      seq: entry.seq,
-      at: entry.at,
-      action: entry.action,
-      seatId: entry.seatId,
-      name: state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
-    })),
+    publicLog: (state.publicLog ?? []).map((entry) => {
+      if (
+        entry.action === 'seat_pin_reset' ||
+        entry.action === 'device_recovered'
+      )
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          seatId: entry.seatId,
+          name:
+            state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
+        };
+      if (entry.action === 'dawn')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          victims: entry.victimIds.map((id) => ({
+            id,
+            name: state.seats.find((seat) => seat.id === id)?.name ?? '',
+          })),
+        };
+      if (entry.action === 'banishment')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          seat: {
+            id: entry.seatId,
+            name:
+              state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
+          },
+        };
+      return {
+        seq: entry.seq,
+        at: entry.at,
+        action: entry.action,
+        winner: entry.winner,
+      };
+    }),
     coordinatorAlerts:
       viewer.kind === 'coordinator'
         ? (state.coordinatorAlerts ?? []).map((alert) => ({

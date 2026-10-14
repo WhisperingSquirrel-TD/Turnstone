@@ -5,14 +5,49 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { PublicLogEntryAction } from './publicLogEntryAction';
+import type { Role } from './role';
 
-export interface PublicLogEntry {
+export type PublicLogEntry = {
   /** @minimum 1 */
   seq: number;
   /** @minimum 0 */
   at: number;
-  action: PublicLogEntryAction;
+  action: 'seat_pin_reset';
   seatId: string;
   name: string;
-}
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'device_recovered';
+  seatId: string;
+  name: string;
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'dawn';
+  victims: {
+  id: string;
+  name: string;
+}[];
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'banishment';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'finished';
+  winner: Role;
+};

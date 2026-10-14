@@ -584,6 +584,7 @@ function webPath(path: string): string {
 
 function PlayerGame() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const token = useContext(csrfContext);
   const install = useContext(installContext);
   const queryClient = useQueryClient();
@@ -630,10 +631,14 @@ function PlayerGame() {
   const view = response?.view;
   const full = view && isFullView(view) ? view : null;
   const visitor = view && !isFullView(view) ? (view as VisitorView) : null;
+  const ownSeat = full?.viewerSeatId
+    ? (full.seats.find((seat) => seat.id === full.viewerSeatId) ?? null)
+    : null;
   const eligibleSeats =
     full?.seats.filter((seat) => seat.status === 'alive') ?? [];
   const phaseIsPrivate = Boolean(
     full &&
+    ownSeat?.status === 'alive' &&
     ['DEAL', 'VOTE', 'SHADOW', 'FINAL_VOTE', 'FINAL_BANISH'].includes(
       full.phase,
     ),
@@ -650,18 +655,20 @@ function PlayerGame() {
   const hasPlayerSeat = Boolean(full);
   const privateOptions = privateView?.options ?? [];
   const choices =
-    full?.phase === 'VOTE' || full?.phase === 'FINAL_BANISH'
-      ? eligibleSeats
-          .filter((seat) => seat.id !== full.viewerSeatId)
-          .map(({ id: seatId, name }) => ({ id: seatId, name }))
-      : full?.phase === 'SHADOW'
-        ? privateOptions
-        : full?.phase === 'FINAL_VOTE'
-          ? [
-              { id: 'end', name: 'End the game' },
-              { id: 'continue', name: 'Continue playing' },
-            ]
-          : [];
+    ownSeat?.status !== 'alive'
+      ? []
+      : full?.phase === 'VOTE' || full?.phase === 'FINAL_BANISH'
+        ? eligibleSeats
+            .filter((seat) => seat.id !== full.viewerSeatId)
+            .map(({ id: seatId, name }) => ({ id: seatId, name }))
+        : full?.phase === 'SHADOW'
+          ? privateOptions
+          : full?.phase === 'FINAL_VOTE'
+            ? [
+                { id: 'end', name: 'End the game' },
+                { id: 'continue', name: 'Continue playing' },
+              ]
+            : [];
 
   async function enterFullScreen() {
     try {
@@ -719,7 +726,7 @@ function PlayerGame() {
   );
   const cancelPrivate = useCallback(() => clearPrivate(), [clearPrivate]);
   const privateStepKey = full
-    ? `${full.phase}:${full.cycle}:${full.deadline ?? 'manual'}:${notesOpen ? 'notes' : 'phase'}`
+    ? `${full.phase}:${full.cycle}:${full.deadline ?? 'manual'}:${full.shadowRound}:${notesOpen ? 'notes' : 'phase'}`
     : 'none';
   const activeGame = Boolean(
     full && !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
@@ -910,7 +917,7 @@ function PlayerGame() {
     setShieldPending(true);
     setHoldMessage('');
     try {
-      if (full?.phase === 'DEAL') {
+      if (['DEAL', 'SHADOW', 'FINAL_VOTE'].includes(full?.phase ?? '')) {
         await command.mutateAsync({
           id,
           data: {
@@ -1128,9 +1135,7 @@ function PlayerGame() {
       command.reset();
       const refreshed = await gameQuery.refetch();
       setCommandMessage(
-        refreshed.data?.view.phase === full.phase
-          ? en.game.moveOnFailed
-          : '',
+        refreshed.data?.view.phase === full.phase ? en.game.moveOnFailed : '',
       );
     }
   }
@@ -1227,6 +1232,8 @@ function PlayerGame() {
             className={full.canAdvancePhase && activeGame ? 'pb-24' : ''}
             data-testid="player-game"
             data-phase={full.phase}
+            data-version={full.version}
+            data-shadow-round={full.shadowRound}
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
@@ -1292,13 +1299,15 @@ function PlayerGame() {
                 {en.game.wakeLockFallback}
               </p>
             )}
-            {!inPrivateMoment && <div className="status-rule mt-6 pt-6">
-              <p className="max-w-xl text-ash">
-                {full.paused
-                  ? en.game.paused
-                  : en.game.progress(full.progress.done, full.progress.total)}
-              </p>
-            </div>}
+            {!inPrivateMoment && full.phase !== 'FINISHED' && (
+              <div className="status-rule mt-6 pt-6">
+                <p className="max-w-xl text-ash">
+                  {full.paused
+                    ? en.game.paused
+                    : en.game.progress(full.progress.done, full.progress.total)}
+                </p>
+              </div>
+            )}
 
             {!inPrivateMoment && full.publicAnnouncement && (
               <section
@@ -1329,6 +1338,15 @@ function PlayerGame() {
                   </h2>
                 )}
               </section>
+            )}
+            {full.phase === 'FINISHED' && ownSeat?.role && full.winner && (
+              <p
+                className="mt-4 text-lg text-candle"
+                data-testid="player-outcome"
+                role="status"
+              >
+                {en.game.playerOutcome(full.winner, ownSeat.role)}
+              </p>
             )}
 
             {!inPrivateMoment && full.phase === 'VERDICT' && (
@@ -1726,18 +1744,20 @@ function PlayerGame() {
                     )}
                   </section>
                 )}
-                <section
-                  className="mt-5 border-y border-stone py-4"
-                  aria-label={en.game.prizePot(full.pot, full.unit)}
-                >
-                  <p className="text-sm text-ash">{en.game.prizePotLabel}</p>
-                  <p
-                    className="mt-1 text-xl font-medium tabular-nums text-candle"
-                    data-testid="status-prize-pot"
+                {full.missionsEnabled && (
+                  <section
+                    className="mt-5 border-y border-stone py-4"
+                    aria-label={en.game.prizePot(full.pot, full.unit)}
                   >
-                    {en.game.prizePot(full.pot, full.unit)}
-                  </p>
-                </section>
+                    <p className="text-sm text-ash">{en.game.prizePotLabel}</p>
+                    <p
+                      className="mt-1 text-xl font-medium tabular-nums text-candle"
+                      data-testid="status-prize-pot"
+                    >
+                      {en.game.prizePot(full.pot, full.unit)}
+                    </p>
+                  </section>
+                )}
 
                 <section className="mt-7" aria-labelledby="players-heading">
                   <h2 id="players-heading" className="display text-2xl">
@@ -1758,9 +1778,13 @@ function PlayerGame() {
                           <span
                             className={`shrink-0 text-sm ${isAlive ? 'text-candle' : 'text-ash'}`}
                           >
-                            {isAlive
-                              ? en.game.playerPlaying
-                              : en.game.playerOut}
+                            {isAlive && full.phase === 'FINISHED' && seat.role
+                              ? seat.role === 'traitor'
+                                ? en.game.roleTraitor
+                                : en.game.roleFaithful
+                              : isAlive
+                                ? en.game.playerPlaying
+                                : en.game.playerOut}
                           </span>
                         </li>
                       );
@@ -1779,7 +1803,6 @@ function PlayerGame() {
                     {full.publicLog
                       .slice()
                       .sort((a, b) => a.seq - b.seq)
-                      .slice(-5)
                       .reverse()
                       .map((entry) => (
                         <li
@@ -1789,7 +1812,15 @@ function PlayerGame() {
                         >
                           {entry.action === 'device_recovered'
                             ? en.game.publicLogDeviceRecovered(entry.name)
-                            : en.game.publicLogPinReset(entry.name)}
+                            : entry.action === 'seat_pin_reset'
+                              ? en.game.publicLogPinReset(entry.name)
+                              : entry.action === 'dawn'
+                                ? en.game.publicLogDawn(
+                                    entry.victims.map((victim) => victim.name),
+                                  )
+                                : entry.action === 'banishment'
+                                  ? en.game.publicLogBanishment(entry.seat.name)
+                                  : en.game.publicLogFinished(entry.winner)}
                         </li>
                       ))}
                     {full.publicLog.length === 0 && (
@@ -1813,6 +1844,26 @@ function PlayerGame() {
                 >
                   {en.game.notesButton}
                 </button>
+                {full.phase === 'FINISHED' && (
+                  <div className="mt-6 grid gap-3">
+                    {full.rehearsal && (
+                      <button
+                        className="secondary-action w-full"
+                        type="button"
+                        onClick={() => navigate(config.routes.rehearsal)}
+                      >
+                        {en.game.rehearseAgain}
+                      </button>
+                    )}
+                    <button
+                      className="primary-action w-full"
+                      type="button"
+                      onClick={() => navigate(config.routes.play)}
+                    >
+                      {en.game.backToStart}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1820,7 +1871,9 @@ function PlayerGame() {
         {full?.canAdvancePhase && activeGame && !showShieldCard && (
           <div
             className="fixed inset-x-0 bottom-0 z-30 border-t border-stone bg-hearth px-6 pt-3"
-            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+            style={{
+              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+            }}
             data-testid="rehearsal-action-bar"
           >
             <div className="mx-auto w-full max-w-[480px]">

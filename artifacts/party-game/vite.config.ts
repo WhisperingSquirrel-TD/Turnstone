@@ -222,6 +222,11 @@ export default defineConfig({
               changeOrigin: false,
               ws: true,
             },
+            '^/socket\\.io(?:/|$)': {
+              target: testApiProxyTarget,
+              changeOrigin: false,
+              ws: true,
+            },
           },
         }
       : {}),

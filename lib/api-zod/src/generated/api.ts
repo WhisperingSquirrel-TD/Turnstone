@@ -61,6 +61,9 @@ export const startRehearsalResponseViewTwoGameNameMax = 60;
 export const startRehearsalResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const startRehearsalResponseViewTwoCycleMin = 0;
 
+export const startRehearsalResponseViewTwoShadowRoundMin = 0;
+export const startRehearsalResponseViewTwoShadowRoundMax = 2;
+
 export const startRehearsalResponseViewTwoPotMin = 0;
 
 export const startRehearsalResponseViewTwoSeatsItemIdMax = 128;
@@ -80,7 +83,19 @@ export const startRehearsalResponseViewTwoPublicAnnouncementTwoSeatIdMax = 128;
 export const startRehearsalResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
-export const startRehearsalResponseViewTwoPublicLogItemAtMin = 0;
+export const startRehearsalResponseViewTwoPublicLogItemOneAtMin = 0;
+
+
+export const startRehearsalResponseViewTwoPublicLogItemTwoAtMin = 0;
+
+
+export const startRehearsalResponseViewTwoPublicLogItemThreeAtMin = 0;
+
+
+export const startRehearsalResponseViewTwoPublicLogItemFourAtMin = 0;
+
+
+export const startRehearsalResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 
 export const startRehearsalResponseViewTwoCoordinatorAlertsItemAtMin = 0;
@@ -110,6 +125,9 @@ export const StartRehearsalResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(startRehearsalResponseViewTwoCycleMin),
+  "shadowRound": zod.number().int().min(startRehearsalResponseViewTwoShadowRoundMin).max(startRehearsalResponseViewTwoShadowRoundMax),
+  "missionsEnabled": zod.boolean(),
+  "rehearsal": zod.boolean(),
   "pot": zod.number().min(startRehearsalResponseViewTwoPotMin),
   "unit": zod.string(),
   "seats": zod.array(zod.object({
@@ -169,13 +187,40 @@ export const StartRehearsalResponse = zod.object({
 }),zod.null()]),
   "minimumDurationMs": zod.number().int().min(startRehearsalResponseViewTwoPrivateOneMinimumDurationMsMin)
 }),zod.null()]),
-  "publicLog": zod.array(zod.object({
+  "publicLog": zod.array(zod.union([zod.object({
   "seq": zod.number().int().min(1),
-  "at": zod.number().int().min(startRehearsalResponseViewTwoPublicLogItemAtMin),
-  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "at": zod.number().int().min(startRehearsalResponseViewTwoPublicLogItemOneAtMin),
+  "action": zod.literal("seat_pin_reset"),
   "seatId": zod.string(),
   "name": zod.string()
-})),
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(startRehearsalResponseViewTwoPublicLogItemTwoAtMin),
+  "action": zod.literal("device_recovered"),
+  "seatId": zod.string(),
+  "name": zod.string()
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(startRehearsalResponseViewTwoPublicLogItemThreeAtMin),
+  "action": zod.literal("dawn"),
+  "victims": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(startRehearsalResponseViewTwoPublicLogItemFourAtMin),
+  "action": zod.literal("banishment"),
+  "seat": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(startRehearsalResponseViewTwoPublicLogItemFiveAtMin),
+  "action": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+})])),
   "coordinatorAlerts": zod.array(zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(startRehearsalResponseViewTwoCoordinatorAlertsItemAtMin),
@@ -233,6 +278,9 @@ export const createGameResponseViewTwoGameNameMax = 60;
 export const createGameResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const createGameResponseViewTwoCycleMin = 0;
 
+export const createGameResponseViewTwoShadowRoundMin = 0;
+export const createGameResponseViewTwoShadowRoundMax = 2;
+
 export const createGameResponseViewTwoPotMin = 0;
 
 export const createGameResponseViewTwoSeatsItemIdMax = 128;
@@ -252,7 +300,19 @@ export const createGameResponseViewTwoPublicAnnouncementTwoSeatIdMax = 128;
 export const createGameResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
-export const createGameResponseViewTwoPublicLogItemAtMin = 0;
+export const createGameResponseViewTwoPublicLogItemOneAtMin = 0;
+
+
+export const createGameResponseViewTwoPublicLogItemTwoAtMin = 0;
+
+
+export const createGameResponseViewTwoPublicLogItemThreeAtMin = 0;
+
+
+export const createGameResponseViewTwoPublicLogItemFourAtMin = 0;
+
+
+export const createGameResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 
 export const createGameResponseViewTwoCoordinatorAlertsItemAtMin = 0;
@@ -282,6 +342,9 @@ export const CreateGameResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(createGameResponseViewTwoCycleMin),
+  "shadowRound": zod.number().int().min(createGameResponseViewTwoShadowRoundMin).max(createGameResponseViewTwoShadowRoundMax),
+  "missionsEnabled": zod.boolean(),
+  "rehearsal": zod.boolean(),
   "pot": zod.number().min(createGameResponseViewTwoPotMin),
   "unit": zod.string(),
   "seats": zod.array(zod.object({
@@ -341,13 +404,40 @@ export const CreateGameResponse = zod.object({
 }),zod.null()]),
   "minimumDurationMs": zod.number().int().min(createGameResponseViewTwoPrivateOneMinimumDurationMsMin)
 }),zod.null()]),
-  "publicLog": zod.array(zod.object({
+  "publicLog": zod.array(zod.union([zod.object({
   "seq": zod.number().int().min(1),
-  "at": zod.number().int().min(createGameResponseViewTwoPublicLogItemAtMin),
-  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "at": zod.number().int().min(createGameResponseViewTwoPublicLogItemOneAtMin),
+  "action": zod.literal("seat_pin_reset"),
   "seatId": zod.string(),
   "name": zod.string()
-})),
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(createGameResponseViewTwoPublicLogItemTwoAtMin),
+  "action": zod.literal("device_recovered"),
+  "seatId": zod.string(),
+  "name": zod.string()
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(createGameResponseViewTwoPublicLogItemThreeAtMin),
+  "action": zod.literal("dawn"),
+  "victims": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(createGameResponseViewTwoPublicLogItemFourAtMin),
+  "action": zod.literal("banishment"),
+  "seat": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(createGameResponseViewTwoPublicLogItemFiveAtMin),
+  "action": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+})])),
   "coordinatorAlerts": zod.array(zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(createGameResponseViewTwoCoordinatorAlertsItemAtMin),
@@ -528,6 +618,9 @@ export const getJoinRequestStatusResponseThreeGameViewTwoGameNameMax = 60;
 export const getJoinRequestStatusResponseThreeGameViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const getJoinRequestStatusResponseThreeGameViewTwoCycleMin = 0;
 
+export const getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMin = 0;
+export const getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMax = 2;
+
 export const getJoinRequestStatusResponseThreeGameViewTwoPotMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoSeatsItemIdMax = 128;
@@ -547,7 +640,19 @@ export const getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementTwoSe
 export const getJoinRequestStatusResponseThreeGameViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
-export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemAtMin = 0;
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemOneAtMin = 0;
+
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemTwoAtMin = 0;
+
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemThreeAtMin = 0;
+
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemFourAtMin = 0;
+
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemFiveAtMin = 0;
 
 
 export const getJoinRequestStatusResponseThreeGameViewTwoCoordinatorAlertsItemAtMin = 0;
@@ -583,6 +688,9 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoCycleMin),
+  "shadowRound": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMin).max(getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMax),
+  "missionsEnabled": zod.boolean(),
+  "rehearsal": zod.boolean(),
   "pot": zod.number().min(getJoinRequestStatusResponseThreeGameViewTwoPotMin),
   "unit": zod.string(),
   "seats": zod.array(zod.object({
@@ -642,13 +750,40 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
 }),zod.null()]),
   "minimumDurationMs": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPrivateOneMinimumDurationMsMin)
 }),zod.null()]),
-  "publicLog": zod.array(zod.object({
+  "publicLog": zod.array(zod.union([zod.object({
   "seq": zod.number().int().min(1),
-  "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemAtMin),
-  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemOneAtMin),
+  "action": zod.literal("seat_pin_reset"),
   "seatId": zod.string(),
   "name": zod.string()
-})),
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemTwoAtMin),
+  "action": zod.literal("device_recovered"),
+  "seatId": zod.string(),
+  "name": zod.string()
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemThreeAtMin),
+  "action": zod.literal("dawn"),
+  "victims": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemFourAtMin),
+  "action": zod.literal("banishment"),
+  "seat": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemFiveAtMin),
+  "action": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+})])),
   "coordinatorAlerts": zod.array(zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoCoordinatorAlertsItemAtMin),
@@ -734,6 +869,9 @@ export const getGameViewResponseViewTwoGameNameMax = 60;
 export const getGameViewResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const getGameViewResponseViewTwoCycleMin = 0;
 
+export const getGameViewResponseViewTwoShadowRoundMin = 0;
+export const getGameViewResponseViewTwoShadowRoundMax = 2;
+
 export const getGameViewResponseViewTwoPotMin = 0;
 
 export const getGameViewResponseViewTwoSeatsItemIdMax = 128;
@@ -753,7 +891,19 @@ export const getGameViewResponseViewTwoPublicAnnouncementTwoSeatIdMax = 128;
 export const getGameViewResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
-export const getGameViewResponseViewTwoPublicLogItemAtMin = 0;
+export const getGameViewResponseViewTwoPublicLogItemOneAtMin = 0;
+
+
+export const getGameViewResponseViewTwoPublicLogItemTwoAtMin = 0;
+
+
+export const getGameViewResponseViewTwoPublicLogItemThreeAtMin = 0;
+
+
+export const getGameViewResponseViewTwoPublicLogItemFourAtMin = 0;
+
+
+export const getGameViewResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 
 export const getGameViewResponseViewTwoCoordinatorAlertsItemAtMin = 0;
@@ -783,6 +933,9 @@ export const GetGameViewResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(getGameViewResponseViewTwoCycleMin),
+  "shadowRound": zod.number().int().min(getGameViewResponseViewTwoShadowRoundMin).max(getGameViewResponseViewTwoShadowRoundMax),
+  "missionsEnabled": zod.boolean(),
+  "rehearsal": zod.boolean(),
   "pot": zod.number().min(getGameViewResponseViewTwoPotMin),
   "unit": zod.string(),
   "seats": zod.array(zod.object({
@@ -842,13 +995,40 @@ export const GetGameViewResponse = zod.object({
 }),zod.null()]),
   "minimumDurationMs": zod.number().int().min(getGameViewResponseViewTwoPrivateOneMinimumDurationMsMin)
 }),zod.null()]),
-  "publicLog": zod.array(zod.object({
+  "publicLog": zod.array(zod.union([zod.object({
   "seq": zod.number().int().min(1),
-  "at": zod.number().int().min(getGameViewResponseViewTwoPublicLogItemAtMin),
-  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "at": zod.number().int().min(getGameViewResponseViewTwoPublicLogItemOneAtMin),
+  "action": zod.literal("seat_pin_reset"),
   "seatId": zod.string(),
   "name": zod.string()
-})),
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getGameViewResponseViewTwoPublicLogItemTwoAtMin),
+  "action": zod.literal("device_recovered"),
+  "seatId": zod.string(),
+  "name": zod.string()
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getGameViewResponseViewTwoPublicLogItemThreeAtMin),
+  "action": zod.literal("dawn"),
+  "victims": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getGameViewResponseViewTwoPublicLogItemFourAtMin),
+  "action": zod.literal("banishment"),
+  "seat": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getGameViewResponseViewTwoPublicLogItemFiveAtMin),
+  "action": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+})])),
   "coordinatorAlerts": zod.array(zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(getGameViewResponseViewTwoCoordinatorAlertsItemAtMin),
@@ -910,6 +1090,9 @@ export const revealPrivateViewResponseViewTwoGameNameMax = 60;
 export const revealPrivateViewResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const revealPrivateViewResponseViewTwoCycleMin = 0;
 
+export const revealPrivateViewResponseViewTwoShadowRoundMin = 0;
+export const revealPrivateViewResponseViewTwoShadowRoundMax = 2;
+
 export const revealPrivateViewResponseViewTwoPotMin = 0;
 
 export const revealPrivateViewResponseViewTwoSeatsItemIdMax = 128;
@@ -929,7 +1112,19 @@ export const revealPrivateViewResponseViewTwoPublicAnnouncementTwoSeatIdMax = 12
 export const revealPrivateViewResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
-export const revealPrivateViewResponseViewTwoPublicLogItemAtMin = 0;
+export const revealPrivateViewResponseViewTwoPublicLogItemOneAtMin = 0;
+
+
+export const revealPrivateViewResponseViewTwoPublicLogItemTwoAtMin = 0;
+
+
+export const revealPrivateViewResponseViewTwoPublicLogItemThreeAtMin = 0;
+
+
+export const revealPrivateViewResponseViewTwoPublicLogItemFourAtMin = 0;
+
+
+export const revealPrivateViewResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 
 export const revealPrivateViewResponseViewTwoCoordinatorAlertsItemAtMin = 0;
@@ -959,6 +1154,9 @@ export const RevealPrivateViewResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(revealPrivateViewResponseViewTwoCycleMin),
+  "shadowRound": zod.number().int().min(revealPrivateViewResponseViewTwoShadowRoundMin).max(revealPrivateViewResponseViewTwoShadowRoundMax),
+  "missionsEnabled": zod.boolean(),
+  "rehearsal": zod.boolean(),
   "pot": zod.number().min(revealPrivateViewResponseViewTwoPotMin),
   "unit": zod.string(),
   "seats": zod.array(zod.object({
@@ -1018,13 +1216,40 @@ export const RevealPrivateViewResponse = zod.object({
 }),zod.null()]),
   "minimumDurationMs": zod.number().int().min(revealPrivateViewResponseViewTwoPrivateOneMinimumDurationMsMin)
 }),zod.null()]),
-  "publicLog": zod.array(zod.object({
+  "publicLog": zod.array(zod.union([zod.object({
   "seq": zod.number().int().min(1),
-  "at": zod.number().int().min(revealPrivateViewResponseViewTwoPublicLogItemAtMin),
-  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "at": zod.number().int().min(revealPrivateViewResponseViewTwoPublicLogItemOneAtMin),
+  "action": zod.literal("seat_pin_reset"),
   "seatId": zod.string(),
   "name": zod.string()
-})),
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(revealPrivateViewResponseViewTwoPublicLogItemTwoAtMin),
+  "action": zod.literal("device_recovered"),
+  "seatId": zod.string(),
+  "name": zod.string()
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(revealPrivateViewResponseViewTwoPublicLogItemThreeAtMin),
+  "action": zod.literal("dawn"),
+  "victims": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(revealPrivateViewResponseViewTwoPublicLogItemFourAtMin),
+  "action": zod.literal("banishment"),
+  "seat": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(revealPrivateViewResponseViewTwoPublicLogItemFiveAtMin),
+  "action": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+})])),
   "coordinatorAlerts": zod.array(zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(revealPrivateViewResponseViewTwoCoordinatorAlertsItemAtMin),
@@ -1090,6 +1315,9 @@ export const submitGameCommandResponseViewTwoGameNameMax = 60;
 export const submitGameCommandResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const submitGameCommandResponseViewTwoCycleMin = 0;
 
+export const submitGameCommandResponseViewTwoShadowRoundMin = 0;
+export const submitGameCommandResponseViewTwoShadowRoundMax = 2;
+
 export const submitGameCommandResponseViewTwoPotMin = 0;
 
 export const submitGameCommandResponseViewTwoSeatsItemIdMax = 128;
@@ -1109,7 +1337,19 @@ export const submitGameCommandResponseViewTwoPublicAnnouncementTwoSeatIdMax = 12
 export const submitGameCommandResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
-export const submitGameCommandResponseViewTwoPublicLogItemAtMin = 0;
+export const submitGameCommandResponseViewTwoPublicLogItemOneAtMin = 0;
+
+
+export const submitGameCommandResponseViewTwoPublicLogItemTwoAtMin = 0;
+
+
+export const submitGameCommandResponseViewTwoPublicLogItemThreeAtMin = 0;
+
+
+export const submitGameCommandResponseViewTwoPublicLogItemFourAtMin = 0;
+
+
+export const submitGameCommandResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 
 export const submitGameCommandResponseViewTwoCoordinatorAlertsItemAtMin = 0;
@@ -1139,6 +1379,9 @@ export const SubmitGameCommandResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(submitGameCommandResponseViewTwoCycleMin),
+  "shadowRound": zod.number().int().min(submitGameCommandResponseViewTwoShadowRoundMin).max(submitGameCommandResponseViewTwoShadowRoundMax),
+  "missionsEnabled": zod.boolean(),
+  "rehearsal": zod.boolean(),
   "pot": zod.number().min(submitGameCommandResponseViewTwoPotMin),
   "unit": zod.string(),
   "seats": zod.array(zod.object({
@@ -1198,13 +1441,40 @@ export const SubmitGameCommandResponse = zod.object({
 }),zod.null()]),
   "minimumDurationMs": zod.number().int().min(submitGameCommandResponseViewTwoPrivateOneMinimumDurationMsMin)
 }),zod.null()]),
-  "publicLog": zod.array(zod.object({
+  "publicLog": zod.array(zod.union([zod.object({
   "seq": zod.number().int().min(1),
-  "at": zod.number().int().min(submitGameCommandResponseViewTwoPublicLogItemAtMin),
-  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "at": zod.number().int().min(submitGameCommandResponseViewTwoPublicLogItemOneAtMin),
+  "action": zod.literal("seat_pin_reset"),
   "seatId": zod.string(),
   "name": zod.string()
-})),
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(submitGameCommandResponseViewTwoPublicLogItemTwoAtMin),
+  "action": zod.literal("device_recovered"),
+  "seatId": zod.string(),
+  "name": zod.string()
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(submitGameCommandResponseViewTwoPublicLogItemThreeAtMin),
+  "action": zod.literal("dawn"),
+  "victims": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+}))
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(submitGameCommandResponseViewTwoPublicLogItemFourAtMin),
+  "action": zod.literal("banishment"),
+  "seat": zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(submitGameCommandResponseViewTwoPublicLogItemFiveAtMin),
+  "action": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+})])),
   "coordinatorAlerts": zod.array(zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(submitGameCommandResponseViewTwoCoordinatorAlertsItemAtMin),

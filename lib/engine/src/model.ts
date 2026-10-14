@@ -91,12 +91,38 @@ export type State = {
     cancelled: boolean;
     traitors: string[];
   }[];
-  publicLog: {
-    seq: number;
-    at: number;
-    action: 'seat_pin_reset' | 'device_recovered';
-    seatId: string;
-  }[];
+  publicLog: (
+    | {
+        seq: number;
+        at: number;
+        action: 'seat_pin_reset';
+        seatId: string;
+      }
+    | {
+        seq: number;
+        at: number;
+        action: 'device_recovered';
+        seatId: string;
+      }
+    | {
+        seq: number;
+        at: number;
+        action: 'banishment';
+        seatId: string;
+      }
+    | {
+        seq: number;
+        at: number;
+        action: 'dawn';
+        victimIds: string[];
+      }
+    | {
+        seq: number;
+        at: number;
+        action: 'finished';
+        winner: Role;
+      }
+  )[];
   publicAnnouncement:
     | { kind: 'dawn'; cycle: number; victimIds: string[] }
     | { kind: 'verdict'; cycle: number; seatId: string }

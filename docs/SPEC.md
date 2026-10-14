@@ -270,3 +270,17 @@ PROCESS: write the E1 to E4 plan with ASCII wireframes in docs/DESIGN.md, build 
 Never name the competitor product, its maker or the show. Record every comparative claim with its basis and date in docs/CLAIMS.md: the competitor is about £8.99 per player, a week-long WhatsApp game, up to 30 players, aged 16 and over, UK and Ireland only (sources: Pocket Gamer and CityDays, checked 12 October 2026). Add a pre-launch check to recheck them, and remove any claim that is no longer true.
 
 Push and check CI as usual.
+
+## 28. Single-origin hosting decision [Owner]
+
+This owner decision supersedes earlier hosting statements in sections 4, 20, 22 and 24, and any prior Vercel or split-host direction, wherever they conflict.
+
+Production target, after separate owner approval: one Replit Reserved VM deployment serves the Turnstone public pages, app shell/PWA, API, Socket.IO and durable scheduler from the single origin `https://turnstone.stackstoneconsulting.co.uk`. There is no Vercel deployment and no `live.` subdomain. Stackstone Consulting's company site remains separate and is expected to redirect stackstoneconsulting.co.uk/turnstone to the Turnstone site.
+
+The client uses relative same-origin `/api` and `/socket.io` paths; no API host is baked into the client. The web shell and game server always release together; N-1 shell/server compatibility is not required.
+
+Before the Milestone 5 gate, make only these hosting changes: record this decision in this specification, `docs/HOSTING.md` and `docs/DECISIONS.md`; stop Vercel-specific work; retain existing Vercel files but mark them unused in `docs/HOSTING.md`; keep client paths same-origin. No other hosting code changes are authorised until Milestone 5 is accepted.
+
+After the Milestone 5 gate (M4b), implement each item under TDD: serve the built client from the Node server with one-year immutable caching for hashed assets, no-cache HTML/manifest/service worker, precompressed Brotli/gzip, non-blocking static serving, and page availability during admission control; apply and test security headers on every response, with no CORS access for other origins and unchanged host-only Secure/HttpOnly/SameSite=Lax cookies and CSRF; keep `PRE_LAUNCH_NOINDEX` and `robots.txt` disallow-all until the owner says “launch”; test health checks and correct game recovery after restart; deploy only from a commit with green Verify and record commit/run ID in `docs/RELEASES.md`.
+
+Hard stop: do not create a deployment, connect a domain, add production secrets or change DNS. Present the owner checklist in `docs/HOSTING.md` and wait for explicit approval.

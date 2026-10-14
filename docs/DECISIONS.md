@@ -993,3 +993,40 @@ resolved.
 **Choice:** Store a temporary readable display code alongside the hashed invite lookup value. Only project it to seated players and an enabled presenter during the lobby; the QR carries the code in a URL fragment and opens the ordinary short-code join flow. That flow continues to look up the stored hash and create a pending join request. Revoke the invite and clear its readable display code when the lobby closes or the game ends. Never include it in logs, errors, or analytics.
 
 **Consequence:** The readable code is not an independent join credential: approval, rate limiting and server-side hash lookup remain authoritative. Visitor projections and all non-lobby views remain code-free.
+
+## D71 — Single-origin Replit hosting (resolved)
+
+**Context:** The owner replaced the earlier Vercel/sibling-server direction with one Replit deployment and specified relative API/socket paths. The current hosting files and plan contained conflicting Vercel and `live.`-subdomain instructions.
+
+**Options:** Keep a Vercel static shell with a sibling game server; deploy everything on Vercel; or serve Turnstone's public pages, app shell, API, sockets and scheduler together from one Replit Reserved VM.
+
+**Choice:** Use the single-origin Replit architecture at `https://turnstone.stackstoneconsulting.co.uk` after separate owner launch approval. The Stackstone company site remains separate. Remove API-host selection from the client and use relative `/api` and `/socket.io` paths. Release the shell and server together; do not require N-1 compatibility. Retain existing Vercel files only as unused repository files and record deferred M4b work in `docs/HOSTING.md`.
+
+**Consequence:** This decision selects the intended host but does not authorise deployment, domain connection, DNS changes, production secrets, or paid services. No hosting code work beyond same-origin paths is authorised before Milestone 5 acceptance. The owner checklist must be presented before any launch action.
+
+## D72 — Same-origin Socket.IO polling on the Replit preview (resolved)
+
+**Context:** The real phone rehearsal remained on a stale phase. Socket.IO's
+same-origin polling handshake begins with a GET that omits the `Origin` header,
+but the server required an exact Origin. The Replit development environment
+also lacked `APP_BASE_URL`, so the server's allow-list was empty. Browser
+diagnostics recorded only whether headers were present and their categories;
+no cookie, token, or header values were logged.
+
+**Options:** Accept requests with no Origin from any host; weaken the CSRF
+checks; or accept an Origin-less Socket.IO handshake only when its Host
+exactly matches an already allowed origin, while providing the managed Replit
+development host as an origin only in development.
+
+**Choice:** Keep exact allow-list matching whenever Origin is present. For
+Socket.IO handshake requests only, accept a missing Origin when the Host and
+allowed-origin scheme/port match exactly; the game-scoped seat capability is
+still required. When `APP_BASE_URL` is unset in development, derive the
+allowed origin and public base URL from `REPLIT_DEV_DOMAIN`. Production still
+requires an explicit `APP_BASE_URL`. HTTP state-changing requests retain the
+existing Origin and CSRF-token checks.
+
+**Consequence:** Same-origin mobile polling works on the Replit preview
+without wildcard origins or weaker HTTP CSRF. Tests cover the missing-Origin
+handshake, mismatched Host/port, development fallback, database-backed
+session authorisation, and a full rehearsal with no presenter.

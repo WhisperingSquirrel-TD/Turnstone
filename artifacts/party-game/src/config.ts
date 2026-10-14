@@ -6,17 +6,13 @@ const builder = 'Stackstone Consulting';
 const siteOrigin = 'https://turnstone.stackstoneconsulting.co.uk';
 
 export function resolveApiOrigin(
-  isDevelopment: boolean,
-  configuredOrigin: string | undefined,
-): string | null {
-  if (isDevelopment) return null;
-  return configuredOrigin || null;
+  legacyConfiguredOrigin: string | undefined,
+): null {
+  void legacyConfiguredOrigin;
+  return null;
 }
 
-const configuredApiOrigin = resolveApiOrigin(
-  Boolean(import.meta.env?.DEV),
-  import.meta.env?.VITE_API_ORIGIN as string | undefined,
-);
+const configuredApiOrigin = resolveApiOrigin(undefined);
 
 export const config = {
   appName,
@@ -26,7 +22,6 @@ export const config = {
   builder,
   siteOrigin,
   productionRpId: new URL(siteOrigin).hostname,
-  plannedApiOrigin: 'https://live.turnstone.stackstoneconsulting.co.uk',
   apiOrigin: configuredApiOrigin,
   brandMarkPath: 'brand/stackstone-logo-dark-outlined.svg',
   appIconPath: 'brand/stackstone-icon-dark-outlined.svg',

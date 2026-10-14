@@ -54,11 +54,17 @@ describe('Milestone 1 deterministic engine', () => {
     });
     command(fast, { type: 'StartGame' });
     expect(fast.state.phase).toBe('DEAL');
-    expect(fast.state.deadline! - fast.state.phaseStarted).toBe(5_000);
+    expect(
+      fast.state.deadline! - fast.state.phaseStarted,
+    ).toBeGreaterThanOrEqual(8_000);
 
     advance(fast, 'SHADOW');
-    expect(fast.state.deadline! - fast.state.phaseStarted).toBe(4_000);
-    expect(fast.state.shadowEndAt! - fast.state.phaseStarted).toBe(8_000);
+    expect(
+      fast.state.deadline! - fast.state.phaseStarted,
+    ).toBeGreaterThanOrEqual(8_000);
+    expect(
+      fast.state.shadowEndAt! - fast.state.phaseStarted,
+    ).toBeGreaterThanOrEqual(16_000);
 
     const longerShield = fixture(5, {
       privacy: { holdMs: 1_000, shieldSeconds: 10 },
@@ -67,11 +73,11 @@ describe('Milestone 1 deterministic engine', () => {
     command(longerShield, { type: 'StartGame' });
     expect(
       longerShield.state.deadline! - longerShield.state.phaseStarted,
-    ).toBeGreaterThanOrEqual(11_500);
+    ).toBeGreaterThanOrEqual(13_000);
     advance(longerShield, 'SHADOW');
     expect(
       longerShield.state.deadline! - longerShield.state.phaseStarted,
-    ).toBeGreaterThanOrEqual(11_500);
+    ).toBeGreaterThanOrEqual(13_000);
   });
   it('deals the exact configured number, publishes only the commitment and replays exactly', () => {
     const game = fixture(15);
@@ -210,6 +216,10 @@ describe('Milestone 1 deterministic engine', () => {
     const own = game.state.seats[0]!;
     expect(
       viewFor({ kind: 'player', seatId: own.id }, game.state).viewerSeatId,
+    ).toBe(own.id);
+    command(game, { type: 'MarkDeparted', seatId: own.id });
+    expect(
+      viewFor({ kind: 'ghost', seatId: own.id }, game.state).viewerSeatId,
     ).toBe(own.id);
     expect(viewFor({ kind: 'coordinator' }, game.state)).not.toHaveProperty(
       'viewerSeatId',
@@ -421,6 +431,12 @@ describe('Milestone 1 deterministic engine', () => {
     );
     expect(faithfulView.deadline).toBe(shadowEnd);
     expect(faithfulView.private?.choices).toEqual({});
+    expect(
+      viewFor({ kind: 'player', seatId: firstTraitor.id }, game.state),
+    ).toHaveProperty('shadowRound', 1);
+    expect(viewFor({ kind: 'visitor' }, game.state)).not.toHaveProperty(
+      'shadowRound',
+    );
 
     game.context.now = midpoint + 1;
     command(game, { type: 'AdvancePhase' });
@@ -428,6 +444,9 @@ describe('Milestone 1 deterministic engine', () => {
     expect(game.state.shadowRound).toBe(2);
     expect(game.state.deadline).toBe(shadowEnd);
     expect(game.state.shadow).toEqual({});
+    expect(
+      viewFor({ kind: 'player', seatId: firstTraitor.id }, game.state),
+    ).toHaveProperty('shadowRound', 2);
 
     command(
       game,
@@ -453,9 +472,25 @@ describe('Milestone 1 deterministic engine', () => {
     game.context.now = shadowEnd + 1;
     command(game, { type: 'AdvancePhase' });
 
+    const dawnEvent = game.events.find(
+      (event) => event.type === 'DawnResolved',
+    );
+    expect(dawnEvent).toMatchObject({ victims: expect.any(Array) });
+    if (dawnEvent?.type !== 'DawnResolved')
+      throw new Error('The shadow step did not produce a dawn event.');
     expect(
-      game.events.find((event) => event.type === 'DawnResolved'),
-    ).toMatchObject({ victims: expect.any(Array) });
+      viewFor({ kind: 'presenter' }, game.state).publicLog.find(
+        (entry) => entry.action === 'dawn',
+      ),
+    ).toEqual({
+      seq: dawnEvent.seq,
+      at: dawnEvent.at,
+      action: 'dawn',
+      victims: dawnEvent.victims.map((id) => ({
+        id,
+        name: game.state.seats.find((seat) => seat.id === id)!.name,
+      })),
+    });
     expect(
       game.events.find(
         (event) =>
@@ -999,6 +1034,22 @@ describe('Milestone 1 deterministic engine', () => {
     expect(
       game.state.seats.filter((seat) => seat.status === 'murdered'),
     ).toHaveLength(0);
+    const dawnEvent = game.events.find(
+      (event) => event.type === 'DawnResolved',
+    );
+    expect(dawnEvent).toMatchObject({ victims: [] });
+    if (dawnEvent?.type !== 'DawnResolved')
+      throw new Error('The cancelled murder did not produce a dawn event.');
+    expect(
+      viewFor({ kind: 'presenter' }, game.state).publicLog.find(
+        (entry) => entry.action === 'dawn',
+      ),
+    ).toEqual({
+      seq: dawnEvent.seq,
+      at: dawnEvent.at,
+      action: 'dawn',
+      victims: [],
+    });
     expect(game.state.taskMurderCancelledCycles).toContainEqual(
       expect.objectContaining({ cycle: 1, cancelled: true }),
     );

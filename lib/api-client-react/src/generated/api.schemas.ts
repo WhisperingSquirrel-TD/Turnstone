@@ -263,23 +263,50 @@ export interface PrivateView {
   minimumDurationMs: number;
 }
 
-export type PublicLogEntryAction = typeof PublicLogEntryAction[keyof typeof PublicLogEntryAction];
-
-
-export const PublicLogEntryAction = {
-  seat_pin_reset: 'seat_pin_reset',
-  device_recovered: 'device_recovered',
-} as const;
-
-export interface PublicLogEntry {
+export type PublicLogEntry = {
   /** @minimum 1 */
   seq: number;
   /** @minimum 0 */
   at: number;
-  action: PublicLogEntryAction;
+  action: 'seat_pin_reset';
   seatId: string;
   name: string;
-}
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'device_recovered';
+  seatId: string;
+  name: string;
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'dawn';
+  victims: {
+  id: string;
+  name: string;
+}[];
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'banishment';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'finished';
+  winner: Role;
+};
 
 export interface CoordinatorAlert {
   /** @minimum 1 */
@@ -399,6 +426,13 @@ export interface FullView {
   coordinatorPlays: boolean;
   /** @minimum 0 */
   cycle: number;
+  /**
+     * @minimum 0
+     * @maximum 2
+     */
+  shadowRound: number;
+  missionsEnabled: boolean;
+  rehearsal: boolean;
   /** @minimum 0 */
   pot: number;
   unit: string;

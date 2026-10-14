@@ -1,3 +1,4 @@
+import { isAllowedSocketOrigin } from './socket-origin';
 import { randomUUID } from 'node:crypto';
 import type { IncomingHttpHeaders, Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
@@ -185,8 +186,9 @@ export async function attachRealtime(
   await connectNotificationClient();
 
   io.use((socket, next) => {
-    const origin = socket.handshake.headers.origin;
-    if (!origin || !options.allowedOrigins.includes(origin)) {
+    if (
+      !isAllowedSocketOrigin(socket.handshake.headers, options.allowedOrigins)
+    ) {
       next(new Error('Unauthorized'));
       return;
     }

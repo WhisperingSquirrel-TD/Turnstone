@@ -265,6 +265,15 @@ export function evolve(previous: State | null, input: unknown): State {
           cycle: previous.cycle,
           seatId: event.seatId,
         };
+        state.publicLog = [
+          ...state.publicLog,
+          {
+            seq: event.seq,
+            at: event.at,
+            action: 'banishment',
+            seatId: event.seatId,
+          },
+        ];
       }
       state.taskAssignments = previous.taskAssignments.map((task) =>
         task.seatId === event.seatId && task.status === 'assigned'
@@ -288,6 +297,15 @@ export function evolve(previous: State | null, input: unknown): State {
         cycle: previous.cycle,
         victimIds: event.victims,
       };
+      state.publicLog = [
+        ...state.publicLog,
+        {
+          seq: event.seq,
+          at: event.at,
+          action: 'dawn',
+          victimIds: event.victims,
+        },
+      ];
       break;
     case 'Paused':
       state.paused = true;
@@ -343,6 +361,15 @@ export function evolve(previous: State | null, input: unknown): State {
         kind: 'finished',
         winner: event.winner,
       };
+      state.publicLog = [
+        ...state.publicLog,
+        {
+          seq: event.seq,
+          at: event.at,
+          action: 'finished',
+          winner: event.winner,
+        },
+      ];
       state.deadline = null;
       state.shadowEndAt = null;
       state.paused = false;

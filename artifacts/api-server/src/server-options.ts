@@ -4,6 +4,7 @@ import type { AppOptions } from './app';
 type ServerEnvironment = {
   NODE_ENV: 'development' | 'production' | 'test';
   APP_BASE_URL?: string;
+  REPLIT_DEV_DOMAIN?: string;
   SESSION_SECRET: string;
   MAX_ACTIVE_GAMES?: number;
 };
@@ -25,9 +26,12 @@ export function createServerAppOptions({
   publishGame,
   countActiveGames,
 }: ServerAppOptionsInput): AppOptions {
-  const allowedOrigins = environment.APP_BASE_URL
-    ? [new URL(environment.APP_BASE_URL).origin]
-    : [];
+  const publicBaseUrl =
+    environment.APP_BASE_URL ??
+    (environment.NODE_ENV === 'development' && environment.REPLIT_DEV_DOMAIN
+      ? `https://${environment.REPLIT_DEV_DOMAIN}`
+      : undefined);
+  const allowedOrigins = publicBaseUrl ? [new URL(publicBaseUrl).origin] : [];
 
   return {
     resolveViewer: (request: Request) => resolveViewer(request),
@@ -43,6 +47,6 @@ export function createServerAppOptions({
     countActiveGames,
     secureCookies: environment.NODE_ENV === 'production',
     rateLimitSecret: environment.SESSION_SECRET,
-    publicBaseUrl: environment.APP_BASE_URL,
+    publicBaseUrl,
   };
 }

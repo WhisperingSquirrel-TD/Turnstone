@@ -44,7 +44,6 @@ export * from './privateViewTaskKind';
 export * from './privateViewTaskReport';
 export * from './privateViewTeamItem';
 export * from './publicLogEntry';
-export * from './publicLogEntryAction';
 export * from './readinessStatus';
 export * from './readinessStatusStatus';
 export * from './rehearsalInput';

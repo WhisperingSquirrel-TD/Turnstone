@@ -195,6 +195,50 @@ export const privateViewRequestSchema = z
     purpose: z.enum(['phase', 'notes']).default('phase'),
   })
   .strict();
+const publicLogEntrySchema = z.discriminatedUnion('action', [
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
+      action: z.literal('seat_pin_reset'),
+      seatId: id,
+      name: z.string(),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
+      action: z.literal('device_recovered'),
+      seatId: id,
+      name: z.string(),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
+      action: z.literal('dawn'),
+      victims: z.array(z.object({ id, name: z.string() }).strict()),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
+      action: z.literal('banishment'),
+      seat: z.object({ id, name: z.string() }).strict(),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
+      action: z.literal('finished'),
+      winner: roleSchema,
+    })
+    .strict(),
+]);
 export const fullViewSchema = z
   .object({
     id,
@@ -211,6 +255,9 @@ export const fullViewSchema = z
     deadline: z.number().nullable(),
     coordinatorPlays: z.boolean(),
     cycle: z.number(),
+    shadowRound: z.number().int().min(0).max(2),
+    missionsEnabled: z.boolean(),
+    rehearsal: z.boolean(),
     pot: z.number().nonnegative(),
     unit: z.string(),
     seats: z.array(
@@ -258,17 +305,7 @@ export const fullViewSchema = z
       ])
       .nullable(),
     private: privateViewSchema.nullable(),
-    publicLog: z.array(
-      z
-        .object({
-          seq: z.number().int().positive(),
-          at: z.number().int().nonnegative(),
-          action: z.enum(['seat_pin_reset', 'device_recovered']),
-          seatId: id,
-          name: z.string(),
-        })
-        .strict(),
-    ),
+    publicLog: z.array(publicLogEntrySchema),
     coordinatorAlerts: z.array(
       z
         .object({
