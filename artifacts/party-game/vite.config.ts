@@ -203,7 +203,7 @@ export default defineConfig({
       'qrcode.react',
       'react-router-dom',
       'socket.io-client',
-      'zod',
+      '@workspace/shared > zod',
     ],
   },
   root: import.meta.dirname,
