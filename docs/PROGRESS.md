@@ -2,7 +2,7 @@
 
 - Updated: 14 October 2026, 14:14 UTC.
 - Current milestone/step: Milestone 5 — Amendment 10 public-home work is locally complete; preparing the push and GitHub CI check before the player-screen design brief.
-- Last pushed commit/CI: `06e50fe`, GitHub Verify #19 (`38565430099`) — Success, including Pixel Chromium, iPhone and iPad WebKit, Lighthouse and scenario shards. This local change set has not yet been pushed.
+- Last pushed commit/CI: `06e50fe`, GitHub Verify #19 (`38565430099`) — Success, including Pixel Chromium, iPhone and iPad WebKit, Lighthouse and scenario shards. Current M5 implementation commit `57d1151` is committed locally but not pushed; its GitHub CI run is pending.
 - Latest local verification: `pnpm run verify` exited 0. It passed type-check, lint, formatting and production build; 238 unit tests, 20 property tests, 71 server/HTTP/database tests at 85.16% lines, 2,567 scenarios with zero failures, nine browser smoke tests (three WebKit skips with `WebKit profiles run in CI`), Lighthouse home scores of 100 for performance, accessibility, best practices and SEO, Lighthouse play accessibility 100, and zero high or critical dependency findings. The Lighthouse SEO audit used an isolated launch-mode test fixture; the real build and preview remain noindex. The foreground invocation hit the tool's five-minute ceiling, and the background run completed successfully.
 - Open questions: Q1 in `docs/QUESTIONS.md` asks the owner to confirm the test-only launch-mode Lighthouse SEO fixture.
 - Provisional decisions: D66 — audit SEO in a test-only launch-mode copy; never disable pre-launch noindex in the actual app.
