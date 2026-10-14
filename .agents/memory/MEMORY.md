@@ -3,3 +3,4 @@
 - [GitHub workflow push scope](github-workflow-push-scope.md) — verify the active Replit Git connection can update workflow files before retrying a push.
 - [Scenario RNG isolation](scenario-rng-isolation.md) — keep bot and engine random streams separate so captured full-game traces replay through the server.
 - [Deadline test clock isolation](deadline-test-clock-isolation.md) — DB-backed tests must keep fake deadlines ahead of the live managed scheduler's wall clock.
+- [Vite dev optimizer reload](vite-dev-optimizer.md) — lazy route dependencies can trigger a page-wide reload on first navigation; pre-optimise them and test cold-cache behaviour.

@@ -1049,7 +1049,8 @@ it('persists snapshots atomically and replays only the event tail after a snapsh
 
 it('claims due database deadlines once, reclaims expired work, and completes it durably', async () => {
   const gameId = randomUUID();
-  const now = Date.now();
+  // Keep test deadlines ahead of the live managed scheduler's wall clock.
+  const now = Date.now() + 24 * 60 * 60 * 1_000;
   const createdEvent = eventSchema.parse({
     seq: 1,
     at: now - 2_000,

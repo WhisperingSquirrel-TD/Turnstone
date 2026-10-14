@@ -1,5 +1,47 @@
 import { expect, test } from '@playwright/test';
 
+test('loading the app route does not reload an open public page', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !testInfo.project.name.toLowerCase().includes('desktop'),
+    'Vite development-server navigation regression runs once in desktop Chromium',
+  );
+
+  await page.goto('/');
+  await expect(page.locator('.public-home-hero')).toBeVisible();
+
+  const homeNavigations: string[] = [];
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) homeNavigations.push(frame.url());
+  });
+  const unexpectedReload = page
+    .waitForEvent('framenavigated', {
+      predicate: (frame) => frame === page.mainFrame(),
+      timeout: 2000,
+    })
+    .then(
+      () => true,
+      (error: unknown) => {
+        if (error instanceof Error && error.name === 'TimeoutError') {
+          return false;
+        }
+        throw error;
+      },
+    );
+
+  const appPage = await page.context().newPage();
+  await appPage.goto('/play?entry=create');
+  await expect(appPage.locator('body')).toBeVisible();
+
+  expect(
+    await unexpectedReload,
+    'loading /play must not navigate the already-open public page',
+  ).toBe(false);
+  expect(homeNavigations).toEqual([]);
+  await appPage.close();
+});
+
 test('the public home page stays mobile-first and glow edges stay contained', async ({
   page,
 }, testInfo) => {

@@ -197,6 +197,15 @@ export default defineConfig({
     alias: { '@': path.resolve(import.meta.dirname, 'src') },
     dedupe: ['react', 'react-dom'],
   },
+  optimizeDeps: {
+    include: [
+      '@tanstack/react-query',
+      'qrcode.react',
+      'react-router-dom',
+      'socket.io-client',
+      'zod',
+    ],
+  },
   root: import.meta.dirname,
   build: { outDir: 'dist/public', emptyOutDir: true },
   server: {

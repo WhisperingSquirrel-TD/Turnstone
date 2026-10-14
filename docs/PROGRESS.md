@@ -1,12 +1,12 @@
 # Status for reviewer
 
-- Updated: 14 October 2026, 17:11 UTC.
-- Current milestone/step: Milestone 5 — step 1, lobby-code visibility and QR joins. Commit `3447409` is ready to push after a green full local verify. Do not retry rehearsal until step 2 fixes the blocking rehearsal bugs.
-- Last pushed commit/CI: `b78dffb`; GitHub Verify #21 (`38581869029`) — Success, all 18 verification jobs passed, including iPhone and iPad WebKit, with zero annotations. The promotion job was skipped as intended; no release or deployment occurred. Verify #20's iPhone-only race is fixed by isolating each direct-route browser test.
-- Latest local verification: `pnpm run verify` exited 0 — type-check, test type-check, lint, formatting and production build passed; 246 unit tests, 20 property tests, 72 server tests, 2,567 scenarios with zero failures; 23 browser smoke tests passed with 3 profile-specific skips and the explicit `WebKit profiles run in CI` notice; Lighthouse home scores were 100 for performance, accessibility, best practices and SEO, play accessibility was 100, and the dependency audit found 0 high or critical advisories.
+- Updated: 14 October 2026, 17:49 UTC.
+- Current milestone/step: Milestone 5 — step 1, lobby-code visibility and QR joins. The desktop Chromium Vite reload fix is ready to push after a green clean-cache local verify. GitHub Verify #23 is pending; do not retry rehearsal until it is green.
+- Last pushed commit/CI: `be409cd`; GitHub Verify #22 (`38604803650`) — Failure. Audit, integration, unit, property, static checks, Lighthouse, all six scenario shards and merge, Pixel Chromium, iPhone WebKit and iPad WebKit passed. Desktop Chromium failed in `public-home-responsive`; required checks consequently failed. Promotion was skipped; no release or deployment occurred.
+- Latest local verification: clean-cache `pnpm run verify` exited 0. Type-check, test type-check, lint, formatting and production build passed; 246 unit tests, 20 property tests, server coverage at 85.18% lines, 2,567 scenarios with zero failures, and 24 browser tests passed with 4 profile-specific skips and the explicit `WebKit profiles run in CI` notice. The cold-cache no-reload regression passed; Lighthouse mobile scores were 1.0 for performance, accessibility, best practices and SEO, play accessibility was 1.0, and audit found 0 high or critical advisories.
 - Open questions: none. Q1 is resolved; the launch-mode Lighthouse fixture remains test-only and real builds stay noindex.
 - Provisional decisions: none.
-- Risks: Rehearsal blockers and the owner-approved round-2 rehearsal requirements remain queued for step 2; do not ask the owner to retry yet. The Turnstone logo assets remain unintegrated and the ZIP is excluded from this push. `PRE_LAUNCH_NOINDEX` remains on. No deployment or paid service is authorised.
+- Risks: Step 1 is locally green but awaits GitHub Verify #23. Rehearsal blockers and the owner-approved round-2 rehearsal requirements remain queued for step 2; do not ask the owner to retry yet. The Turnstone logo assets remain unintegrated and the ZIP is excluded from the current tree. `PRE_LAUNCH_NOINDEX` remains on. No deployment or paid service is authorised.
 
 # Progress
 
