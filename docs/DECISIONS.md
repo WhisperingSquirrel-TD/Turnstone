@@ -780,7 +780,7 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** PostgreSQL is authoritative for append-only events, snapshots, idempotency, deadlines, active-game counts and pseudonymous rate-limit buckets. Use transactional optimistic versions and `FOR UPDATE SKIP LOCKED` deadline claims; use PostgreSQL notifications for cross-instance Socket.IO fan-out. Apply the 80%-of-configured-capacity refusal only to new-game creation. Keep the coverage gate at 85% lines for the declared API runtime modules, with bootstrap and test harness excluded. Keep reduced-scale performance evidence in `docs/CAPACITY.md`; do not extrapolate to production capacity.
 
-**Consequence:** No Redis, paid service, or Replit-only runtime feature was added. The initial backend commit passed GitHub Verify run #9 (`38469104044`) with all 18 jobs green, including both WebKit profiles. At that 13 October checkpoint, capability identity, PIN/device recovery, fault games and portability remained open; the 14 October implementation and local verification are recorded in D58 and the current Milestone 4 progress section. Milestone 4 still awaits its new public CI run.
+**Consequence:** No Redis, paid service, or Replit-only runtime feature was added. The initial backend commit passed GitHub Verify run #9 (`38469104044`) with all 18 jobs green, including both WebKit profiles. At that 13 October checkpoint, capability identity, PIN/device recovery, fault games and portability remained open; the 14 October implementation and local verification are recorded in D58 and the current Milestone 4 progress section. The completed Milestone 4 push passed Verify #14 with all 18 jobs green and no annotations.
 
 ## D49 — Browser smoke tests use a dedicated Vite server locally and in CI (resolved)
 
@@ -874,7 +874,7 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Keep seat and coordinator credentials separate. Issue cryptographically random opaque capabilities, store only hashes, and deliver them in game-scoped host-only HttpOnly, Secure, SameSite=Lax cookies. Coordinator capability authorises logistics only. Five failed seat-PIN attempts lock recovery for 15 minutes and add a coordinator-only alert. Coordinator reset is publicly logged without recording the PIN. Successful recovery revokes all earlier device sessions and logs the move.
 
-**Consequence:** Integration tests cover capability transfer, lockout/alert separation, reset without PIN disclosure, stale PIN rejection and old-device revocation. The full local `pnpm run verify` is green at 85.28% server line coverage; the M4 push and public CI result remain pending.
+**Consequence:** Integration tests cover capability transfer, lockout/alert separation, reset without PIN disclosure, stale PIN rejection and old-device revocation. The full local `pnpm run verify` is green at 85.28% server line coverage. GitHub Verify #14 (`38524115466`, commit `1c8f52b`) passed all 18 jobs, including all six scenario shards, both WebKit profiles, report merge and required-checks, with zero annotations. Promotion run #14 was skipped; no deployment occurred.
 
 ## D59 — Single execution of integration tests in aggregate verify (resolved)
 
