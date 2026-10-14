@@ -10,6 +10,10 @@ test('mobile join and rehearsal stay enabled after the same-origin CSRF handshak
 
   const csrfRequests: string[] = [];
   const csrfFailures: string[] = [];
+  const scriptRequests: string[] = [];
+  const scriptResponses: string[] = [];
+  const scriptFailures: string[] = [];
+  const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
   const redact = (value: string) =>
     value
@@ -19,6 +23,9 @@ test('mobile join and rehearsal stay enabled after the same-origin CSRF handshak
     const url = new URL(request.url());
     if (url.pathname === '/api/csrf')
       csrfRequests.push(`${request.method()} ${url.origin}${url.pathname}`);
+    if (request.resourceType() === 'script' && request.url()) {
+      scriptRequests.push(`${url.origin}${url.pathname}`);
+    }
   });
   page.on('requestfailed', (request) => {
     const url = new URL(request.url());
@@ -27,17 +34,45 @@ test('mobile join and rehearsal stay enabled after the same-origin CSRF handshak
         `${url.origin}${url.pathname}: ${request.failure()?.errorText ?? 'failed'}`,
       );
     }
+    if (request.resourceType() === 'script') {
+      scriptFailures.push(
+        `${url.origin}${url.pathname}: ${request.failure()?.errorText ?? 'failed'}`,
+      );
+    }
+  });
+  page.on('response', (response) => {
+    if (response.request().resourceType() === 'script') {
+      const url = new URL(response.url());
+      scriptResponses.push(`${response.status()} ${url.origin}${url.pathname}`);
+    }
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error')
+      consoleErrors.push(redact(message.text().split('\n')[0]));
   });
   page.on('pageerror', (error) =>
     pageErrors.push(redact(`${error.name}: ${error.message.split('\n')[0]}`)),
   );
   const csrfResponsePromise = page.waitForResponse(
     (response) => new URL(response.url()).pathname === '/api/csrf',
+    { timeout: 15_000 },
   );
   await page.goto('/play');
-  const csrfResponse = await csrfResponsePromise.catch(() => {
+  const csrfResponse = await csrfResponsePromise.catch(async () => {
+    const browserState = await page
+      .evaluate(() => ({
+        readyState: document.readyState,
+        title: document.title,
+        scripts: Array.from(document.scripts, (script) => {
+          if (!script.src) return '[inline]';
+          const url = new URL(script.src);
+          return `${url.origin}${url.pathname}`;
+        }),
+        bodyText: document.body.innerText.slice(0, 240),
+      }))
+      .catch(() => null);
     throw new Error(
-      `CSRF bootstrap timed out. Requests: ${csrfRequests.join(', ') || 'none'}; failures: ${csrfFailures.join(', ') || 'none'}; page errors: ${pageErrors.join(', ') || 'none'}`,
+      `CSRF bootstrap timed out. Requests: ${csrfRequests.join(', ') || 'none'}; failures: ${csrfFailures.join(', ') || 'none'}; scripts requested: ${scriptRequests.join(', ') || 'none'}; script responses: ${scriptResponses.join(', ') || 'none'}; script failures: ${scriptFailures.join(', ') || 'none'}; console errors: ${consoleErrors.join(', ') || 'none'}; page errors: ${pageErrors.join(', ') || 'none'}; browser state: ${JSON.stringify(browserState)}`,
     );
   });
 

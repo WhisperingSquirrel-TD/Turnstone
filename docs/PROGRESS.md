@@ -1,13 +1,13 @@
 # Status for reviewer
 
-- Updated: 14 October 2026, 12:31 UTC.
+- Updated: 14 October 2026, 12:39 UTC.
 - Current milestone/step: Milestone 5 — CI #17 failure fixes in progress under TDD. Amendment 10 is recorded but implementation has not started.
-- Last pushed commit/CI: `0a9cd21`, GitHub Verify #17 (`38561890591`) — Failure. Unit and Pixel browser jobs failed; all other jobs passed, including iPhone and iPad WebKit. Unit failed on a database import in pure tests without `DATABASE_URL`. Pixel failed because its CSRF handshake got no `/api/csrf` response and the public-home axe run measured FAQ summaries at 18px before styles were applied.
-- Local branch: `main`; `0a9cd21` is pushed. Database-free unit fixes, the CSS-ready/tap-target assertion, and CSRF failure diagnostics are local and uncommitted. Local test results: typecheck, lint, formatting and 230 unit tests pass; Pixel cannot currently launch locally because `libgbm.so.1` is missing. `origin` and `.git/config` are credential-free.
+- Last pushed commit/CI: `3d29c6d`, GitHub Verify #18 (`38564701126`) — Failure. Pixel and required-checks failed; all unit, static, property, integration, audit, Lighthouse, scenario-shard/merge, desktop, iPhone and iPad WebKit jobs passed. The Pixel smoke/axe test now passes. Its CSRF test still times out: no `/api/csrf` request, failed request, or page error was observed.
+- Local branch: `main`; `3d29c6d` is pushed. The next Pixel diagnostic captures script requests/responses, console errors and DOM state; it is local and uncommitted. Typecheck, lint and formatting pass after the diagnostic change; 230 unit tests passed before it. Pixel cannot currently launch locally because `libgbm.so.1` is missing. `origin` and `.git/config` are credential-free.
 - Latest local verification: `pnpm run verify` passed on 14 October: 229 unit tests, 20 property tests, 71 server/HTTP/database tests at 85.16% lines, 2,567 scenarios with zero failures, six Pixel/desktop smoke tests passed (two WebKit skips), Lighthouse accessibility 1.0 on home and play, and zero high or critical audit findings. Typecheck, lint, formatting and production build passed.
 - Open questions: none.
 - Provisional decisions: none. Coordinator handoff uses a single-use code claimed on the target’s authenticated game seat.
-- Risks: Verify #17 is red. The Pixel CSRF timeout still needs a root cause; test-only diagnostics are in place to reveal whether Chromium emitted a request, failed it, or raised a page error on the next run. Local Chromium cannot launch because `libgbm.so.1` is unavailable. No further Milestone 5 feature work starts until CI is green. Section 27 is queued but not implemented. Milestone 5 ends with a hands-on full rehearsal review on a real phone; pre-launch noindex remains on. No deployment or paid service is authorised.
+- Risks: Verify #18 is red. The Pixel CSRF timeout has no API request or page error; the next run adds script-request/response, console-error and DOM-state evidence before any CSRF/auth change. Local Chromium cannot launch because `libgbm.so.1` is unavailable. No further Milestone 5 feature work starts until CI is green. Section 27 is queued but not implemented. Milestone 5 ends with a hands-on full rehearsal review on a real phone; pre-launch noindex remains on. No deployment or paid service is authorised.
 
 # Progress
 
