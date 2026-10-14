@@ -8,15 +8,8 @@ const requiredQuestions = [
 ];
 
 test('FAQ, comparison and llms.txt are public, complete and pre-launch noindex', async ({
-  page,
   request,
 }) => {
-  const csrfRequests: string[] = [];
-  page.on('request', (request) => {
-    if (new URL(request.url()).pathname.endsWith('/api/csrf')) {
-      csrfRequests.push(request.url());
-    }
-  });
   for (const route of ['/faq', '/compare', '/llms.txt']) {
     const response = await request.get(route);
     expect(response.status(), route).toBe(200);
@@ -66,13 +59,31 @@ test('FAQ, comparison and llms.txt are public, complete and pre-launch noindex',
   ]) {
     expect(llmsText).toContain(fact);
   }
+});
 
+test('the public home page does not request CSRF on load', async ({ page }) => {
+  const csrfRequests: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.endsWith('/api/csrf')) {
+      csrfRequests.push(request.url());
+    }
+  });
   await page.goto('/');
   expect(csrfRequests).toEqual([]);
+});
+
+test('the FAQ route opens directly in a fresh browser page', async ({
+  page,
+}) => {
   await page.goto('/faq');
   await expect(
     page.getByRole('heading', { level: 1, name: 'Frequently asked questions' }),
   ).toBeVisible();
+});
+
+test('the comparison route opens directly in a fresh browser page', async ({
+  page,
+}) => {
   await page.goto('/compare');
   await expect(
     page.getByRole('heading', { level: 1, name: 'Compare game formats' }),
