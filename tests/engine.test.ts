@@ -214,12 +214,10 @@ describe('Milestone 1 deterministic engine', () => {
     advance(game, 'VOTE');
     const player = game.state.seats.find((seat) => seat.status === 'alive')!;
     expect(
-      command(
-        game,
-        { type: 'AcknowledgePrivate' },
-        true,
-        { kind: 'player', seatId: player.id },
-      ),
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: player.id,
+      }),
     ).toMatchObject({ ok: true });
     expect(game.state.acks).toContain(player.id);
   });

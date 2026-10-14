@@ -50,6 +50,7 @@ export function evolve(previous: State | null, input: unknown): State {
       taskReports: [],
       taskMurderCancelledCycles: [],
       publicLog: [],
+      publicAnnouncement: null,
       coordinatorAlerts: [],
     };
   }
@@ -258,6 +259,13 @@ export function evolve(previous: State | null, input: unknown): State {
             }
           : candidate,
       );
+      if (event.reason === 'banished') {
+        state.publicAnnouncement = {
+          kind: 'verdict',
+          cycle: previous.cycle,
+          seatId: event.seatId,
+        };
+      }
       state.taskAssignments = previous.taskAssignments.map((task) =>
         task.seatId === event.seatId && task.status === 'assigned'
           ? { ...task, status: 'void' }
@@ -275,6 +283,11 @@ export function evolve(previous: State | null, input: unknown): State {
     case 'DawnResolved':
       state.protected = event.protected;
       state.shields = [];
+      state.publicAnnouncement = {
+        kind: 'dawn',
+        cycle: previous.cycle,
+        victimIds: event.victims,
+      };
       break;
     case 'Paused':
       state.paused = true;
@@ -326,6 +339,10 @@ export function evolve(previous: State | null, input: unknown): State {
       state.phase = 'FINISHED';
       state.winner = event.winner;
       state.reason = event.reason;
+      state.publicAnnouncement = {
+        kind: 'finished',
+        winner: event.winner,
+      };
       state.deadline = null;
       state.shadowEndAt = null;
       state.paused = false;

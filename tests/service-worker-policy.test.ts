@@ -16,7 +16,10 @@ type PolicyGlobal = {
 };
 
 const policyPath = fileURLToPath(
-  new URL('../artifacts/party-game/public/service-worker-policy.js', import.meta.url),
+  new URL(
+    '../artifacts/party-game/public/service-worker-policy.js',
+    import.meta.url,
+  ),
 );
 
 describe('service worker static cache policy', () => {
@@ -27,35 +30,65 @@ describe('service worker static cache policy', () => {
     const shouldCache = self.shouldCacheStaticRequest;
 
     expect(shouldCache).toBeTypeOf('function');
-    expect(shouldCache!({
-      method: 'GET',
-      url: 'https://turnstone.example/assets/player.js',
-      destination: 'script',
-    }, 'https://turnstone.example')).toBe(true);
-    expect(shouldCache!({
-      method: 'GET',
-      url: 'https://turnstone.example/api/games/abc/view',
-      destination: '',
-    }, 'https://turnstone.example')).toBe(false);
-    expect(shouldCache!({
-      method: 'GET',
-      url: 'https://turnstone.example/socket.io/?EIO=4',
-      destination: '',
-    }, 'https://turnstone.example')).toBe(false);
-    expect(shouldCache!({
-      method: 'GET',
-      url: 'https://third-party.example/font.woff2',
-      destination: 'font',
-    }, 'https://turnstone.example')).toBe(false);
-    expect(shouldCache!({
-      method: 'GET',
-      url: 'https://turnstone.example/game/abc',
-      destination: 'document',
-    }, 'https://turnstone.example')).toBe(false);
-    expect(shouldCache!({
-      method: 'POST',
-      url: 'https://turnstone.example/assets/player.js',
-      destination: 'script',
-    }, 'https://turnstone.example')).toBe(false);
+    expect(
+      shouldCache!(
+        {
+          method: 'GET',
+          url: 'https://turnstone.example/assets/player.js',
+          destination: 'script',
+        },
+        'https://turnstone.example',
+      ),
+    ).toBe(true);
+    expect(
+      shouldCache!(
+        {
+          method: 'GET',
+          url: 'https://turnstone.example/api/games/abc/view',
+          destination: '',
+        },
+        'https://turnstone.example',
+      ),
+    ).toBe(false);
+    expect(
+      shouldCache!(
+        {
+          method: 'GET',
+          url: 'https://turnstone.example/socket.io/?EIO=4',
+          destination: '',
+        },
+        'https://turnstone.example',
+      ),
+    ).toBe(false);
+    expect(
+      shouldCache!(
+        {
+          method: 'GET',
+          url: 'https://third-party.example/font.woff2',
+          destination: 'font',
+        },
+        'https://turnstone.example',
+      ),
+    ).toBe(false);
+    expect(
+      shouldCache!(
+        {
+          method: 'GET',
+          url: 'https://turnstone.example/game/abc',
+          destination: 'document',
+        },
+        'https://turnstone.example',
+      ),
+    ).toBe(false);
+    expect(
+      shouldCache!(
+        {
+          method: 'POST',
+          url: 'https://turnstone.example/assets/player.js',
+          destination: 'script',
+        },
+        'https://turnstone.example',
+      ),
+    ).toBe(false);
   });
 });

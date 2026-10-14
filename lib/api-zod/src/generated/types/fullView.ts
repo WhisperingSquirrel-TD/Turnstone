@@ -9,6 +9,7 @@ import type { CoordinatorAlert } from './coordinatorAlert';
 import type { FairnessView } from './fairnessView';
 import type { FullViewBallots } from './fullViewBallots';
 import type { FullViewProgress } from './fullViewProgress';
+import type { FullViewPublicAnnouncement } from './fullViewPublicAnnouncement';
 import type { Phase } from './phase';
 import type { PrivateView } from './privateView';
 import type { PublicLogEntry } from './publicLogEntry';
@@ -43,6 +44,7 @@ export interface FullView {
   progress: FullViewProgress;
   ballots: FullViewBallots;
   winner: Role | null;
+  publicAnnouncement: FullViewPublicAnnouncement;
   private: PrivateView | null;
   publicLog: PublicLogEntry[];
   coordinatorAlerts: CoordinatorAlert[];

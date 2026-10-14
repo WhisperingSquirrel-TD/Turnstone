@@ -12,6 +12,7 @@ import { attachRealtime } from '../artifacts/api-server/src/realtime';
 import {
   cookieNameForGame,
   createCoordinatorViewerResolver,
+  cookieNameForJoinRequest,
   createSeatViewerResolver,
 } from '../artifacts/api-server/src/session-auth';
 import { createDeadlineScheduler } from '../artifacts/api-server/src/deadline-scheduler';
@@ -1228,7 +1229,8 @@ it('returns only the allow-listed visitor projection from the HTTP game endpoint
 
 it('runs a server-backed rehearsal to completion and only reveals private data on hold', async () => {
   const gameId = randomUUID();
-  let now = Date.now();
+  // Keep test deadlines ahead of the live managed scheduler's wall clock.
+  let now = Date.now() + 24 * 60 * 60 * 1_000;
   const { createRehearsalBotRunner } =
     await import('../artifacts/api-server/src/rehearsal-bots');
   const botRunner = createRehearsalBotRunner();
@@ -1247,15 +1249,13 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
   });
 
   try {
-    const created = await request(app)
-      .post('/api/rehearsals')
-      .send({
-        gameId,
-        idempotencyKey: randomUUID(),
-        name: 'Morgan',
-        playerCount: 6,
-        speed: 'fast',
-      });
+    const created = await request(app).post('/api/rehearsals').send({
+      gameId,
+      idempotencyKey: randomUUID(),
+      name: 'Morgan',
+      playerCount: 6,
+      speed: 'fast',
+    });
     expect(created.status).toBe(201);
     expect(created.body.view.id).toBe(gameId);
     expect(created.body.view.phase).toBe('DEAL');
@@ -1319,9 +1319,7 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
       .set('Cookie', shieldedCookie)
       .set('X-CSRF-Token', csrfToken);
     expect(revealed.status).toBe(200);
-    expect(['traitor', 'faithful']).toContain(
-      revealed.body.view.private.role,
-    );
+    expect(['traitor', 'faithful']).toContain(revealed.body.view.private.role);
     expect(JSON.stringify(ordinaryView.body)).not.toContain(
       revealed.body.view.private.role,
     );
@@ -1335,9 +1333,40 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
     const { readGameEvents } = await import('@workspace/db/game-store');
     const { replay } = await import('../lib/engine/src/index');
     const currentGame = async () => replay(await readGameEvents(gameId));
+    const progress: {
+      phase: string;
+      cycle: number;
+      steps: number;
+      shadowRound: number;
+      alive: number;
+      acknowledgements: number;
+      shadowChoices: number;
+      votes: number;
+    }[] = [];
     for (let step = 0; step < 50; step += 1) {
       const state = await currentGame();
       if (state.phase === 'FINISHED') break;
+      if (state.phase === 'SHADOW' && state.shadowRound === 1) {
+        const activeDeadline = await db.execute(sql`
+          select due_at
+          from game_deadlines
+          where game_id = ${gameId} and completed_at is null
+          order by id desc
+          limit 1
+        `);
+        const dueAt = activeDeadline.rows[0]?.due_at;
+        expect(new Date(String(dueAt)).getTime()).toBe(state.deadline);
+      }
+      progress.push({
+        phase: state.phase,
+        cycle: state.cycle,
+        steps: state.steps,
+        shadowRound: state.shadowRound,
+        alive: state.seats.filter((seat) => seat.status === 'alive').length,
+        acknowledgements: state.acks.length,
+        shadowChoices: Object.keys(state.shadow).length,
+        votes: Object.keys(state.votes).length,
+      });
       const player = state.seats.find((seat) => seat.name === 'Morgan');
       expect(player).toBeDefined();
       let playerCommand: Record<string, unknown> | null = null;
@@ -1348,7 +1377,9 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
         'FINAL_VOTE',
         'FINAL_BANISH',
       ];
-      if (
+      if (player!.status !== 'alive') {
+        playerCommand = null;
+      } else if (
         privatePhases.includes(state.phase) &&
         !state.acks.includes(player!.id)
       )
@@ -1359,8 +1390,7 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
             seat.status === 'alive' &&
             seat.id !== player!.id &&
             (player!.role !== 'traitor' ||
-              (seat.role !== 'traitor' &&
-                !state.protected.includes(seat.id))),
+              (seat.role !== 'traitor' && !state.protected.includes(seat.id))),
         );
         const target = candidates[0];
         if (target)
@@ -1375,12 +1405,8 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
         const target = state.seats.find(
           (seat) => seat.status === 'alive' && seat.id !== player!.id,
         );
-        if (target)
-          playerCommand = { type: 'SubmitVote', target: target.id };
-      } else if (
-        state.phase === 'FINAL_VOTE' &&
-        !state.endVotes[player!.id]
-      ) {
+        if (target) playerCommand = { type: 'SubmitVote', target: target.id };
+      } else if (state.phase === 'FINAL_VOTE' && !state.endVotes[player!.id]) {
         playerCommand = {
           type: 'SubmitEndgameVote',
           choice: 'continue',
@@ -1395,7 +1421,18 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
             ...playerCommand,
             idempotencyKey: randomUUID(),
           });
-        expect(submitted.status).toBe(200);
+        expect(
+          submitted.status,
+          JSON.stringify({
+            phase: state.phase,
+            cycle: state.cycle,
+            steps: state.steps,
+            shadowRound: state.shadowRound,
+            playerStatus: player!.status,
+            commandType: playerCommand.type,
+            responseError: submitted.body.error,
+          }),
+        ).toBe(200);
       }
       const current = await currentGame();
       if (current.phase === 'FINISHED') break;
@@ -1403,7 +1440,10 @@ it('runs a server-backed rehearsal to completion and only reveals private data o
       now = Math.max(now, current.deadline ?? now);
       await scheduler.runOnce();
     }
-    expect((await currentGame()).phase).toBe('FINISHED');
+    const finished = await currentGame();
+    expect(finished.phase, JSON.stringify(progress.slice(-10))).toBe(
+      'FINISHED',
+    );
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }
@@ -1458,6 +1498,14 @@ it('creates and advances a game through authenticated HTTP with idempotent repla
     expect(retry.body.version).toBe(2);
     expect(published).toEqual([gameId, gameId, gameId]);
 
+    const reusedIdempotencyKey = await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .send({ ...advance, expectedVersion: 2 });
+    expect(reusedIdempotencyKey.status).toBe(409);
+    expect(reusedIdempotencyKey.body).toEqual({
+      error: 'Command rejected',
+    });
+
     const current = await request(app).get(`/api/games/${gameId}/view`);
     expect(current.status).toBe(200);
     expect(current.body.version).toBe(2);
@@ -1485,6 +1533,21 @@ it('creates and advances a game through authenticated HTTP with idempotent repla
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }
+});
+
+it('does not reveal unknown join-request status with a valid-looking token', async () => {
+  const requestId = '0123456789abcdef0123456789abcdef';
+  const app = createApp(async () => {}, {
+    rateLimitSecret: 'unit-test-secret',
+  });
+  const response = await request(app)
+    .get(`/api/join-requests/${requestId}`)
+    .set(
+      'Cookie',
+      `${cookieNameForJoinRequest(requestId)}=${Buffer.alloc(32, 1).toString('base64url')}`,
+    );
+  expect(response.status).toBe(404);
+  expect(response.body).toEqual({ error: 'Not found' });
 });
 
 it('returns a generic service error if realtime publishing fails after a command commit', async () => {
@@ -2501,8 +2564,9 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
       .send({ decision: 'approve', expectedVersion: 2 })
       .expect(200);
     expect(approval.body.status).toBe('approved');
-    expect(publishedGames.filter((publishedId) => publishedId === gameId))
-      .toHaveLength(2);
+    expect(
+      publishedGames.filter((publishedId) => publishedId === gameId),
+    ).toHaveLength(2);
     expect(approval.body.seatId).toBe(seatId);
 
     const status = await request(app)

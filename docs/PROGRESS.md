@@ -1,19 +1,23 @@
 # Status for reviewer
 
-- Updated: 14 October 2026, 06:57 UTC.
-- Current milestone/step: Milestone 5 — starting player journey, privacy shield and server-backed rehearsal. Stop after the milestone for the owner's real-phone review.
+- Updated: 14 October 2026, 11:51 UTC.
+- Current milestone/step: Milestone 5 — local CSRF and full verification passed; Amendment 10 recorded and queued; preparing the push and GitHub WebKit check.
 - Last pushed commit/CI: `0fc29b6`, GitHub Verify #15 (`38524680870`) — Success, all 18 jobs green, all 18 annotation checks returned zero, including both WebKit profiles and six scenario shards. Promotion run #15 (`38524976239`) was skipped.
-- Local branch: `main`; `HEAD` and `origin/main` are both `0fc29b6`. The Milestone 5 progress update is local and will be committed with the milestone work.
-- Latest local verify: green. 190 unit tests, 20 property tests, 64 server/HTTP/DB coverage tests at 85.28% lines, 2,567 scenarios with zero failures, Pixel/desktop smoke, Lighthouse accessibility 1.0 on home and play, and zero high or critical audit findings. WebKit printed `WebKit profiles run in CI`.
+- Local branch: `main`; current Milestone 5 changes are local and ahead of `origin/main`. `origin` and `.git/config` are credential-free.
+- Latest local verify: green on 14 October before the documentation-only specification/plan updates. 228 unit tests, 20 property tests, 71 server/HTTP/database tests at 85.16% lines, 2,567 scenarios with zero failures, six Pixel/desktop smoke tests passed (two WebKit skips), Lighthouse accessibility 1.0 on home and play, and zero high or critical audit findings. WebKit printed `WebKit profiles run in CI`; changed docs pass Prettier.
 - Open questions: none.
 - Provisional decisions: none. Coordinator handoff uses a single-use code claimed on the target’s authenticated game seat.
-- Risks: Milestone 5 ends with a hands-on full rehearsal review on a real phone; pre-launch noindex remains on. No deployment or paid service is authorised.
+- Risks: The CSRF fix has passed locally; the next GitHub run must confirm iPhone and iPad WebKit. Section 27 is queued but not implemented. Milestone 5 ends with a hands-on full rehearsal review on a real phone; pre-launch noindex remains on. No deployment or paid service is authorised.
 
 # Progress
 
-## Current status — Milestones 0–4 accepted; Milestone 5 starting
+## Current status — Milestones 0–4 accepted; Milestone 5 in progress
 
-Specification sections 1–25 and owner rulings are recorded. Milestones 0–4 are accepted; Milestone 2 acceptance is based on reviewer confirmation and GitHub Verify #8, #9 and #13. The independent oracle’s two engine defect regressions remain permanent. The Milestone 2 sample passes all 2,567 local scenarios; Verify #13 passed all 18 jobs, all six scenario shards, the exact 2,522-row coverage merger and all four browser profiles with no annotations. The 40-seat engine profile averaged 729 ms/game; the slowest shard was 84,404 ms against a 266,650 ms projection. Milestone 4 passed local verify and GitHub Verify #14. The separate M4 documentation push passed Verify #15 (all 18 jobs and annotations green); Milestone 5 is starting.
+Specification sections 1–27 and owner rulings are recorded. Milestones 0–4 are accepted; Milestone 2 acceptance is based on reviewer confirmation and GitHub Verify #8, #9 and #13. The independent oracle’s two engine defect regressions remain permanent. The Milestone 2 sample passes all 2,567 local scenarios; Verify #13 passed all 18 jobs, all six scenario shards, the exact 2,522-row coverage merger and all four browser profiles with no annotations. The 40-seat engine profile averaged 729 ms/game; the slowest shard was 84,404 ms against a 266,650 ms projection. Milestone 4 passed local verify and GitHub Verify #14. The separate M4 documentation push passed Verify #15 (all 18 jobs and annotations green); Milestone 5 is in progress.
+
+`docs/SPEC.md` was missing the previously approved section 26; Amendment 9 is restored in order, followed by section 27. D63 and the Task 5 plan place section 27 after the current CSRF push/green-CI gate and before the M5 design brief. No section 27 implementation has started.
+
+On 14 October, the `/play` security banner was traced to the development client requesting `/api-server/api/csrf`, which returned Vite HTML instead of the API JSON response. The client now uses the shared same-origin `/api` route in development; CSRF cookies, origin checks and double-submit validation remain unchanged. Pixel and desktop Playwright regressions pass, including the old-path regression, and the complete local verify is green. iPhone and iPad WebKit are pending the next GitHub run.
 
 Milestone 0 is **accepted** following fully green GitHub Actions Verify runs #2 and #4, including iPhone WebKit and iPad WebKit. Local Replit verification may skip those profiles only with the explicit notice `WebKit profiles run in CI`. Milestone 4's latest local run passed the 85% server line-coverage gate at 85.28%, and public GitHub Verify #14 passed all 18 jobs with zero annotations.
 

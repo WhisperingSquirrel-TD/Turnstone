@@ -38,17 +38,24 @@ describe('seat recovery client', () => {
         method: 'POST',
         credentials: 'include',
         headers: expect.objectContaining({ 'X-CSRF-Token': 'csrf-test' }),
-        body: JSON.stringify({ shortCode: 'ABCD23', name: 'Alex', pin: '1234' }),
+        body: JSON.stringify({
+          shortCode: 'ABCD23',
+          name: 'Alex',
+          pin: '1234',
+        }),
       }),
     );
   });
 
   it('returns one generic error for rejected recovery attempts', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ error: 'Recovery could not be completed' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({ error: 'Recovery could not be completed' }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
     );
     vi.stubGlobal('fetch', fetchMock);
 

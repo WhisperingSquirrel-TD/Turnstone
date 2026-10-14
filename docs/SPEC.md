@@ -224,3 +224,49 @@ Motion: one orchestrated moment per big event (role reveal, dawn announcement, v
 Restraint: gold hairline borders only on things that matter or can be tapped; varied hierarchy rather than identical rounded cards; no blanket shadows, no gradient washes beyond the single specified diagonal lift, no fade-up on every section.
 Public site hero: a centred Stackstone logo, with a two-line Playfair headline whose second line is in Gilt, a Playfair subtitle in Ash and a DM Sans byline beside a live "Hold to see your role" demo card that runs the real hold-to-reveal interaction in miniature, randomly revealing Traitor or Faithful.
 Process: before building each screen set, write a short design plan in docs/DESIGN.md (tokens, type scale, ASCII wireframes, alignment), check it against generic AI-design defaults and revise anything templated, then build and review with Playwright screenshots on the phone, tablet and TV profiles. The section 20 weight budgets still apply.
+
+## 26. Real-phone feedback: mobile entry and shared announcements [M][Owner]
+
+1. BUG, top priority: on load, the /play page shows the banner "The security check could not be completed. Try again", and both "Join game" and "Rehearse a full game" look disabled. Retrying does not help. Find the root cause (for example the CSRF token request, cookie flags or partitioning in a mobile in-app browser, origin checks on the dev domain, or the pre-launch headers), fix it properly without weakening CSRF, and add an end-to-end test that reproduces these conditions on the Pixel and iPhone profiles. The error state must explain in plain words what to do.
+
+2. PHONES ONLY BY DEFAULT. The presenter (TV) screen becomes OPTIONAL and off by default; many groups will not have one. Every public moment (lobby code and QR, dawn and verdict announcements, one-by-one vote reveals, timers, pot, endgame, results) must show on every phone as a shared announcement screen, identical for all. Spoken narration is optional and plays only from the organiser's phone, so the room hears it once. Add golden and end-to-end tests proving a complete game with zero presenter connections. Copy: "Enter the code your organiser shared", never "in the room".
+
+3. A DRAMATIC, GAME-LIKE WAY IN (owner: the current screen is "a bit full and corporate"). Replace the form-first /play page with:
+
+E1 Title card: full-screen Charcoal with one soft Gilt candle glow behind the wordmark. "Turnstone" in Playfair, about 56px, with "stone" in Gilt. Below it, a Playfair subtitle in Ash: "A game of traitors and faithful." Then a DM Sans line: "Everyone plays. Even the host." Three choices in the thumb zone: primary Gilt "Start a new game"; secondary Gilt outline "Join a game"; text link "Practise alone first". Small footer "A Stackstone game" with the mark (links per section 23). No form fields on this screen. Motion: on first load the wordmark fades up over 600ms while the glow breathes once, then everything is still; with reduced motion, no animation.
+
+E2 Join, one question per screen with three progress dots: (1) "What's the game code?" as six large boxes, auto-advancing and pasteable, skipped when the link or QR supplied it; (2) "What should we call you?", first name, with an "Options" link for tap-instead-of-hold, larger text and simpler words; (3) "Choose a 4-digit PIN", numeric keypad, "You'll only need it if you change phones."; then "Waiting for {organiser} to let you in", with the gold seal breathing slowly.
+
+E3 Start a new game, a minimal organiser flow brought forward from Milestone 6, using the existing CreateGame and coordinator capability: (1) "Name your game" (optional, default "Turnstone game"); (2) "How many players?" (a 5 to 40 stepper showing the recommended number of Traitors); (3) your name and PIN, since the organiser plays. Then the organiser lobby: a big QR code, the six-character code, a Share button (Web Share with copy fallback), joiners with Approve buttons, and a primary "Start the game". Defaults for everything else; the planner, themes and advanced settings stay in Milestone 6.
+
+E4 Practise alone: a players slider from 6 to 15 (not fixed at four bots), Fast or Normal speed, and your first name only (no PIN in rehearsal).
+
+4. BRAND AND COPY. Turnstone is the hero name. The current header shows "STACKSTONE" large at top left: change it to the Turnstone wordmark (Playfair 20) on the left and the small Stackstone mark on the right, per section 23. Use the tagline "A game of traitors and faithful." with the ordinary words in lowercase. Never use "The Traitors" or "Traitors-style". UK spelling throughout: "Practise" as a verb.
+
+5. PUBLIC HOME PAGE (/), findable by Claude, Copilot, ChatGPT and the rest. It opens with the same title card, then below the fold has answer-first, prerendered sections: "Turnstone is a free game of traitors and faithful for 5 to 40 players, played on everyone's own phone, where the host plays too"; how it works in four steps; formats; the section 21 FAQ questions word for word; and the facts block. Title tag: "Turnstone: a free game of traitors and faithful for 5 to 40 players". Include the WebApplication and Game JSON-LD now. /play stays noindex, and pre-launch noindex stays on for the whole site until the owner says launch. The rest of the agent package remains in Milestone 9.
+
+PROCESS: write the E1 to E4 plan with ASCII wireframes in docs/DESIGN.md, build under TDD, take Playwright screenshots on iPhone, Pixel and iPad into docs/screens/, and push. The reviewer checks the screenshots before the owner's hands-on rehearsal.
+
+## 27. Home-page visual and FAQ feedback [M][Owner]
+
+1. Stackstone logo on dark backgrounds: the header mark's lower stone disappears against Charcoal. Use the retrieved variant made for dark backgrounds (check stackstone-icon-dark and stackstone-logo-dark), outlined like the others. If neither works, adjust only the mark's lower-stone fill to a brand-consistent light tone. Add a test that every distinct fill in the mark has at least 3:1 contrast (WCAG 1.4.11) against every background it appears on.
+
+2. Odd shading above "Turnstone": the hero glow currently appears as a rectangular box with visible edges (top-left of the hero), and the demo card has a stray shadow rectangle extending below it. Replace them with one soft radial Gilt glow that fades to fully transparent well inside its element, with no visible edges or boxes at any viewport. Add Playwright screenshot checks at the 320, 390, 768 and 1280 px widths.
+
+3. Entirely mobile-first:
+- On phones, the title card fills the first screen: wordmark, tagline and all three ways in ("Start a new game", "Join a game", "Practise alone first") in the thumb zone, with the hold-to-reveal demo card directly below. The desktop hero currently lacks Join and Practise: add them.
+- The nav collapses gracefully.
+- Fluid type with clamp().
+- No horizontal scroll from 320 px upwards.
+- Tap targets at least 44 px.
+- Safe areas respected.
+- Lighthouse mobile performance, accessibility, SEO and best-practice scores of at least 95.
+- Test at 320, 375, 390, 414 and 768 px.
+
+4. FAQ answering the chat-based competitor without naming it. Add these questions word for word to /faq, to /compare's category comparison, to llms.txt and to the FAQPage JSON-LD:
+- "Is there a free alternative to the WhatsApp traitors game?" Answer: "Yes. Chat versions play out as messages over a week, charge per player and limit numbers. Turnstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight."
+- "Is Turnstone the official game from the TV show?" Answer: "No. Turnstone is an independent game made by Stackstone Consulting. It is not affiliated with, or endorsed by, any TV programme or its producers."
+- "Do I need WhatsApp or an app?" Answer: "No. Turnstone runs in any modern phone or tablet browser. You can add it to your Home Screen if you like, but you never have to."
+Never name the competitor product, its maker or the show. Record every comparative claim with its basis and date in docs/CLAIMS.md: the competitor is about £8.99 per player, a week-long WhatsApp game, up to 30 players, aged 16 and over, UK and Ireland only (sources: Pocket Gamer and CityDays, checked 12 October 2026). Add a pre-launch check to recheck them, and remove any claim that is no longer true.
+
+Push and check CI as usual.

@@ -36,6 +36,7 @@ export const VIEW_ALLOW_LIST = [
   'progress',
   'ballots',
   'winner',
+  'publicAnnouncement',
   'private',
   'publicLog',
   'coordinatorAlerts',
@@ -80,6 +81,37 @@ export function viewFor(viewer: Viewer, state: State): View {
             .map((id) => [id, state.votes[id]!]),
         )
       : {};
+  const announcement = state.publicAnnouncement;
+  let publicAnnouncement: FullView['publicAnnouncement'] = null;
+  if (announcement?.kind === 'dawn') {
+    publicAnnouncement = {
+      kind: 'dawn',
+      cycle: announcement.cycle,
+      victims: announcement.victimIds.flatMap((id) => {
+        const seat = state.seats.find((candidate) => candidate.id === id);
+        return seat ? [{ id: seat.id, name: seat.name }] : [];
+      }),
+    };
+  } else if (announcement?.kind === 'verdict') {
+    const seat = state.seats.find(
+      (candidate) => candidate.id === announcement.seatId,
+    );
+    if (!seat) throw new Error('Banishment announcement seat is missing');
+    publicAnnouncement = {
+      kind: 'verdict',
+      cycle: announcement.cycle,
+      seat: {
+        id: seat.id,
+        name: seat.name,
+        ...(seat.publicRole && seat.role ? { role: seat.role } : {}),
+      },
+    };
+  } else if (announcement?.kind === 'finished') {
+    publicAnnouncement = {
+      kind: 'finished',
+      winner: announcement.winner,
+    };
+  }
   return fullViewSchema.parse({
     id: state.id,
     ...(state.config.basics.gameName
@@ -110,6 +142,7 @@ export function viewFor(viewer: Viewer, state: State): View {
     },
     ballots,
     winner: state.winner,
+    publicAnnouncement,
     publicLog: (state.publicLog ?? []).map((entry) => ({
       seq: entry.seq,
       at: entry.at,

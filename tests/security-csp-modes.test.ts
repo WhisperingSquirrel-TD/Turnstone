@@ -6,15 +6,17 @@ describe('content security policy modes', () => {
     const development = securityHeaders('test-nonce', true)[
       'Content-Security-Policy'
     ];
-    const production = securityHeaders('test-nonce')[
-      'Content-Security-Policy'
-    ];
+    const production = securityHeaders('test-nonce')['Content-Security-Policy'];
 
-    expect(development).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'");
+    expect(development).toContain(
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    );
     expect(development).toContain("style-src 'self' 'unsafe-inline'");
     expect(development).toContain('ws: wss:');
     expect(production).not.toContain("'unsafe-inline'");
     expect(production).not.toContain("'unsafe-eval'");
-    expect(production).toContain("script-src 'nonce-test-nonce' 'strict-dynamic'");
+    expect(production).toContain(
+      "script-src 'nonce-test-nonce' 'strict-dynamic'",
+    );
   });
 });

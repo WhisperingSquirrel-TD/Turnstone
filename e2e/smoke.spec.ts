@@ -11,7 +11,7 @@ test('home and play are accessible, reloadable and responsive', async ({
   );
   await expect(page.getByRole('main')).toBeVisible();
   await expect(page.getByRole('contentinfo')).toContainText(
-    'Built by Stackstone Consulting',
+    'A Stackstone game',
   );
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   expect(
@@ -109,11 +109,12 @@ test('private role is requested only during a hold and is removed on release', a
   });
 
   await page.goto(`/game/${gameId}`);
-  const shieldConfirmation = page.getByRole('button', {
+  const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
+  const shieldConfirmation = shieldDialog.getByRole('button', {
     name: /i’m shielded/i,
   });
   await expect(shieldConfirmation).toBeVisible();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(shieldDialog).toBeVisible();
   await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'true');
   await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
   expect(privateRequests).toBe(0);

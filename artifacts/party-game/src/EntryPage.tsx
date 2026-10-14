@@ -26,8 +26,16 @@ import {
   type View,
 } from '@workspace/shared';
 import { config } from '@/config';
+import { apiUrl as buildApiUrl } from '@/api-url';
 import { en } from '@/locale/en-GB';
-import { EntryExperience, type EntryExperienceBusy, type EntryExperienceErrors, type EntryExperienceInputs, type EntryExperienceOptions, type EntryScreen } from './EntryExperience';
+import {
+  EntryExperience,
+  type EntryExperienceBusy,
+  type EntryExperienceErrors,
+  type EntryExperienceInputs,
+  type EntryExperienceOptions,
+  type EntryScreen,
+} from './EntryExperience';
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
 
 const QRCode = lazy(async () => {
@@ -70,10 +78,7 @@ function createApiError(status: number): ApiRequestError {
 }
 
 function apiUrl(path: string): string {
-  const prefix =
-    config.apiOrigin?.replace(/\/+$/, '') ??
-    import.meta.env.BASE_URL.replace(/\/+$/, '');
-  return `${prefix}/api${path}`;
+  return buildApiUrl(path, config.apiOrigin);
 }
 
 async function getJson<T>(path: string, schema: Schema<T>): Promise<T> {
@@ -126,7 +131,8 @@ function readEntryOptions(): EntryExperienceOptions {
     const raw = sessionStorage.getItem(
       `${config.appName.toLowerCase()}-display-options`,
     );
-    if (!raw) return { tapToReveal: false, largeText: false, simpleLanguage: false };
+    if (!raw)
+      return { tapToReveal: false, largeText: false, simpleLanguage: false };
     const value = JSON.parse(raw) as Partial<EntryExperienceOptions>;
     return {
       tapToReveal: value.tapToReveal === true,
@@ -157,8 +163,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
   const coordinatorGameId =
     mode === 'coordinate' ? params.id : mode === 'play' ? queryGameId : null;
   const inviteGameId = mode === 'join' ? params.gameId : null;
-  const requestId =
-    mode === 'waiting' ? params.requestId : null;
+  const requestId = mode === 'waiting' ? params.requestId : null;
   const [screen, setScreen] = useState<EntryScreen>(() =>
     initialScreen(
       mode,
@@ -178,8 +183,11 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     rehearsalSpeed: 'fast',
     rehearsalName: '',
   });
-  const [options, setOptions] = useState<EntryExperienceOptions>(readEntryOptions);
-  const [joinRequestId, setJoinRequestId] = useState<string | null>(requestId ?? null);
+  const [options, setOptions] =
+    useState<EntryExperienceOptions>(readEntryOptions);
+  const [joinRequestId, setJoinRequestId] = useState<string | null>(
+    requestId ?? null,
+  );
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [coordinatorView, setCoordinatorView] = useState<FullView | null>(null);
   const [joinCode, setJoinCode] = useState('');
@@ -208,7 +216,8 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
   useEffect(() => {
     if (mode === 'coordinate' || queryGameId) setScreen('lobby');
     else if (mode === 'waiting') setScreen('join-wait');
-    else if (mode === 'join') setScreen(window.location.hash ? 'join-name' : 'join-code');
+    else if (mode === 'join')
+      setScreen(window.location.hash ? 'join-name' : 'join-code');
     else setScreen('welcome');
   }, [mode, queryGameId]);
 
@@ -236,27 +245,23 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     [],
   );
 
-  const loadPendingJoiners = useCallback(
-    async (gameId: string) => {
-      const result = await getJson(
-        `/games/${encodeURIComponent(gameId)}/join-requests`,
-        pendingJoinRequestsResponseSchema,
-      );
-      if (mounted.current) {
-        setPendingJoiners(
-          result.requests.map(({ id, name }) => ({ id, name })),
-        );
-      }
-    },
-    [],
-  );
+  const loadPendingJoiners = useCallback(async (gameId: string) => {
+    const result = await getJson(
+      `/games/${encodeURIComponent(gameId)}/join-requests`,
+      pendingJoinRequestsResponseSchema,
+    );
+    if (mounted.current) {
+      setPendingJoiners(result.requests.map(({ id, name }) => ({ id, name })));
+    }
+  }, []);
 
   const loadCoordinatorView = useCallback(async (gameId: string) => {
     const response = await getJson(
       `/games/${encodeURIComponent(gameId)}/view`,
       gameViewResponseSchema,
     );
-    if (!isFullView(response.view)) throw new Error('coordinator-view-unavailable');
+    if (!isFullView(response.view))
+      throw new Error('coordinator-view-unavailable');
     if (mounted.current) setCoordinatorView(response.view);
     return response.view;
   }, []);
@@ -290,7 +295,11 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         if (!shareUrl) await createLobbyInvite(coordinatorGameId);
         if (!active) return;
       } catch {
-        if (active) setErrors((current) => ({ ...current, approve: en.entry.errorFallback }));
+        if (active)
+          setErrors((current) => ({
+            ...current,
+            approve: en.entry.errorFallback,
+          }));
       }
     };
     void load();
@@ -316,8 +325,6 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       detach?.();
       socket?.disconnect();
     };
-    // Invite creation is tied to entering the lobby route, not to socket updates.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coordinatorGameId, csrfToken]);
 
   async function join(data: {
@@ -351,7 +358,9 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       );
       setJoinRequestId(result.requestId);
       setInviteToken(null);
-      navigate(webPath(`/join-request/${encodeURIComponent(result.requestId)}`));
+      navigate(
+        webPath(`/join-request/${encodeURIComponent(result.requestId)}`),
+      );
     } catch (error) {
       setErrors((current) => ({
         ...current,
@@ -382,7 +391,10 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         setErrors((current) => ({ ...current, join: en.entry.joinRejected }));
       } else if (status.status === 'approved') {
         if (!isFullView(status.game.view)) {
-          setErrors((current) => ({ ...current, join: en.entry.errorFallback }));
+          setErrors((current) => ({
+            ...current,
+            join: en.entry.errorFallback,
+          }));
           return;
         }
         navigate(webPath(`/game/${encodeURIComponent(status.game.view.id)}`));
@@ -434,7 +446,12 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         idempotencyKey: crypto.randomUUID(),
         config: configValue,
       });
-      const created = await postJson('/games', command, gameViewResponseSchema, csrfToken);
+      const created = await postJson(
+        '/games',
+        command,
+        gameViewResponseSchema,
+        csrfToken,
+      );
       if (!isFullView(created.view)) throw new Error('game-view-unavailable');
       const lobby = await postJson(
         `/games/${encodeURIComponent(id)}/commands`,
@@ -493,7 +510,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
           `/play?game=${encodeURIComponent(id)}&players=${encodeURIComponent(String(data.playerCount))}`,
         ),
         {
-        replace: true,
+          replace: true,
         },
       );
       setScreen('lobby');
@@ -537,7 +554,9 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     } finally {
       setBusy((current) => ({
         ...current,
-        approveJoinerIds: current.approveJoinerIds.filter((id) => id !== joinerId),
+        approveJoinerIds: current.approveJoinerIds.filter(
+          (id) => id !== joinerId,
+        ),
       }));
     }
   }
@@ -559,7 +578,10 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       );
       navigate(webPath(`/game/${encodeURIComponent(coordinatorGameId)}`));
     } catch {
-      setErrors((current) => ({ ...current, startGame: en.entry.errorFallback }));
+      setErrors((current) => ({
+        ...current,
+        startGame: en.entry.errorFallback,
+      }));
     } finally {
       setBusy((current) => ({ ...current, startGame: false }));
     }
@@ -585,7 +607,8 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         gameViewResponseSchema,
         csrfToken,
       );
-      if (!isFullView(result.view)) throw new Error('rehearsal-view-unavailable');
+      if (!isFullView(result.view))
+        throw new Error('rehearsal-view-unavailable');
       navigate(webPath(`/game/${encodeURIComponent(result.view.id)}`));
     } catch (error) {
       setErrors((current) => ({
@@ -610,7 +633,8 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
           await navigator.share({ title: config.appName, url });
           return;
         } catch (error) {
-          if (error instanceof DOMException && error.name === 'AbortError') return;
+          if (error instanceof DOMException && error.name === 'AbortError')
+            return;
         }
       }
       await navigator.clipboard.writeText(url);

@@ -55,16 +55,19 @@ const serverOptions = createServerAppOptions({
   publishGame: (gameId) => publishGame(gameId),
   countActiveGames,
 });
-const app = createApp(async () => {
-  const result = await db.execute(
-    sql`select version from foundation_meta where id = 1`,
-  );
-  if (result.rows[0]?.version !== 1)
-    throw new Error('Database schema not ready');
-}, {
-  ...serverOptions,
-  processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
-});
+const app = createApp(
+  async () => {
+    const result = await db.execute(
+      sql`select version from foundation_meta where id = 1`,
+    );
+    if (result.rows[0]?.version !== 1)
+      throw new Error('Database schema not ready');
+  },
+  {
+    ...serverOptions,
+    processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
+  },
+);
 const server = createServer(app);
 const { attachRealtime } = await import('./realtime');
 const { createDeadlineScheduler } = await import('./deadline-scheduler');

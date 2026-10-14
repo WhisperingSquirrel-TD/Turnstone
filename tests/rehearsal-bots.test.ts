@@ -28,12 +28,10 @@ describe('server rehearsal bot policy', () => {
     expect(nextRehearsalBotCommand(game.state, 's1')).toMatchObject({
       type: 'AcknowledgePrivate',
     });
-    command(
-      game,
-      { type: 'AcknowledgePrivate' },
-      true,
-      { kind: 'player', seatId: 's1' },
-    );
+    command(game, { type: 'AcknowledgePrivate' }, true, {
+      kind: 'player',
+      seatId: 's1',
+    });
     const vote = nextRehearsalBotCommand(game.state, 's1');
     expect(vote?.type).toBe('SubmitVote');
     if (vote?.type === 'SubmitVote') {
@@ -55,16 +53,11 @@ describe('server rehearsal bot policy', () => {
     expect(nextRehearsalBotCommand(game.state, bot.id)).toMatchObject({
       type: 'AcknowledgePrivate',
     });
-    command(
-      game,
-      { type: 'AcknowledgePrivate' },
-      true,
-      { kind: 'player', seatId: bot.id },
-    );
-    const choice = nextRehearsalBotCommand(
-      game.state as State,
-      bot.id,
-    );
+    command(game, { type: 'AcknowledgePrivate' }, true, {
+      kind: 'player',
+      seatId: bot.id,
+    });
+    const choice = nextRehearsalBotCommand(game.state as State, bot.id);
     expect(choice?.type).toBe('SubmitShadowChoice');
     if (choice?.type === 'SubmitShadowChoice') {
       const eligible = game.state.seats
@@ -72,7 +65,8 @@ describe('server rehearsal bot policy', () => {
         .filter(
           (seat) =>
             bot.role !== 'traitor' ||
-            (seat.role !== 'traitor' && !game.state.protected.includes(seat.id)),
+            (seat.role !== 'traitor' &&
+              !game.state.protected.includes(seat.id)),
         )
         .map((seat) => seat.id);
       expect(eligible).toContain(choice.choice);

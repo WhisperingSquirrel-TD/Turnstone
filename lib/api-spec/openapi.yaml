@@ -638,6 +638,7 @@ components:
         - progress
         - ballots
         - winner
+        - publicAnnouncement
         - private
         - publicLog
         - coordinatorAlerts
@@ -693,6 +694,61 @@ components:
         winner:
           oneOf:
             - $ref: "#/components/schemas/Role"
+            - type: "null"
+        publicAnnouncement:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [kind, cycle, victims]
+              properties:
+                kind:
+                  const: dawn
+                cycle:
+                  type: integer
+                  minimum: 0
+                victims:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [id, name]
+                    properties:
+                      id:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                      name:
+                        type: string
+            - type: object
+              additionalProperties: false
+              required: [kind, cycle, seat]
+              properties:
+                kind:
+                  const: verdict
+                cycle:
+                  type: integer
+                  minimum: 0
+                seat:
+                  type: object
+                  additionalProperties: false
+                  required: [id, name]
+                  properties:
+                    id:
+                      type: string
+                      minLength: 1
+                      maxLength: 128
+                    name:
+                      type: string
+                    role:
+                      $ref: "#/components/schemas/Role"
+            - type: object
+              additionalProperties: false
+              required: [kind, winner]
+              properties:
+                kind:
+                  const: finished
+                winner:
+                  $ref: "#/components/schemas/Role"
             - type: "null"
         private:
           oneOf:

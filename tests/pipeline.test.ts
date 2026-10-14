@@ -16,10 +16,16 @@ describe('owner-approved delivery policy', () => {
   it('runs local and CI smoke tests against the dedicated Vite server', () => {
     const playwrightConfig = readFileSync('playwright.config.ts', 'utf8');
     expect(playwrightConfig).toContain(
-      "baseURL: process.env.TEST_BASE_URL ?? 'http://127.0.0.1:3000'",
+      'const webPort = Number(process.env.TEST_WEB_PORT ?? 3100)',
     );
     expect(playwrightConfig).toContain(
-      "webServer: {\n    command: 'pnpm --filter @workspace/party-game run dev'",
+      "command: 'pnpm exec tsx e2e/support/csrf-test-server.ts'",
+    );
+    expect(playwrightConfig).toContain(
+      "command: 'pnpm --filter @workspace/party-game run dev'",
+    );
+    expect(playwrightConfig).toContain(
+      'TEST_API_PROXY_TARGET: `http://127.0.0.1:${csrfTestPort}`',
     );
   });
   it('blocks inclusive freeze dates except exact security-tagged commits', () => {
@@ -163,7 +169,10 @@ describe('owner-approved delivery policy', () => {
         );
         if (path !== '/robots.txt') {
           const html = await response.text();
-          expect(html).not.toMatch(/<script\b(?![^>]*\bsrc=)[^>]*>/i);
+          expect(html).not.toMatch(
+            /<script\b(?![^>]*\bsrc=)(?![^>]*type="application\/ld\+json")[^>]*>/i,
+          );
+          expect(html).toContain('type="application/ld+json"');
           expect(html).not.toMatch(/<style\b/i);
           expect(html).not.toMatch(/\sstyle=/i);
         }

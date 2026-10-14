@@ -1,27 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import { evolve, viewFor } from '../lib/engine/src/index';
+import { eventSchema } from '../lib/shared/src/index';
 import { fixture, command } from './support/engine';
+
+function eventFor(
+  version: number,
+  type: string,
+  payload: Record<string, unknown>,
+) {
+  return eventSchema.parse({
+    seq: version + 1,
+    at: 100 + version,
+    schemaVersion: 1,
+    type,
+    ...payload,
+  });
+}
 
 describe('shared public announcements', () => {
   it('projects the same dawn result to every seated viewer without disclosing why nobody was taken', () => {
     const game = fixture(5);
     const protectedSeat = game.state.seats[0]!;
-    const phase = evolve(game.state, {
-      type: 'PhaseChanged',
-      seq: game.state.version + 1,
-      at: 100,
-      phase: 'DAWN',
-      deadline: null,
-      shadowEndAt: null,
-      cycle: 1,
-    });
-    const state = evolve(phase, {
-      type: 'DawnResolved',
-      seq: phase.version + 1,
-      at: 101,
-      victims: [],
-      protected: [protectedSeat.id],
-    });
+    const phase = evolve(
+      game.state,
+      eventFor(game.state.version, 'PhaseChanged', {
+        phase: 'DAWN',
+        deadline: null,
+        shadowEndAt: null,
+        cycle: 1,
+      }),
+    );
+    const state = evolve(
+      phase,
+      eventFor(phase.version, 'DawnResolved', {
+        victims: [],
+        protected: [protectedSeat.id],
+      }),
+    );
 
     const faithful = viewFor(
       { kind: 'player', seatId: game.state.seats[1]!.id },
@@ -48,17 +63,19 @@ describe('shared public announcements', () => {
     const game = fixture(5);
     command(game, { type: 'StartGame' });
     const removed = game.state.seats[0]!;
-    const state = evolve(game.state, {
-      type: 'SeatRemoved',
-      seq: game.state.version + 1,
-      at: 100,
-      seatId: removed.id,
-      reason: 'banished',
-      publicRole: false,
-    });
+    const state = evolve(
+      game.state,
+      eventFor(game.state.version, 'SeatRemoved', {
+        seatId: removed.id,
+        reason: 'banished',
+        publicRole: false,
+      }),
+    );
 
-    expect(viewFor({ kind: 'player', seatId: game.state.seats[1]!.id }, state)
-      .publicAnnouncement).toEqual({
+    expect(
+      viewFor({ kind: 'player', seatId: game.state.seats[1]!.id }, state)
+        .publicAnnouncement,
+    ).toEqual({
       kind: 'verdict',
       cycle: state.cycle,
       seat: { id: removed.id, name: removed.name },
@@ -67,13 +84,13 @@ describe('shared public announcements', () => {
 
   it('publishes the final outcome identically to players and coordinators', () => {
     const game = fixture(5);
-    const state = evolve(game.state, {
-      type: 'GameFinished',
-      seq: game.state.version + 1,
-      at: 100,
-      winner: 'faithful',
-      reason: 'no-traitors',
-    });
+    const state = evolve(
+      game.state,
+      eventFor(game.state.version, 'GameFinished', {
+        winner: 'faithful',
+        reason: 'no-traitors',
+      }),
+    );
 
     expect(
       viewFor({ kind: 'player', seatId: game.state.seats[0]!.id }, state)
@@ -82,9 +99,7 @@ describe('shared public announcements', () => {
       kind: 'finished',
       winner: 'faithful',
     });
-    expect(
-      viewFor({ kind: 'coordinator' }, state).publicAnnouncement,
-    ).toEqual(
+    expect(viewFor({ kind: 'coordinator' }, state).publicAnnouncement).toEqual(
       viewFor({ kind: 'player', seatId: game.state.seats[0]!.id }, state)
         .publicAnnouncement,
     );

@@ -68,9 +68,7 @@ export const rehearsalStartRequestSchema = z
     speed: z.enum(['fast', 'normal']),
   })
   .strict();
-export type RehearsalStartRequest = z.infer<
-  typeof rehearsalStartRequestSchema
->;
+export type RehearsalStartRequest = z.infer<typeof rehearsalStartRequestSchema>;
 const eventBase = {
   seq: z.number().int().positive(),
   at: z.number().int().nonnegative(),
@@ -218,6 +216,36 @@ export const fullViewSchema = z
     progress: z.object({ done: z.number(), total: z.number() }).strict(),
     ballots: z.record(id),
     winner: roleSchema.nullable(),
+    publicAnnouncement: z
+      .discriminatedUnion('kind', [
+        z
+          .object({
+            kind: z.literal('dawn'),
+            cycle: z.number().int().nonnegative(),
+            victims: z.array(z.object({ id, name: z.string() }).strict()),
+          })
+          .strict(),
+        z
+          .object({
+            kind: z.literal('verdict'),
+            cycle: z.number().int().nonnegative(),
+            seat: z
+              .object({
+                id,
+                name: z.string(),
+                role: roleSchema.optional(),
+              })
+              .strict(),
+          })
+          .strict(),
+        z
+          .object({
+            kind: z.literal('finished'),
+            winner: roleSchema,
+          })
+          .strict(),
+      ])
+      .nullable(),
     private: privateViewSchema.nullable(),
     publicLog: z.array(
       z

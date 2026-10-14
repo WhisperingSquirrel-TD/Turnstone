@@ -16,6 +16,7 @@ export * from './fairnessViewTasksItemReport';
 export * from './fullView';
 export * from './fullViewBallots';
 export * from './fullViewProgress';
+export * from './fullViewPublicAnnouncement';
 export * from './gameCommandInput';
 export * from './gameInviteResponse';
 export * from './gameViewResponse';

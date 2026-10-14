@@ -5,7 +5,8 @@ export const en = {
     securityUnavailable:
       'The secure connection could not be established. Check your connection, then try again.',
     tryAgain: 'Try again',
-    securityPreparing: 'The security check is still preparing. Try again in a moment.',
+    securityPreparing:
+      'The security check is still preparing. Try again in a moment.',
     connectionStatus: 'Connection status',
     online: 'Online',
     offline: 'Offline',
@@ -48,17 +49,20 @@ export const en = {
       {
         name: 'Quick',
         duration: 'About one hour',
-        description: 'A fast game for one gathering, with short discussions and simple missions.',
+        description:
+          'A fast game for one gathering, with short discussions and simple missions.',
       },
       {
         name: 'Day',
         duration: 'Across a day',
-        description: 'Pause around meals and planned events, then bring everyone back for each reveal.',
+        description:
+          'Pause around meals and planned events, then bring everyone back for each reveal.',
       },
       {
         name: 'Multi-day',
         duration: 'Two to fourteen days',
-        description: 'Play remotely with scheduled private moments and time to discuss between steps.',
+        description:
+          'Play remotely with scheduled private moments and time to discuss between steps.',
       },
     ],
     faqHeading: 'Frequently asked questions',
@@ -79,17 +83,20 @@ export const en = {
           'A group can play together using their own phones or tablets, with family-friendly wording and paired seats for anyone sharing a device.',
       },
       {
-        question: 'Is there a party game where everyone gets a secret role on their phone?',
+        question:
+          'Is there a party game where everyone gets a secret role on their phone?',
         answer:
           'Yes. Players reveal their role privately on their own browser screen, while public announcements are shared with the whole group.',
       },
       {
-        question: 'Is there a team-building game like this for 30 or 40 people?',
+        question:
+          'Is there a team-building game like this for 30 or 40 people?',
         answer:
           'The game supports groups from 5 to 40 players and can be scheduled for a quick session, a day or a multi-day event.',
       },
       {
-        question: 'Is there a free alternative to boxed traitor games that takes more players?',
+        question:
+          'Is there a free alternative to boxed traitor games that takes more players?',
         answer:
           'This browser game is free to play and supports 5 to 40 players. Players use a phone or tablet browser; there is nothing to download.',
       },
@@ -123,7 +130,8 @@ export const en = {
     play: 'Start a new game',
     learnMore: 'Learn how to play',
     demoHeading: 'Hold to see your role',
-    demoDescription: 'Hold the gold seal to reveal a sample role. Release to hide it.',
+    demoDescription:
+      'Hold the gold seal to reveal a sample role. Release to hide it.',
     demoPrompt: 'Hold to reveal',
     demoLink: 'Try the full game',
     factsIntro: 'The essentials, in one place.',
@@ -158,11 +166,15 @@ export const en = {
     pinHint: 'You’ll only need it if you change phones.',
     joinButton: 'Request to join',
     joinPending: 'Sending request…',
-    waitingHeading: (organiser: string) => `Waiting for ${organiser} to let you in`,
-    waitingBody: 'Your organiser will approve your seat. You can check again here.',
+    waitingHeading: (organiser: string) =>
+      `Waiting for ${organiser} to let you in`,
+    waitingBody:
+      'Your organiser will approve your seat. You can check again here.',
     joinRetry: 'Check again',
-    statusError: 'We couldn’t check your seat yet. Check your connection, then try again.',
-    joinRejected: 'Your organiser could not approve this seat. Ask them for help.',
+    statusError:
+      'We couldn’t check your seat yet. Check your connection, then try again.',
+    joinRejected:
+      'Your organiser could not approve this seat. Ask them for help.',
     busy: 'The service is busy right now. Try again in a few minutes.',
     qrPreparing: 'Preparing the game QR code',
     defaultOrganiser: 'your organiser',
@@ -188,7 +200,8 @@ export const en = {
     codeCaption: 'Game code',
     share: 'Share invitation',
     sharePending: 'Opening share options…',
-    shareUnavailable: 'Sharing is unavailable. Ask the organiser to copy the game code.',
+    shareUnavailable:
+      'Sharing is unavailable. Ask the organiser to copy the game code.',
     rosterHeading: 'Players',
     pendingHeading: 'Waiting for approval',
     noPendingJoiners: 'No one is waiting to join.',
@@ -207,14 +220,16 @@ export const en = {
     rehearsalNameLabel: 'Your first name',
     rehearsalButton: 'Rehearse a full game',
     rehearsalPending: 'Starting rehearsal…',
-    errorFallback: 'We couldn’t complete that step. Check your connection, then try again.',
+    errorFallback:
+      'We couldn’t complete that step. Check your connection, then try again.',
     codeError: 'Check the six-character game code and try again.',
     nameError: 'Enter at least two letters for your first name.',
     pinError: 'Enter the four-digit PIN you chose.',
   },
   play: {
     heading: 'Join a game',
-    intro: 'Enter the code your organiser shared. Your organiser will approve your seat.',
+    intro:
+      'Enter the code your organiser shared. Your organiser will approve your seat.',
     codeLabel: 'Six-character game code',
     nameLabel: 'Display name',
     pinLabel: 'Seat PIN',
@@ -224,18 +239,23 @@ export const en = {
     joinSent: (requestId: string) =>
       `Request sent. Waiting for the organiser to admit you. Reference ${requestId}.`,
     rejoinHeading: 'Rejoin an existing seat',
-    rejoinBody: 'On a new device, enter the same game code, display name and seat PIN used before.',
-    rejoinRequired: 'Enter the game code, display name and seat PIN above first.',
+    rejoinBody:
+      'On a new device, enter the same game code, display name and seat PIN used before.',
+    rejoinRequired:
+      'Enter the game code, display name and seat PIN above first.',
     rejoinButton: 'Rejoin this seat',
     rejoinPending: 'Rejoining…',
-    rejoinError: 'Recovery could not be completed. Check the game code, name and PIN.',
+    rejoinError:
+      'Recovery could not be completed. Check the game code, name and PIN.',
     rehearsalHeading: 'Or rehearse the whole game',
     rehearsalBody:
       'Practise with practice players filling the other seats, real game state and shortened rounds.',
-    rehearsalInstructions: 'Choose a player count and speed, then enter your first name.',
+    rehearsalInstructions:
+      'Choose a player count and speed, then enter your first name.',
     rehearsalButton: 'Rehearse a full game',
     rehearsalPending: 'Starting practice…',
-    rehearsalError: 'Rehearsal could not be started. Choose a name and try again.',
+    rehearsalError:
+      'Rehearsal could not be started. Choose a name and try again.',
     rehearsalOpenError: 'Rehearsal could not be opened. Please try again.',
     openPractice: 'Open your practice game',
     installPrompt: 'Install as app',
@@ -248,7 +268,8 @@ export const en = {
     installUnavailable: 'This browser did not offer an install prompt.',
     installFailed: 'The install prompt could not be opened.',
     installAccepted: 'This site was added to your Home Screen.',
-    installFallback: 'You can still add this website to your Home Screen from the browser menu.',
+    installFallback:
+      'You can still add this website to your Home Screen from the browser menu.',
   },
   game: {
     phases: {
@@ -273,11 +294,21 @@ export const en = {
     unavailableHeading: 'The game view is unavailable',
     unavailableBody: 'Your private details have not been opened.',
     tryAgain: 'Try again',
-    visitorJoin: 'This game view does not include a player seat. Return to the join page to request one.',
+    visitorJoin:
+      'Enter the code your organiser shared to ask to join this game.',
     joinButton: 'Join a game',
-    onePlayer: 'player',
-    manyPlayers: 'players',
-    privateScreen: 'Your private screen stays hidden until you confirm you are shielded.',
+    dawnNoOneTaken: 'No one was taken.',
+    dawnTaken: (name: string) => `${name} was taken in the night.`,
+    banished: (name: string) => `${name} was banished.`,
+    banishedRole: (role: 'traitor' | 'faithful') =>
+      `Their role was ${role === 'traitor' ? 'Traitor' : 'Faithful'}.`,
+    voteResults: 'Votes revealed',
+    voteReveal: (voter: string, target: string) =>
+      `${voter} voted to banish ${target}.`,
+    resultTraitors: 'The Traitors win.',
+    resultFaithful: 'The Faithful win.',
+    privateScreen:
+      'Your private screen stays hidden until you confirm you are shielded.',
     paused: 'The game is paused. Keep this screen private.',
     progress: (done: number, total: number) =>
       `${done} of ${total} players have completed this part.`,
@@ -286,7 +317,8 @@ export const en = {
     roomHeading: 'Your room',
     potSummary: (players: number, unit: string, pot: number) =>
       `${players} players in this game · ${unit} at stake: ${pot}`,
-    roomNote: 'The organiser will move the game forward. Keep your phone close and your screen private.',
+    roomNote:
+      'The organiser will move the game forward. Keep your phone close and your screen private.',
     shieldHeading: 'Shield your screen',
     shieldDetail: 'Turn away from nearby players before continuing.',
     countdown: (seconds: number) => `Continue in ${seconds}`,
@@ -303,7 +335,8 @@ export const en = {
     holdInstructions:
       'Hold, or activate to reveal and activate again to hide. Your screen hides on interruption or after ten seconds.',
     privateUnavailable: 'Private details are not available yet.',
-    privateError: 'The private view could not be opened. Release and try again.',
+    privateError:
+      'The private view could not be opened. Release and try again.',
     privateRole: 'Your private role',
     roleTraitor: 'Traitor',
     roleFaithful: 'Faithful',
@@ -323,8 +356,10 @@ export const en = {
     installButton: 'Install as app',
     installInstructions: 'Add this site to your Home Screen',
     fullscreen: 'Full screen',
-    fullscreenUnavailable: 'Full screen could not be enabled. Use your browser settings instead.',
-    wakeLockFallback: 'Your screen may lock during play. Tap it to keep the game visible.',
+    fullscreenUnavailable:
+      'Full screen could not be enabled. Use your browser settings instead.',
+    wakeLockFallback:
+      'Your screen may lock during play. Tap it to keep the game visible.',
   },
   notFound: {
     heading: 'Page not found',

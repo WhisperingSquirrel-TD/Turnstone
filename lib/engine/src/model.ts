@@ -97,6 +97,11 @@ export type State = {
     action: 'seat_pin_reset' | 'device_recovered';
     seatId: string;
   }[];
+  publicAnnouncement:
+    | { kind: 'dawn'; cycle: number; victimIds: string[] }
+    | { kind: 'verdict'; cycle: number; seatId: string }
+    | { kind: 'finished'; winner: Role }
+    | null;
   coordinatorAlerts: {
     seq: number;
     at: number;

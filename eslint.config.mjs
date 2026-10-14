@@ -9,4 +9,16 @@ export default tseslint.config(
     files: ['**/*.{ts,tsx,mjs}'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly', document: 'readonly', window: 'readonly', URL: 'readonly', setTimeout: 'readonly' } },
   },
+  {
+    files: ['artifacts/party-game/public/service-worker*.js'],
+    languageOptions: {
+      globals: {
+        caches: 'readonly',
+        fetch: 'readonly',
+        importScripts: 'readonly',
+        self: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
 );

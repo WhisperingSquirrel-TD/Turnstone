@@ -97,9 +97,11 @@ export function nextRehearsalBotCommand(
   return null;
 }
 
-export function createRehearsalBotRunner(options: {
-  publishGame?: (gameId: string) => Promise<void>;
-} = {}) {
+export function createRehearsalBotRunner(
+  options: {
+    publishGame?: (gameId: string) => Promise<void>;
+  } = {},
+) {
   async function processGame(gameId: string): Promise<void> {
     let state = await loadState(gameId);
     if (!state || !state.config.rehearsal.enabled || state.winner) return;
@@ -138,10 +140,7 @@ export function createRehearsalBotRunner(options: {
           : {}),
         deadline: {
           kind: nextState.phase,
-          dueAt:
-            nextState.phase === 'SHADOW'
-              ? nextState.shadowEndAt
-              : nextState.deadline,
+          dueAt: nextState.deadline,
         },
       });
       if (!stored.ok) {

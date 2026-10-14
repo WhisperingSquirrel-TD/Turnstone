@@ -524,7 +524,9 @@ export function createApp(
         });
         response
           .status(200)
-          .json(projectState(existing, { kind: 'player', seatId: humanSeatId }));
+          .json(
+            projectState(existing, { kind: 'player', seatId: humanSeatId }),
+          );
         return;
       }
 
@@ -670,14 +672,12 @@ export function createApp(
       });
       await publishGame(gameId);
       const currentState = await loadGameState(gameId);
-      response
-        .status(201)
-        .json(
-          projectState(currentState ?? state, {
-            kind: 'player',
-            seatId: humanSeatId,
-          }),
-        );
+      response.status(201).json(
+        projectState(currentState ?? state, {
+          kind: 'player',
+          seatId: humanSeatId,
+        }),
+      );
     } catch {
       sendError(response, 503, 'Service unavailable');
     }

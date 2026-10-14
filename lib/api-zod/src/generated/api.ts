@@ -66,6 +66,14 @@ export const startRehearsalResponseViewTwoProgressDoneMin = 0;
 
 export const startRehearsalResponseViewTwoProgressTotalMin = 0;
 
+export const startRehearsalResponseViewTwoPublicAnnouncementOneCycleMin = 0;
+
+export const startRehearsalResponseViewTwoPublicAnnouncementOneVictimsItemIdMax = 128;
+
+export const startRehearsalResponseViewTwoPublicAnnouncementTwoCycleMin = 0;
+
+export const startRehearsalResponseViewTwoPublicAnnouncementTwoSeatIdMax = 128;
+
 export const startRehearsalResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
@@ -111,6 +119,25 @@ export const StartRehearsalResponse = zod.object({
 }),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "publicAnnouncement": zod.union([zod.object({
+  "kind": zod.literal("dawn"),
+  "cycle": zod.number().int().min(startRehearsalResponseViewTwoPublicAnnouncementOneCycleMin),
+  "victims": zod.array(zod.object({
+  "id": zod.string().min(1).max(startRehearsalResponseViewTwoPublicAnnouncementOneVictimsItemIdMax),
+  "name": zod.string()
+}))
+}),zod.object({
+  "kind": zod.literal("verdict"),
+  "cycle": zod.number().int().min(startRehearsalResponseViewTwoPublicAnnouncementTwoCycleMin),
+  "seat": zod.object({
+  "id": zod.string().min(1).max(startRehearsalResponseViewTwoPublicAnnouncementTwoSeatIdMax),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})
+}),zod.object({
+  "kind": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+}),zod.null()]),
   "private": zod.union([zod.object({
   "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
   "team": zod.array(zod.object({
@@ -205,6 +232,14 @@ export const createGameResponseViewTwoProgressDoneMin = 0;
 
 export const createGameResponseViewTwoProgressTotalMin = 0;
 
+export const createGameResponseViewTwoPublicAnnouncementOneCycleMin = 0;
+
+export const createGameResponseViewTwoPublicAnnouncementOneVictimsItemIdMax = 128;
+
+export const createGameResponseViewTwoPublicAnnouncementTwoCycleMin = 0;
+
+export const createGameResponseViewTwoPublicAnnouncementTwoSeatIdMax = 128;
+
 export const createGameResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
@@ -250,6 +285,25 @@ export const CreateGameResponse = zod.object({
 }),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "publicAnnouncement": zod.union([zod.object({
+  "kind": zod.literal("dawn"),
+  "cycle": zod.number().int().min(createGameResponseViewTwoPublicAnnouncementOneCycleMin),
+  "victims": zod.array(zod.object({
+  "id": zod.string().min(1).max(createGameResponseViewTwoPublicAnnouncementOneVictimsItemIdMax),
+  "name": zod.string()
+}))
+}),zod.object({
+  "kind": zod.literal("verdict"),
+  "cycle": zod.number().int().min(createGameResponseViewTwoPublicAnnouncementTwoCycleMin),
+  "seat": zod.object({
+  "id": zod.string().min(1).max(createGameResponseViewTwoPublicAnnouncementTwoSeatIdMax),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})
+}),zod.object({
+  "kind": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+}),zod.null()]),
   "private": zod.union([zod.object({
   "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
   "team": zod.array(zod.object({
@@ -467,6 +521,14 @@ export const getJoinRequestStatusResponseThreeGameViewTwoProgressDoneMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoProgressTotalMin = 0;
 
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementOneCycleMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementOneVictimsItemIdMax = 128;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementTwoCycleMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementTwoSeatIdMax = 128;
+
 export const getJoinRequestStatusResponseThreeGameViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
@@ -518,6 +580,25 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
 }),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "publicAnnouncement": zod.union([zod.object({
+  "kind": zod.literal("dawn"),
+  "cycle": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementOneCycleMin),
+  "victims": zod.array(zod.object({
+  "id": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementOneVictimsItemIdMax),
+  "name": zod.string()
+}))
+}),zod.object({
+  "kind": zod.literal("verdict"),
+  "cycle": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementTwoCycleMin),
+  "seat": zod.object({
+  "id": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementTwoSeatIdMax),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})
+}),zod.object({
+  "kind": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+}),zod.null()]),
   "private": zod.union([zod.object({
   "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
   "team": zod.array(zod.object({
@@ -640,6 +721,14 @@ export const getGameViewResponseViewTwoProgressDoneMin = 0;
 
 export const getGameViewResponseViewTwoProgressTotalMin = 0;
 
+export const getGameViewResponseViewTwoPublicAnnouncementOneCycleMin = 0;
+
+export const getGameViewResponseViewTwoPublicAnnouncementOneVictimsItemIdMax = 128;
+
+export const getGameViewResponseViewTwoPublicAnnouncementTwoCycleMin = 0;
+
+export const getGameViewResponseViewTwoPublicAnnouncementTwoSeatIdMax = 128;
+
 export const getGameViewResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
@@ -685,6 +774,25 @@ export const GetGameViewResponse = zod.object({
 }),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "publicAnnouncement": zod.union([zod.object({
+  "kind": zod.literal("dawn"),
+  "cycle": zod.number().int().min(getGameViewResponseViewTwoPublicAnnouncementOneCycleMin),
+  "victims": zod.array(zod.object({
+  "id": zod.string().min(1).max(getGameViewResponseViewTwoPublicAnnouncementOneVictimsItemIdMax),
+  "name": zod.string()
+}))
+}),zod.object({
+  "kind": zod.literal("verdict"),
+  "cycle": zod.number().int().min(getGameViewResponseViewTwoPublicAnnouncementTwoCycleMin),
+  "seat": zod.object({
+  "id": zod.string().min(1).max(getGameViewResponseViewTwoPublicAnnouncementTwoSeatIdMax),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})
+}),zod.object({
+  "kind": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+}),zod.null()]),
   "private": zod.union([zod.object({
   "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
   "team": zod.array(zod.object({
@@ -777,6 +885,14 @@ export const revealPrivateViewResponseViewTwoProgressDoneMin = 0;
 
 export const revealPrivateViewResponseViewTwoProgressTotalMin = 0;
 
+export const revealPrivateViewResponseViewTwoPublicAnnouncementOneCycleMin = 0;
+
+export const revealPrivateViewResponseViewTwoPublicAnnouncementOneVictimsItemIdMax = 128;
+
+export const revealPrivateViewResponseViewTwoPublicAnnouncementTwoCycleMin = 0;
+
+export const revealPrivateViewResponseViewTwoPublicAnnouncementTwoSeatIdMax = 128;
+
 export const revealPrivateViewResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
@@ -822,6 +938,25 @@ export const RevealPrivateViewResponse = zod.object({
 }),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "publicAnnouncement": zod.union([zod.object({
+  "kind": zod.literal("dawn"),
+  "cycle": zod.number().int().min(revealPrivateViewResponseViewTwoPublicAnnouncementOneCycleMin),
+  "victims": zod.array(zod.object({
+  "id": zod.string().min(1).max(revealPrivateViewResponseViewTwoPublicAnnouncementOneVictimsItemIdMax),
+  "name": zod.string()
+}))
+}),zod.object({
+  "kind": zod.literal("verdict"),
+  "cycle": zod.number().int().min(revealPrivateViewResponseViewTwoPublicAnnouncementTwoCycleMin),
+  "seat": zod.object({
+  "id": zod.string().min(1).max(revealPrivateViewResponseViewTwoPublicAnnouncementTwoSeatIdMax),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})
+}),zod.object({
+  "kind": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+}),zod.null()]),
   "private": zod.union([zod.object({
   "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
   "team": zod.array(zod.object({
@@ -924,6 +1059,14 @@ export const submitGameCommandResponseViewTwoProgressDoneMin = 0;
 
 export const submitGameCommandResponseViewTwoProgressTotalMin = 0;
 
+export const submitGameCommandResponseViewTwoPublicAnnouncementOneCycleMin = 0;
+
+export const submitGameCommandResponseViewTwoPublicAnnouncementOneVictimsItemIdMax = 128;
+
+export const submitGameCommandResponseViewTwoPublicAnnouncementTwoCycleMin = 0;
+
+export const submitGameCommandResponseViewTwoPublicAnnouncementTwoSeatIdMax = 128;
+
 export const submitGameCommandResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
 
 
@@ -969,6 +1112,25 @@ export const SubmitGameCommandResponse = zod.object({
 }),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "publicAnnouncement": zod.union([zod.object({
+  "kind": zod.literal("dawn"),
+  "cycle": zod.number().int().min(submitGameCommandResponseViewTwoPublicAnnouncementOneCycleMin),
+  "victims": zod.array(zod.object({
+  "id": zod.string().min(1).max(submitGameCommandResponseViewTwoPublicAnnouncementOneVictimsItemIdMax),
+  "name": zod.string()
+}))
+}),zod.object({
+  "kind": zod.literal("verdict"),
+  "cycle": zod.number().int().min(submitGameCommandResponseViewTwoPublicAnnouncementTwoCycleMin),
+  "seat": zod.object({
+  "id": zod.string().min(1).max(submitGameCommandResponseViewTwoPublicAnnouncementTwoSeatIdMax),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})
+}),zod.object({
+  "kind": zod.literal("finished"),
+  "winner": zod.enum(['traitor', 'faithful'])
+}),zod.null()]),
   "private": zod.union([zod.object({
   "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
   "team": zod.array(zod.object({

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { config } from '../artifacts/party-game/src/config';
+import { getPublicTitle } from '../artifacts/party-game/src/public-site-content';
 
 describe('single-source owner identity', () => {
   it('stores the confirmed name, tagline/byline and organisation in config', () => {
@@ -27,7 +28,8 @@ describe('single-source owner identity', () => {
       'utf8',
     );
     expect(source).not.toMatch(/(?:<title>|content=")APP_NAME/);
-    expect(source).toContain('__APP_NAME__');
+    expect(source).toContain('__PUBLIC_TITLE__');
+    expect(source).not.toContain('__APP_NAME__');
     const output = readFileSync(
       new URL(
         '../artifacts/party-game/dist/public/index.html',
@@ -35,11 +37,14 @@ describe('single-source owner identity', () => {
       ),
       'utf8',
     );
-    expect(output).toContain(`<title>${config.appName}</title>`);
-    expect(output).toContain(`property="og:title" content="${config.appName}"`);
+    expect(output).toContain(`<title>${getPublicTitle()}</title>`);
     expect(output).toContain(
-      `name="twitter:title" content="${config.appName}"`,
+      `property="og:title" content="${getPublicTitle()}"`,
+    );
+    expect(output).toContain(
+      `name="twitter:title" content="${getPublicTitle()}"`,
     );
     expect(output).not.toContain('__APP_NAME__');
+    expect(output).not.toContain('__PUBLIC_TITLE__');
   });
 });

@@ -904,7 +904,7 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** In development, clear the configured base URL even when a production API origin variable is present, so `/api/csrf` and generated `/api/...` calls use the shared same-origin service path. Keep application runtime free of a custom Vite proxy; the isolated Playwright server may enable a test-only `/api` proxy. Keep the existing HttpOnly cookie and double-submit token validation unchanged. Add a mobile E2E regression on Pixel and iPhone that checks the JSON token response, cookie attributes, matching CSRF header/cookie, and enabled actions.
 
-**Consequence:** A direct request to the shared `/api/csrf` route returns JSON and the Replit preview no longer shows the failure banner; join and rehearsal actions are enabled. The preview’s proxy supplies secure cookie attributes, and the browser successfully receives the token response without relaxing CSRF. A local Playwright run is currently blocked before test execution by the container's missing `libgbm.so.1`; the configured GitHub browser jobs provide the Pixel/iPhone runtime check.
+**Consequence:** A direct request to the shared `/api/csrf` route returns JSON and the Replit preview no longer shows the failure banner; join and rehearsal actions are enabled. The preview’s proxy supplies secure cookie attributes, and the browser successfully receives the token response without relaxing CSRF. Pixel and desktop Playwright regressions pass locally, including the assertion that rejects the old `/api-server/api/csrf` path. iPhone and iPad WebKit remain delegated to the configured GitHub browser jobs.
 
 ## D62 — Amendment 9 moves phone-first entry and public announcements into Milestone 5 (resolved)
 
@@ -913,3 +913,11 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 **Choice:** Build the amendment's complete E1–E4 flow and shared phone announcements in Milestone 5. Keep the presenter disabled by default and do not require a TV connection for any complete game. Bring forward only the home-page content, title and JSON-LD explicitly named in §26; keep the rest of agent optimisation in Milestone 9. Preserve the site-wide pre-launch noindex policy. The owner requires Playwright screenshots in `docs/screens/` before hands-on rehearsal review.
 
 **Consequence:** Milestone 5's plan and design wireframes are expanded. The existing advanced planner, themes and presenter console remain in their later milestones.
+
+## D63 — Amendment 10 home-page work sequencing (resolved)
+
+**Context:** The owner reviewed the desktop home page and specified dark-background logo contrast, a cleaner radial glow, mobile-first layout/performance requirements, three additional FAQ entries and a documented, rechecked basis for comparative claims.
+
+**Choice:** Record the owner's Amendment 10 verbatim as SPEC section 27. Complete the current announcement-test correction and CSRF verification/push/green-CI gate first; implement section 27 before starting the M5 screen-design brief work. Test logo-fill contrast against every used background, remove visible hero/demo shadow edges, verify the named responsive widths and mobile Lighthouse scores, and add the exact FAQ answers to all specified surfaces. Maintain the competitor claims and their cited sources/date in `docs/CLAIMS.md`, rechecking before launch and removing claims that are no longer accurate. Do not name the competitor product, its maker or the TV programme.
+
+**Consequence:** Section 27 is queued after the current CSRF/push gate and before the M5 design brief. No section 27 UI, copy or asset changes are made until that gate is green.

@@ -185,3 +185,39 @@ Do not add a generic feature-card wall, routine fade-up effects, extra gradient 
 - Respect reduced motion, keyboard, touch, screen-reader and zoom behaviour; run axe on every implemented screen.
 - Capture Playwright screenshots on the relevant configured phone, tablet and TV/presenter profiles. A skipped local WebKit run is labelled exactly as specified; iPhone and iPad WebKit evidence comes from CI.
 - Record the reviewed result in `docs/PROGRESS.md`; do not treat a static wireframe or unbuilt route as a passing test.
+
+## M5 brief
+
+FOUNDATIONS
+
+- Layout: single column, max-width 480px centred, 24px side padding, 8px spacing grid, safe-area insets, dvh units. Primary action sits in a bottom action bar (thumb zone); buttons are 56px tall with a 12px radius.
+- Type: Display is Playfair 400 40/44. Title is Playfair 30/36. Subtitle is Playfair 22/30 in Ash. Body is DM Sans 400 17/26. Label is DM Sans 500 15/20. Meta is DM Sans 400 14/20 in Ash. Never all caps. Every title has one key phrase in Gilt (written below as _word_).
+- Colour: background Charcoal, with one subtle 135-degree lift to Stone at the bottom right; surfaces Hearth; Stone 1px dividers; Candle text; Ash secondary text; Gilt for key phrases, 2px focus rings with a 2px offset, progress and primary buttons.
+- Buttons: Primary is a Gilt fill with Hearth text (passes AA). Secondary is transparent with a 1px Gilt border and Candle text. Disabled is a Stone fill with Ash text.
+- Header on every screen and identical for every role: "Turnstone" in Playfair 20 Candle on the left; the outlined Stackstone mark (24px) on the right, linking per section 23. Rehearsal games add a small Meta tag, "Rehearsal".
+- Motion: 200ms fade between screens and nothing else, except the seal glow, dawn reveal and verdict reveal. With reduced motion, no animation at all.
+
+PRIVATEMOMENT COMPONENT (one component for the deal, votes, shadow, tasks, recruitment and endgame)
+
+1. Shield: full-screen Hearth. Title "Shield your _screen_"; body "Turn away and cover your phone."; a 5-to-1 countdown in Playfair Gilt numerals; then a primary button, "I'm shielded".
+2. Hold: a centred 168px seal (Hearth disc, 2px Gilt ring, "Hold" label in Ash), with Meta below: "Press and hold to reveal". While pressed, the ring fills clockwise over the hold time. On completion, the seal glows (radial Gilt, up to 40% opacity) and the content card appears instantly above it: Hearth, 1px Stone border, 24px padding. On release, everything hides instantly with no animation.
+3. Choice, when needed: full-width name rows, 56px tall, Body Candle, Stone separators. A selected row gets a 4px Gilt left bar and a Gilt tick. "Confirm" sits in the action bar, and confirming needs a second 300ms hold on the seal.
+4. Done: "Thanks. Waiting for everyone." for all players, held until the shared minimum duration ends.
+   Traitor and Faithful variants must be identical in element count, sizes and colours; only the words differ.
+
+PLAYER SCREENS
+P1 Join. Title "Join the _game_". Fields: game code (6 characters, auto-uppercase, unambiguous alphabet, prefilled from the link); "Your name"; "Choose a 4-digit PIN" (numeric keypad, with show and hide). Toggles: "Tap instead of hold", "Larger text", "Simpler words". Primary button "Join". Meta: "No account needed. We only keep your first name."
+P2 Waiting room. Title "You're _in_". Subtitle "Waiting for {organiser} to start." Joined names with initials in Hearth circles: Ash initials, no per-player colours. "11 of 15 joined". A collapsible "Add Turnstone to your Home Screen" card with platform-specific steps. Secondary button "Practise the secret screen", which opens P3.
+P3 Practice. A PrivateMoment with "This is how secrets appear. Only you can see this while you hold." Then "Done".
+P4 Role. Traitor: "You are a _Traitor_", then "Your fellow Traitors: {names}", then "Stay hidden. Choose wisely." Faithful: "You are _Faithful_", then "Find the Traitors before it's too late.", then one more line of equal length. Same layout for both.
+P5 Day (public). Title is the phase name; subtitle is the next step and its time; a "Prize pot: {n} {unit}" card; a player grid where those who are out show an "Out" label in Ash, never a role colour; the latest 5 log entries. One button, "Notes", for everyone, opening a PrivateMoment: Traitors get Traitor chat, Faithful get a private notebook, with the same layout and size. Never show a separate "Traitor chat" button.
+P6 Vote. A PrivateMoment choice: "Who do you vote to _banish_?"
+P7 Shadow. Traitors: "Who will the Traitors _take_ tonight?", plus a line in Ash such as "Sam picked: Alex". Faithful: "Who do you _suspect_ most right now?" with the same list, and an equal-sized Ash line in that slot ("Your answer stays private"). Fellow Traitors are not greyed out; picking one gives a same-looking confirmation, then a private "choose someone else".
+P8 Announcement (public). "{Name} was _taken_ in the night" or "No one was _taken_"; "{Name} was _banished_", then their role per config.
+P9 Ghost. Banner "You're a _ghost_"; predictions, ghost chat, and referee tools when enabled.
+P10 Endgame. A PrivateMoment choice: "_End_ the game" or "_Banish_ again".
+P11 Results. "The _Traitors_ win" or "The _Faithful_ win"; the pot split; every role; a link to the fairness check; awards; "View recap".
+R1 Rehearsal, from a secondary call to action on the home page, "Try a rehearsal". Title "Rehearse _alone_"; a players slider from 6 to 15; speed "Fast" or "Normal"; "You play one seat; computer players fill the rest." Primary button "Start rehearsal". It then uses the same player screens through the real server.
+
+COPY: UK English, sentence case. The family-friendly wording swaps "murdered" for "taken" and "banished" for "sent home" everywhere.
+ACCEPTANCE: Playwright screenshots of every screen on iPhone, Pixel and iPad, saved to docs/screens/; uniformity tests for every PrivateMoment variant, including the Notes screen; axe passing; the font budget met; then the owner's hands-on rehearsal on a real phone (hard stop).

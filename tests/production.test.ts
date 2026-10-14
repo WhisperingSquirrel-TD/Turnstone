@@ -27,8 +27,22 @@ describe('actual built production website', () => {
       expect(first.text).not.toContain('__RESPONSE_NONCE__');
       const scripts =
         first.text.match(/<script\b[^>]*>[\s\S]*?<\/script>/g) ?? [];
-      expect(scripts.length).toBeGreaterThan(0);
-      for (const script of scripts) {
+      const structuredData = scripts.find((script) =>
+        /type="application\/ld\+json"/i.test(script),
+      );
+      expect(structuredData).toBeDefined();
+      expect(() =>
+        JSON.parse(
+          structuredData!
+            .replace(/^<script\b[^>]*>/i, '')
+            .replace(/<\/script>$/i, ''),
+        ),
+      ).not.toThrow();
+      const executableScripts = scripts.filter(
+        (script) => !/type="application\/ld\+json"/i.test(script),
+      );
+      expect(executableScripts.length).toBeGreaterThan(0);
+      for (const script of executableScripts) {
         expect(script).toMatch(/\bsrc="/);
         expect(script).toContain(`nonce="${nonce}"`);
         expect(script).toMatch(/><\/script>$/);

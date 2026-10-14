@@ -208,10 +208,7 @@ export const gameConfigSchema = z
     rehearsal: z
       .object({
         enabled: z.boolean().default(false),
-        botSeatIds: z
-          .array(z.string().min(1).max(128))
-          .max(39)
-          .default([]),
+        botSeatIds: z.array(z.string().min(1).max(128)).max(39).default([]),
       })
       .strict()
       .default({}),

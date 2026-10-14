@@ -342,6 +342,36 @@ export type FullViewProgress = {
 
 export type FullViewBallots = {[key: string]: string};
 
+export type FullViewPublicAnnouncement = {
+  kind: 'dawn';
+  /** @minimum 0 */
+  cycle: number;
+  victims: {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  id: string;
+  name: string;
+}[];
+} | {
+  kind: 'verdict';
+  /** @minimum 0 */
+  cycle: number;
+  seat: {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  id: string;
+  name: string;
+  role?: Role;
+};
+} | {
+  kind: 'finished';
+  winner: Role;
+} | null;
+
 export interface FullView {
   /**
      * @minLength 1
@@ -370,6 +400,7 @@ export interface FullView {
   progress: FullViewProgress;
   ballots: FullViewBallots;
   winner: Role | null;
+  publicAnnouncement: FullViewPublicAnnouncement;
   private: PrivateView | null;
   publicLog: PublicLogEntry[];
   coordinatorAlerts: CoordinatorAlert[];

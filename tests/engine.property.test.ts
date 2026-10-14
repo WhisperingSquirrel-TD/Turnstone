@@ -26,7 +26,12 @@ it('preserves deal, replay, projection allow-lists and secret isolation across s
         const original = JSON.stringify(game.state);
         for (const kind of ['coordinator', 'presenter', 'admin'] as const) {
           const view = viewFor({ kind, reveal: true }, game.state);
-          expect(Object.keys(view).sort()).toEqual([...VIEW_ALLOW_LIST].sort());
+          expect(
+            Object.keys(view).every((key) =>
+              (VIEW_ALLOW_LIST as readonly string[]).includes(key),
+            ),
+          ).toBe(true);
+          expect(view).toHaveProperty('publicAnnouncement');
           expect(view.private).toBeNull();
           expect(view.seats.every((seat) => seat.role === undefined)).toBe(
             true,

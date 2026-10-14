@@ -16,7 +16,9 @@ describe('routes', () => {
     const html = render('/');
     expect(html).toContain('Turnstone is a free game of traitors and faithful');
     expect(html).toContain('How it works');
-    expect(html).toContain('How do we play a traitor game at home with 15 people?');
+    expect(html).toContain(
+      'How do we play a traitor game at home with 15 people?',
+    );
     expect(html).toContain('A Stackstone game');
   });
   it('starts with the E1 title card and keeps all entry actions enabled without fields', () => {

@@ -55,10 +55,7 @@ export function HoldRoleDemo() {
         onPointerLeave={clearReveal}
         onPointerCancel={clearReveal}
         onKeyDown={(event) => {
-          if (
-            !event.repeat &&
-            (event.key === ' ' || event.key === 'Enter')
-          ) {
+          if (!event.repeat && (event.key === ' ' || event.key === 'Enter')) {
             event.preventDefault();
             beginReveal();
           }

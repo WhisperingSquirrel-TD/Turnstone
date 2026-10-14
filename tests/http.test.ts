@@ -186,6 +186,90 @@ describe('health and readiness', () => {
     expect(allowed.body).toEqual({ error: 'Authentication required' });
   });
 
+  it('requires a valid CSRF token on every game-scoped write route', async () => {
+    const app = createApp(async () => {});
+    const paths = [
+      '/api/games/test-game/private-view',
+      '/api/games/test-game/presenter-pairings',
+      '/api/presenter/pair',
+      '/api/recover',
+      '/api/games/test-game/join',
+      '/api/games/test-game/seats/test-seat/pin/reset',
+      '/api/games/test-game/coordinator-handoffs',
+      '/api/games/test-game/invites',
+      '/api/games/test-game/join-requests/test-request/decision',
+      '/api/coordinator-handoffs/claim',
+      '/api/join',
+    ];
+
+    for (const path of paths) {
+      const response = await request(app)
+        .post(path)
+        .set('Origin', 'https://turnstone.stackstoneconsulting.co.uk')
+        .send({});
+      expect(response.status, path).toBe(403);
+      expect(response.body, path).toEqual({ error: 'Invalid request' });
+    }
+  });
+
+  it('rejects malformed recovery, join and presenter pairing payloads after CSRF', async () => {
+    const app = createApp(async () => {}, {
+      rateLimitSecret: 'unit-test-secret',
+    });
+    const csrfResponse = await request(app).get('/api/csrf');
+    const token = csrfResponse.body.csrfToken as string;
+    const cookie = csrfResponse.headers['set-cookie']?.[0]?.split(';')[0] ?? '';
+
+    for (const path of ['/api/recover', '/api/join', '/api/presenter/pair']) {
+      const response = await request(app)
+        .post(path)
+        .set('Origin', 'https://turnstone.stackstoneconsulting.co.uk')
+        .set('Cookie', cookie)
+        .set('X-CSRF-Token', token)
+        .send({});
+      expect(response.status, path).toBe(400);
+      expect(response.body, path).toEqual({ error: 'Invalid request' });
+    }
+  });
+
+  it('does not allow CreateGame through a game-scoped command route', async () => {
+    const origin = 'https://turnstone.stackstoneconsulting.co.uk';
+    const app = createApp(async () => {}, {
+      allowedOrigins: [origin],
+    });
+    const csrf = await request(app).get('/api/csrf');
+    const token = csrf.body.csrfToken as string;
+    const cookie = csrf.headers['set-cookie']?.[0]?.split(';')[0] ?? '';
+    const response = await request(app)
+      .post('/api/games/untrusted-game/commands')
+      .set('Origin', origin)
+      .set('Cookie', cookie)
+      .set('X-CSRF-Token', token)
+      .send({
+        type: 'CreateGame',
+        id: 'not-allowed-here',
+        idempotencyKey: 'create-game-on-command-route',
+        config: gameConfigSchema.parse({}),
+      });
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Invalid request' });
+  });
+
+  it('returns the same not-found response for malformed join request IDs', async () => {
+    const app = createApp(async () => {}, {
+      rateLimitSecret: 'unit-test-secret',
+    });
+    const response = await request(app).get('/api/join-requests/not-a-token');
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: 'Not found' });
+
+    const missingToken = await request(app).get(
+      '/api/join-requests/0123456789abcdef0123456789abcdef',
+    );
+    expect(missingToken.status).toBe(404);
+    expect(missingToken.body).toEqual({ error: 'Not found' });
+  });
+
   it('rate-limits creation by a pseudonymous IP and coordinator bucket', async () => {
     const bucketHashes: string[] = [];
     const app = createApp(async () => {}, {
