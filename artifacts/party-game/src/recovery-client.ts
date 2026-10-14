@@ -1,0 +1,48 @@
+import {
+  gameViewResponseSchema,
+  seatRecoveryRequestSchema,
+} from '@workspace/shared';
+
+export interface RecoverSeatInput {
+  apiOrigin: string | null;
+  csrfToken: string | null;
+  shortCode: string;
+  name: string;
+  pin: string;
+}
+
+export async function recoverSeat(input: RecoverSeatInput) {
+  if (!input.csrfToken) {
+    throw new Error('Recovery could not be completed');
+  }
+  const request = seatRecoveryRequestSchema.parse({
+    shortCode: input.shortCode,
+    name: input.name,
+    pin: input.pin,
+  });
+  const configuredOrigin = input.apiOrigin ?? '';
+  const apiBase = configuredOrigin.endsWith('/')
+    ? configuredOrigin.slice(0, -1)
+    : configuredOrigin;
+  const response = await fetch(`${apiBase}/api/recover`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': input.csrfToken,
+    },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    const message =
+      typeof body === 'object' &&
+      body !== null &&
+      'error' in body &&
+      typeof body.error === 'string'
+        ? body.error
+        : 'Recovery could not be completed';
+    throw new Error(message);
+  }
+  return gameViewResponseSchema.parse(await response.json());
+}

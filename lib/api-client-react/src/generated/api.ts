@@ -6,22 +6,38 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  ApiError,
+  GameCommandInput,
+  GameInviteResponse,
+  GameViewResponse,
+  GuestJoinRequest,
   HealthStatus,
-  ReadinessStatus
+  JoinRequestDecisionInput,
+  JoinRequestDecisionResponse,
+  JoinRequestInput,
+  JoinRequestResponse,
+  JoinRequestStatusResponse,
+  PendingJoinRequestsResponse,
+  ReadinessStatus,
+  RehearsalInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
-import type { ErrorType } from '../custom-fetch';
+import type { ErrorType , BodyType } from '../custom-fetch';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -201,4 +217,916 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+export const getStartRehearsalUrl = () => {
+
+
+
+
+  return `/api/rehearsals`
+}
+
+/**
+ * @summary Create and start a phone-only rehearsal with a human player and bots
+ */
+export const startRehearsal = async (rehearsalInput: RehearsalInput, options?: Parameters<typeof customFetch>[1]): Promise<GameViewResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<GameViewResponse>(getStartRehearsalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(rehearsalInput)
+  }
+);}
+
+
+
+
+
+export const getStartRehearsalMutationKey = () => ['startRehearsal'] as const;
+
+export const getStartRehearsalMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startRehearsal>>, TError,StartRehearsalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startRehearsal>>, TError,StartRehearsalMutationVariables, TContext> => {
+
+const mutationKey = getStartRehearsalMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startRehearsal>>, StartRehearsalMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  startRehearsal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartRehearsalMutationResult = NonNullable<Awaited<ReturnType<typeof startRehearsal>>>
+    export type StartRehearsalMutationBody = BodyType<RehearsalInput>
+    export type StartRehearsalMutationError = ErrorType<ApiError>
+    export type StartRehearsalMutationVariables = {data: BodyType<RehearsalInput>}
+
+    /**
+ * @summary Create and start a phone-only rehearsal with a human player and bots
+ */
+export const useStartRehearsal = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startRehearsal>>, TError,StartRehearsalMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startRehearsal>>,
+        TError,
+        StartRehearsalMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStartRehearsalMutationOptions(options));
+    }
+
+export const getCreateGameUrl = () => {
+
+
+
+
+  return `/api/games`
+}
+
+/**
+ * @summary Create a game and issue the coordinator capability cookie
+ */
+export const createGame = async (gameCommandInput: GameCommandInput, options?: Parameters<typeof customFetch>[1]): Promise<GameViewResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<GameViewResponse>(getCreateGameUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(gameCommandInput)
+  }
+);}
+
+
+
+
+
+export const getCreateGameMutationKey = () => ['createGame'] as const;
+
+export const getCreateGameMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGame>>, TError,CreateGameMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGame>>, TError,CreateGameMutationVariables, TContext> => {
+
+const mutationKey = getCreateGameMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGame>>, CreateGameMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createGame(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGameMutationResult = NonNullable<Awaited<ReturnType<typeof createGame>>>
+    export type CreateGameMutationBody = BodyType<GameCommandInput>
+    export type CreateGameMutationError = ErrorType<ApiError>
+    export type CreateGameMutationVariables = {data: BodyType<GameCommandInput>}
+
+    /**
+ * @summary Create a game and issue the coordinator capability cookie
+ */
+export const useCreateGame = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGame>>, TError,CreateGameMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGame>>,
+        TError,
+        CreateGameMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateGameMutationOptions(options));
+    }
+
+export const getCreateGameInviteUrl = (id: string,) => {
+
+
+
+
+  return `/api/games/${id}/invites`
+}
+
+/**
+ * @summary Create a short code and private join link
+ */
+export const createGameInvite = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<GameInviteResponse> => {
+
+  return customFetch<GameInviteResponse>(getCreateGameInviteUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateGameInviteMutationKey = () => ['createGameInvite'] as const;
+
+export const getCreateGameInviteMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGameInvite>>, TError,CreateGameInviteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGameInvite>>, TError,CreateGameInviteMutationVariables, TContext> => {
+
+const mutationKey = getCreateGameInviteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGameInvite>>, CreateGameInviteMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  createGameInvite(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGameInviteMutationResult = NonNullable<Awaited<ReturnType<typeof createGameInvite>>>
+
+    export type CreateGameInviteMutationError = ErrorType<ApiError>
+    export type CreateGameInviteMutationVariables = {id: string}
+
+    /**
+ * @summary Create a short code and private join link
+ */
+export const useCreateGameInvite = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGameInvite>>, TError,CreateGameInviteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGameInvite>>,
+        TError,
+        CreateGameInviteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateGameInviteMutationOptions(options));
+    }
+
+export const getRequestToJoinByInviteUrl = (id: string,) => {
+
+
+
+
+  return `/api/games/${id}/join`
+}
+
+/**
+ * @summary Request approval using an invitation link
+ */
+export const requestToJoinByInvite = async (id: string,
+    guestJoinRequest: GuestJoinRequest, options?: Parameters<typeof customFetch>[1]): Promise<JoinRequestResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<JoinRequestResponse>(getRequestToJoinByInviteUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(guestJoinRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestToJoinByInviteMutationKey = () => ['requestToJoinByInvite'] as const;
+
+export const getRequestToJoinByInviteMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestToJoinByInvite>>, TError,RequestToJoinByInviteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestToJoinByInvite>>, TError,RequestToJoinByInviteMutationVariables, TContext> => {
+
+const mutationKey = getRequestToJoinByInviteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestToJoinByInvite>>, RequestToJoinByInviteMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  requestToJoinByInvite(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestToJoinByInviteMutationResult = NonNullable<Awaited<ReturnType<typeof requestToJoinByInvite>>>
+    export type RequestToJoinByInviteMutationBody = BodyType<GuestJoinRequest>
+    export type RequestToJoinByInviteMutationError = ErrorType<ApiError>
+    export type RequestToJoinByInviteMutationVariables = {id: string;data: BodyType<GuestJoinRequest>}
+
+    /**
+ * @summary Request approval using an invitation link
+ */
+export const useRequestToJoinByInvite = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestToJoinByInvite>>, TError,RequestToJoinByInviteMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestToJoinByInvite>>,
+        TError,
+        RequestToJoinByInviteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestToJoinByInviteMutationOptions(options));
+    }
+
+export const getGetPendingJoinRequestsUrl = (id: string,) => {
+
+
+
+
+  return `/api/games/${id}/join-requests`
+}
+
+/**
+ * @summary List pending join requests for the coordinator
+ */
+export const getPendingJoinRequests = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<PendingJoinRequestsResponse> => {
+
+  return customFetch<PendingJoinRequestsResponse>(getGetPendingJoinRequestsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPendingJoinRequestsQueryKey = (id: string,) => {
+    return [
+    `/api/games/${id}/join-requests`
+    ] as const;
+    }
+
+
+export const getGetPendingJoinRequestsQueryOptions = <TData = Awaited<ReturnType<typeof getPendingJoinRequests>>, TError = ErrorType<ApiError>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPendingJoinRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPendingJoinRequestsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPendingJoinRequests>>> = ({ signal }) => getPendingJoinRequests(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPendingJoinRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPendingJoinRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof getPendingJoinRequests>>>
+export type GetPendingJoinRequestsQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary List pending join requests for the coordinator
+ */
+
+export function useGetPendingJoinRequests<TData = Awaited<ReturnType<typeof getPendingJoinRequests>>, TError = ErrorType<ApiError>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPendingJoinRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPendingJoinRequestsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDecideGameJoinRequestUrl = (id: string,
+    requestId: string,) => {
+
+
+
+
+  return `/api/games/${id}/join-requests/${requestId}/decision`
+}
+
+/**
+ * @summary Approve or reject a pending join request
+ */
+export const decideGameJoinRequest = async (id: string,
+    requestId: string,
+    joinRequestDecisionInput: JoinRequestDecisionInput, options?: Parameters<typeof customFetch>[1]): Promise<JoinRequestDecisionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<JoinRequestDecisionResponse>(getDecideGameJoinRequestUrl(id,requestId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(joinRequestDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getDecideGameJoinRequestMutationKey = () => ['decideGameJoinRequest'] as const;
+
+export const getDecideGameJoinRequestMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideGameJoinRequest>>, TError,DecideGameJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideGameJoinRequest>>, TError,DecideGameJoinRequestMutationVariables, TContext> => {
+
+const mutationKey = getDecideGameJoinRequestMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideGameJoinRequest>>, DecideGameJoinRequestMutationVariables> = (props) => {
+          const {id,requestId,data} = props ?? {};
+
+          return  decideGameJoinRequest(id,requestId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideGameJoinRequestMutationResult = NonNullable<Awaited<ReturnType<typeof decideGameJoinRequest>>>
+    export type DecideGameJoinRequestMutationBody = BodyType<JoinRequestDecisionInput>
+    export type DecideGameJoinRequestMutationError = ErrorType<ApiError>
+    export type DecideGameJoinRequestMutationVariables = {id: string;requestId: string;data: BodyType<JoinRequestDecisionInput>}
+
+    /**
+ * @summary Approve or reject a pending join request
+ */
+export const useDecideGameJoinRequest = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideGameJoinRequest>>, TError,DecideGameJoinRequestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideGameJoinRequest>>,
+        TError,
+        DecideGameJoinRequestMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDecideGameJoinRequestMutationOptions(options));
+    }
+
+export const getGetJoinRequestStatusUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/join-requests/${requestId}`
+}
+
+/**
+ * @summary Check a join request using its HttpOnly capability cookie
+ */
+export const getJoinRequestStatus = async (requestId: string, options?: Parameters<typeof customFetch>[1]): Promise<JoinRequestStatusResponse> => {
+
+  return customFetch<JoinRequestStatusResponse>(getGetJoinRequestStatusUrl(requestId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetJoinRequestStatusQueryKey = (requestId: string,) => {
+    return [
+    `/api/join-requests/${requestId}`
+    ] as const;
+    }
+
+
+export const getGetJoinRequestStatusQueryOptions = <TData = Awaited<ReturnType<typeof getJoinRequestStatus>>, TError = ErrorType<ApiError>>(requestId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getJoinRequestStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetJoinRequestStatusQueryKey(requestId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getJoinRequestStatus>>> = ({ signal }) => getJoinRequestStatus(requestId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: requestId !== null && requestId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getJoinRequestStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetJoinRequestStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getJoinRequestStatus>>>
+export type GetJoinRequestStatusQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Check a join request using its HttpOnly capability cookie
+ */
+
+export function useGetJoinRequestStatus<TData = Awaited<ReturnType<typeof getJoinRequestStatus>>, TError = ErrorType<ApiError>>(
+ requestId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getJoinRequestStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetJoinRequestStatusQueryOptions(requestId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRequestToJoinGameUrl = () => {
+
+
+
+
+  return `/api/join`
+}
+
+/**
+ * @summary Request approval to join by short code
+ */
+export const requestToJoinGame = async (joinRequestInput: JoinRequestInput, options?: Parameters<typeof customFetch>[1]): Promise<JoinRequestResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<JoinRequestResponse>(getRequestToJoinGameUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(joinRequestInput)
+  }
+);}
+
+
+
+
+
+export const getRequestToJoinGameMutationKey = () => ['requestToJoinGame'] as const;
+
+export const getRequestToJoinGameMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestToJoinGame>>, TError,RequestToJoinGameMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestToJoinGame>>, TError,RequestToJoinGameMutationVariables, TContext> => {
+
+const mutationKey = getRequestToJoinGameMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestToJoinGame>>, RequestToJoinGameMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestToJoinGame(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestToJoinGameMutationResult = NonNullable<Awaited<ReturnType<typeof requestToJoinGame>>>
+    export type RequestToJoinGameMutationBody = BodyType<JoinRequestInput>
+    export type RequestToJoinGameMutationError = ErrorType<ApiError>
+    export type RequestToJoinGameMutationVariables = {data: BodyType<JoinRequestInput>}
+
+    /**
+ * @summary Request approval to join by short code
+ */
+export const useRequestToJoinGame = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestToJoinGame>>, TError,RequestToJoinGameMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestToJoinGame>>,
+        TError,
+        RequestToJoinGameMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestToJoinGameMutationOptions(options));
+    }
+
+export const getGetGameViewUrl = (id: string,) => {
+
+
+
+
+  return `/api/games/${id}/view`
+}
+
+/**
+ * @summary Get the public projection for the current viewer
+ */
+export const getGameView = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<GameViewResponse> => {
+
+  return customFetch<GameViewResponse>(getGetGameViewUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGameViewQueryKey = (id: string,) => {
+    return [
+    `/api/games/${id}/view`
+    ] as const;
+    }
+
+
+export const getGetGameViewQueryOptions = <TData = Awaited<ReturnType<typeof getGameView>>, TError = ErrorType<ApiError>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGameView>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGameViewQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGameView>>> = ({ signal }) => getGameView(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGameView>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGameViewQueryResult = NonNullable<Awaited<ReturnType<typeof getGameView>>>
+export type GetGameViewQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get the public projection for the current viewer
+ */
+
+export function useGetGameView<TData = Awaited<ReturnType<typeof getGameView>>, TError = ErrorType<ApiError>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGameView>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGameViewQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRevealPrivateViewUrl = (id: string,) => {
+
+
+
+
+  return `/api/games/${id}/private-view`
+}
+
+/**
+ * @summary Request the current player's private projection while holding
+ */
+export const revealPrivateView = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<GameViewResponse> => {
+
+  return customFetch<GameViewResponse>(getRevealPrivateViewUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevealPrivateViewMutationKey = () => ['revealPrivateView'] as const;
+
+export const getRevealPrivateViewMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revealPrivateView>>, TError,RevealPrivateViewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revealPrivateView>>, TError,RevealPrivateViewMutationVariables, TContext> => {
+
+const mutationKey = getRevealPrivateViewMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revealPrivateView>>, RevealPrivateViewMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  revealPrivateView(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevealPrivateViewMutationResult = NonNullable<Awaited<ReturnType<typeof revealPrivateView>>>
+
+    export type RevealPrivateViewMutationError = ErrorType<ApiError>
+    export type RevealPrivateViewMutationVariables = {id: string}
+
+    /**
+ * @summary Request the current player's private projection while holding
+ */
+export const useRevealPrivateView = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revealPrivateView>>, TError,RevealPrivateViewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revealPrivateView>>,
+        TError,
+        RevealPrivateViewMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevealPrivateViewMutationOptions(options));
+    }
+
+export const getSubmitGameCommandUrl = (id: string,) => {
+
+
+
+
+  return `/api/games/${id}/commands`
+}
+
+/**
+ * @summary Submit an idempotent game command
+ */
+export const submitGameCommand = async (id: string,
+    gameCommandInput: GameCommandInput, options?: Parameters<typeof customFetch>[1]): Promise<GameViewResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<GameViewResponse>(getSubmitGameCommandUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(gameCommandInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitGameCommandMutationKey = () => ['submitGameCommand'] as const;
+
+export const getSubmitGameCommandMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitGameCommand>>, TError,SubmitGameCommandMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitGameCommand>>, TError,SubmitGameCommandMutationVariables, TContext> => {
+
+const mutationKey = getSubmitGameCommandMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitGameCommand>>, SubmitGameCommandMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  submitGameCommand(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitGameCommandMutationResult = NonNullable<Awaited<ReturnType<typeof submitGameCommand>>>
+    export type SubmitGameCommandMutationBody = BodyType<GameCommandInput>
+    export type SubmitGameCommandMutationError = ErrorType<ApiError>
+    export type SubmitGameCommandMutationVariables = {id: string;data: BodyType<GameCommandInput>}
+
+    /**
+ * @summary Submit an idempotent game command
+ */
+export const useSubmitGameCommand = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitGameCommand>>, TError,SubmitGameCommandMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitGameCommand>>,
+        TError,
+        SubmitGameCommandMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubmitGameCommandMutationOptions(options));
+    }
 

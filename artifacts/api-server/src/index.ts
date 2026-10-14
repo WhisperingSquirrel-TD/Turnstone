@@ -26,6 +26,10 @@ const resolveCoordinatorViewer = createCoordinatorViewerResolver({
 });
 
 let publishGame: (gameId: string) => Promise<void> = async () => {};
+const { createRehearsalBotRunner } = await import('./rehearsal-bots');
+const rehearsalBots = createRehearsalBotRunner({
+  publishGame: (gameId) => publishGame(gameId),
+});
 const serverOptions = createServerAppOptions({
   environment,
   resolveViewer: (request) => {
@@ -57,7 +61,10 @@ const app = createApp(async () => {
   );
   if (result.rows[0]?.version !== 1)
     throw new Error('Database schema not ready');
-}, serverOptions);
+}, {
+  ...serverOptions,
+  processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
+});
 const server = createServer(app);
 const { attachRealtime } = await import('./realtime');
 const { createDeadlineScheduler } = await import('./deadline-scheduler');
@@ -71,6 +78,7 @@ const realtime = await attachRealtime(server, {
 publishGame = realtime.publishGame;
 const scheduler = createDeadlineScheduler({
   publishGame,
+  processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
   onError: () => logger.error('Deadline scheduler iteration failed'),
 });
 server.listen(environment.PORT, '0.0.0.0', () => {

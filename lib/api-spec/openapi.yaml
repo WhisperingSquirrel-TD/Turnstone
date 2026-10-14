@@ -42,6 +42,353 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /rehearsals:
+    post:
+      operationId: startRehearsal
+      tags: [games]
+      summary: Create and start a phone-only rehearsal with a human player and bots
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RehearsalInput"
+      responses:
+        "201":
+          description: Rehearsal created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameViewResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /games:
+    post:
+      operationId: createGame
+      tags: [games]
+      summary: Create a game and issue the coordinator capability cookie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameCommandInput"
+      responses:
+        "201":
+          description: Game created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameViewResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Command rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /games/{id}/invites:
+    post:
+      operationId: createGameInvite
+      tags: [games]
+      summary: Create a short code and private join link
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "201":
+          description: Invite created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameInviteResponse"
+        "401":
+          description: Coordinator capability required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /games/{id}/join:
+    post:
+      operationId: requestToJoinByInvite
+      tags: [games]
+      summary: Request approval using an invitation link
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuestJoinRequest"
+      responses:
+        "202":
+          description: Join request awaits approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinRequestResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /games/{id}/join-requests:
+    get:
+      operationId: getPendingJoinRequests
+      tags: [games]
+      summary: List pending join requests for the coordinator
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Pending requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingJoinRequestsResponse"
+        "401":
+          description: Coordinator capability required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /games/{id}/join-requests/{requestId}/decision:
+    post:
+      operationId: decideGameJoinRequest
+      tags: [games]
+      summary: Approve or reject a pending join request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinRequestDecisionInput"
+      responses:
+        "200":
+          description: Request resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinRequestDecisionResponse"
+        "401":
+          description: Coordinator capability required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /join-requests/{requestId}:
+    get:
+      operationId: getJoinRequestStatus
+      tags: [games]
+      summary: Check a join request using its HttpOnly capability cookie
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Current request status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinRequestStatusResponse"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /join:
+    post:
+      operationId: requestToJoinGame
+      tags: [games]
+      summary: Request approval to join by short code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinRequestInput"
+      responses:
+        "202":
+          description: Join request is awaiting coordinator approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinRequestResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /games/{id}/view:
+    get:
+      operationId: getGameView
+      tags: [games]
+      summary: Get the public projection for the current viewer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Allow-listed game view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameViewResponse"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /games/{id}/private-view:
+    post:
+      operationId: revealPrivateView
+      tags: [games]
+      summary: Request the current player's private projection while holding
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Allow-listed view with the current player's private data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameViewResponse"
+        "401":
+          description: Player authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /games/{id}/commands:
+    post:
+      operationId: submitGameCommand
+      tags: [games]
+      summary: Submit an idempotent game command
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GameCommandInput"
+      responses:
+        "200":
+          description: Updated viewer projection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameViewResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Command rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     ReadinessStatus:
@@ -61,4 +408,461 @@ components:
           enum: [ok]
       required:
         - status
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string
+          minLength: 1
+          maxLength: 80
+    RehearsalInput:
+      type: object
+      additionalProperties: false
+      required: [gameId, idempotencyKey, name, playerCount, speed]
+      properties:
+        gameId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 128
+        name:
+          type: string
+          minLength: 2
+          maxLength: 20
+        playerCount:
+          type: integer
+          minimum: 6
+          maximum: 15
+        speed:
+          type: string
+          enum: [fast, normal]
+    GuestJoinRequest:
+      type: object
+      additionalProperties: false
+      required: [inviteToken, name, pin, idempotencyKey]
+      properties:
+        inviteToken:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{43}$"
+        name:
+          type: string
+          minLength: 2
+          maxLength: 20
+        pin:
+          type: string
+          pattern: "^\\d{4,6}$"
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 128
+    GameInviteResponse:
+      type: object
+      additionalProperties: false
+      required: [gameId, joinUrl, shortCode]
+      properties:
+        gameId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        joinUrl:
+          type: string
+          format: uri
+        shortCode:
+          type: string
+          pattern: "^[A-HJ-NP-Z2-9]{6}$"
+    PendingJoinRequestsResponse:
+      type: object
+      additionalProperties: false
+      required: [requests]
+      properties:
+        requests:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, seatId, name, createdAt]
+            properties:
+              id:
+                type: string
+                minLength: 1
+                maxLength: 128
+              seatId:
+                type: string
+                minLength: 1
+                maxLength: 128
+              name:
+                type: string
+                minLength: 2
+                maxLength: 20
+              createdAt:
+                type: integer
+                minimum: 0
+    JoinRequestDecisionInput:
+      type: object
+      additionalProperties: false
+      required: [decision, expectedVersion]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject]
+        expectedVersion:
+          type: integer
+          minimum: 0
+    JoinRequestDecisionResponse:
+      type: object
+      additionalProperties: false
+      required: [status, seatId]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        seatId:
+          type: string
+          minLength: 1
+          maxLength: 128
+    JoinRequestStatusResponse:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [status]
+          properties:
+            status:
+              type: string
+              const: pending
+        - type: object
+          additionalProperties: false
+          required: [status]
+          properties:
+            status:
+              type: string
+              const: rejected
+        - type: object
+          additionalProperties: false
+          required: [status, game]
+          properties:
+            status:
+              type: string
+              const: approved
+            game:
+              $ref: "#/components/schemas/GameViewResponse"
+    JoinRequestInput:
+      type: object
+      additionalProperties: false
+      required: [shortCode, name, pin, idempotencyKey]
+      properties:
+        shortCode:
+          type: string
+          pattern: "^[A-HJ-NP-Z2-9]{6}$"
+        name:
+          type: string
+          minLength: 2
+          maxLength: 20
+        pin:
+          type: string
+          pattern: "^\\d{4,6}$"
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 128
+    JoinRequestResponse:
+      type: object
+      additionalProperties: false
+      required: [requestId, status]
+      properties:
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        status:
+          type: string
+          const: pending
+    GameCommandInput:
+      type: object
+      required: [type, idempotencyKey]
+      properties:
+        type:
+          type: string
+          minLength: 1
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 128
+      additionalProperties: true
+    GameViewResponse:
+      type: object
+      additionalProperties: false
+      required: [version, view]
+      properties:
+        version:
+          type: integer
+          minimum: 0
+        view:
+          oneOf:
+            - $ref: "#/components/schemas/VisitorView"
+            - $ref: "#/components/schemas/FullView"
+    VisitorView:
+      type: object
+      additionalProperties: false
+      required: [exists, phase, lobbyOpen, seatCount]
+      properties:
+        exists:
+          type: boolean
+          const: true
+        phase:
+          $ref: "#/components/schemas/Phase"
+        lobbyOpen:
+          type: boolean
+        seatCount:
+          type: integer
+          minimum: 0
+    FullView:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - phase
+        - paused
+        - deadline
+        - coordinatorPlays
+        - cycle
+        - pot
+        - unit
+        - seats
+        - commitment
+        - progress
+        - ballots
+        - winner
+        - private
+        - publicLog
+        - coordinatorAlerts
+        - fairness
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        gameName:
+          type: string
+          minLength: 1
+          maxLength: 60
+        version:
+          type: integer
+        phase:
+          $ref: "#/components/schemas/Phase"
+        paused:
+          type: boolean
+        deadline:
+          type: [integer, "null"]
+        coordinatorPlays:
+          type: boolean
+        cycle:
+          type: integer
+          minimum: 0
+        pot:
+          type: number
+          minimum: 0
+        unit:
+          type: string
+        seats:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeatView"
+        commitment:
+          type: [string, "null"]
+        progress:
+          type: object
+          additionalProperties: false
+          required: [done, total]
+          properties:
+            done:
+              type: integer
+              minimum: 0
+            total:
+              type: integer
+              minimum: 0
+        ballots:
+          type: object
+          additionalProperties:
+            type: string
+        winner:
+          oneOf:
+            - $ref: "#/components/schemas/Role"
+            - type: "null"
+        private:
+          oneOf:
+            - $ref: "#/components/schemas/PrivateView"
+            - type: "null"
+        publicLog:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicLogEntry"
+        coordinatorAlerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoordinatorAlert"
+        fairness:
+          oneOf:
+            - $ref: "#/components/schemas/FairnessView"
+            - type: "null"
+    SeatView:
+      type: object
+      additionalProperties: false
+      required: [id, name, status]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 128
+        name:
+          type: string
+        status:
+          type: string
+          enum: [alive, banished, murdered, departed]
+        role:
+          $ref: "#/components/schemas/Role"
+    PrivateView:
+      type: object
+      additionalProperties: false
+      required: [role, team, options, choices, chat, task, minimumDurationMs]
+      properties:
+        role:
+          oneOf:
+            - $ref: "#/components/schemas/Role"
+            - type: "null"
+        team:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name, role]
+            properties:
+              id: { type: string }
+              name: { type: string }
+              role: { $ref: "#/components/schemas/Role" }
+        options:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name]
+            properties:
+              id: { type: string }
+              name: { type: string }
+        choices:
+          type: object
+          additionalProperties:
+            type: string
+        chat:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [seatId, text, seq]
+            properties:
+              seatId: { type: string }
+              text: { type: string }
+              seq: { type: integer }
+        task:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [kind, instruction, report, murderLost]
+              properties:
+                kind: { type: string, enum: [task, decoy] }
+                instruction: { type: string }
+                report:
+                  oneOf:
+                    - type: string
+                      enum: [assigned, done, missed, void]
+                    - type: "null"
+                murderLost: { type: boolean }
+            - type: "null"
+        minimumDurationMs:
+          type: integer
+          minimum: 0
+    PublicLogEntry:
+      type: object
+      additionalProperties: false
+      required: [seq, at, action, seatId, name]
+      properties:
+        seq: { type: integer, minimum: 1 }
+        at: { type: integer, minimum: 0 }
+        action: { type: string, enum: [seat_pin_reset, device_recovered] }
+        seatId: { type: string }
+        name: { type: string }
+    CoordinatorAlert:
+      type: object
+      additionalProperties: false
+      required: [seq, at, code, seatId, name, lockedUntil]
+      properties:
+        seq: { type: integer, minimum: 1 }
+        at: { type: integer, minimum: 0 }
+        code: { type: string, const: seat_pin_locked }
+        seatId: { type: string }
+        name: { type: string }
+        lockedUntil: { type: integer, minimum: 0 }
+    FairnessView:
+      type: object
+      additionalProperties: false
+      required: [salt, roles, sleeper, tasks, decoys]
+      properties:
+        salt: { type: string }
+        roles:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/Role"
+        sleeper:
+          type: [string, "null"]
+        tasks:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [seatId, cycle, taskId, text, report, shared, complete]
+            properties:
+              seatId: { type: string }
+              cycle: { type: integer, minimum: 1 }
+              taskId: { type: [string, "null"] }
+              text: { type: string }
+              report:
+                type: string
+                enum: [assigned, done, missed, void]
+              shared: { type: boolean }
+              complete: { type: boolean }
+        decoys:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [seatId, cycle, answer]
+            properties:
+              seatId: { type: string }
+              cycle: { type: integer, minimum: 1 }
+              answer: { type: string }
+    Role:
+      type: string
+      enum: [traitor, faithful]
+    Phase:
+      type: string
+      enum:
+        - DRAFT
+        - LOBBY
+        - DEAL
+        - MISSION
+        - DEBATE
+        - VOTE
+        - VERDICT
+        - SHADOW
+        - DAWN
+        - ENDGAME
+        - FINAL_VOTE
+        - FINAL_BANISH
+        - FINISHED
+        - ARCHIVED
 

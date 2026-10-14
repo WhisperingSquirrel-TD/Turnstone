@@ -516,3 +516,20 @@ export async function countActiveGames(): Promise<number> {
   );
   return Number(result.rows[0]?.count ?? 0);
 }
+
+export async function listActiveRehearsalGameIds(
+  limit = 25,
+): Promise<string[]> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500)
+    throw new Error('Invalid rehearsal game limit');
+  const result = await db.execute(
+    sql`select id from games
+        where status = 'active'
+          and config #>> '{rehearsal,enabled}' = 'true'
+        order by updated_at asc
+        limit ${limit}`,
+  );
+  return result.rows.flatMap((row) =>
+    typeof row.id === 'string' ? [row.id] : [],
+  );
+}

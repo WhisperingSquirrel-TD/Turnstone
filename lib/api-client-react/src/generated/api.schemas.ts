@@ -28,3 +28,403 @@ export interface HealthStatus {
   status: HealthStatusStatus;
 }
 
+export interface ApiError {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  error: string;
+}
+
+export type RehearsalInputSpeed = typeof RehearsalInputSpeed[keyof typeof RehearsalInputSpeed];
+
+
+export const RehearsalInputSpeed = {
+  fast: 'fast',
+  normal: 'normal',
+} as const;
+
+export interface RehearsalInput {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  gameId: string;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  idempotencyKey: string;
+  /**
+     * @minLength 2
+     * @maxLength 20
+     */
+  name: string;
+  /**
+     * @minimum 6
+     * @maximum 15
+     */
+  playerCount: number;
+  speed: RehearsalInputSpeed;
+}
+
+export interface GuestJoinRequest {
+  /** @pattern ^[A-Za-z0-9_-]{43}$ */
+  inviteToken: string;
+  /**
+     * @minLength 2
+     * @maxLength 20
+     */
+  name: string;
+  /** @pattern ^\d{4,6}$ */
+  pin: string;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  idempotencyKey: string;
+}
+
+export interface GameInviteResponse {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  gameId: string;
+  joinUrl: string;
+  /** @pattern ^[A-HJ-NP-Z2-9]{6}$ */
+  shortCode: string;
+}
+
+export type PendingJoinRequestsResponseRequestsItem = {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  seatId: string;
+  /**
+     * @minLength 2
+     * @maxLength 20
+     */
+  name: string;
+  /** @minimum 0 */
+  createdAt: number;
+};
+
+export interface PendingJoinRequestsResponse {
+  requests: PendingJoinRequestsResponseRequestsItem[];
+}
+
+export type JoinRequestDecisionInputDecision = typeof JoinRequestDecisionInputDecision[keyof typeof JoinRequestDecisionInputDecision];
+
+
+export const JoinRequestDecisionInputDecision = {
+  approve: 'approve',
+  reject: 'reject',
+} as const;
+
+export interface JoinRequestDecisionInput {
+  decision: JoinRequestDecisionInputDecision;
+  /** @minimum 0 */
+  expectedVersion: number;
+}
+
+export type JoinRequestDecisionResponseStatus = typeof JoinRequestDecisionResponseStatus[keyof typeof JoinRequestDecisionResponseStatus];
+
+
+export const JoinRequestDecisionResponseStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface JoinRequestDecisionResponse {
+  status: JoinRequestDecisionResponseStatus;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  seatId: string;
+}
+
+export type Phase = typeof Phase[keyof typeof Phase];
+
+
+export const Phase = {
+  DRAFT: 'DRAFT',
+  LOBBY: 'LOBBY',
+  DEAL: 'DEAL',
+  MISSION: 'MISSION',
+  DEBATE: 'DEBATE',
+  VOTE: 'VOTE',
+  VERDICT: 'VERDICT',
+  SHADOW: 'SHADOW',
+  DAWN: 'DAWN',
+  ENDGAME: 'ENDGAME',
+  FINAL_VOTE: 'FINAL_VOTE',
+  FINAL_BANISH: 'FINAL_BANISH',
+  FINISHED: 'FINISHED',
+  ARCHIVED: 'ARCHIVED',
+} as const;
+
+export interface VisitorView {
+  exists: true;
+  phase: Phase;
+  lobbyOpen: boolean;
+  /** @minimum 0 */
+  seatCount: number;
+}
+
+export type SeatViewStatus = typeof SeatViewStatus[keyof typeof SeatViewStatus];
+
+
+export const SeatViewStatus = {
+  alive: 'alive',
+  banished: 'banished',
+  murdered: 'murdered',
+  departed: 'departed',
+} as const;
+
+export type Role = typeof Role[keyof typeof Role];
+
+
+export const Role = {
+  traitor: 'traitor',
+  faithful: 'faithful',
+} as const;
+
+export interface SeatView {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  id: string;
+  name: string;
+  status: SeatViewStatus;
+  role?: Role;
+}
+
+export type PrivateViewTaskKind = typeof PrivateViewTaskKind[keyof typeof PrivateViewTaskKind];
+
+
+export const PrivateViewTaskKind = {
+  task: 'task',
+  decoy: 'decoy',
+} as const;
+
+export type PrivateViewTaskReport = typeof PrivateViewTaskReport[keyof typeof PrivateViewTaskReport] | null;
+
+
+export const PrivateViewTaskReport = {
+  assigned: 'assigned',
+  done: 'done',
+  missed: 'missed',
+  void: 'void',
+} as const;
+
+export type PrivateViewTeamItem = {
+  id: string;
+  name: string;
+  role: Role;
+};
+
+export type PrivateViewOptionsItem = {
+  id: string;
+  name: string;
+};
+
+export type PrivateViewChoices = {[key: string]: string};
+
+export type PrivateViewChatItem = {
+  seatId: string;
+  text: string;
+  seq: number;
+};
+
+export type PrivateViewTask = {
+  kind: PrivateViewTaskKind;
+  instruction: string;
+  report: PrivateViewTaskReport;
+  murderLost: boolean;
+} | null;
+
+export interface PrivateView {
+  role: Role | null;
+  team: PrivateViewTeamItem[];
+  options: PrivateViewOptionsItem[];
+  choices: PrivateViewChoices;
+  chat: PrivateViewChatItem[];
+  task: PrivateViewTask;
+  /** @minimum 0 */
+  minimumDurationMs: number;
+}
+
+export type PublicLogEntryAction = typeof PublicLogEntryAction[keyof typeof PublicLogEntryAction];
+
+
+export const PublicLogEntryAction = {
+  seat_pin_reset: 'seat_pin_reset',
+  device_recovered: 'device_recovered',
+} as const;
+
+export interface PublicLogEntry {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: PublicLogEntryAction;
+  seatId: string;
+  name: string;
+}
+
+export interface CoordinatorAlert {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  code: 'seat_pin_locked';
+  seatId: string;
+  name: string;
+  /** @minimum 0 */
+  lockedUntil: number;
+}
+
+export type FairnessViewTasksItemReport = typeof FairnessViewTasksItemReport[keyof typeof FairnessViewTasksItemReport];
+
+
+export const FairnessViewTasksItemReport = {
+  assigned: 'assigned',
+  done: 'done',
+  missed: 'missed',
+  void: 'void',
+} as const;
+
+export type FairnessViewRoles = {[key: string]: Role};
+
+export type FairnessViewTasksItem = {
+  seatId: string;
+  /** @minimum 1 */
+  cycle: number;
+  /** @nullable */
+  taskId: string | null;
+  text: string;
+  report: FairnessViewTasksItemReport;
+  shared: boolean;
+  complete: boolean;
+};
+
+export type FairnessViewDecoysItem = {
+  seatId: string;
+  /** @minimum 1 */
+  cycle: number;
+  answer: string;
+};
+
+export interface FairnessView {
+  salt: string;
+  roles: FairnessViewRoles;
+  /** @nullable */
+  sleeper: string | null;
+  tasks: FairnessViewTasksItem[];
+  decoys: FairnessViewDecoysItem[];
+}
+
+export type FullViewProgress = {
+  /** @minimum 0 */
+  done: number;
+  /** @minimum 0 */
+  total: number;
+};
+
+export type FullViewBallots = {[key: string]: string};
+
+export interface FullView {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 60
+     */
+  gameName?: string;
+  version: number;
+  phase: Phase;
+  paused: boolean;
+  /** @nullable */
+  deadline: number | null;
+  coordinatorPlays: boolean;
+  /** @minimum 0 */
+  cycle: number;
+  /** @minimum 0 */
+  pot: number;
+  unit: string;
+  seats: SeatView[];
+  /** @nullable */
+  commitment: string | null;
+  progress: FullViewProgress;
+  ballots: FullViewBallots;
+  winner: Role | null;
+  private: PrivateView | null;
+  publicLog: PublicLogEntry[];
+  coordinatorAlerts: CoordinatorAlert[];
+  fairness: FairnessView | null;
+}
+
+export interface GameViewResponse {
+  /** @minimum 0 */
+  version: number;
+  view: VisitorView | FullView;
+}
+
+export type JoinRequestStatusResponse = {
+  status: 'pending';
+} | {
+  status: 'rejected';
+} | {
+  status: 'approved';
+  game: GameViewResponse;
+};
+
+export interface JoinRequestInput {
+  /** @pattern ^[A-HJ-NP-Z2-9]{6}$ */
+  shortCode: string;
+  /**
+     * @minLength 2
+     * @maxLength 20
+     */
+  name: string;
+  /** @pattern ^\d{4,6}$ */
+  pin: string;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  idempotencyKey: string;
+}
+
+export interface JoinRequestResponse {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  requestId: string;
+  status: 'pending';
+}
+
+export interface GameCommandInput {
+  /** @minLength 1 */
+  type: string;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  idempotencyKey: string;
+  [key: string]: unknown;
+ }
+

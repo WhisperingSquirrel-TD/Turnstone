@@ -22,6 +22,7 @@ export const VISITOR_VIEW_ALLOW_LIST = [
 ] as const;
 export const VIEW_ALLOW_LIST = [
   'id',
+  'gameName',
   'version',
   'phase',
   'paused',
@@ -81,6 +82,9 @@ export function viewFor(viewer: Viewer, state: State): View {
       : {};
   return fullViewSchema.parse({
     id: state.id,
+    ...(state.config.basics.gameName
+      ? { gameName: state.config.basics.gameName }
+      : {}),
     version: state.version,
     phase: state.phase,
     paused: state.paused,

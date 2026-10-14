@@ -5,11 +5,17 @@ export function createNonce() {
 }
 
 export function securityHeaders(nonce: string, development = false) {
+  const scriptPolicy = development
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    : `script-src 'nonce-${nonce}' 'strict-dynamic'`;
+  const stylePolicy = development
+    ? "style-src 'self' 'unsafe-inline'"
+    : `style-src 'self' 'nonce-${nonce}'`;
   return {
     'Content-Security-Policy': [
       "default-src 'none'",
-      `script-src 'nonce-${nonce}' 'strict-dynamic'`,
-      `style-src 'self' 'nonce-${nonce}'`,
+      scriptPolicy,
+      stylePolicy,
       "img-src 'self' data:",
       "font-src 'self'",
       `connect-src 'self'${development ? ' ws: wss:' : ''}`,

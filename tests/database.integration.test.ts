@@ -1226,6 +1226,189 @@ it('returns only the allow-listed visitor projection from the HTTP game endpoint
   }
 });
 
+it('runs a server-backed rehearsal to completion and only reveals private data on hold', async () => {
+  const gameId = randomUUID();
+  let now = Date.now();
+  const { createRehearsalBotRunner } =
+    await import('../artifacts/api-server/src/rehearsal-bots');
+  const botRunner = createRehearsalBotRunner();
+  const seatResolver = createSeatViewerResolver({
+    findSession: findViewerSession,
+  });
+  const app = createApp(async () => {}, {
+    secureCookies: true,
+    testOnlyNow: () => now,
+    processRehearsalGame: (id) => botRunner.processGame(id),
+    resolveViewer: (request) =>
+      seatResolver({
+        gameId: requestGameId(request),
+        cookieHeader: request.headers.cookie,
+      }),
+  });
+
+  try {
+    const created = await request(app)
+      .post('/api/rehearsals')
+      .send({
+        gameId,
+        idempotencyKey: randomUUID(),
+        name: 'Morgan',
+        playerCount: 6,
+        speed: 'fast',
+      });
+    expect(created.status).toBe(201);
+    expect(created.body.view.id).toBe(gameId);
+    expect(created.body.view.phase).toBe('DEAL');
+    expect(created.body.view.seats).toHaveLength(6);
+    expect(created.body.view.private).toBeNull();
+    expect(created.body.view.progress.done).toBe(5);
+    const { listActiveRehearsalGameIds } =
+      await import('@workspace/db/game-store');
+    expect(await listActiveRehearsalGameIds()).toContain(gameId);
+    const recoveredGames: string[] = [];
+    const { createDeadlineScheduler } =
+      await import('../artifacts/api-server/src/deadline-scheduler');
+    const scheduler = createDeadlineScheduler({
+      now: () => now,
+      processRehearsalGame: async (id) => {
+        recoveredGames.push(id);
+        await botRunner.processGame(id);
+      },
+    });
+    await scheduler.runOnce();
+    expect(recoveredGames).toContain(gameId);
+
+    const seatCookie = cookieValues(created.headers['set-cookie']).find(
+      (cookie) => cookie.startsWith('turnstone-seat-'),
+    );
+    expect(seatCookie).toContain('HttpOnly');
+    expect(seatCookie).toContain('Secure');
+    expect(seatCookie).toContain('SameSite=Lax');
+    expect(seatCookie).not.toContain('Domain=');
+
+    const cookie = seatCookie!.split(';')[0]!;
+    const ordinaryView = await request(app)
+      .get(`/api/games/${gameId}/view`)
+      .set('Cookie', cookie);
+    expect(ordinaryView.status).toBe(200);
+    expect(ordinaryView.body.view.private).toBeNull();
+
+    const csrf = await request(app).get('/api/csrf');
+    const csrfToken = csrf.body.csrfToken as string;
+    const shieldedCookie = `${cookie}; turnstone-csrf=${csrfToken}`;
+    const prematureReveal = await request(app)
+      .post(`/api/games/${gameId}/private-view`)
+      .set('Cookie', shieldedCookie)
+      .set('X-CSRF-Token', csrfToken);
+    expect(prematureReveal.status).toBe(409);
+    expect(prematureReveal.body).toEqual({
+      error: 'Private view unavailable',
+    });
+
+    const acknowledgement = await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .set('Cookie', shieldedCookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({
+        type: 'AcknowledgePrivate',
+        idempotencyKey: randomUUID(),
+      });
+    expect(acknowledgement.status).toBe(200);
+    const revealed = await request(app)
+      .post(`/api/games/${gameId}/private-view`)
+      .set('Cookie', shieldedCookie)
+      .set('X-CSRF-Token', csrfToken);
+    expect(revealed.status).toBe(200);
+    expect(['traitor', 'faithful']).toContain(
+      revealed.body.view.private.role,
+    );
+    expect(JSON.stringify(ordinaryView.body)).not.toContain(
+      revealed.body.view.private.role,
+    );
+
+    const visitor = await request(app).post(
+      `/api/games/${gameId}/private-view`,
+    );
+    expect(visitor.status).toBe(401);
+    expect(visitor.body).toEqual({ error: 'Authentication required' });
+
+    const { readGameEvents } = await import('@workspace/db/game-store');
+    const { replay } = await import('../lib/engine/src/index');
+    const currentGame = async () => replay(await readGameEvents(gameId));
+    for (let step = 0; step < 50; step += 1) {
+      const state = await currentGame();
+      if (state.phase === 'FINISHED') break;
+      const player = state.seats.find((seat) => seat.name === 'Morgan');
+      expect(player).toBeDefined();
+      let playerCommand: Record<string, unknown> | null = null;
+      const privatePhases = [
+        'DEAL',
+        'SHADOW',
+        'VOTE',
+        'FINAL_VOTE',
+        'FINAL_BANISH',
+      ];
+      if (
+        privatePhases.includes(state.phase) &&
+        !state.acks.includes(player!.id)
+      )
+        playerCommand = { type: 'AcknowledgePrivate' };
+      else if (state.phase === 'SHADOW' && !state.shadow[player!.id]) {
+        const candidates = state.seats.filter(
+          (seat) =>
+            seat.status === 'alive' &&
+            seat.id !== player!.id &&
+            (player!.role !== 'traitor' ||
+              (seat.role !== 'traitor' &&
+                !state.protected.includes(seat.id))),
+        );
+        const target = candidates[0];
+        if (target)
+          playerCommand = {
+            type: 'SubmitShadowChoice',
+            choice: target.id,
+          };
+      } else if (
+        (state.phase === 'VOTE' || state.phase === 'FINAL_BANISH') &&
+        !state.votes[player!.id]
+      ) {
+        const target = state.seats.find(
+          (seat) => seat.status === 'alive' && seat.id !== player!.id,
+        );
+        if (target)
+          playerCommand = { type: 'SubmitVote', target: target.id };
+      } else if (
+        state.phase === 'FINAL_VOTE' &&
+        !state.endVotes[player!.id]
+      ) {
+        playerCommand = {
+          type: 'SubmitEndgameVote',
+          choice: 'continue',
+        };
+      }
+      if (playerCommand) {
+        const submitted = await request(app)
+          .post(`/api/games/${gameId}/commands`)
+          .set('Cookie', shieldedCookie)
+          .set('X-CSRF-Token', csrfToken)
+          .send({
+            ...playerCommand,
+            idempotencyKey: randomUUID(),
+          });
+        expect(submitted.status).toBe(200);
+      }
+      const current = await currentGame();
+      if (current.phase === 'FINISHED') break;
+      expect(current.deadline).not.toBeNull();
+      now = Math.max(now, current.deadline ?? now);
+      await scheduler.runOnce();
+    }
+    expect((await currentGame()).phase).toBe('FINISHED');
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
 it('creates and advances a game through authenticated HTTP with idempotent replay', async () => {
   const gameId = randomUUID();
   const published: string[] = [];
@@ -2230,6 +2413,7 @@ it('creates a private invite and gives a joining guest a seat session', async ()
 it('holds short-code joins for coordinator approval and returns a seat cookie after approval', async () => {
   const gameId = randomUUID();
   const now = Date.now();
+  const publishedGames: string[] = [];
   const created = eventSchema.parse({
     seq: 1,
     at: now,
@@ -2266,6 +2450,9 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
       ],
     });
     const app = createApp(async () => {}, {
+      publishGame: async (publishedGameId) => {
+        publishedGames.push(publishedGameId);
+      },
       resolveViewer: () => ({ kind: 'coordinator' }),
       rateLimitSecret: 'integration-test-rate-limit-secret',
       publicBaseUrl: 'https://turnstone.test',
@@ -2287,6 +2474,7 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
       })
       .expect(202);
     expect(joinRequest.body.status).toBe('pending');
+    expect(publishedGames).toContain(gameId);
     const requestId = joinRequest.body.requestId as string;
     const cookieHeader = joinRequest.headers['set-cookie'];
     const cookieLines = Array.isArray(cookieHeader)
@@ -2313,6 +2501,8 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
       .send({ decision: 'approve', expectedVersion: 2 })
       .expect(200);
     expect(approval.body.status).toBe('approved');
+    expect(publishedGames.filter((publishedId) => publishedId === gameId))
+      .toHaveLength(2);
     expect(approval.body.seatId).toBe(seatId);
 
     const status = await request(app)
@@ -3098,7 +3288,7 @@ it('pairs a presenter using a single-use game-scoped code stored only as a hash'
     schemaVersion: 1,
     type: 'GameCreated',
     id: gameId,
-    config: gameConfigSchema.parse({}),
+    config: gameConfigSchema.parse({ presenter: { enabled: true } }),
   });
   await createGameWithEvent({
     event: created,
@@ -3254,6 +3444,36 @@ it('pairs a presenter using a single-use game-scoped code stored only as a hash'
       .post('/api/presenter/pair')
       .send({ gameId, code })
       .expect(401, { error: 'Pairing could not be completed' });
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('does not create a presenter pairing unless the game enabled the presenter', async () => {
+  const gameId = randomUUID();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: Date.now(),
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+  await createGameWithEvent({
+    event: created,
+    actorId: 'coordinator:test',
+    idempotencyKey: 'presenter-off-create',
+    requestHash: 'presenter-off-create',
+  });
+  try {
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-rate-limit-secret',
+      secureCookies: true,
+    });
+    await request(app)
+      .post(`/api/games/${gameId}/presenter-pairings`)
+      .expect(404);
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }

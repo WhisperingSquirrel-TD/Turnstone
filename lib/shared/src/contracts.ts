@@ -54,6 +54,23 @@ export const commandSchema = z.union([
   }),
   command('EndGameEarly'),
 ]);
+export const rehearsalStartRequestSchema = z
+  .object({
+    gameId: id,
+    idempotencyKey: id,
+    name: z
+      .string()
+      .trim()
+      .min(2)
+      .max(20)
+      .refine((value) => !/\p{Cc}/u.test(value)),
+    playerCount: z.number().int().min(6).max(15),
+    speed: z.enum(['fast', 'normal']),
+  })
+  .strict();
+export type RehearsalStartRequest = z.infer<
+  typeof rehearsalStartRequestSchema
+>;
 const eventBase = {
   seq: z.number().int().positive(),
   at: z.number().int().nonnegative(),
@@ -178,6 +195,7 @@ export const privateViewSchema = z
 export const fullViewSchema = z
   .object({
     id,
+    gameName: z.string().trim().min(1).max(60).optional(),
     version: z.number(),
     phase: phaseSchema,
     paused: z.boolean(),
@@ -370,6 +388,18 @@ export const joinRequestDecisionSchema = z
   .object({
     decision: z.enum(['approve', 'reject']),
     expectedVersion: z.number().int().nonnegative(),
+  })
+  .strict();
+export const joinRequestCreatedResponseSchema = z
+  .object({
+    requestId: id,
+    status: z.literal('pending'),
+  })
+  .strict();
+export const joinRequestDecisionResponseSchema = z
+  .object({
+    status: z.enum(['approved', 'rejected']),
+    seatId: id,
   })
   .strict();
 export const joinRequestStatusResponseSchema = z.discriminatedUnion('status', [

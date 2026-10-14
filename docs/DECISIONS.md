@@ -885,3 +885,31 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 **Choice:** Keep `test:integration` available as a standalone command. The aggregate `verify` runs `test:server-coverage` once, which includes the database integration, HTTP and environment suites and enforces the same 85% server-line threshold. A pipeline regression test guards this composition.
 
 **Consequence:** Integration coverage is not reduced or omitted; the full local `pnpm run verify` now completes within the available run budget and passes.
+
+## D60 — Self-hosted typefaces without a runtime dependency (resolved)
+
+**Context:** Milestone 5 requires Playfair Display 400 for headlines and DM Sans 400/500 for body text, self-hosted from the product origin, with both SIL Open Font Licence notices retained and a combined font budget below 80 KB.
+
+**Options:** Load fonts from a third-party font service; keep system fonts only; or vendor the required Latin WOFF2 subsets and licence notices.
+
+**Choice:** Vendor Playfair Display 400 and DM Sans 400/500 Latin WOFF2 files from the pinned Fontsource 5.2.6 packages. Keep each SIL OFL licence beside the assets. Remove the temporary package dependencies after copying; the product has no runtime font dependency or third-party font request.
+
+**Consequence:** The three WOFF2 assets total 50,248 bytes, below the 80 KB budget. Serve them from the app origin with immutable one-year caching and use size-adjusted local fallback faces to limit layout shift.
+
+## D61 — Same-origin development API proxy for mobile CSRF (resolved)
+
+**Context:** The owner reproduced a persistent security banner and disabled join/rehearsal actions on an Android phone using the Replit development URL. The browser requested `/api-server/api/csrf`, which missed the API artifact’s declared `/api` route and fell through to Vite HTML instead of the API JSON response.
+
+**Options:** Weaken CSRF or origin checks; point a phone at a loopback API address; add an application-level development proxy; or use the shared same-origin `/api` service route already declared by the API artifact.
+
+**Choice:** In development, clear the configured base URL even when a production API origin variable is present, so `/api/csrf` and generated `/api/...` calls use the shared same-origin service path. Keep application runtime free of a custom Vite proxy; the isolated Playwright server may enable a test-only `/api` proxy. Keep the existing HttpOnly cookie and double-submit token validation unchanged. Add a mobile E2E regression on Pixel and iPhone that checks the JSON token response, cookie attributes, matching CSRF header/cookie, and enabled actions.
+
+**Consequence:** A direct request to the shared `/api/csrf` route returns JSON and the Replit preview no longer shows the failure banner; join and rehearsal actions are enabled. The preview’s proxy supplies secure cookie attributes, and the browser successfully receives the token response without relaxing CSRF. A local Playwright run is currently blocked before test execution by the container's missing `libgbm.so.1`; the configured GitHub browser jobs provide the Pixel/iPhone runtime check.
+
+## D62 — Amendment 9 moves phone-first entry and public announcements into Milestone 5 (resolved)
+
+**Context:** Real-phone feedback showed the existing form-first `/play` experience was too dense and assumed a room display. The owner specified E1–E4 entry, an organiser-as-player lobby, phone-only public announcements, a presenter off by default, and a limited public-home subset.
+
+**Choice:** Build the amendment's complete E1–E4 flow and shared phone announcements in Milestone 5. Keep the presenter disabled by default and do not require a TV connection for any complete game. Bring forward only the home-page content, title and JSON-LD explicitly named in §26; keep the rest of agent optimisation in Milestone 9. Preserve the site-wide pre-launch noindex policy. The owner requires Playwright screenshots in `docs/screens/` before hands-on rehearsal review.
+
+**Consequence:** Milestone 5's plan and design wireframes are expanded. The existing advanced planner, themes and presenter console remain in their later milestones.

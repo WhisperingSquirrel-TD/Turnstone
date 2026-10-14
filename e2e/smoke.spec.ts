@@ -51,3 +51,103 @@ test('home and play are accessible, reloadable and responsive', async ({
     ),
   ).toBe(true);
 });
+
+test('private role is requested only during a hold and is removed on release', async ({
+  page,
+}) => {
+  let privateRequests = 0;
+  const gameId = 'rehearsal-id';
+  const publicView = {
+    id: gameId,
+    version: 3,
+    phase: 'DEAL',
+    paused: false,
+    deadline: null,
+    coordinatorPlays: true,
+    cycle: 0,
+    pot: 0,
+    unit: 'points',
+    seats: [{ id: 'human-seat', name: 'Morgan', status: 'alive' }],
+    commitment: null,
+    progress: { done: 0, total: 5 },
+    ballots: {},
+    winner: null,
+    private: null,
+    publicLog: [],
+    coordinatorAlerts: [],
+    fairness: null,
+  };
+
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      status: 200,
+      headers: {
+        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+      },
+      json: { csrfToken: 'test-csrf' },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, async (route) => {
+    expect(route.request().method()).toBe('POST');
+    await route.fulfill({
+      status: 200,
+      json: { version: 4, view: publicView },
+    });
+  });
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({ status: 200, json: { version: 3, view: publicView } }),
+  );
+  await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
+    privateRequests += 1;
+    await route.fulfill({
+      status: 200,
+      json: {
+        version: 3,
+        view: { ...publicView, private: { role: 'faithful' } },
+      },
+    });
+  });
+
+  await page.goto(`/game/${gameId}`);
+  const shieldConfirmation = page.getByRole('button', {
+    name: /i’m shielded/i,
+  });
+  await expect(shieldConfirmation).toBeVisible();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
+  expect(privateRequests).toBe(0);
+  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
+    timeout: 6500,
+  });
+  await shieldConfirmation.click();
+
+  const holdPad = page.getByRole('button', { name: /hold to reveal/i });
+  await expect(holdPad).toBeVisible();
+  await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
+  expect(privateRequests).toBe(0);
+
+  const box = await holdPad.boundingBox();
+  if (!box) throw new Error('Hold pad has no visible bounds');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect.poll(() => privateRequests).toBe(1);
+  await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
+  await page.waitForTimeout(550);
+  await expect(page.getByText('Faithful', { exact: true })).toBeVisible();
+  await page.mouse.up();
+  await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
+  expect(
+    await page.evaluate(() => ({
+      title: document.title,
+      url: location.href,
+      local: JSON.stringify(localStorage),
+      session: JSON.stringify(sessionStorage),
+    })),
+  ).toEqual({
+    title: 'Turnstone',
+    url: expect.stringContaining(`/game/${gameId}`),
+    local: '{}',
+    session: '{}',
+  });
+});

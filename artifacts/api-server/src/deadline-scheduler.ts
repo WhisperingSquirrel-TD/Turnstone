@@ -7,6 +7,7 @@ import {
   readGameEventsAfter,
   readLatestGameSnapshot,
   releaseGameDeadline,
+  listActiveRehearsalGameIds,
   type DeadlineClaim,
 } from '@workspace/db/game-store';
 import { decide, replay, replayFrom, type State } from '@workspace/engine';
@@ -19,6 +20,7 @@ type SchedulerOptions = {
   leaseMs?: number;
   batchSize?: number;
   publishGame?: (gameId: string) => Promise<void>;
+  processRehearsalGame?: (gameId: string) => Promise<void>;
   onError?: () => void;
 };
 
@@ -125,6 +127,16 @@ export function createDeadlineScheduler(options: SchedulerOptions = {}) {
         } catch {
           await releaseGameDeadline(claim.id, claim.claimToken);
           options.onError?.();
+        }
+      }
+      if (options.processRehearsalGame) {
+        const rehearsals = await listActiveRehearsalGameIds(batchSize);
+        for (const gameId of rehearsals) {
+          try {
+            await options.processRehearsalGame(gameId);
+          } catch {
+            options.onError?.();
+          }
         }
       }
     })();

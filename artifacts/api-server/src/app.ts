@@ -2,6 +2,7 @@ import {
   createHash,
   createHmac,
   randomBytes,
+  randomInt,
   randomUUID,
   timingSafeEqual,
 } from 'node:crypto';
@@ -26,6 +27,7 @@ import {
   csrfTokenResponseSchema,
   eventSchema,
   gameInviteResponseSchema,
+  gameConfigSchema,
   guestJoinRequestSchema,
   gameViewResponseSchema,
   joinRequestDecisionSchema,
@@ -34,6 +36,8 @@ import {
   presenterPairRequestSchema,
   presenterPairResponseSchema,
   presenterPairingResponseSchema,
+  recommended,
+  rehearsalStartRequestSchema,
   seatPinResetRequestSchema,
   seatRecoveryRequestSchema,
   shortCodeJoinRequestSchema,
@@ -67,6 +71,7 @@ export type AppOptions = {
   /** Test-only deterministic randomness; production always uses Web Crypto. */
   testOnlyRandom?: Context['random'];
   publishGame?: (gameId: string) => Promise<void>;
+  processRehearsalGame?: (gameId: string) => Promise<void>;
   allowedOrigins?: readonly string[];
   maxActiveGames?: number;
   countActiveGames?: () => Promise<number>;
@@ -219,6 +224,49 @@ export function createApp(
     }
     return true;
   }
+  async function publishGame(gameId: string): Promise<void> {
+    await options.publishGame?.(gameId);
+    await options.processRehearsalGame?.(gameId);
+  }
+  async function appendInternalCommand(
+    state: State,
+    rawCommand: unknown,
+    actor: Actor,
+  ): Promise<State> {
+    const parsed = commandSchema.safeParse(rawCommand);
+    if (!parsed.success || parsed.data.type === 'CreateGame')
+      throw new Error('Invalid internal command');
+    const now = options.testOnlyNow?.() ?? Date.now();
+    const result = decide(state, parsed.data, {
+      now,
+      actor,
+      random: options.testOnlyRandom ?? gameRandom,
+    });
+    if (!result.ok || result.events.length === 0)
+      throw new Error('Internal game command was rejected');
+    const nextState = replayFrom(state, result.events);
+    const { appendGameEvents } = await import('@workspace/db/game-store');
+    const stored = await appendGameEvents({
+      gameId: state.id,
+      actorId: actorId(actor),
+      idempotencyKey: parsed.data.idempotencyKey,
+      requestHash: requestHash(parsed.data),
+      expectedVersion: state.version,
+      events: result.events,
+      ...(nextState.version % 20 === 0
+        ? { snapshot: { seq: nextState.version, state: nextState } }
+        : {}),
+      deadline: {
+        kind: nextState.phase,
+        dueAt:
+          nextState.phase === 'SHADOW'
+            ? nextState.shadowEndAt
+            : nextState.deadline,
+      },
+    });
+    if (!stored.ok) throw new Error('Unable to store internal game command');
+    return nextState;
+  }
   async function appendServerEvent(
     state: State,
     event: ReturnType<typeof eventSchema.parse>,
@@ -257,7 +305,7 @@ export function createApp(
       if (result.code === 'VERSION_CONFLICT') return null;
       throw new Error('Unable to append game event');
     }
-    await options.publishGame?.(state.id);
+    await publishGame(state.id);
     return nextState;
   }
   async function viewerForRequest(request: Request): Promise<Viewer> {
@@ -308,7 +356,11 @@ export function createApp(
         return;
       }
       const parsed = commandSchema.safeParse(request.body);
-      if (!parsed.success || parsed.data.type !== 'CreateGame') {
+      if (
+        !parsed.success ||
+        parsed.data.type !== 'CreateGame' ||
+        parsed.data.config.rehearsal.enabled
+      ) {
         sendError(response, 400, 'Invalid request');
         return;
       }
@@ -376,7 +428,7 @@ export function createApp(
         sendError(response, 404, 'Not found');
         return;
       }
-      await options.publishGame?.(parsed.data.id);
+      await publishGame(parsed.data.id);
       if (!stored.duplicate)
         response.cookie(
           cookieNameForCoordinatorGame(parsed.data.id),
@@ -396,6 +448,235 @@ export function createApp(
             state,
             stored.duplicate ? viewer : { kind: 'coordinator' },
           ),
+        );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.post('/api/rehearsals', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const parsed = rehearsalStartRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
+      if (!(await checkRateLimit(request, 'start-rehearsal', undefined, 3))) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      if (options.maxActiveGames !== undefined) {
+        const activeGames = options.countActiveGames
+          ? await options.countActiveGames()
+          : await (await import('@workspace/db/game-store')).countActiveGames();
+        if (activeGames > options.maxActiveGames * 0.8) {
+          sendError(
+            response,
+            503,
+            'Busy right now, try again in a few minutes',
+          );
+          return;
+        }
+      }
+
+      const { gameId, idempotencyKey, name, playerCount, speed } = parsed.data;
+      const idSecret = options.rateLimitSecret ?? 'turnstone-rehearsal-local';
+      const deterministicSeatId = (label: string) =>
+        createHmac('sha256', idSecret)
+          .update(`turnstone-rehearsal\u0000${gameId}\u0000${label}`)
+          .digest('hex')
+          .slice(0, 32);
+      const humanSeatId = deterministicSeatId('human');
+      const existing = await loadGameState(gameId);
+      if (existing) {
+        const human = existing.seats.find(
+          (seat) => seat.id === humanSeatId && seat.name === name,
+        );
+        const viewer = await viewerForRequest(request);
+        if (
+          !existing.config.rehearsal.enabled ||
+          !human ||
+          viewer.kind !== 'player' ||
+          viewer.seatId !== humanSeatId
+        ) {
+          sendError(response, 401, 'Rehearsal could not be resumed');
+          return;
+        }
+        const { createViewerSession } =
+          await import('@workspace/db/seat-access-store');
+        const token = randomBytes(32).toString('base64url');
+        const now = options.testOnlyNow?.() ?? Date.now();
+        await createViewerSession({
+          tokenHash: createHash('sha256').update(token).digest('hex'),
+          gameId,
+          seatId: humanSeatId,
+          expiresAt: now + seatSessionDurationMs,
+        });
+        response.cookie(cookieNameForGame(gameId), token, {
+          httpOnly: true,
+          secure: options.secureCookies ?? false,
+          sameSite: 'lax',
+          path: '/',
+          maxAge: seatSessionDurationMs,
+        });
+        response
+          .status(200)
+          .json(projectState(existing, { kind: 'player', seatId: humanSeatId }));
+        return;
+      }
+
+      const botSeatIds = Array.from({ length: playerCount - 1 }, (_, index) =>
+        deterministicSeatId(`bot-${index + 1}`),
+      );
+      const gameRecommendation = recommended(playerCount);
+      const config = gameConfigSchema.parse({
+        basics: { coordinatorPlays: true, coCoordinators: 0 },
+        players: {
+          count: playerCount,
+          pairedSeats: false,
+          sharedDevices: false,
+          lateJoining: 'never',
+        },
+        traitors: {
+          number: gameRecommendation.traitors,
+          sleeper: false,
+          recruitment: 'off',
+          murders: 1,
+        },
+        roundTable: {
+          debateMinutes: speed === 'fast' ? 2 : 15,
+          voteMinutes: speed === 'fast' ? 1 : 3,
+          revealStyle: 'all',
+          revealRole: 'always',
+        },
+        missions: { enabled: false, shields: 'off' },
+        endgame: {
+          trigger: 'alive',
+          size: gameRecommendation.finalSize,
+          parity: true,
+        },
+        schedule: {
+          format: 'quick',
+          advancement: 'scheduled',
+          plannedCycles: speed === 'fast' ? 1 : 3,
+        },
+        privacy: { holdMs: 500, shieldSeconds: 3 },
+        tasks: { enabled: false },
+        rehearsal: { enabled: true, botSeatIds },
+      });
+      const createCommand = commandSchema.parse({
+        type: 'CreateGame',
+        id: gameId,
+        idempotencyKey,
+        config,
+      });
+      const now = options.testOnlyNow?.() ?? Date.now();
+      const creation = decide(null, createCommand, {
+        now,
+        actor: { kind: 'coordinator' },
+        random: options.testOnlyRandom ?? gameRandom,
+      });
+      if (!creation.ok || creation.events.length !== 1) {
+        sendError(response, 409, 'Rehearsal could not be started');
+        return;
+      }
+      const initialState = replay(creation.events);
+      const { createGameWithEvent } = await import('@workspace/db/game-store');
+      const stored = await createGameWithEvent({
+        event: creation.events[0]!,
+        actorId: 'coordinator',
+        idempotencyKey,
+        requestHash: requestHash(createCommand),
+        snapshot: { seq: initialState.version, state: initialState },
+        deadline: { kind: initialState.phase, dueAt: initialState.deadline },
+      });
+      if (!stored.ok) {
+        sendError(response, 409, 'Rehearsal could not be started');
+        return;
+      }
+
+      let state = await appendInternalCommand(
+        initialState,
+        {
+          type: 'AdvancePhase',
+          expectedVersion: initialState.version,
+          idempotencyKey: `${idempotencyKey}:lobby`,
+        },
+        { kind: 'coordinator' },
+      );
+      const names = new Set([name.toLocaleLowerCase('en-GB')]);
+      const seats = [
+        { id: humanSeatId, name },
+        ...botSeatIds.map((id, index) => {
+          let botName = `Practice player ${index + 1}`;
+          while (names.has(botName.toLocaleLowerCase('en-GB')))
+            botName = `Practice ${index + 1} player`;
+          names.add(botName.toLocaleLowerCase('en-GB'));
+          return { id, name: botName };
+        }),
+      ];
+      for (const seat of seats) {
+        state = await appendInternalCommand(
+          state,
+          {
+            type: 'JoinGame',
+            seatId: seat.id,
+            name: seat.name,
+            idempotencyKey: `${idempotencyKey}:join:${seat.id}`,
+          },
+          { kind: 'player', seatId: seat.id },
+        );
+      }
+      state = await appendInternalCommand(
+        state,
+        {
+          type: 'StartGame',
+          expectedVersion: state.version,
+          idempotencyKey: `${idempotencyKey}:start`,
+        },
+        { kind: 'coordinator' },
+      );
+
+      const { createSeatAccess, createViewerSession } =
+        await import('@workspace/db/seat-access-store');
+      const internalPin = randomInt(0, 1_000_000).toString().padStart(6, '0');
+      const internalPinHash = await hashSeatPin(internalPin);
+      const accessCreated = await createSeatAccess({
+        gameId,
+        seatId: humanSeatId,
+        pinSalt: internalPinHash.salt,
+        pinHash: internalPinHash.hash,
+      });
+      if (!accessCreated) {
+        sendError(response, 409, 'Rehearsal could not be started');
+        return;
+      }
+      const token = randomBytes(32).toString('base64url');
+      await createViewerSession({
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        gameId,
+        seatId: humanSeatId,
+        expiresAt: now + seatSessionDurationMs,
+      });
+      response.cookie(cookieNameForGame(gameId), token, {
+        httpOnly: true,
+        secure: options.secureCookies ?? false,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: seatSessionDurationMs,
+      });
+      await publishGame(gameId);
+      const currentState = await loadGameState(gameId);
+      response
+        .status(201)
+        .json(
+          projectState(currentState ?? state, {
+            kind: 'player',
+            seatId: humanSeatId,
+          }),
         );
     } catch {
       sendError(response, 503, 'Service unavailable');
@@ -579,6 +860,7 @@ export function createApp(
         path: `/api/join-requests/${requestId}`,
         maxAge: joinRequestCookieDurationMs,
       });
+      await publishGame(invite.gameId);
       response.status(202).json({ requestId, status: 'pending' });
     } catch {
       sendError(response, 503, 'Service unavailable');
@@ -675,6 +957,7 @@ export function createApp(
             sendError(response, 409, 'Command rejected');
             return;
           }
+          await publishGame(gameId);
           response.json({ status: 'rejected', seatId: joinRequest.seatId });
           return;
         }
@@ -724,7 +1007,6 @@ export function createApp(
             sendError(response, 409, 'Command rejected');
             return;
           }
-          await options.publishGame?.(gameId);
         }
         const resolved = await resolveGameJoinRequest(
           gameId,
@@ -736,6 +1018,7 @@ export function createApp(
           sendError(response, 409, 'Command rejected');
           return;
         }
+        await publishGame(gameId);
         response.json({ status: 'approved', seatId: joinRequest.seatId });
       } catch {
         sendError(response, 503, 'Service unavailable');
@@ -1075,7 +1358,7 @@ export function createApp(
           sendError(response, 409, 'Command rejected');
           return;
         }
-        await options.publishGame?.(gameId);
+        await publishGame(gameId);
       }
 
       const current = await loadGameState(gameId);
@@ -1261,6 +1544,53 @@ export function createApp(
       sendError(response, 503, 'Service unavailable');
     }
   });
+  app.post('/api/games/:id/private-view', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const state = await loadGameState(gameId);
+      if (!state) {
+        sendError(response, 404, 'Not found');
+        return;
+      }
+      const viewer = await viewerForRequest(request);
+      if (viewer.kind !== 'player' || !viewer.seatId) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const privatePhases = new Set([
+        'DEAL',
+        'SHADOW',
+        'VOTE',
+        'FINAL_VOTE',
+        'FINAL_BANISH',
+      ]);
+      const seat = state.seats.find(
+        (candidate) => candidate.id === viewer.seatId,
+      );
+      if (
+        !seat ||
+        seat.status !== 'alive' ||
+        !privatePhases.has(state.phase) ||
+        !state.acks.includes(seat.id)
+      ) {
+        sendError(response, 409, 'Private view unavailable');
+        return;
+      }
+      response.json(
+        projectState(state, {
+          kind: 'player',
+          seatId: seat.id,
+          reveal: true,
+        }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
   app.post('/api/games/:id/presenter-pairings', async (request, response) => {
     try {
       if (!hasValidCsrf(request)) {
@@ -1280,7 +1610,11 @@ export function createApp(
         return;
       }
       const state = await loadGameState(gameId);
-      if (!state || state.phase === 'ARCHIVED') {
+      if (
+        !state ||
+        state.phase === 'ARCHIVED' ||
+        !state.config.presenter.enabled
+      ) {
         sendError(response, 404, 'Not found');
         return;
       }
@@ -1324,7 +1658,11 @@ export function createApp(
         return;
       }
       const state = await loadGameState(parsed.data.gameId);
-      if (!state || state.phase === 'ARCHIVED') {
+      if (
+        !state ||
+        state.phase === 'ARCHIVED' ||
+        !state.config.presenter.enabled
+      ) {
         sendError(response, 401, 'Pairing could not be completed');
         return;
       }
@@ -1507,7 +1845,7 @@ export function createApp(
             sendError(response, 409, 'Command rejected');
             return;
           }
-          await options.publishGame?.(gameId);
+          await publishGame(gameId);
         }
       }
 

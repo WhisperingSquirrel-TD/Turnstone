@@ -323,7 +323,11 @@ export function decide(
       enter('DEAL');
       break;
     case 'AcknowledgePrivate':
-      if (!['DEAL', 'SHADOW'].includes(state.phase))
+      if (
+        !['DEAL', 'SHADOW', 'VOTE', 'FINAL_VOTE', 'FINAL_BANISH'].includes(
+          state.phase,
+        )
+      )
         return error('WRONG_PHASE');
       emit('PrivateAcknowledged', { seatId: actingSeat!.id });
       if (

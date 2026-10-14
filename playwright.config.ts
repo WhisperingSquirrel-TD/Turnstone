@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const webPort = Number(process.env.TEST_WEB_PORT ?? 3100);
+const csrfTestPort = Number(process.env.TEST_CSRF_PORT ?? 8081);
+
 export default defineConfig({
   testDir: './e2e',
   outputDir: 'generated-artifacts/playwright',
@@ -11,7 +14,7 @@ export default defineConfig({
     ],
   ],
   use: {
-    baseURL: process.env.TEST_BASE_URL ?? 'http://127.0.0.1:3000',
+    baseURL: process.env.TEST_BASE_URL ?? `http://127.0.0.1:${webPort}`,
     trace: 'off',
     screenshot: 'off',
     video: 'off',
@@ -36,10 +39,22 @@ export default defineConfig({
     },
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
   ],
-  webServer: {
-    command: 'pnpm --filter @workspace/party-game run dev',
-    url: 'http://127.0.0.1:3000',
-    reuseExistingServer: false,
-    env: { PORT: '3000', BASE_PATH: '/' },
-  },
+  webServer: [
+    {
+      command: 'pnpm exec tsx e2e/support/csrf-test-server.ts',
+      url: `http://127.0.0.1:${csrfTestPort}/healthz`,
+      reuseExistingServer: false,
+      env: { CSRF_TEST_PORT: String(csrfTestPort) },
+    },
+    {
+      command: 'pnpm --filter @workspace/party-game run dev',
+      url: `http://127.0.0.1:${webPort}`,
+      reuseExistingServer: false,
+      env: {
+        PORT: String(webPort),
+        BASE_PATH: '/',
+        TEST_API_PROXY_TARGET: `http://127.0.0.1:${csrfTestPort}`,
+      },
+    },
+  ],
 });

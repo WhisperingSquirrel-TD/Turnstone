@@ -49,6 +49,7 @@ export const gameConfigSchema = z
   .object({
     basics: z
       .object({
+        gameName: z.string().trim().min(1).max(60).optional(),
         theme: z.enum(['classic', 'office', 'celebration']).default('classic'),
         wording: z.enum(['standard', 'family']).default('standard'),
         labels: z
@@ -178,6 +179,7 @@ export const gameConfigSchema = z
       .default({}),
     presenter: z
       .object({
+        enabled: z.boolean().default(false),
         narration: z.boolean().default(true),
         sound: z.boolean().default(true),
       })
@@ -200,6 +202,16 @@ export const gameConfigSchema = z
           .enum(['none', 'lose-next-murder'])
           .default('lose-next-murder'),
         filters: z.array(taskTagSchema).default([]),
+      })
+      .strict()
+      .default({}),
+    rehearsal: z
+      .object({
+        enabled: z.boolean().default(false),
+        botSeatIds: z
+          .array(z.string().min(1).max(128))
+          .max(39)
+          .default([]),
       })
       .strict()
       .default({}),
@@ -233,6 +245,18 @@ export const gameConfigSchema = z
         code: 'custom',
         path: ['tasks', 'filters'],
         message: 'Family and adults-only task filters cannot be combined',
+      });
+    if (
+      (!value.rehearsal.enabled && value.rehearsal.botSeatIds.length > 0) ||
+      (value.rehearsal.enabled &&
+        value.rehearsal.botSeatIds.length !== value.players.count - 1) ||
+      new Set(value.rehearsal.botSeatIds).size !==
+        value.rehearsal.botSeatIds.length
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['rehearsal'],
+        message: 'Rehearsal bot seats must match the configured seat count',
       });
   });
 export type GameConfig = z.infer<typeof gameConfigSchema>;

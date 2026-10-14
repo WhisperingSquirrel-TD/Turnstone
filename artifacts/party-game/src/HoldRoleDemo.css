@@ -1,0 +1,76 @@
+.home-role-demo {
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  min-width: 0;
+  padding: 1.5rem;
+  border: 1px solid var(--stone);
+  background: var(--hearth);
+  text-align: center;
+}
+
+.home-role-demo h2 {
+  margin: 0;
+  color: var(--candle);
+  font-family: var(--font-headline);
+  font-size: 1.55rem;
+  font-weight: 400;
+}
+
+.home-role-demo p {
+  max-width: 24rem;
+  margin: 0;
+  color: var(--ash);
+}
+
+.home-role-seal {
+  position: relative;
+  display: grid;
+  width: min(13rem, 60vw);
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--gilt);
+  border-radius: 50%;
+  background: var(--stone);
+  color: var(--candle);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.home-role-seal:focus-visible {
+  outline: 3px solid var(--gilt);
+  outline-offset: 4px;
+}
+
+.home-role-seal-ring {
+  position: absolute;
+  inset: 0.55rem;
+  border: 1px solid var(--gilt);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.home-role-label {
+  position: relative;
+  max-width: 8rem;
+  font-family: var(--font-headline);
+  font-size: 1.35rem;
+}
+
+.home-demo-link {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--candle);
+  text-underline-offset: 0.2em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-role-seal:active {
+    background: var(--gilt);
+    color: var(--charcoal);
+  }
+}

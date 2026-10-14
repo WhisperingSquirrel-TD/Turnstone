@@ -147,10 +147,15 @@ export function evolve(previous: State | null, input: unknown): State {
         if (!state.revote) state.candidates = [];
         state.firstVoteOccurred = true;
       }
+      if (
+        ['DEAL', 'SHADOW', 'VOTE', 'FINAL_VOTE', 'FINAL_BANISH'].includes(
+          event.phase,
+        )
+      )
+        state.acks = [];
       if (event.phase === 'SHADOW') {
         state.shadow = {};
         state.shadowRound = 1;
-        state.acks = [];
       } else {
         state.shadowRound = 0;
       }

@@ -25,3 +25,1010 @@ export const HealthCheckResponse = zod.object({
 })
 
 
+/**
+ * @summary Create and start a phone-only rehearsal with a human player and bots
+ */
+export const startRehearsalBodyGameIdMax = 128;
+
+export const startRehearsalBodyIdempotencyKeyMax = 128;
+
+export const startRehearsalBodyNameMin = 2;
+export const startRehearsalBodyNameMax = 20;
+
+export const startRehearsalBodyPlayerCountMin = 6;
+export const startRehearsalBodyPlayerCountMax = 15;
+
+
+
+export const StartRehearsalBody = zod.object({
+  "gameId": zod.string().min(1).max(startRehearsalBodyGameIdMax),
+  "idempotencyKey": zod.string().min(1).max(startRehearsalBodyIdempotencyKeyMax),
+  "name": zod.string().min(startRehearsalBodyNameMin).max(startRehearsalBodyNameMax),
+  "playerCount": zod.number().int().min(startRehearsalBodyPlayerCountMin).max(startRehearsalBodyPlayerCountMax),
+  "speed": zod.enum(['fast', 'normal'])
+})
+
+export const startRehearsalResponseVersionMin = 0;
+
+export const startRehearsalResponseViewOneSeatCountMin = 0;
+
+export const startRehearsalResponseViewTwoIdMax = 128;
+
+export const startRehearsalResponseViewTwoGameNameMax = 60;
+
+export const startRehearsalResponseViewTwoCycleMin = 0;
+
+export const startRehearsalResponseViewTwoPotMin = 0;
+
+export const startRehearsalResponseViewTwoSeatsItemIdMax = 128;
+
+export const startRehearsalResponseViewTwoProgressDoneMin = 0;
+
+export const startRehearsalResponseViewTwoProgressTotalMin = 0;
+
+export const startRehearsalResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
+
+
+export const startRehearsalResponseViewTwoPublicLogItemAtMin = 0;
+
+
+export const startRehearsalResponseViewTwoCoordinatorAlertsItemAtMin = 0;
+
+export const startRehearsalResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
+
+
+
+
+
+export const StartRehearsalResponse = zod.object({
+  "version": zod.number().int().min(startRehearsalResponseVersionMin),
+  "view": zod.union([zod.object({
+  "exists": zod.literal(true),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "lobbyOpen": zod.boolean(),
+  "seatCount": zod.number().int().min(startRehearsalResponseViewOneSeatCountMin)
+}),zod.object({
+  "id": zod.string().min(1).max(startRehearsalResponseViewTwoIdMax),
+  "gameName": zod.string().min(1).max(startRehearsalResponseViewTwoGameNameMax).optional(),
+  "version": zod.number().int(),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "paused": zod.boolean(),
+  "deadline": zod.number().int().nullable(),
+  "coordinatorPlays": zod.boolean(),
+  "cycle": zod.number().int().min(startRehearsalResponseViewTwoCycleMin),
+  "pot": zod.number().min(startRehearsalResponseViewTwoPotMin),
+  "unit": zod.string(),
+  "seats": zod.array(zod.object({
+  "id": zod.string().min(1).max(startRehearsalResponseViewTwoSeatsItemIdMax),
+  "name": zod.string(),
+  "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})),
+  "commitment": zod.string().nullable(),
+  "progress": zod.object({
+  "done": zod.number().int().min(startRehearsalResponseViewTwoProgressDoneMin),
+  "total": zod.number().int().min(startRehearsalResponseViewTwoProgressTotalMin)
+}),
+  "ballots": zod.record(zod.string(), zod.string()),
+  "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "private": zod.union([zod.object({
+  "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "team": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful'])
+})),
+  "options": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})),
+  "choices": zod.record(zod.string(), zod.string()),
+  "chat": zod.array(zod.object({
+  "seatId": zod.string(),
+  "text": zod.string(),
+  "seq": zod.number().int()
+})),
+  "task": zod.union([zod.object({
+  "kind": zod.enum(['task', 'decoy']),
+  "instruction": zod.string(),
+  "report": zod.union([zod.enum(['assigned', 'done', 'missed', 'void']),zod.null()]),
+  "murderLost": zod.boolean()
+}),zod.null()]),
+  "minimumDurationMs": zod.number().int().min(startRehearsalResponseViewTwoPrivateOneMinimumDurationMsMin)
+}),zod.null()]),
+  "publicLog": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(startRehearsalResponseViewTwoPublicLogItemAtMin),
+  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "seatId": zod.string(),
+  "name": zod.string()
+})),
+  "coordinatorAlerts": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(startRehearsalResponseViewTwoCoordinatorAlertsItemAtMin),
+  "code": zod.literal("seat_pin_locked"),
+  "seatId": zod.string(),
+  "name": zod.string(),
+  "lockedUntil": zod.number().int().min(startRehearsalResponseViewTwoCoordinatorAlertsItemLockedUntilMin)
+})),
+  "fairness": zod.union([zod.object({
+  "salt": zod.string(),
+  "roles": zod.record(zod.string(), zod.enum(['traitor', 'faithful'])),
+  "sleeper": zod.string().nullable(),
+  "tasks": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "taskId": zod.string().nullable(),
+  "text": zod.string(),
+  "report": zod.enum(['assigned', 'done', 'missed', 'void']),
+  "shared": zod.boolean(),
+  "complete": zod.boolean()
+})),
+  "decoys": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "answer": zod.string()
+}))
+}),zod.null()])
+})])
+})
+
+
+/**
+ * @summary Create a game and issue the coordinator capability cookie
+ */
+
+export const createGameBodyIdempotencyKeyMax = 128;
+
+
+
+export const CreateGameBody = zod.object({
+  "type": zod.string().min(1),
+  "idempotencyKey": zod.string().min(1).max(createGameBodyIdempotencyKeyMax)
+})
+
+export const createGameResponseVersionMin = 0;
+
+export const createGameResponseViewOneSeatCountMin = 0;
+
+export const createGameResponseViewTwoIdMax = 128;
+
+export const createGameResponseViewTwoGameNameMax = 60;
+
+export const createGameResponseViewTwoCycleMin = 0;
+
+export const createGameResponseViewTwoPotMin = 0;
+
+export const createGameResponseViewTwoSeatsItemIdMax = 128;
+
+export const createGameResponseViewTwoProgressDoneMin = 0;
+
+export const createGameResponseViewTwoProgressTotalMin = 0;
+
+export const createGameResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
+
+
+export const createGameResponseViewTwoPublicLogItemAtMin = 0;
+
+
+export const createGameResponseViewTwoCoordinatorAlertsItemAtMin = 0;
+
+export const createGameResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
+
+
+
+
+
+export const CreateGameResponse = zod.object({
+  "version": zod.number().int().min(createGameResponseVersionMin),
+  "view": zod.union([zod.object({
+  "exists": zod.literal(true),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "lobbyOpen": zod.boolean(),
+  "seatCount": zod.number().int().min(createGameResponseViewOneSeatCountMin)
+}),zod.object({
+  "id": zod.string().min(1).max(createGameResponseViewTwoIdMax),
+  "gameName": zod.string().min(1).max(createGameResponseViewTwoGameNameMax).optional(),
+  "version": zod.number().int(),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "paused": zod.boolean(),
+  "deadline": zod.number().int().nullable(),
+  "coordinatorPlays": zod.boolean(),
+  "cycle": zod.number().int().min(createGameResponseViewTwoCycleMin),
+  "pot": zod.number().min(createGameResponseViewTwoPotMin),
+  "unit": zod.string(),
+  "seats": zod.array(zod.object({
+  "id": zod.string().min(1).max(createGameResponseViewTwoSeatsItemIdMax),
+  "name": zod.string(),
+  "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})),
+  "commitment": zod.string().nullable(),
+  "progress": zod.object({
+  "done": zod.number().int().min(createGameResponseViewTwoProgressDoneMin),
+  "total": zod.number().int().min(createGameResponseViewTwoProgressTotalMin)
+}),
+  "ballots": zod.record(zod.string(), zod.string()),
+  "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "private": zod.union([zod.object({
+  "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "team": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful'])
+})),
+  "options": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})),
+  "choices": zod.record(zod.string(), zod.string()),
+  "chat": zod.array(zod.object({
+  "seatId": zod.string(),
+  "text": zod.string(),
+  "seq": zod.number().int()
+})),
+  "task": zod.union([zod.object({
+  "kind": zod.enum(['task', 'decoy']),
+  "instruction": zod.string(),
+  "report": zod.union([zod.enum(['assigned', 'done', 'missed', 'void']),zod.null()]),
+  "murderLost": zod.boolean()
+}),zod.null()]),
+  "minimumDurationMs": zod.number().int().min(createGameResponseViewTwoPrivateOneMinimumDurationMsMin)
+}),zod.null()]),
+  "publicLog": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(createGameResponseViewTwoPublicLogItemAtMin),
+  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "seatId": zod.string(),
+  "name": zod.string()
+})),
+  "coordinatorAlerts": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(createGameResponseViewTwoCoordinatorAlertsItemAtMin),
+  "code": zod.literal("seat_pin_locked"),
+  "seatId": zod.string(),
+  "name": zod.string(),
+  "lockedUntil": zod.number().int().min(createGameResponseViewTwoCoordinatorAlertsItemLockedUntilMin)
+})),
+  "fairness": zod.union([zod.object({
+  "salt": zod.string(),
+  "roles": zod.record(zod.string(), zod.enum(['traitor', 'faithful'])),
+  "sleeper": zod.string().nullable(),
+  "tasks": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "taskId": zod.string().nullable(),
+  "text": zod.string(),
+  "report": zod.enum(['assigned', 'done', 'missed', 'void']),
+  "shared": zod.boolean(),
+  "complete": zod.boolean()
+})),
+  "decoys": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "answer": zod.string()
+}))
+}),zod.null()])
+})])
+})
+
+
+/**
+ * @summary Create a short code and private join link
+ */
+export const createGameInvitePathIdMax = 128;
+
+
+
+export const CreateGameInviteParams = zod.object({
+  "id": zod.coerce.string().min(1).max(createGameInvitePathIdMax)
+})
+
+export const createGameInviteResponseGameIdMax = 128;
+
+export const createGameInviteResponseShortCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
+
+
+export const CreateGameInviteResponse = zod.object({
+  "gameId": zod.string().min(1).max(createGameInviteResponseGameIdMax),
+  "joinUrl": zod.string().url(),
+  "shortCode": zod.string().regex(createGameInviteResponseShortCodeRegExp)
+})
+
+
+/**
+ * @summary Request approval using an invitation link
+ */
+export const requestToJoinByInvitePathIdMax = 128;
+
+
+
+export const RequestToJoinByInviteParams = zod.object({
+  "id": zod.coerce.string().min(1).max(requestToJoinByInvitePathIdMax)
+})
+
+export const requestToJoinByInviteBodyInviteTokenRegExp = new RegExp('^[A-Za-z0-9_-]{43}$');
+export const requestToJoinByInviteBodyNameMin = 2;
+export const requestToJoinByInviteBodyNameMax = 20;
+
+export const requestToJoinByInviteBodyPinRegExp = new RegExp('^\\d{4,6}$');
+export const requestToJoinByInviteBodyIdempotencyKeyMax = 128;
+
+
+
+export const RequestToJoinByInviteBody = zod.object({
+  "inviteToken": zod.string().regex(requestToJoinByInviteBodyInviteTokenRegExp),
+  "name": zod.string().min(requestToJoinByInviteBodyNameMin).max(requestToJoinByInviteBodyNameMax),
+  "pin": zod.string().regex(requestToJoinByInviteBodyPinRegExp),
+  "idempotencyKey": zod.string().min(1).max(requestToJoinByInviteBodyIdempotencyKeyMax)
+})
+
+export const requestToJoinByInviteResponseRequestIdMax = 128;
+
+
+
+export const RequestToJoinByInviteResponse = zod.object({
+  "requestId": zod.string().min(1).max(requestToJoinByInviteResponseRequestIdMax),
+  "status": zod.literal("pending")
+})
+
+
+/**
+ * @summary List pending join requests for the coordinator
+ */
+export const getPendingJoinRequestsPathIdMax = 128;
+
+
+
+export const GetPendingJoinRequestsParams = zod.object({
+  "id": zod.coerce.string().min(1).max(getPendingJoinRequestsPathIdMax)
+})
+
+export const getPendingJoinRequestsResponseRequestsItemIdMax = 128;
+
+export const getPendingJoinRequestsResponseRequestsItemSeatIdMax = 128;
+
+export const getPendingJoinRequestsResponseRequestsItemNameMin = 2;
+export const getPendingJoinRequestsResponseRequestsItemNameMax = 20;
+
+export const getPendingJoinRequestsResponseRequestsItemCreatedAtMin = 0;
+
+
+
+export const GetPendingJoinRequestsResponse = zod.object({
+  "requests": zod.array(zod.object({
+  "id": zod.string().min(1).max(getPendingJoinRequestsResponseRequestsItemIdMax),
+  "seatId": zod.string().min(1).max(getPendingJoinRequestsResponseRequestsItemSeatIdMax),
+  "name": zod.string().min(getPendingJoinRequestsResponseRequestsItemNameMin).max(getPendingJoinRequestsResponseRequestsItemNameMax),
+  "createdAt": zod.number().int().min(getPendingJoinRequestsResponseRequestsItemCreatedAtMin)
+}))
+})
+
+
+/**
+ * @summary Approve or reject a pending join request
+ */
+export const decideGameJoinRequestPathIdMax = 128;
+
+export const decideGameJoinRequestPathRequestIdMax = 128;
+
+
+
+export const DecideGameJoinRequestParams = zod.object({
+  "id": zod.coerce.string().min(1).max(decideGameJoinRequestPathIdMax),
+  "requestId": zod.coerce.string().min(1).max(decideGameJoinRequestPathRequestIdMax)
+})
+
+export const decideGameJoinRequestBodyExpectedVersionMin = 0;
+
+
+
+export const DecideGameJoinRequestBody = zod.object({
+  "decision": zod.enum(['approve', 'reject']),
+  "expectedVersion": zod.number().int().min(decideGameJoinRequestBodyExpectedVersionMin)
+})
+
+export const decideGameJoinRequestResponseSeatIdMax = 128;
+
+
+
+export const DecideGameJoinRequestResponse = zod.object({
+  "status": zod.enum(['approved', 'rejected']),
+  "seatId": zod.string().min(1).max(decideGameJoinRequestResponseSeatIdMax)
+})
+
+
+/**
+ * @summary Check a join request using its HttpOnly capability cookie
+ */
+export const getJoinRequestStatusPathRequestIdMax = 128;
+
+
+
+export const GetJoinRequestStatusParams = zod.object({
+  "requestId": zod.coerce.string().min(1).max(getJoinRequestStatusPathRequestIdMax)
+})
+
+export const getJoinRequestStatusResponseThreeGameVersionMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewOneSeatCountMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoIdMax = 128;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoGameNameMax = 60;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoCycleMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPotMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoSeatsItemIdMax = 128;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoProgressDoneMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoProgressTotalMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPrivateOneMinimumDurationMsMin = 0;
+
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemAtMin = 0;
+
+
+export const getJoinRequestStatusResponseThreeGameViewTwoCoordinatorAlertsItemAtMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
+
+
+
+
+
+export const GetJoinRequestStatusResponse = zod.union([zod.object({
+  "status": zod.literal("pending")
+}),zod.object({
+  "status": zod.literal("rejected")
+}),zod.object({
+  "status": zod.literal("approved"),
+  "game": zod.object({
+  "version": zod.number().int().min(getJoinRequestStatusResponseThreeGameVersionMin),
+  "view": zod.union([zod.object({
+  "exists": zod.literal(true),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "lobbyOpen": zod.boolean(),
+  "seatCount": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewOneSeatCountMin)
+}),zod.object({
+  "id": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoIdMax),
+  "gameName": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoGameNameMax).optional(),
+  "version": zod.number().int(),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "paused": zod.boolean(),
+  "deadline": zod.number().int().nullable(),
+  "coordinatorPlays": zod.boolean(),
+  "cycle": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoCycleMin),
+  "pot": zod.number().min(getJoinRequestStatusResponseThreeGameViewTwoPotMin),
+  "unit": zod.string(),
+  "seats": zod.array(zod.object({
+  "id": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoSeatsItemIdMax),
+  "name": zod.string(),
+  "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})),
+  "commitment": zod.string().nullable(),
+  "progress": zod.object({
+  "done": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoProgressDoneMin),
+  "total": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoProgressTotalMin)
+}),
+  "ballots": zod.record(zod.string(), zod.string()),
+  "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "private": zod.union([zod.object({
+  "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "team": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful'])
+})),
+  "options": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})),
+  "choices": zod.record(zod.string(), zod.string()),
+  "chat": zod.array(zod.object({
+  "seatId": zod.string(),
+  "text": zod.string(),
+  "seq": zod.number().int()
+})),
+  "task": zod.union([zod.object({
+  "kind": zod.enum(['task', 'decoy']),
+  "instruction": zod.string(),
+  "report": zod.union([zod.enum(['assigned', 'done', 'missed', 'void']),zod.null()]),
+  "murderLost": zod.boolean()
+}),zod.null()]),
+  "minimumDurationMs": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPrivateOneMinimumDurationMsMin)
+}),zod.null()]),
+  "publicLog": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemAtMin),
+  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "seatId": zod.string(),
+  "name": zod.string()
+})),
+  "coordinatorAlerts": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoCoordinatorAlertsItemAtMin),
+  "code": zod.literal("seat_pin_locked"),
+  "seatId": zod.string(),
+  "name": zod.string(),
+  "lockedUntil": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoCoordinatorAlertsItemLockedUntilMin)
+})),
+  "fairness": zod.union([zod.object({
+  "salt": zod.string(),
+  "roles": zod.record(zod.string(), zod.enum(['traitor', 'faithful'])),
+  "sleeper": zod.string().nullable(),
+  "tasks": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "taskId": zod.string().nullable(),
+  "text": zod.string(),
+  "report": zod.enum(['assigned', 'done', 'missed', 'void']),
+  "shared": zod.boolean(),
+  "complete": zod.boolean()
+})),
+  "decoys": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "answer": zod.string()
+}))
+}),zod.null()])
+})])
+})
+})])
+
+
+/**
+ * @summary Request approval to join by short code
+ */
+export const requestToJoinGameBodyShortCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
+export const requestToJoinGameBodyNameMin = 2;
+export const requestToJoinGameBodyNameMax = 20;
+
+export const requestToJoinGameBodyPinRegExp = new RegExp('^\\d{4,6}$');
+export const requestToJoinGameBodyIdempotencyKeyMax = 128;
+
+
+
+export const RequestToJoinGameBody = zod.object({
+  "shortCode": zod.string().regex(requestToJoinGameBodyShortCodeRegExp),
+  "name": zod.string().min(requestToJoinGameBodyNameMin).max(requestToJoinGameBodyNameMax),
+  "pin": zod.string().regex(requestToJoinGameBodyPinRegExp),
+  "idempotencyKey": zod.string().min(1).max(requestToJoinGameBodyIdempotencyKeyMax)
+})
+
+export const requestToJoinGameResponseRequestIdMax = 128;
+
+
+
+export const RequestToJoinGameResponse = zod.object({
+  "requestId": zod.string().min(1).max(requestToJoinGameResponseRequestIdMax),
+  "status": zod.literal("pending")
+})
+
+
+/**
+ * @summary Get the public projection for the current viewer
+ */
+export const getGameViewPathIdMax = 128;
+
+
+
+export const GetGameViewParams = zod.object({
+  "id": zod.coerce.string().min(1).max(getGameViewPathIdMax)
+})
+
+export const getGameViewResponseVersionMin = 0;
+
+export const getGameViewResponseViewOneSeatCountMin = 0;
+
+export const getGameViewResponseViewTwoIdMax = 128;
+
+export const getGameViewResponseViewTwoGameNameMax = 60;
+
+export const getGameViewResponseViewTwoCycleMin = 0;
+
+export const getGameViewResponseViewTwoPotMin = 0;
+
+export const getGameViewResponseViewTwoSeatsItemIdMax = 128;
+
+export const getGameViewResponseViewTwoProgressDoneMin = 0;
+
+export const getGameViewResponseViewTwoProgressTotalMin = 0;
+
+export const getGameViewResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
+
+
+export const getGameViewResponseViewTwoPublicLogItemAtMin = 0;
+
+
+export const getGameViewResponseViewTwoCoordinatorAlertsItemAtMin = 0;
+
+export const getGameViewResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
+
+
+
+
+
+export const GetGameViewResponse = zod.object({
+  "version": zod.number().int().min(getGameViewResponseVersionMin),
+  "view": zod.union([zod.object({
+  "exists": zod.literal(true),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "lobbyOpen": zod.boolean(),
+  "seatCount": zod.number().int().min(getGameViewResponseViewOneSeatCountMin)
+}),zod.object({
+  "id": zod.string().min(1).max(getGameViewResponseViewTwoIdMax),
+  "gameName": zod.string().min(1).max(getGameViewResponseViewTwoGameNameMax).optional(),
+  "version": zod.number().int(),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "paused": zod.boolean(),
+  "deadline": zod.number().int().nullable(),
+  "coordinatorPlays": zod.boolean(),
+  "cycle": zod.number().int().min(getGameViewResponseViewTwoCycleMin),
+  "pot": zod.number().min(getGameViewResponseViewTwoPotMin),
+  "unit": zod.string(),
+  "seats": zod.array(zod.object({
+  "id": zod.string().min(1).max(getGameViewResponseViewTwoSeatsItemIdMax),
+  "name": zod.string(),
+  "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})),
+  "commitment": zod.string().nullable(),
+  "progress": zod.object({
+  "done": zod.number().int().min(getGameViewResponseViewTwoProgressDoneMin),
+  "total": zod.number().int().min(getGameViewResponseViewTwoProgressTotalMin)
+}),
+  "ballots": zod.record(zod.string(), zod.string()),
+  "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "private": zod.union([zod.object({
+  "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "team": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful'])
+})),
+  "options": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})),
+  "choices": zod.record(zod.string(), zod.string()),
+  "chat": zod.array(zod.object({
+  "seatId": zod.string(),
+  "text": zod.string(),
+  "seq": zod.number().int()
+})),
+  "task": zod.union([zod.object({
+  "kind": zod.enum(['task', 'decoy']),
+  "instruction": zod.string(),
+  "report": zod.union([zod.enum(['assigned', 'done', 'missed', 'void']),zod.null()]),
+  "murderLost": zod.boolean()
+}),zod.null()]),
+  "minimumDurationMs": zod.number().int().min(getGameViewResponseViewTwoPrivateOneMinimumDurationMsMin)
+}),zod.null()]),
+  "publicLog": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getGameViewResponseViewTwoPublicLogItemAtMin),
+  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "seatId": zod.string(),
+  "name": zod.string()
+})),
+  "coordinatorAlerts": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getGameViewResponseViewTwoCoordinatorAlertsItemAtMin),
+  "code": zod.literal("seat_pin_locked"),
+  "seatId": zod.string(),
+  "name": zod.string(),
+  "lockedUntil": zod.number().int().min(getGameViewResponseViewTwoCoordinatorAlertsItemLockedUntilMin)
+})),
+  "fairness": zod.union([zod.object({
+  "salt": zod.string(),
+  "roles": zod.record(zod.string(), zod.enum(['traitor', 'faithful'])),
+  "sleeper": zod.string().nullable(),
+  "tasks": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "taskId": zod.string().nullable(),
+  "text": zod.string(),
+  "report": zod.enum(['assigned', 'done', 'missed', 'void']),
+  "shared": zod.boolean(),
+  "complete": zod.boolean()
+})),
+  "decoys": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "answer": zod.string()
+}))
+}),zod.null()])
+})])
+})
+
+
+/**
+ * @summary Request the current player's private projection while holding
+ */
+export const revealPrivateViewPathIdMax = 128;
+
+
+
+export const RevealPrivateViewParams = zod.object({
+  "id": zod.coerce.string().min(1).max(revealPrivateViewPathIdMax)
+})
+
+export const revealPrivateViewResponseVersionMin = 0;
+
+export const revealPrivateViewResponseViewOneSeatCountMin = 0;
+
+export const revealPrivateViewResponseViewTwoIdMax = 128;
+
+export const revealPrivateViewResponseViewTwoGameNameMax = 60;
+
+export const revealPrivateViewResponseViewTwoCycleMin = 0;
+
+export const revealPrivateViewResponseViewTwoPotMin = 0;
+
+export const revealPrivateViewResponseViewTwoSeatsItemIdMax = 128;
+
+export const revealPrivateViewResponseViewTwoProgressDoneMin = 0;
+
+export const revealPrivateViewResponseViewTwoProgressTotalMin = 0;
+
+export const revealPrivateViewResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
+
+
+export const revealPrivateViewResponseViewTwoPublicLogItemAtMin = 0;
+
+
+export const revealPrivateViewResponseViewTwoCoordinatorAlertsItemAtMin = 0;
+
+export const revealPrivateViewResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
+
+
+
+
+
+export const RevealPrivateViewResponse = zod.object({
+  "version": zod.number().int().min(revealPrivateViewResponseVersionMin),
+  "view": zod.union([zod.object({
+  "exists": zod.literal(true),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "lobbyOpen": zod.boolean(),
+  "seatCount": zod.number().int().min(revealPrivateViewResponseViewOneSeatCountMin)
+}),zod.object({
+  "id": zod.string().min(1).max(revealPrivateViewResponseViewTwoIdMax),
+  "gameName": zod.string().min(1).max(revealPrivateViewResponseViewTwoGameNameMax).optional(),
+  "version": zod.number().int(),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "paused": zod.boolean(),
+  "deadline": zod.number().int().nullable(),
+  "coordinatorPlays": zod.boolean(),
+  "cycle": zod.number().int().min(revealPrivateViewResponseViewTwoCycleMin),
+  "pot": zod.number().min(revealPrivateViewResponseViewTwoPotMin),
+  "unit": zod.string(),
+  "seats": zod.array(zod.object({
+  "id": zod.string().min(1).max(revealPrivateViewResponseViewTwoSeatsItemIdMax),
+  "name": zod.string(),
+  "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})),
+  "commitment": zod.string().nullable(),
+  "progress": zod.object({
+  "done": zod.number().int().min(revealPrivateViewResponseViewTwoProgressDoneMin),
+  "total": zod.number().int().min(revealPrivateViewResponseViewTwoProgressTotalMin)
+}),
+  "ballots": zod.record(zod.string(), zod.string()),
+  "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "private": zod.union([zod.object({
+  "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "team": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful'])
+})),
+  "options": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})),
+  "choices": zod.record(zod.string(), zod.string()),
+  "chat": zod.array(zod.object({
+  "seatId": zod.string(),
+  "text": zod.string(),
+  "seq": zod.number().int()
+})),
+  "task": zod.union([zod.object({
+  "kind": zod.enum(['task', 'decoy']),
+  "instruction": zod.string(),
+  "report": zod.union([zod.enum(['assigned', 'done', 'missed', 'void']),zod.null()]),
+  "murderLost": zod.boolean()
+}),zod.null()]),
+  "minimumDurationMs": zod.number().int().min(revealPrivateViewResponseViewTwoPrivateOneMinimumDurationMsMin)
+}),zod.null()]),
+  "publicLog": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(revealPrivateViewResponseViewTwoPublicLogItemAtMin),
+  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "seatId": zod.string(),
+  "name": zod.string()
+})),
+  "coordinatorAlerts": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(revealPrivateViewResponseViewTwoCoordinatorAlertsItemAtMin),
+  "code": zod.literal("seat_pin_locked"),
+  "seatId": zod.string(),
+  "name": zod.string(),
+  "lockedUntil": zod.number().int().min(revealPrivateViewResponseViewTwoCoordinatorAlertsItemLockedUntilMin)
+})),
+  "fairness": zod.union([zod.object({
+  "salt": zod.string(),
+  "roles": zod.record(zod.string(), zod.enum(['traitor', 'faithful'])),
+  "sleeper": zod.string().nullable(),
+  "tasks": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "taskId": zod.string().nullable(),
+  "text": zod.string(),
+  "report": zod.enum(['assigned', 'done', 'missed', 'void']),
+  "shared": zod.boolean(),
+  "complete": zod.boolean()
+})),
+  "decoys": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "answer": zod.string()
+}))
+}),zod.null()])
+})])
+})
+
+
+/**
+ * @summary Submit an idempotent game command
+ */
+export const submitGameCommandPathIdMax = 128;
+
+
+
+export const SubmitGameCommandParams = zod.object({
+  "id": zod.coerce.string().min(1).max(submitGameCommandPathIdMax)
+})
+
+
+export const submitGameCommandBodyIdempotencyKeyMax = 128;
+
+
+
+export const SubmitGameCommandBody = zod.object({
+  "type": zod.string().min(1),
+  "idempotencyKey": zod.string().min(1).max(submitGameCommandBodyIdempotencyKeyMax)
+})
+
+export const submitGameCommandResponseVersionMin = 0;
+
+export const submitGameCommandResponseViewOneSeatCountMin = 0;
+
+export const submitGameCommandResponseViewTwoIdMax = 128;
+
+export const submitGameCommandResponseViewTwoGameNameMax = 60;
+
+export const submitGameCommandResponseViewTwoCycleMin = 0;
+
+export const submitGameCommandResponseViewTwoPotMin = 0;
+
+export const submitGameCommandResponseViewTwoSeatsItemIdMax = 128;
+
+export const submitGameCommandResponseViewTwoProgressDoneMin = 0;
+
+export const submitGameCommandResponseViewTwoProgressTotalMin = 0;
+
+export const submitGameCommandResponseViewTwoPrivateOneMinimumDurationMsMin = 0;
+
+
+export const submitGameCommandResponseViewTwoPublicLogItemAtMin = 0;
+
+
+export const submitGameCommandResponseViewTwoCoordinatorAlertsItemAtMin = 0;
+
+export const submitGameCommandResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
+
+
+
+
+
+export const SubmitGameCommandResponse = zod.object({
+  "version": zod.number().int().min(submitGameCommandResponseVersionMin),
+  "view": zod.union([zod.object({
+  "exists": zod.literal(true),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "lobbyOpen": zod.boolean(),
+  "seatCount": zod.number().int().min(submitGameCommandResponseViewOneSeatCountMin)
+}),zod.object({
+  "id": zod.string().min(1).max(submitGameCommandResponseViewTwoIdMax),
+  "gameName": zod.string().min(1).max(submitGameCommandResponseViewTwoGameNameMax).optional(),
+  "version": zod.number().int(),
+  "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
+  "paused": zod.boolean(),
+  "deadline": zod.number().int().nullable(),
+  "coordinatorPlays": zod.boolean(),
+  "cycle": zod.number().int().min(submitGameCommandResponseViewTwoCycleMin),
+  "pot": zod.number().min(submitGameCommandResponseViewTwoPotMin),
+  "unit": zod.string(),
+  "seats": zod.array(zod.object({
+  "id": zod.string().min(1).max(submitGameCommandResponseViewTwoSeatsItemIdMax),
+  "name": zod.string(),
+  "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "role": zod.enum(['traitor', 'faithful']).optional()
+})),
+  "commitment": zod.string().nullable(),
+  "progress": zod.object({
+  "done": zod.number().int().min(submitGameCommandResponseViewTwoProgressDoneMin),
+  "total": zod.number().int().min(submitGameCommandResponseViewTwoProgressTotalMin)
+}),
+  "ballots": zod.record(zod.string(), zod.string()),
+  "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "private": zod.union([zod.object({
+  "role": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
+  "team": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['traitor', 'faithful'])
+})),
+  "options": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string()
+})),
+  "choices": zod.record(zod.string(), zod.string()),
+  "chat": zod.array(zod.object({
+  "seatId": zod.string(),
+  "text": zod.string(),
+  "seq": zod.number().int()
+})),
+  "task": zod.union([zod.object({
+  "kind": zod.enum(['task', 'decoy']),
+  "instruction": zod.string(),
+  "report": zod.union([zod.enum(['assigned', 'done', 'missed', 'void']),zod.null()]),
+  "murderLost": zod.boolean()
+}),zod.null()]),
+  "minimumDurationMs": zod.number().int().min(submitGameCommandResponseViewTwoPrivateOneMinimumDurationMsMin)
+}),zod.null()]),
+  "publicLog": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(submitGameCommandResponseViewTwoPublicLogItemAtMin),
+  "action": zod.enum(['seat_pin_reset', 'device_recovered']),
+  "seatId": zod.string(),
+  "name": zod.string()
+})),
+  "coordinatorAlerts": zod.array(zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(submitGameCommandResponseViewTwoCoordinatorAlertsItemAtMin),
+  "code": zod.literal("seat_pin_locked"),
+  "seatId": zod.string(),
+  "name": zod.string(),
+  "lockedUntil": zod.number().int().min(submitGameCommandResponseViewTwoCoordinatorAlertsItemLockedUntilMin)
+})),
+  "fairness": zod.union([zod.object({
+  "salt": zod.string(),
+  "roles": zod.record(zod.string(), zod.enum(['traitor', 'faithful'])),
+  "sleeper": zod.string().nullable(),
+  "tasks": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "taskId": zod.string().nullable(),
+  "text": zod.string(),
+  "report": zod.enum(['assigned', 'done', 'missed', 'void']),
+  "shared": zod.boolean(),
+  "complete": zod.boolean()
+})),
+  "decoys": zod.array(zod.object({
+  "seatId": zod.string(),
+  "cycle": zod.number().int().min(1),
+  "answer": zod.string()
+}))
+}),zod.null()])
+})])
+})
+
+

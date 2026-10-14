@@ -208,6 +208,21 @@ describe('Milestone 1 deterministic engine', () => {
       s0: 's2',
     });
   });
+  it('requires the shield acknowledgement during private voting', () => {
+    const game = fixture(15);
+    command(game, { type: 'StartGame' });
+    advance(game, 'VOTE');
+    const player = game.state.seats.find((seat) => seat.status === 'alive')!;
+    expect(
+      command(
+        game,
+        { type: 'AcknowledgePrivate' },
+        true,
+        { kind: 'player', seatId: player.id },
+      ),
+    ).toMatchObject({ ok: true });
+    expect(game.state.acks).toContain(player.id);
+  });
   it('uses the same shadow command shape for decoys and murders, rejects friendly fire and protection', () => {
     const game = fixture(15, {
       missions: {
