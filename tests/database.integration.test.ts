@@ -699,7 +699,7 @@ it('persists only hashed seat credentials and locks PIN attempts atomically', as
   }
 });
 
-it('stores only hashed invite credentials and exposes pending join requests to the coordinator', async () => {
+it('stores hashed invite lookup credentials, clears the readable code on revoke, and exposes pending join requests', async () => {
   const gameId = randomUUID();
   const seatId = randomUUID();
   const requestId = randomUUID();
@@ -723,12 +723,19 @@ it('stores only hashed invite credentials and exposes pending join requests to t
       idempotencyKey: 'invite-store-create',
       requestHash: 'invite-store-create',
     });
-    await createGameInvite({
+    const inviteInput = {
       gameId,
       linkTokenHash,
       shortCodeHash,
+      displayCode: 'ABC234',
       expiresAt: now + 60_000,
-    });
+    };
+    await createGameInvite(inviteInput);
+    const storedCode = await pool.query<{ display_code: string | null }>(
+      'select display_code from game_invites where game_id = $1',
+      [gameId],
+    );
+    expect(storedCode.rows[0]?.display_code).toBe('ABC234');
     expect(await findActiveGameInvite({ gameId, linkTokenHash }, now)).toEqual({
       gameId,
     });
@@ -783,11 +790,109 @@ it('stores only hashed invite credentials and exposes pending join requests to t
       await resolveGameJoinRequest(gameId, requestId, 'rejected', now + 3),
     ).toBe(false);
     await revokeGameInvite(gameId, now + 4);
+    const revokedCode = await pool.query<{ display_code: string | null }>(
+      'select display_code from game_invites where game_id = $1',
+      [gameId],
+    );
+    expect(revokedCode.rows[0]?.display_code).toBeNull();
     expect(
       await findActiveGameInvite({ gameId, linkTokenHash }, now + 5),
     ).toBeNull();
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('clears readable invite codes when the lobby closes or a game ends', async () => {
+  const scenarios = [
+    { command: 'StartGame' as const, code: 'ABC234' },
+    { command: 'EndGameEarly' as const, code: 'DEF567' },
+  ];
+
+  for (const [scenarioIndex, scenario] of scenarios.entries()) {
+    const gameId = randomUUID();
+    const now = Date.now();
+    const createdEvent = eventSchema.parse({
+      seq: 1,
+      at: now,
+      schemaVersion: 1,
+      type: 'GameCreated',
+      id: gameId,
+      config: gameConfigSchema.parse({}),
+    });
+
+    try {
+      await createGameWithEvent({
+        event: createdEvent,
+        actorId: 'coordinator:test',
+        idempotencyKey: `invite-close-create-${scenarioIndex}`,
+        requestHash: `invite-close-create-${scenarioIndex}`,
+      });
+      const lobbyEvents = [
+        eventSchema.parse({
+          seq: 2,
+          at: now + 1,
+          schemaVersion: 1,
+          type: 'PhaseChanged',
+          phase: 'LOBBY',
+          deadline: null,
+          shadowEndAt: null,
+          cycle: 0,
+        }),
+        ...Array.from({ length: 5 }, (_, index) =>
+          eventSchema.parse({
+            seq: index + 3,
+            at: now + index + 2,
+            schemaVersion: 1,
+            type: 'SeatJoined',
+            seatId: `invite-close-seat-${scenarioIndex}-${index}`,
+            name: `Player ${index + 1}`,
+          }),
+        ),
+      ];
+      await appendGameEvents({
+        gameId,
+        expectedVersion: 1,
+        actorId: 'coordinator:test',
+        idempotencyKey: `invite-close-lobby-${scenarioIndex}`,
+        requestHash: `invite-close-lobby-${scenarioIndex}`,
+        events: lobbyEvents,
+      });
+      await createGameInvite({
+        gameId,
+        linkTokenHash: String(scenarioIndex + 1).repeat(64),
+        shortCodeHash: String(scenarioIndex + 3).repeat(64),
+        displayCode: scenario.code,
+        expiresAt: now + 60_000,
+      });
+
+      const app = createApp(async () => {}, {
+        resolveViewer: () => ({ kind: 'coordinator' }),
+        resolveCoordinatorViewer: () => ({ kind: 'coordinator' }),
+        rateLimitSecret: 'integration-test-rate-limit-secret',
+        publicBaseUrl: 'https://turnstone.test',
+        secureCookies: false,
+      });
+      const response = await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .send({
+          type: scenario.command,
+          expectedVersion: 7,
+          idempotencyKey: `invite-close-action-${scenarioIndex}`,
+        })
+        .expect(200);
+      expect(response.body.view.phase).toBe(
+        scenario.command === 'StartGame' ? 'DEAL' : 'FINISHED',
+      );
+
+      const storedCode = await pool.query<{ display_code: string | null }>(
+        'select display_code from game_invites where game_id = $1',
+        [gameId],
+      );
+      expect(storedCode.rows[0]?.display_code).toBeNull();
+    } finally {
+      await db.execute(sql`delete from games where id = ${gameId}`);
+    }
   }
 });
 

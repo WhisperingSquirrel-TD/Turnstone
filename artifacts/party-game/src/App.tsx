@@ -5,6 +5,8 @@ import {
 } from '@tanstack/react-query';
 import {
   createContext,
+  lazy,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -43,6 +45,7 @@ import { en } from '@/locale/en-GB';
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
 import { EntryPage } from './EntryPage';
 import { HoldRoleDemo } from './HoldRoleDemo';
+import { lobbyCodeJoinUrl } from './lobby-code-url';
 import { getPublicFacts } from './public-site-content';
 import './public-home.css';
 
@@ -50,6 +53,23 @@ setBaseUrl(config.apiOrigin);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+});
+const LobbyQRCode = lazy(async () => {
+  const module = await import('qrcode.react');
+  return {
+    default: function LobbyQRCodeView({ value }: { value: string }) {
+      return (
+        <module.QRCodeSVG
+          value={value}
+          size={176}
+          includeMargin
+          fgColor="#16110D"
+          bgColor="#FAFAF5"
+          title={en.entry.qrAlt}
+        />
+      );
+    },
+  };
 });
 const csrfContext = createContext<string | null>(null);
 type InstallOutcome = 'accepted' | 'dismissed';
@@ -283,18 +303,20 @@ function Shell({
             </div>
           </details>
         )}
-        <Link
-          to={config.routes.home}
-          aria-label={en.app.turnstoneHomeLink}
+        <a
+          href={config.organisation.url}
+          target={isPlayer ? '_blank' : undefined}
+          rel={isPlayer ? 'noopener noreferrer' : undefined}
+          aria-label={en.app.brandLink}
           className="public-home-brand-mark inline-flex min-h-11 min-w-11 items-center justify-center"
-          data-testid="link-turnstone-mark"
+          data-testid="link-stackstone-mark"
         >
           <img
             className="brand-mark-small"
             src={`${import.meta.env.BASE_URL}${config.appIconPath}`}
             alt=""
           />
-        </Link>
+        </a>
       </header>
       <main
         id="main"
@@ -314,7 +336,7 @@ function Shell({
         >
           <img
             className="brand-mark-small"
-            src={`${import.meta.env.BASE_URL}${config.stackstoneIconPath}`}
+            src={`${import.meta.env.BASE_URL}${config.appIconPath}`}
             alt=""
           />
         </a>
@@ -547,6 +569,11 @@ function phaseLabel(phase: string): string {
 
 function isFullView(view: GameViewResponse['view']): view is FullView {
   return 'id' in view;
+}
+
+function webPath(path: string): string {
+  const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+  return `${base}${path}`;
 }
 
 function PlayerGame() {
@@ -1407,6 +1434,42 @@ function PlayerGame() {
             {!inPrivateMoment && (
               <div className="mt-12 border-t border-stone pt-6">
                 <h2 className="display text-2xl">{en.game.roomHeading}</h2>
+                {full.phase === 'LOBBY' && full.lobbyCode && (
+                  <section
+                    className="mt-5 flex flex-col items-center gap-3 border-y border-stone py-5 text-center"
+                    aria-label={en.entry.qrAlt}
+                  >
+                    <h3 className="text-sm text-ash">{en.entry.codeCaption}</h3>
+                    <p
+                      className="font-mono text-3xl font-medium tracking-[0.2em] text-candle"
+                      data-testid="lobby-room-code"
+                    >
+                      {full.lobbyCode}
+                    </p>
+                    <Suspense
+                      fallback={
+                        <span role="status">{en.entry.qrPreparing}</span>
+                      }
+                    >
+                      <span
+                        data-testid="lobby-join-qr"
+                        data-join-url={lobbyCodeJoinUrl({
+                          origin: window.location.origin,
+                          joinPath: webPath(config.routes.join),
+                          code: full.lobbyCode,
+                        })}
+                      >
+                        <LobbyQRCode
+                          value={lobbyCodeJoinUrl({
+                            origin: window.location.origin,
+                            joinPath: webPath(config.routes.join),
+                            code: full.lobbyCode,
+                          })}
+                        />
+                      </span>
+                    </Suspense>
+                  </section>
+                )}
                 <section
                   className="mt-5 border-y border-stone py-4"
                   aria-label={en.game.prizePot(full.pot, full.unit)}

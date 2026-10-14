@@ -19,6 +19,7 @@ import {
   readGameEventsAfter,
   readLatestGameSnapshot,
 } from '@workspace/db/game-store';
+import { getOpenGameInviteCode } from '@workspace/db/seat-access-store';
 
 export type RealtimeOptions = {
   allowedOrigins: readonly string[];
@@ -33,10 +34,17 @@ export type RealtimeOptions = {
   onError?: () => void;
 };
 
-function projectViewer(viewer: Viewer, state: State) {
+async function projectViewer(viewer: Viewer, state: State) {
+  const maySeeLobbyCode =
+    state.phase === 'LOBBY' &&
+    (viewer.kind === 'presenter' ||
+      (viewer.kind === 'player' && Boolean(viewer.seatId)));
+  const lobbyCode = maySeeLobbyCode
+    ? await getOpenGameInviteCode(state.id, Date.now())
+    : null;
   return viewer.kind === 'visitor'
     ? viewFor({ kind: 'visitor' }, state)
-    : viewFor(viewer, state);
+    : viewFor(viewer, state, { lobbyCode });
 }
 
 function encodedGameRoom(gameId: string): string {
@@ -121,7 +129,7 @@ export async function attachRealtime(
       socket.data.viewer = viewer;
       const response = gameViewResponseSchema.parse({
         version: state.version,
-        view: projectViewer(viewer, state),
+        view: await projectViewer(viewer, state),
       });
       socket.emit('game:view', response);
     }
@@ -260,7 +268,7 @@ export async function attachRealtime(
           await socket.join(room);
           const response = gameViewResponseSchema.parse({
             version: state.version,
-            view: projectViewer(viewer, state),
+            view: await projectViewer(viewer, state),
           });
           socket.emit('game:view', response);
           acknowledgement?.({ ok: true });

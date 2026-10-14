@@ -16,4 +16,5 @@ checks; the intentional noindex is the sole failing SEO audit. Skipping that
 audit would misstate Lighthouse's score, while disabling noindex in the actual
 preview would violate the standing privacy rule.
 
-**Status:** Provisional; no preview or deployment has indexing enabled.
+**Status:** Resolved by the owner on 14 October 2026: keep the launch-mode
+fixture test-only and retain the regression proving real builds stay noindex.

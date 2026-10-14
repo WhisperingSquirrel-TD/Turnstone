@@ -1,0 +1,1 @@
+ALTER TABLE "game_invites" ADD COLUMN "display_code" text;

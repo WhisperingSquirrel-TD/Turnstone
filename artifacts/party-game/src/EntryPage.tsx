@@ -37,6 +37,7 @@ import {
   type EntryScreen,
 } from './EntryExperience';
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
+import { lobbyCodeJoinUrl, parseLobbyCodeFragment } from './lobby-code-url';
 
 const QRCode = lazy(async () => {
   const module = await import('qrcode.react');
@@ -230,10 +231,19 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
   }, [entryIntent, mode, queryGameId]);
 
   useEffect(() => {
-    if (mode !== 'join' || !inviteGameId || !window.location.hash) return;
-    const token = window.location.hash.slice(1);
-    if (/^[A-Za-z0-9_-]{43}$/.test(token)) {
+    if (mode !== 'join' || !window.location.hash) return;
+    const fragment = window.location.hash.slice(1);
+    const lobbyCode = parseLobbyCodeFragment(fragment);
+    if (inviteGameId && /^[A-Za-z0-9_-]{43}$/.test(fragment)) {
+      const token = fragment;
       setInviteToken(token);
+      setScreen('join-name');
+    } else if (lobbyCode) {
+      setInviteToken(null);
+      setInputs((current) => ({
+        ...current,
+        joinCodeEntry: lobbyCode,
+      }));
       setScreen('join-name');
     } else {
       setInviteToken(null);
@@ -658,13 +668,22 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         .map(({ id, name }) => ({ id, name })),
     [coordinatorView],
   );
-  const qrCode = shareUrl ? (
+  const lobbyCodeUrl = joinCode
+    ? lobbyCodeJoinUrl({
+        origin: window.location.origin,
+        joinPath: webPath(config.routes.join),
+        code: joinCode,
+      })
+    : '';
+  const qrCode = lobbyCodeUrl ? (
     <Suspense fallback={<span aria-label={en.entry.qrPreparing}>…</span>}>
-      <QRCode value={shareUrl} />
+      <span data-testid="lobby-join-qr" data-join-url={lobbyCodeUrl}>
+        <QRCode value={lobbyCodeUrl} />
+      </span>
     </Suspense>
   ) : null;
   const gameLogoSrc = `${import.meta.env.BASE_URL}${config.appIconPath}`;
-  const stackstoneMarkSrc = `${import.meta.env.BASE_URL}${config.stackstoneIconPath}`;
+  const stackstoneMarkSrc = gameLogoSrc;
 
   return (
     <EntryExperience
@@ -672,6 +691,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         ...en.entry,
         brand: config.appName,
         brandGoldSuffix: config.wordmarkAccentSuffix,
+        stackstoneLink: en.app.brandLink,
         footer: config.byline,
       }}
       screen={screen}
@@ -701,7 +721,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       shareUrl={shareUrl}
       qrCode={qrCode}
       gameLogoSrc={gameLogoSrc}
-      gameLogoHref={config.routes.home}
+      gameLogoHref={config.organisation.url}
       stackstoneMarkSrc={stackstoneMarkSrc}
       stackstoneHref={config.organisation.url}
       stackstoneNewTab

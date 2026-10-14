@@ -112,14 +112,17 @@ async function revealNotes(
   await expect.poll(() => privateRequests).toBe(1);
   const notes = page.getByTestId('private-notes-content');
   await expect(notes).toBeVisible({ timeout: 1500 });
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+  });
   const snapshot = await notes.evaluate((element) =>
     [element, ...Array.from(element.querySelectorAll('*'))].map((node) => {
       const rect = node.getBoundingClientRect();
       const style = getComputedStyle(node);
       return {
         tag: node.tagName,
-        width: rect.width,
-        height: rect.height,
+        width: Math.round(rect.width * 10) / 10,
+        height: Math.round(rect.height * 10) / 10,
         color: style.color,
         backgroundColor: style.backgroundColor,
         borderColor: style.borderColor,
@@ -277,9 +280,7 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
   };
   await page.reload();
   await expect(page.getByTestId('shared-announcement')).toContainText('Alex');
-  await expect(page.getByTestId('list-vote-reveal')).toContainText(
-    'Morgan',
-  );
+  await expect(page.getByTestId('list-vote-reveal')).toContainText('Morgan');
 
   currentView = {
     ...currentView,
@@ -317,6 +318,6 @@ test('the lobby code and join QR are shared on each seated player phone', async 
   );
   await page.goto(`/game/${gameId}`);
 
-  await expect(page.getByTestId('shared-lobby-code')).toHaveText('ABC234');
-  await expect(page.getByTestId('shared-lobby-qr')).toBeVisible();
+  await expect(page.getByTestId('lobby-room-code')).toHaveText('ABC234');
+  await expect(page.getByTestId('lobby-join-qr')).toBeVisible();
 });

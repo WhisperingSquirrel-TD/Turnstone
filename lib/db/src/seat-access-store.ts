@@ -228,6 +228,7 @@ export async function createGameInvite(input: {
   gameId: string;
   linkTokenHash: string;
   shortCodeHash: string;
+  displayCode: string;
   expiresAt?: number | null;
 }): Promise<void> {
   const parsed = insertGameInviteSchema.parse({
@@ -245,6 +246,7 @@ export async function createGameInvite(input: {
       set: {
         linkTokenHash: parsed.linkTokenHash,
         shortCodeHash: parsed.shortCodeHash,
+        displayCode: parsed.displayCode,
         expiresAt: parsed.expiresAt ?? null,
         revokedAt: null,
         createdAt: new Date(),
@@ -276,14 +278,35 @@ export async function findActiveGameInvite(
   return invite ?? null;
 }
 
+export async function getOpenGameInviteCode(
+  gameId: string,
+  now: number,
+): Promise<string | null> {
+  const [invite] = await db
+    .select({
+      displayCode: gameInvites.displayCode,
+      expiresAt: gameInvites.expiresAt,
+      revokedAt: gameInvites.revokedAt,
+    })
+    .from(gameInvites)
+    .where(eq(gameInvites.gameId, gameId))
+    .limit(1);
+  if (!invite || invite.revokedAt) return null;
+  if (invite.expiresAt && invite.expiresAt.getTime() <= now) {
+    await revokeGameInvite(gameId, now);
+    return null;
+  }
+  return invite.displayCode;
+}
+
 export async function revokeGameInvite(
   gameId: string,
   revokedAt: number,
 ): Promise<void> {
   await db
     .update(gameInvites)
-    .set({ revokedAt: new Date(revokedAt) })
-    .where(eq(gameInvites.gameId, gameId));
+    .set({ revokedAt: new Date(revokedAt), displayCode: null })
+    .where(and(eq(gameInvites.gameId, gameId), isNull(gameInvites.revokedAt)));
 }
 
 export async function createGameJoinRequest(input: {

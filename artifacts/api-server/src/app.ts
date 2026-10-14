@@ -146,11 +146,28 @@ function actorId(actor: Actor): string {
   return actor.kind === 'player' ? `seat:${actor.seatId}` : 'coordinator';
 }
 
-function projectState(state: State, viewer: Viewer) {
+async function closeInviteIfJoiningClosed(state: State): Promise<void> {
+  if (state.phase === 'DRAFT' || state.phase === 'LOBBY') return;
+  const { revokeGameInvite } = await import('@workspace/db/seat-access-store');
+  await revokeGameInvite(state.id, Date.now());
+}
+
+async function projectState(state: State, viewer: Viewer) {
+  await closeInviteIfJoiningClosed(state);
+  const maySeeLobbyCode =
+    state.phase === 'LOBBY' &&
+    (viewer.kind === 'presenter' ||
+      (viewer.kind === 'player' && Boolean(viewer.seatId)));
+  const lobbyCode = maySeeLobbyCode
+    ? await import('@workspace/db/seat-access-store').then(
+        ({ getOpenGameInviteCode }) =>
+          getOpenGameInviteCode(state.id, Date.now()),
+      )
+    : null;
   const view =
     viewer.kind === 'visitor'
       ? viewFor({ kind: 'visitor' }, state)
-      : viewFor(viewer, state);
+      : viewFor(viewer, state, { lobbyCode });
   return gameViewResponseSchema.parse({ version: state.version, view });
 }
 
@@ -266,6 +283,7 @@ export function createApp(
       },
     });
     if (!stored.ok) throw new Error('Unable to store internal game command');
+    await closeInviteIfJoiningClosed(nextState);
     return nextState;
   }
   async function appendServerEvent(
@@ -445,7 +463,7 @@ export function createApp(
       response
         .status(stored.duplicate ? 200 : 201)
         .json(
-          projectState(
+          await projectState(
             state,
             stored.duplicate ? viewer : { kind: 'coordinator' },
           ),
@@ -523,11 +541,12 @@ export function createApp(
           path: '/',
           maxAge: seatSessionDurationMs,
         });
-        response
-          .status(200)
-          .json(
-            projectState(existing, { kind: 'player', seatId: humanSeatId }),
-          );
+        response.status(200).json(
+          await projectState(existing, {
+            kind: 'player',
+            seatId: humanSeatId,
+          }),
+        );
         return;
       }
 
@@ -674,7 +693,7 @@ export function createApp(
       await publishGame(gameId);
       const currentState = await loadGameState(gameId);
       response.status(201).json(
-        projectState(currentState ?? state, {
+        await projectState(currentState ?? state, {
           kind: 'player',
           seatId: humanSeatId,
         }),
@@ -730,6 +749,7 @@ export function createApp(
             gameId,
             linkTokenHash,
             shortCodeHash: hashJoinCode(candidate, options.rateLimitSecret),
+            displayCode: candidate,
             expiresAt: now + seatSessionDurationMs,
           });
           shortCode = candidate;
@@ -1105,7 +1125,7 @@ export function createApp(
         sameSite: 'lax',
         path: `/api/join-requests/${requestId}`,
       });
-      const game = projectState(state, {
+      const game = await projectState(state, {
         kind: 'player',
         seatId: joinRequest.seatId,
       });
@@ -1233,7 +1253,10 @@ export function createApp(
         maxAge: seatSessionDurationMs,
       });
       response.json(
-        projectState(recoveredState, { kind: 'player', seatId: seat.id }),
+        await projectState(recoveredState, {
+          kind: 'player',
+          seatId: seat.id,
+        }),
       );
     } catch {
       sendError(response, 503, 'Service unavailable');
@@ -1384,7 +1407,7 @@ export function createApp(
       });
       response
         .status(previous?.duplicate ? 200 : 201)
-        .json(projectState(current, { kind: 'player', seatId }));
+        .json(await projectState(current, { kind: 'player', seatId }));
     } catch {
       sendError(response, 503, 'Service unavailable');
     }
@@ -1540,7 +1563,7 @@ export function createApp(
         return;
       }
       const viewer = await viewerForRequest(request);
-      response.json(projectState(state, viewer));
+      response.json(await projectState(state, viewer));
     } catch {
       sendError(response, 503, 'Service unavailable');
     }
@@ -1589,7 +1612,7 @@ export function createApp(
         return;
       }
       response.json(
-        projectState(state, {
+        await projectState(state, {
           kind: 'player',
           seatId: seat.id,
           reveal: true,
@@ -1699,7 +1722,7 @@ export function createApp(
       });
       response.json(
         presenterPairResponseSchema.parse({
-          game: projectState(state, { kind: 'presenter' }),
+          game: await projectState(state, { kind: 'presenter' }),
         }),
       );
     } catch {
@@ -1767,7 +1790,8 @@ export function createApp(
           sendError(response, 409, 'Command rejected');
           return;
         }
-        response.json(projectState(nextState, viewer));
+        await closeInviteIfJoiningClosed(nextState);
+        response.json(await projectState(nextState, viewer));
       } catch {
         sendError(response, 503, 'Service unavailable');
       }
@@ -1862,7 +1886,7 @@ export function createApp(
         sendError(response, 404, 'Not found');
         return;
       }
-      response.json(projectState(current, viewer));
+      response.json(await projectState(current, viewer));
     } catch {
       sendError(response, 503, 'Service unavailable');
     }

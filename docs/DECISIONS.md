@@ -938,7 +938,7 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Consequence:** No logo fill was altered; the standalone dark mark uses the artwork intended for dark backgrounds.
 
-## D66 — Lighthouse SEO versus pre-launch noindex (provisional)
+## D66 — Lighthouse SEO versus pre-launch noindex (resolved)
 
 **Context:** Amendment 10 requires a mobile Lighthouse SEO score of at least
 95, while the standing pre-launch policy requires every real preview/build
@@ -950,14 +950,15 @@ audit and report a non-Lighthouse custom score; or run Lighthouse against an
 isolated launch-mode test fixture while separately verifying the real
 pre-launch build remains noindex.
 
-**Choice:** PROVISIONAL — use the isolated launch-mode fixture for Lighthouse
-SEO. It exists only in test code; the shared `PRE_LAUNCH_NOINDEX` flag,
+**Choice:** The owner confirmed using the isolated launch-mode fixture for
+Lighthouse SEO. It exists only in test code; the shared `PRE_LAUNCH_NOINDEX` flag,
 production build, Replit preview and Vercel headers remain unchanged and
-noindex. Ask the owner to confirm this interpretation.
+noindex.
 
 **Consequence:** The SEO score describes launch-ready page content, not the
 unindexable pre-launch preview. The normal production-header and robots tests
-remain mandatory; no deployment or indexing change is authorised.
+remain mandatory; no deployment or indexing change is authorised. Q1 is
+resolved.
 
 ## D67 — Turnstone symbol-only logo (resolved)
 
@@ -969,10 +970,26 @@ remain mandatory; no deployment or indexing change is authorised.
 
 **Consequence:** The product title remains independent from the logo artwork, and future logo exports must not include the name or a separate separator dot.
 
-## D68 — Turnstone emblem in game headers (resolved)
+## D68 — Turnstone emblem in game headers (superseded)
 
 **Context:** The owner approved the symbol-only Turnstone emblem for use in the product and clarified from the public-home screenshot that every top-right site and game header should identify Turnstone, not Stackstone Consulting.
 
 **Choice:** Use the Turnstone emblem in public-site, game and entry headers, linking internally to Turnstone home. Keep Stackstone marks for Stackstone Consulting links in footers and other explicit builder links; those links continue to target `https://stackstoneconsulting.co.uk/`. Public-site Stackstone links open in the same tab; in-game Stackstone links open a new tab with `noopener noreferrer`.
 
 **Consequence:** The product emblem and builder mark have separate assets and destinations. The Turnstone favicon, app icon and all top-right headers use the game emblem; Stackstone footer links retain their original website destination.
+
+## D69 — Keep the Turnstone emblem staged until app approval (resolved)
+
+**Context:** The owner clarified that the new Turnstone emblem should be saved in the repository but not used in the app until separately approved. After initially allowing the ZIP, the owner directed that it be removed from the upcoming push.
+
+**Choice:** D68 is superseded. Keep the existing Stackstone mark in the app icon, favicon, and public/game headers. Move the Turnstone SVG, PNG, and favicon assets to `assets/brand/turnstone/` as source files only; exclude the ZIP from the upcoming push. Continue rendering the Turnstone product name as text. Stackstone marks link to the Stackstone website: same tab on public pages and a new tab with `noopener noreferrer` in game screens.
+
+**Consequence:** The source emblem is preserved without appearing in the product. Changing the app to the Turnstone emblem requires a later owner approval.
+
+## D70 — Lobby code visibility and QR joins (resolved)
+
+**Context:** The owner requires the room code and join QR to be available to seated players, and to an explicitly enabled presenter, only while joining is open. Visitors must never receive the code. QR joins must follow the same approval and rate-limit path as organiser code entry.
+
+**Choice:** Store a temporary readable display code alongside the hashed invite lookup value. Only project it to seated players and an enabled presenter during the lobby; the QR carries the code in a URL fragment and opens the ordinary short-code join flow. That flow continues to look up the stored hash and create a pending join request. Revoke the invite and clear its readable display code when the lobby closes or the game ends. Never include it in logs, errors, or analytics.
+
+**Consequence:** The readable code is not an independent join credential: approval, rate limiting and server-side hash lookup remain authoritative. Visitor projections and all non-lobby views remain code-free.

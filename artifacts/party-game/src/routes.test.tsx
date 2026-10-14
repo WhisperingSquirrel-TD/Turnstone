@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { renderToString } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { AppRoutes } from '@/App';
+import { config } from '@/config';
 import { en } from '@/locale/en-GB';
 import { renderPublicHomeHtml } from '@/public-site-content';
 
@@ -38,30 +39,44 @@ describe('routes', () => {
   });
   it('uses clean, in-bounds stone geometry in the Turnstone SVG exports', () => {
     const darkEmblem = readFileSync(
-      new URL('../../../branding/turnstone-emblem-dark.svg', import.meta.url),
+      new URL(
+        '../../../assets/brand/turnstone/turnstone-emblem-dark.svg',
+        import.meta.url,
+      ),
       'utf8',
     );
     const favicon = readFileSync(
-      new URL('../../../branding/favicon.svg', import.meta.url),
+      new URL('../../../assets/brand/turnstone/favicon.svg', import.meta.url),
       'utf8',
     );
     const lightEmblem = readFileSync(
-      new URL('../../../branding/turnstone-emblem-light.svg', import.meta.url),
-      'utf8',
-    );
-    const publicEmblem = readFileSync(
-      new URL('../public/brand/turnstone-emblem-dark.svg', import.meta.url),
+      new URL(
+        '../../../assets/brand/turnstone/turnstone-emblem-light.svg',
+        import.meta.url,
+      ),
       'utf8',
     );
     const publicFavicon = readFileSync(
       new URL('../public/favicon.svg', import.meta.url),
       'utf8',
     );
+    const currentStackstoneIcon = readFileSync(
+      new URL(
+        '../public/brand/stackstone-icon-dark-outlined.svg',
+        import.meta.url,
+      ),
+      'utf8',
+    );
     const seatShapePattern =
       /<rect\b(?=[^>]*width="8")(?=[^>]*height="12")[^>]*>/g;
 
-    expect(publicEmblem).toBe(darkEmblem);
-    expect(publicFavicon).toBe(favicon);
+    expect(
+      existsSync(
+        new URL('../public/brand/turnstone-emblem-dark.svg', import.meta.url),
+      ),
+    ).toBe(false);
+    expect(config.appIconPath).toBe('brand/stackstone-icon-dark-outlined.svg');
+    expect(publicFavicon).toBe(currentStackstoneIcon);
     for (const source of [darkEmblem, lightEmblem, favicon]) {
       expect([...source.matchAll(seatShapePattern)]).toHaveLength(8);
       expect(source).not.toContain('translate(');
@@ -75,7 +90,7 @@ describe('routes', () => {
     expect(html).not.toContain('Faithful');
     expect(html).not.toContain('Traitor');
   });
-  it('uses the Turnstone emblem in game headers and keeps Stackstone links on its website', () => {
+  it('keeps the Stackstone mark in game headers until the emblem is approved', () => {
     const entryHtml = render('/play');
     const entryHeader =
       entryHtml.match(/<header class="entry-brand"[\s\S]*?<\/header>/)?.[0] ??
@@ -84,10 +99,13 @@ describe('routes', () => {
       entryHtml.match(/<footer class="entry-footer"[\s\S]*?<\/footer>/)?.[0] ??
       '';
 
-    expect(entryHeader).toContain('data-testid="link-turnstone-mark"');
-    expect(entryHeader).toContain('href="/"');
-    expect(entryHeader).toContain('src="/brand/turnstone-emblem-dark.svg"');
-    expect(entryHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(entryHeader).toContain('data-testid="link-stackstone-mark"');
+    expect(entryHeader).toContain('href="https://stackstoneconsulting.co.uk/"');
+    expect(entryHeader).toContain(
+      'src="/brand/stackstone-icon-dark-outlined.svg"',
+    );
+    expect(entryHeader).toContain('target="_blank"');
+    expect(entryHeader).toContain('rel="noopener noreferrer"');
     expect(entryFooter).toContain('href="https://stackstoneconsulting.co.uk/"');
     expect(entryFooter).toContain(
       'src="/brand/stackstone-icon-dark-outlined.svg"',
@@ -103,10 +121,15 @@ describe('routes', () => {
     const playerFooter =
       playerHtml.match(/<footer class="mx-auto mt-8[\s\S]*?<\/footer>/)?.[0] ??
       '';
-    expect(playerHeader).toContain('data-testid="link-turnstone-mark"');
-    expect(playerHeader).toContain('href="/"');
-    expect(playerHeader).toContain('src="/brand/turnstone-emblem-dark.svg"');
-    expect(playerHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(playerHeader).toContain('data-testid="link-stackstone-mark"');
+    expect(playerHeader).toContain(
+      'href="https://stackstoneconsulting.co.uk/"',
+    );
+    expect(playerHeader).toContain(
+      'src="/brand/stackstone-icon-dark-outlined.svg"',
+    );
+    expect(playerHeader).toContain('target="_blank"');
+    expect(playerHeader).toContain('rel="noopener noreferrer"');
     expect(playerFooter).toContain(
       'href="https://stackstoneconsulting.co.uk/"',
     );
@@ -124,7 +147,7 @@ describe('routes', () => {
     expect(playerHtml).toContain('target="_blank"');
     expect(playerHtml).toContain('rel="noopener noreferrer"');
   });
-  it('uses the Turnstone emblem in public headers and keeps Stackstone links in the footer', () => {
+  it('uses the Stackstone mark in public headers and links in the same tab', () => {
     const publicHtml = render('/');
     const header =
       publicHtml.match(
@@ -133,10 +156,10 @@ describe('routes', () => {
     const footer =
       publicHtml.match(/<footer class="mx-auto mt-8[\s\S]*?<\/footer>/)?.[0] ??
       '';
-    expect(header).toContain('data-testid="link-turnstone-mark"');
-    expect(header).toContain('href="/"');
-    expect(header).toContain('src="/brand/turnstone-emblem-dark.svg"');
-    expect(header).not.toContain('stackstoneconsulting.co.uk');
+    expect(header).toContain('data-testid="link-stackstone-mark"');
+    expect(header).toContain('href="https://stackstoneconsulting.co.uk/"');
+    expect(header).toContain('src="/brand/stackstone-icon-dark-outlined.svg"');
+    expect(header).not.toContain('target="_blank"');
     expect(footer).toContain('href="https://stackstoneconsulting.co.uk/"');
     expect(footer).toContain('src="/brand/stackstone-icon-dark-outlined.svg"');
 
@@ -147,9 +170,10 @@ describe('routes', () => {
       staticHome.match(
         /<footer class="public-home-footer"[\s\S]*?<\/footer>/,
       )?.[0] ?? '';
-    expect(staticHeader).toContain('href="/"');
-    expect(staticHeader).toContain('/brand/turnstone-emblem-dark.svg');
-    expect(staticHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(staticHeader).toContain(
+      'href="https://stackstoneconsulting.co.uk/"',
+    );
+    expect(staticHeader).toContain('/brand/stackstone-icon-dark-outlined.svg');
     expect(staticFooter).toContain(
       'href="https://stackstoneconsulting.co.uk/"',
     );

@@ -67,6 +67,7 @@ export const gameInvites = pgTable(
       .references(() => games.id, { onDelete: 'cascade' }),
     linkTokenHash: text('link_token_hash').notNull().unique(),
     shortCodeHash: text('short_code_hash').notNull().unique(),
+    displayCode: text('display_code'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -124,6 +125,7 @@ export const insertGameInviteSchema = z.object({
   gameId: z.string().min(1).max(128),
   linkTokenHash: z.string().regex(/^[a-f0-9]{64}$/),
   shortCodeHash: z.string().regex(/^[a-f0-9]{64}$/),
+  displayCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),
   expiresAt: z.date().nullable().optional(),
 });
 

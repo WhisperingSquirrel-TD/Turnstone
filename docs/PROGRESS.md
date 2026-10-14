@@ -1,12 +1,12 @@
 # Status for reviewer
 
-- Updated: 14 October 2026, 14:39 UTC.
-- Current milestone/step: Milestone 5 — Verify #21 is green; continuing with the player-screen design brief. The owner can try joining and rehearsing on a real phone now.
+- Updated: 14 October 2026, 17:09 UTC.
+- Current milestone/step: Milestone 5 — step 1, lobby-code visibility and QR joins. Full local `pnpm run verify` is green; preparing the step-1 commit and push. Do not retry rehearsal until step 2 fixes the blocking rehearsal bugs.
 - Last pushed commit/CI: `b78dffb`; GitHub Verify #21 (`38581869029`) — Success, all 18 verification jobs passed, including iPhone and iPad WebKit, with zero annotations. The promotion job was skipped as intended; no release or deployment occurred. Verify #20's iPhone-only race is fixed by isolating each direct-route browser test.
-- Latest local verification after the E2E test adjustment: `pnpm run verify` exited 0. It passed type-check, lint, formatting and production build; 238 unit tests, 20 property tests, 71 server/HTTP/database tests at 85.16% lines, 2,567 scenarios with zero failures, 15 browser smoke tests (three WebKit skips with `WebKit profiles run in CI`), Lighthouse home scores of 100 for performance, accessibility, best practices and SEO, Lighthouse play accessibility 100, and zero high or critical dependency findings. The Lighthouse SEO audit used an isolated launch-mode test fixture; the real build and preview remain noindex. The foreground invocation hit the tool's five-minute ceiling, and the background run completed successfully.
-- Open questions: Q1 in `docs/QUESTIONS.md` asks the owner to confirm the test-only launch-mode Lighthouse SEO fixture.
-- Provisional decisions: D66 — audit SEO in a test-only launch-mode copy; never disable pre-launch noindex in the actual app.
-- Risks: `PRE_LAUNCH_NOINDEX` remains on. The owner may test the entry flow now; Milestone 5 still ends with the owner's hands-on full rehearsal on a real phone. No deployment or paid service is authorised.
+- Latest local verification: `pnpm run verify` exited 0 — type-check, test type-check, lint, formatting and production build passed; 246 unit tests, 20 property tests, 72 server tests, 2,567 scenarios with zero failures; 23 browser smoke tests passed with 3 profile-specific skips and the explicit `WebKit profiles run in CI` notice; Lighthouse home scores were 100 for performance, accessibility, best practices and SEO, play accessibility was 100, and the dependency audit found 0 high or critical advisories.
+- Open questions: none. Q1 is resolved; the launch-mode Lighthouse fixture remains test-only and real builds stay noindex.
+- Provisional decisions: none.
+- Risks: Rehearsal blockers remain open; do not ask the owner to retry yet. The Turnstone logo assets remain unintegrated and the ZIP is excluded from this push. `PRE_LAUNCH_NOINDEX` remains on. No deployment or paid service is authorised.
 
 # Progress
 

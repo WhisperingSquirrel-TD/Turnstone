@@ -7,7 +7,6 @@ import {
   type ClipboardEvent,
   type ReactNode,
 } from 'react';
-import { Link } from 'react-router-dom';
 import { recommended } from '@workspace/shared';
 import './EntryExperience.css';
 
@@ -87,7 +86,7 @@ export interface EntryExperienceCopy {
   brandDescriptor: string;
   footer: string;
   markAlt: string;
-  turnstoneHomeLink: string;
+  stackstoneLink: string;
   headlineFirst: string;
   headlineSecond: string;
   subtitle: string;
@@ -452,14 +451,16 @@ export function EntryExperience({
           <span>{copy.brand.slice(0, -copy.brandGoldSuffix.length)}</span>
           <span className="entry-gilt">{copy.brandGoldSuffix}</span>
         </span>
-        <Link
+        <a
           className="entry-brand-mark-link"
-          to={gameLogoHref}
-          aria-label={copy.turnstoneHomeLink}
-          data-testid="link-turnstone-mark"
+          href={gameLogoHref}
+          target={stackstoneNewTab ? '_blank' : undefined}
+          rel={stackstoneNewTab ? 'noopener noreferrer' : undefined}
+          aria-label={copy.stackstoneLink}
+          data-testid="link-stackstone-mark"
         >
           <img className="entry-brand-mark" src={gameLogoSrc} alt="" />
-        </Link>
+        </a>
       </header>
 
       <main

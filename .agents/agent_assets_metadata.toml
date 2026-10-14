@@ -30,22 +30,8 @@ storage_version_token = "1791992730455109"
 content_type = "text/html"
 
 [[outputs]]
-id = "d8SvGuSxSdCgKXXiWfwzm"
-uri = "file://branding/turnstone-brand-assets.zip"
-type = "unspecified"
-title = "Turnstone brand assets — corrected"
-description = "Updated symbol-only dark/light SVGs, PNGs for both backgrounds, a two-background preview, and favicon SVG/PNG/ICO. The rotated seat geometry is corrected to remove stray corner pixels."
-logical_id = "5285fe9f-33b9-4620-bf8e-181c2af21963"
-content_hash = "sha256:a6dd40bd15070debbf850df84dc579c9ba5476cf9f843b2d8e770db18573d87e"
-size = 68107
-mtime_ms = 1791994362843
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:4e06c17d-98e7-4362-92dc-8f7452853539/5285fe9f-33b9-4620-bf8e-181c2af21963/862db7e3-ff78-440b-8c30-faec9c697a1a"
-storage_version_token = "1791994559753144"
-content_type = "application/octet-stream"
-
-[[outputs]]
 id = "JfcsnaHeWWrEvd7AH2qUa"
-uri = "file://branding/turnstone-emblem-preview.png"
+uri = "file://assets/brand/turnstone/turnstone-emblem-preview.png"
 type = "image"
 title = "Turnstone emblem — corrected PNG"
 description = "Clean two-background preview with equal-sized stones and the gold stone at about 1:30."

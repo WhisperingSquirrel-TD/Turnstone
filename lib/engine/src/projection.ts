@@ -23,6 +23,7 @@ export const VISITOR_VIEW_ALLOW_LIST = [
 export const VIEW_ALLOW_LIST = [
   'id',
   'gameName',
+  'lobbyCode',
   'version',
   'phase',
   'paused',
@@ -43,16 +44,26 @@ export const VIEW_ALLOW_LIST = [
   'fairness',
 ] as const;
 
+export type ProjectionContext = {
+  lobbyCode?: string | null;
+};
+
 // Never spread state, seats or events: construct every field and nested field.
 export function viewFor(
   viewer: Extract<Viewer, { kind: 'visitor' }>,
   state: State,
+  context?: ProjectionContext,
 ): VisitorView;
 export function viewFor(
   viewer: Exclude<Viewer, { kind: 'visitor' }>,
   state: State,
+  context?: ProjectionContext,
 ): FullView;
-export function viewFor(viewer: Viewer, state: State): View {
+export function viewFor(
+  viewer: Viewer,
+  state: State,
+  context: ProjectionContext = {},
+): View {
   if (viewer.kind === 'visitor') {
     return visitorViewSchema.parse({
       exists: true,
@@ -71,6 +82,12 @@ export function viewFor(viewer: Viewer, state: State): View {
     Boolean(own) &&
     state.config.ghosts.seeRoles;
   const player = viewer.kind === 'player' && own?.status === 'alive';
+  const lobbyCode =
+    state.phase === 'LOBBY' &&
+    (player || viewer.kind === 'presenter') &&
+    context.lobbyCode
+      ? context.lobbyCode
+      : undefined;
   const reveal = Boolean(viewer.reveal && (player || host || spectator));
   const isTraitor = player && own?.role === 'traitor';
   const ballots =
@@ -117,6 +134,7 @@ export function viewFor(viewer: Viewer, state: State): View {
     ...(state.config.basics.gameName
       ? { gameName: state.config.basics.gameName }
       : {}),
+    ...(lobbyCode ? { lobbyCode } : {}),
     version: state.version,
     phase: state.phase,
     paused: state.paused,

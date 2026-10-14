@@ -56,6 +56,7 @@ export const startRehearsalResponseViewTwoIdMax = 128;
 
 export const startRehearsalResponseViewTwoGameNameMax = 60;
 
+export const startRehearsalResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const startRehearsalResponseViewTwoCycleMin = 0;
 
 export const startRehearsalResponseViewTwoPotMin = 0;
@@ -98,6 +99,7 @@ export const StartRehearsalResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(startRehearsalResponseViewTwoIdMax),
   "gameName": zod.string().min(1).max(startRehearsalResponseViewTwoGameNameMax).optional(),
+  "lobbyCode": zod.string().regex(startRehearsalResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -222,6 +224,7 @@ export const createGameResponseViewTwoIdMax = 128;
 
 export const createGameResponseViewTwoGameNameMax = 60;
 
+export const createGameResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const createGameResponseViewTwoCycleMin = 0;
 
 export const createGameResponseViewTwoPotMin = 0;
@@ -264,6 +267,7 @@ export const CreateGameResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(createGameResponseViewTwoIdMax),
   "gameName": zod.string().min(1).max(createGameResponseViewTwoGameNameMax).optional(),
+  "lobbyCode": zod.string().regex(createGameResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -511,6 +515,7 @@ export const getJoinRequestStatusResponseThreeGameViewTwoIdMax = 128;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoGameNameMax = 60;
 
+export const getJoinRequestStatusResponseThreeGameViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const getJoinRequestStatusResponseThreeGameViewTwoCycleMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoPotMin = 0;
@@ -559,6 +564,7 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoIdMax),
   "gameName": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoGameNameMax).optional(),
+  "lobbyCode": zod.string().regex(getJoinRequestStatusResponseThreeGameViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -711,6 +717,7 @@ export const getGameViewResponseViewTwoIdMax = 128;
 
 export const getGameViewResponseViewTwoGameNameMax = 60;
 
+export const getGameViewResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const getGameViewResponseViewTwoCycleMin = 0;
 
 export const getGameViewResponseViewTwoPotMin = 0;
@@ -753,6 +760,7 @@ export const GetGameViewResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(getGameViewResponseViewTwoIdMax),
   "gameName": zod.string().min(1).max(getGameViewResponseViewTwoGameNameMax).optional(),
+  "lobbyCode": zod.string().regex(getGameViewResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -881,6 +889,7 @@ export const revealPrivateViewResponseViewTwoIdMax = 128;
 
 export const revealPrivateViewResponseViewTwoGameNameMax = 60;
 
+export const revealPrivateViewResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const revealPrivateViewResponseViewTwoCycleMin = 0;
 
 export const revealPrivateViewResponseViewTwoPotMin = 0;
@@ -923,6 +932,7 @@ export const RevealPrivateViewResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(revealPrivateViewResponseViewTwoIdMax),
   "gameName": zod.string().min(1).max(revealPrivateViewResponseViewTwoGameNameMax).optional(),
+  "lobbyCode": zod.string().regex(revealPrivateViewResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -1055,6 +1065,7 @@ export const submitGameCommandResponseViewTwoIdMax = 128;
 
 export const submitGameCommandResponseViewTwoGameNameMax = 60;
 
+export const submitGameCommandResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
 export const submitGameCommandResponseViewTwoCycleMin = 0;
 
 export const submitGameCommandResponseViewTwoPotMin = 0;
@@ -1097,6 +1108,7 @@ export const SubmitGameCommandResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(submitGameCommandResponseViewTwoIdMax),
   "gameName": zod.string().min(1).max(submitGameCommandResponseViewTwoGameNameMax).optional(),
+  "lobbyCode": zod.string().regex(submitGameCommandResponseViewTwoLobbyCodeRegExp).optional(),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),

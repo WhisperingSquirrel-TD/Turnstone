@@ -48,7 +48,7 @@ function renderPublicHeader(basePath: string): string {
           <a href="${escapeHtml(`${basePath}play`)}">${escapeHtml(en.nav.play)}</a>
         </div>
       </details>
-      <a class="public-home-brand-mark" href="${escapeHtml(basePath)}" aria-label="${escapeHtml(en.app.turnstoneHomeLink)}">
+      <a class="public-home-brand-mark" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}">
         <img src="${escapeHtml(`${basePath}${config.appIconPath}`)}" alt="" width="32" height="32">
       </a>
     </header>
@@ -56,7 +56,7 @@ function renderPublicHeader(basePath: string): string {
 }
 
 function renderStackstoneFooterLink(basePath: string): string {
-  return `<a class="inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.stackstoneIconPath}`)}" alt="" width="32" height="32"></a>`;
+  return `<a class="inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.appIconPath}`)}" alt="" width="32" height="32"></a>`;
 }
 
 function renderFaqDetails(

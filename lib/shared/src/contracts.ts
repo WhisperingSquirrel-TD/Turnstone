@@ -199,6 +199,10 @@ export const fullViewSchema = z
   .object({
     id,
     gameName: z.string().trim().min(1).max(60).optional(),
+    lobbyCode: z
+      .string()
+      .regex(/^[A-HJ-NP-Z2-9]{6}$/)
+      .optional(),
     version: z.number(),
     phase: phaseSchema,
     paused: z.boolean(),

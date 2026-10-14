@@ -1,6 +1,7 @@
 # Turnstone emblem assets
 
 The emblem is symbol-only. Render the product title as separate text; the name is not embedded in these SVG files.
+These files are source artwork only. The app continues to use the Stackstone mark until the owner approves the Turnstone emblem for product use.
 
 - `turnstone-emblem-dark.svg`: transparent mark for dark backgrounds.
 - `turnstone-emblem-light.svg`: transparent mark for light backgrounds.

@@ -27,6 +27,8 @@ export interface FullView {
      * @maxLength 60
      */
   gameName?: string;
+  /** @pattern ^[A-HJ-NP-Z2-9]{6}$ */
+  lobbyCode?: string;
   version: number;
   phase: Phase;
   paused: boolean;
