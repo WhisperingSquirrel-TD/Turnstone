@@ -1030,3 +1030,26 @@ existing Origin and CSRF-token checks.
 without wildcard origins or weaker HTTP CSRF. Tests cover the missing-Origin
 handshake, mismatched Host/port, development fallback, database-backed
 session authorisation, and a full rehearsal with no presenter.
+
+## D73 — Separate browser smoke profiles from the full rehearsal (resolved)
+
+**Context:** GitHub Verify #25 failed all four browser profile jobs. The
+matrix invoked the full `@rehearsal-live` test using the ordinary Playwright
+configuration, which starts Vite and a CSRF test server but no game API or
+PostgreSQL. A local reproduction timed out when the rehearsal could not
+navigate into its created game. The separate rehearsal configuration starts
+the real server and requires PostgreSQL.
+
+**Options:** Keep running the full game in every profile under the mock setup;
+remove the full-game test from CI; or exclude it from the smoke matrix and run
+it once with the real server and database.
+
+**Choice:** Exclude `@rehearsal-live` from each browser smoke profile. Add a
+dedicated required `rehearsal-live` job with PostgreSQL, migrations, an
+isolated session secret, Chromium and `playwright.rehearsal.config.ts`.
+Include this job in the required-check aggregator.
+
+**Consequence:** The four browser profiles remain independent smoke checks,
+and the complete rehearsal remains covered end-to-end against the real
+server. The new workflow is locally tested; GitHub Verify after the fix is
+still required before the owner retries the phone flow.

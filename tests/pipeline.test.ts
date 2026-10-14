@@ -243,6 +243,7 @@ describe('owner-approved delivery policy', () => {
       'unit',
       'property',
       'integration',
+      'rehearsal-live',
       'scenarios',
       'merge-scenario-reports',
       'browsers',
@@ -274,6 +275,25 @@ describe('owner-approved delivery policy', () => {
     const promotion = readFileSync('.github/workflows/promote.yml', 'utf8');
     expect(promotion).toContain("vars.TURNSTONE_PROMOTION_ENABLED == 'true'");
     expect(promotion).toContain('ubuntu-24.04');
+  });
+
+  it('runs the real-server rehearsal separately from the mock-API browser matrix', () => {
+    const workflow = readFileSync('.github/workflows/verify.yml', 'utf8');
+    const browserJob =
+      workflow.split('\n  browsers:\n')[1]?.split('\n  rehearsal-live:\n')[0] ??
+      '';
+    expect(browserJob).toContain('--grep-invert @rehearsal-live');
+
+    const rehearsalJob =
+      workflow
+        .split('\n  rehearsal-live:\n')[1]
+        ?.split('\n  lighthouse:\n')[0] ?? '';
+    expect(rehearsalJob).toContain('playwright.rehearsal.config.ts');
+    expect(rehearsalJob).toContain('DATABASE_URL');
+    expect(rehearsalJob).toContain('SESSION_SECRET');
+
+    const requiredChecks = workflow.split('\n  required-checks:\n')[1] ?? '';
+    expect(requiredChecks).toContain('      - rehearsal-live');
   });
 
   it('uses Node 24-compatible pinned artifact actions in CI', () => {
