@@ -1,13 +1,13 @@
 # Status for reviewer
 
-- Updated: 14 October 2026, 11:51 UTC.
-- Current milestone/step: Milestone 5 — local CSRF and full verification passed; Amendment 10 recorded and queued; preparing the push and GitHub WebKit check.
-- Last pushed commit/CI: `0fc29b6`, GitHub Verify #15 (`38524680870`) — Success, all 18 jobs green, all 18 annotation checks returned zero, including both WebKit profiles and six scenario shards. Promotion run #15 (`38524976239`) was skipped.
-- Local branch: `main`; current Milestone 5 changes are local and ahead of `origin/main`. `origin` and `.git/config` are credential-free.
-- Latest local verify: green on 14 October before the documentation-only specification/plan updates. 228 unit tests, 20 property tests, 71 server/HTTP/database tests at 85.16% lines, 2,567 scenarios with zero failures, six Pixel/desktop smoke tests passed (two WebKit skips), Lighthouse accessibility 1.0 on home and play, and zero high or critical audit findings. WebKit printed `WebKit profiles run in CI`; changed docs pass Prettier.
+- Updated: 14 October 2026, 12:10 UTC.
+- Current milestone/step: Milestone 5 — CI #16 cause fixed under TDD; full local `pnpm run verify` is green. Amendment 10 is recorded but implementation has not started.
+- Last pushed commit/CI: `d4b013b`, GitHub Verify #16 (`38559688722`) — Failure. Static checks, unit/build, Lighthouse, required-checks and all four browser profiles failed; audit, property, PostgreSQL integration, six scenario shards and scenario report merge passed. Static-check annotations identified the undeclared `@workspace/api-client-react` import; browser logs required sign-in and were not accessible.
+- Local branch: `main`; the workspace dependency declaration, regression test and refreshed scenario report are local and ahead of `origin/main`. `origin` and `.git/config` are credential-free.
+- Latest local verification: `pnpm run verify` passed on 14 October: 229 unit tests, 20 property tests, 71 server/HTTP/database tests at 85.16% lines, 2,567 scenarios with zero failures, six Pixel/desktop smoke tests passed (two WebKit skips), Lighthouse accessibility 1.0 on home and play, and zero high or critical audit findings. Typecheck, lint, formatting and production build passed.
 - Open questions: none.
 - Provisional decisions: none. Coordinator handoff uses a single-use code claimed on the target’s authenticated game seat.
-- Risks: The CSRF fix has passed locally; the next GitHub run must confirm iPhone and iPad WebKit. Section 27 is queued but not implemented. Milestone 5 ends with a hands-on full rehearsal review on a real phone; pre-launch noindex remains on. No deployment or paid service is authorised.
+- Risks: Verify #16 remains red until the local dependency fix is pushed and a new GitHub run is green; no new Milestone 5 feature work starts before then. Section 27 is queued but not implemented. Milestone 5 ends with a hands-on full rehearsal review on a real phone; pre-launch noindex remains on. No deployment or paid service is authorised.
 
 # Progress
 

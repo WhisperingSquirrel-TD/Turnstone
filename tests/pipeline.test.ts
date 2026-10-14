@@ -59,6 +59,15 @@ describe('owner-approved delivery policy', () => {
     expect(settings.buildCommand).toContain('--filter @workspace/party-game');
     expect(settings.buildCommand).not.toMatch(/api-server|run start|run dev/);
   });
+  it('declares the API React client used by the production app', () => {
+    const manifest = JSON.parse(
+      readFileSync('artifacts/party-game/package.json', 'utf8'),
+    );
+    expect(
+      manifest.dependencies?.['@workspace/api-client-react'] ??
+        manifest.devDependencies?.['@workspace/api-client-react'],
+    ).toBe('workspace:*');
+  });
   it('verifies the pinned Gitleaks release checksum before scanning all history', () => {
     const workflow = readFileSync('.github/workflows/verify.yml', 'utf8');
     const staticJob = workflow.split('\n  unit:\n')[0] ?? '';
