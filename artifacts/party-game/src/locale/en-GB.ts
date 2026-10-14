@@ -1,6 +1,6 @@
 export const en = {
   skip: 'Skip to main content',
-  nav: { label: 'Main', home: 'Home', play: 'Play' },
+  nav: { label: 'Main', home: 'Home', play: 'Play', menu: 'Menu' },
   app: {
     securityUnavailable:
       'The secure connection could not be established. Check your connection, then try again.',
@@ -66,6 +66,8 @@ export const en = {
       },
     ],
     faqHeading: 'Frequently asked questions',
+    faqDescription:
+      'Answers about group size, playing on phones, privacy and how to join.',
     faq: [
       {
         question: 'How do we play a traitor game at home with 15 people?',
@@ -109,6 +111,61 @@ export const en = {
         question: 'How long does a game take?',
         answer:
           'A quick game takes about one hour. A day format can span a gathering, and a multi-day game can run for two to fourteen days.',
+      },
+      {
+        question: 'Is there a free alternative to the WhatsApp traitors game?',
+        answer:
+          'Yes. Chat versions play out as messages over a week, charge per player and limit numbers. Turnstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight.',
+      },
+      {
+        question: 'Is Turnstone the official game from the TV show?',
+        answer:
+          'No. Turnstone is an independent game made by Stackstone Consulting. It is not affiliated with, or endorsed by, any TV programme or its producers.',
+      },
+      {
+        question: 'Do I need WhatsApp or an app?',
+        answer:
+          'No. Turnstone runs in any modern phone or tablet browser. You can add it to your Home Screen if you like, but you never have to.',
+      },
+    ],
+    joinGame: 'Join a game',
+    practiseAlone: 'Practise alone first',
+    seeAllQuestions: 'See all questions',
+    compareHeading: 'Compare game formats',
+    compareDescription:
+      'Compare group game formats and see how Turnstone lets the organiser play too.',
+    compareIntro:
+      'Different games suit different groups. Turnstone is a free game of traitors and faithful for 5 to 40 players, where the organiser plays too.',
+    comparisonCategories: [
+      {
+        name: 'Boxed games',
+        description:
+          'A small boxed game can suit a table-sized group, but a large gathering may need several copies or a separate organiser.',
+      },
+      {
+        name: 'Week-long chat games',
+        description:
+          'These play out as messages over several days and can have player limits or a per-player price.',
+      },
+      {
+        name: 'Single-player apps',
+        description:
+          'These are designed for one person at a time rather than a whole gathering playing together.',
+      },
+      {
+        name: 'Werewolf apps with a moderator',
+        description:
+          'A moderator runs the game and may need to sit out instead of taking a secret role.',
+      },
+      {
+        name: 'Do-it-yourself games',
+        description:
+          'The group creates its own materials and someone has to manage the game instead of playing.',
+      },
+      {
+        name: 'Turnstone',
+        description:
+          'Five to 40 people play together, including the organiser. Phones are used for private secrets, and there is nothing to download.',
       },
     ],
     factsHeading: 'At a glance',

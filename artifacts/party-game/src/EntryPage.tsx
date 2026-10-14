@@ -148,10 +148,13 @@ function initialScreen(
   mode: EntryMode,
   hasGameQuery: boolean,
   hasInviteFragment: boolean,
+  entryIntent: string | null,
 ): EntryScreen {
   if (mode === 'coordinate' || hasGameQuery) return 'lobby';
   if (mode === 'waiting') return 'join-wait';
   if (mode === 'join') return hasInviteFragment ? 'join-name' : 'join-code';
+  if (mode === 'play' && entryIntent === 'create') return 'create-name';
+  if (mode === 'play' && entryIntent === 'rehearsal') return 'rehearsal-setup';
   return 'welcome';
 }
 
@@ -160,6 +163,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
   const location = useLocation();
   const params = useParams<{ gameId: string; id: string; requestId: string }>();
   const queryGameId = new URLSearchParams(location.search).get('game');
+  const entryIntent = new URLSearchParams(location.search).get('entry');
   const coordinatorGameId =
     mode === 'coordinate' ? params.id : mode === 'play' ? queryGameId : null;
   const inviteGameId = mode === 'join' ? params.gameId : null;
@@ -169,6 +173,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       mode,
       Boolean(queryGameId),
       typeof window !== 'undefined' && Boolean(window.location.hash),
+      entryIntent,
     ),
   );
   const [inputs, setInputs] = useState<EntryExperienceInputs>({
@@ -214,12 +219,15 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
   }, []);
 
   useEffect(() => {
-    if (mode === 'coordinate' || queryGameId) setScreen('lobby');
-    else if (mode === 'waiting') setScreen('join-wait');
-    else if (mode === 'join')
-      setScreen(window.location.hash ? 'join-name' : 'join-code');
-    else setScreen('welcome');
-  }, [mode, queryGameId]);
+    setScreen(
+      initialScreen(
+        mode,
+        Boolean(queryGameId),
+        Boolean(window.location.hash),
+        entryIntent,
+      ),
+    );
+  }, [entryIntent, mode, queryGameId]);
 
   useEffect(() => {
     if (mode !== 'join' || !inviteGameId || !window.location.hash) return;

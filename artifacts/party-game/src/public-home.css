@@ -9,6 +9,108 @@
   white-space: nowrap;
 }
 
+.public-home-brand {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(0.5rem, 2vw, 1.5rem);
+  width: min(100%, 72rem);
+  min-height: 3.5rem;
+  margin-inline: auto;
+}
+
+.public-home-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.2rem, 1.2vw, 1rem);
+}
+
+.public-home-nav a,
+.public-home-menu summary,
+.public-home-brand-mark {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.public-home-nav a {
+  padding-inline: clamp(0.25rem, 0.8vw, 0.7rem);
+  text-align: center;
+  text-decoration-thickness: 1px;
+}
+
+.public-home-brand > .turnstone-wordmark {
+  min-height: 44px;
+}
+
+.public-home-nav > a,
+.public-home-nav > button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.public-home-brand-mark {
+  justify-self: end;
+}
+
+.public-home-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  width: min(100%, 72rem);
+  min-height: 3.5rem;
+  margin: 2rem auto 0;
+  border-top: 1px solid var(--stone);
+  color: var(--ash);
+}
+
+.public-home-menu {
+  display: none;
+  position: relative;
+  justify-self: end;
+  color: var(--candle);
+}
+
+.public-home-menu summary {
+  padding-inline: 0.5rem;
+  border: 1px solid var(--stone);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.public-home-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.public-home-menu > div {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 10;
+  display: grid;
+  min-width: min(17rem, calc(100vw - 2rem));
+  padding: 0.5rem;
+  border: 1px solid var(--stone);
+  background: var(--hearth);
+}
+
+.public-home-menu a {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding-inline: 0.75rem;
+}
+
 .brand-mark-small {
   width: 2rem;
   height: 2rem;
@@ -18,28 +120,54 @@
 .public-home-content {
   display: grid;
   gap: clamp(4rem, 9vw, 7rem);
-  padding: clamp(2rem, 5vw, 4.5rem) 0;
+  width: min(100%, 72rem);
+  margin-inline: auto;
+  padding: clamp(1.5rem, 5vw, 4.5rem) 0;
+}
+
+.safe-page > main:has(> .public-home-content) {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .public-home-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
   display: grid;
   align-items: center;
   gap: clamp(2.5rem, 7vw, 6rem);
   min-height: min(70vh, 42rem);
   grid-template-columns: minmax(0, 1.1fr) minmax(17rem, 0.9fr);
-  background:
-    radial-gradient(ellipse at 10% 5%, rgb(200 148 74 / 0.09), transparent 37%),
-    linear-gradient(135deg, transparent 60%, rgb(85 80 75 / 0.16));
+}
+
+.public-home-hero::before {
+  position: absolute;
+  z-index: 0;
+  inset: 8% 12%;
+  content: '';
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 48% 62% at 24% 50%,
+    rgb(200 148 74 / 0.13) 0%,
+    rgb(200 148 74 / 0.055) 44%,
+    transparent 72%
+  );
 }
 
 .public-home-hero-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
   max-width: 42rem;
+  min-width: 0;
 }
 
 .public-home-wordmark {
   margin: 0;
   font-family: var(--font-headline);
-  font-size: clamp(3.5rem, 7vw, 4.5rem);
+  font-size: clamp(3rem, 7vw, 4.5rem);
   font-weight: 400;
   line-height: 1.05;
   white-space: nowrap;
@@ -65,6 +193,83 @@
   color: var(--candle);
   font-size: clamp(1.1rem, 1.6vw, 1.3rem);
   line-height: 1.6;
+}
+
+.public-home-actions {
+  display: grid;
+  width: min(100%, 22rem);
+  gap: 0.65rem;
+  margin-top: clamp(2rem, 5vh, 3.5rem);
+}
+
+.public-home-actions a {
+  min-height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.public-home-actions .secondary-action {
+  border: 1px solid var(--gilt);
+  color: var(--candle);
+  background: transparent;
+}
+
+.public-home-actions .quiet-action {
+  min-height: 48px;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.public-home-demo {
+  position: relative;
+  z-index: 1;
+  box-shadow: none;
+}
+
+.public-home-answer-section {
+  max-width: 52rem;
+}
+
+.public-page-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.public-comparison-table {
+  width: 100%;
+  margin-top: 1.5rem;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.public-comparison-table caption {
+  margin-bottom: 0.75rem;
+  color: var(--ash);
+  text-align: left;
+}
+
+.public-comparison-table th,
+.public-comparison-table td {
+  padding: 1rem 0.75rem;
+  border-top: 1px solid var(--stone);
+  vertical-align: top;
+}
+
+.public-comparison-table th {
+  color: var(--candle);
+  font-weight: 500;
+}
+
+.public-comparison-table td {
+  color: var(--ash);
 }
 
 .public-home-section {
@@ -176,8 +381,44 @@
 
 @media (max-width: 760px) {
   .public-home-hero {
-    min-height: auto;
-    grid-template-columns: 1fr;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, calc(100svh - 7rem)) auto;
+    gap: 1.5rem;
+  }
+
+  .public-home-hero-copy {
+    min-height: calc(100svh - 7rem);
+    padding-block: clamp(1.25rem, 4vh, 2.5rem);
+  }
+
+  .public-home-actions {
+    margin-top: auto;
+    padding-top: 1.5rem;
+  }
+
+  .public-home-demo {
+    width: 100%;
+    max-width: 32rem;
+    justify-self: center;
+  }
+
+  .public-home-brand {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 0.35rem;
+  }
+
+  .public-home-nav {
+    display: none;
+  }
+
+  .public-home-nav.player-status-nav {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .public-home-menu {
+    display: block;
   }
 
   .public-home-steps,
@@ -187,7 +428,30 @@
   }
 
   .public-home-wordmark {
-    font-size: clamp(3.25rem, 18vw, 4rem);
+    font-size: clamp(3rem, 16vw, 4rem);
+  }
+
+  .public-comparison-table th,
+  .public-comparison-table td {
+    padding-inline: 0.5rem;
+  }
+
+  .public-comparison-table th:first-child {
+    width: 38%;
+  }
+}
+
+@media (max-width: 360px) {
+  .public-home-content {
+    padding-inline: 0.25rem;
+  }
+
+  .public-home-hero-copy {
+    min-height: calc(100svh - 6rem);
+  }
+
+  .public-home-wordmark {
+    font-size: clamp(2.75rem, 15vw, 3rem);
   }
 }
 

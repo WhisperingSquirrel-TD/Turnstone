@@ -29,7 +29,7 @@ export const config = {
   plannedApiOrigin: 'https://live.turnstone.stackstoneconsulting.co.uk',
   apiOrigin: configuredApiOrigin,
   brandMarkPath: 'brand/stackstone-logo-dark-outlined.svg',
-  appIconPath: 'brand/stackstone-icon.svg',
+  appIconPath: 'brand/stackstone-icon-dark-outlined.svg',
   socialLinks: [] as const,
   preLaunch: PRE_LAUNCH_NOINDEX,
   organisation: {
@@ -37,5 +37,12 @@ export const config = {
     url: 'https://stackstoneconsulting.co.uk/',
     location: { locality: 'Abingdon', region: 'Oxfordshire' },
   },
-  routes: { home: '/', play: '/play' },
+  routes: {
+    home: '/',
+    play: '/play',
+    join: '/join',
+    faq: '/faq',
+    compare: '/compare',
+    rehearsal: '/play?entry=rehearsal',
+  },
 } as const;

@@ -43,7 +43,10 @@ export function HoldRoleDemo() {
   }, []);
 
   return (
-    <section className="home-role-demo" aria-labelledby="home-demo-heading">
+    <section
+      className="home-role-demo public-home-demo"
+      aria-labelledby="home-demo-heading"
+    >
       <h2 id="home-demo-heading">{en.publicSite.demoHeading}</h2>
       <p>{en.publicSite.demoDescription}</p>
       <button

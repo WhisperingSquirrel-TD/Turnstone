@@ -178,7 +178,10 @@
 
 .entry-experience button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  color: var(--entry-ash) !important;
+  background: var(--entry-stone);
+  border-color: var(--entry-stone);
+  opacity: 1;
 }
 
 .entry-primary-action,

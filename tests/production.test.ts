@@ -3,6 +3,18 @@ import request from 'supertest';
 import { createWebApp } from '../artifacts/party-game/src/web-app';
 
 describe('actual built production website', () => {
+  it('serves the prerendered FAQ and comparison documents at clean routes', async () => {
+    const app = createWebApp(
+      new URL('../artifacts/party-game/dist/public', import.meta.url).pathname,
+    );
+    const faq = await request(app).get('/faq');
+    const compare = await request(app).get('/compare');
+    expect(faq.status).toBe(200);
+    expect(faq.text).toContain('Frequently asked questions');
+    expect(compare.status).toBe(200);
+    expect(compare.text).toContain('Compare game formats');
+  });
+
   it('serves external-only scripts with fresh CSP nonces and strict headers on both routes', async () => {
     const app = createWebApp(
       new URL('../artifacts/party-game/dist/public', import.meta.url).pathname,

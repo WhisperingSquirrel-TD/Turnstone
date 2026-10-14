@@ -1,4 +1,7 @@
 .home-role-demo {
+  width: 100%;
+  max-width: 32rem;
+  min-width: 0;
   display: grid;
   justify-items: center;
   gap: 0.8rem;
@@ -6,6 +9,8 @@
   padding: 1.5rem;
   border: 1px solid var(--stone);
   background: var(--hearth);
+  box-shadow: none;
+  filter: none;
   text-align: center;
 }
 
@@ -61,7 +66,7 @@
 }
 
 .home-demo-link {
-  min-height: 2.75rem;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   color: var(--candle);

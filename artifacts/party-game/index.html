@@ -1,17 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en-GB">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preload" href="./src/fonts/playfair-display-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="./src/fonts/dm-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="./src/fonts/dm-sans-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link
+      rel="preload"
+      href="./src/fonts/playfair-display-latin-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="./src/fonts/dm-sans-latin-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="./src/fonts/dm-sans-latin-500-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="%BASE_URL%brand/stackstone-icon.svg" />
+    <link
+      rel="apple-touch-icon"
+      href="%BASE_URL%brand/stackstone-icon-dark-outlined.svg"
+    />
     <meta name="theme-color" content="#3D3A38" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <title>__PUBLIC_TITLE__</title>
     <meta name="description" content="__PUBLIC_DESCRIPTION__" />
     <meta name="robots" content="noindex, nofollow" />
@@ -22,10 +46,12 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="__PUBLIC_TITLE__" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
-    <script type="application/ld+json">__PUBLIC_JSON_LD__</script>
+    <script type="application/ld+json">
+      __PUBLIC_JSON_LD__
+    </script>
   </head>
   <body>
-    <div id="static-home">__PUBLIC_HOME__</div>
+    <div id="static-home" class="safe-page">__PUBLIC_HOME__</div>
     <div id="root"></div>
     <script type="module" src="%BASE_URL%src/main.tsx"></script>
   </body>

@@ -4,15 +4,29 @@ import { readFile } from 'node:fs/promises';
 import { createNonce, securityHeaders } from '@workspace/security';
 import { PRE_LAUNCH_NOINDEX } from '../../../lib/security/src/deployment';
 
-export function createWebApp(publicDirectory: string) {
+export function createWebApp(
+  publicDirectory: string,
+  options: { forLighthouseAudit?: true } = {},
+) {
   const app = express();
   app.disable('x-powered-by');
   app.use((_req, res, next) => {
     const nonce = createNonce();
     res.locals.nonce = nonce;
     res.set(securityHeaders(nonce));
-    if (PRE_LAUNCH_NOINDEX) res.set('X-Robots-Tag', 'noindex, nofollow');
+    if (PRE_LAUNCH_NOINDEX && !options.forLighthouseAudit) {
+      res.set('X-Robots-Tag', 'noindex, nofollow');
+    }
     next();
+  });
+  app.get(['/faq', '/compare'], async (req, res) => {
+    const html = await readFile(
+      path.join(publicDirectory, req.path.slice(1), 'index.html'),
+      'utf8',
+    );
+    res
+      .type('html')
+      .send(html.replaceAll('__RESPONSE_NONCE__', res.locals.nonce as string));
   });
   app.use(
     express.static(publicDirectory, {
@@ -22,10 +36,13 @@ export function createWebApp(publicDirectory: string) {
     }),
   );
   app.get('/{*path}', async (_req, res) => {
-    const html = await readFile(
-      path.join(publicDirectory, 'index.html'),
-      'utf8',
-    );
+    let html = await readFile(path.join(publicDirectory, 'index.html'), 'utf8');
+    if (options.forLighthouseAudit) {
+      html = html.replace(
+        /(<meta name="robots" content=")noindex, nofollow(")/,
+        '$1index, follow$2',
+      );
+    }
     res
       .type('html')
       .send(html.replaceAll('__RESPONSE_NONCE__', res.locals.nonce as string));

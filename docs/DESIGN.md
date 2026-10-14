@@ -221,3 +221,33 @@ R1 Rehearsal, from a secondary call to action on the home page, "Try a rehearsal
 
 COPY: UK English, sentence case. The family-friendly wording swaps "murdered" for "taken" and "banished" for "sent home" everywhere.
 ACCEPTANCE: Playwright screenshots of every screen on iPhone, Pixel and iPad, saved to docs/screens/; uniformity tests for every PrivateMoment variant, including the Notes screen; axe passing; the font budget met; then the owner's hands-on rehearsal on a real phone (hard stop).
+
+## Amendment 10 — responsive home page and public comparison
+
+Keep section 25's Charcoal, Hearth, Stone, Gilt, Candle and Ash tokens, Playfair Display/DM Sans hierarchy, and outlined Stackstone assets. This is a responsive refinement, not a new visual system. Use only one radial Gilt glow behind the hero wordmark; it must fade to transparent before reaching the hero boundary. Remove box shadows or pseudo-elements that create visible rectangular edges, including on the role demo.
+
+Mobile priorities: the first viewport contains the Turnstone wordmark and tagline, all three entry actions in the lower thumb zone, and the beginning of the demo directly below the title card. Keep the header compact, safe-area aware and non-overlapping at 320px. Buttons and links have at least 44px targets. Use `clamp()` for fluid type and prevent horizontal overflow. At wider widths, place the title card and live hold demo side by side without removing any entry action.
+
+```text
+Mobile, 320–414px                  Desktop, 1280px
++--------------------------+       +----------------------------------------+
+| Turnstone          mark  |       | Turnstone     public links       mark  |
+|                          |       |                                        |
+|        Turnstone         |       | Turnstone                   Hold to    |
+| A game of traitors       |       | A game of traitors          see your  |
+| and faithful.            |       | and faithful.                role      |
+| Everyone plays.          |       | Everyone plays.              [seal]    |
+| Even the host.           |       | Even the host.                         |
+| [Start a new game]       |       | [Start a new game] [Join a game]       |
+| [Join a game]            |       | Practise alone first                    |
+| Practise alone first     |       +----------------------------------------+
+| A Stackstone game        |
++--------------------------+
+| Hold to see your role    |
+| [role-neutral seal]      |
++--------------------------+
+```
+
+Public comparison stays category-based and uses the exact approved FAQ copy. The home page, `/faq`, `/compare`, `/llms.txt`, and FAQPage JSON-LD read their FAQ entries from one shared locale source. Keep the answer-first home content and fact block server-rendered; pre-launch noindex remains enabled. Do not add competitor product, maker or programme names.
+
+Acceptance checks: capture the home page at 320, 390, 768 and 1280px; also assert no horizontal overflow and at least 44px targets at 320, 375, 390, 414 and 768px. Check the glow and demo at every screenshot width; test each distinct mark fill against every surface on which the mark appears for at least 3:1 contrast. Run mobile Lighthouse for performance, accessibility, SEO and best practices, each at least 95.

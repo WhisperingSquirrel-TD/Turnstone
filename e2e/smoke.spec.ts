@@ -26,16 +26,27 @@ test('home and play are accessible, reloadable and responsive', async ({
         .analyze()
     ).violations,
   ).toEqual([]);
-  await page
-    .getByRole('link', { name: /play|enter/i })
-    .first()
-    .click();
-  await expect(page).toHaveURL(/\/play$/);
+  await page.getByRole('link', { name: 'Start a new game' }).click();
+  await expect(page).toHaveURL(/\/play\?entry=create$/);
+  await expect(
+    page.getByRole('heading', { name: 'Name your game' }),
+  ).toBeVisible();
   const playResponse = await page.reload();
   expect(playResponse?.headers()['x-robots-tag']).toBe(
     PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,
   );
   await expect(page.getByRole('main')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Name your game' }),
+  ).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.evaluate(async () => {
+    await Promise.all(
+      document
+        .getAnimations()
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
+  });
   expect(
     (
       await new AxeBuilder({ page })

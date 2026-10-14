@@ -920,4 +920,41 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Record the owner's Amendment 10 verbatim as SPEC section 27. Complete the current announcement-test correction and CSRF verification/push/green-CI gate first; implement section 27 before starting the M5 screen-design brief work. Test logo-fill contrast against every used background, remove visible hero/demo shadow edges, verify the named responsive widths and mobile Lighthouse scores, and add the exact FAQ answers to all specified surfaces. Maintain the competitor claims and their cited sources/date in `docs/CLAIMS.md`, rechecking before launch and removing claims that are no longer accurate. Do not name the competitor product, its maker or the TV programme.
 
-**Consequence:** Section 27 is queued after the current CSRF/push gate and before the M5 design brief. No section 27 UI, copy or asset changes are made until that gate is green.
+**Consequence:** The announcement correction and CSRF gate were completed and public Verify #19 passed. Section 27 is now in progress ahead of the detailed M5 screen-design brief. The earlier transient Pixel-only failure in Verify #18 had no confirmed CSRF root cause; it was fixed by waiting for CSS before axe measured the FAQ tap targets, with no security weakening.
+
+## D64 — Comparative claims evidence and recheck (resolved)
+
+**Context:** Amendment 10 requires comparative claims to have a dated basis and to be reviewed before launch.
+
+**Choice:** Record only the owner-supplied category facts in `docs/CLAIMS.md`: about £8.99 per player, a week-long chat game, up to 30 players, ages 16 and over, and UK and Ireland only. Cite Pocket Gamer and CityDays as the supplied sources, checked 12 October 2026. Do not invent source URLs or name the product, its maker or the TV programme. Recheck every claim against current sources before launch and remove any claim that is no longer true.
+
+**Consequence:** Public copy uses category-level wording and the exact owner-approved FAQ answers; unsupported competitive details stay out of marketing copy.
+
+## D65 — Dark-background Stackstone mark (resolved)
+
+**Context:** The existing standalone icon used a lower stone identical to the Charcoal background, making the mark disappear. The available dark-background outlined logo already has a contrasting lower stone and middle stone.
+
+**Choice:** Use a small, font-independent mark derived from the dark-background outlined logo's existing three fills. Keep the source logo and original icon unchanged. Test every distinct SVG colour against the Charcoal header background at a minimum 3:1 ratio.
+
+**Consequence:** No logo fill was altered; the standalone dark mark uses the artwork intended for dark backgrounds.
+
+## D66 — Lighthouse SEO versus pre-launch noindex (provisional)
+
+**Context:** Amendment 10 requires a mobile Lighthouse SEO score of at least
+95, while the standing pre-launch policy requires every real preview/build
+response to remain noindex until the owner declares launch. Lighthouse's only
+failing SEO audit on the homepage is the intentional `is-crawlable` check.
+
+**Options:** Accept a failing SEO score until launch; omit the crawlability
+audit and report a non-Lighthouse custom score; or run Lighthouse against an
+isolated launch-mode test fixture while separately verifying the real
+pre-launch build remains noindex.
+
+**Choice:** PROVISIONAL — use the isolated launch-mode fixture for Lighthouse
+SEO. It exists only in test code; the shared `PRE_LAUNCH_NOINDEX` flag,
+production build, Replit preview and Vercel headers remain unchanged and
+noindex. Ask the owner to confirm this interpretation.
+
+**Consequence:** The SEO score describes launch-ready page content, not the
+unindexable pre-launch preview. The normal production-header and robots tests
+remain mandatory; no deployment or indexing change is authorised.

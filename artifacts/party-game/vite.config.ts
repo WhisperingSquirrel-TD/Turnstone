@@ -5,7 +5,15 @@ import { defineConfig } from 'vite';
 import { noncePlugin } from './vite.security';
 import { config } from './src/config';
 import { createWebManifest } from './src/pwa-manifest';
-import { getPublicTitle, renderPublicHomeHtml, structuredPublicData } from './src/public-site-content';
+import {
+  getPublicTitle,
+  renderLlmsTxt,
+  renderPublicCompareHtml,
+  renderPublicFaqHtml,
+  renderPublicHomeHtml,
+  renderPublicStaticDocument,
+  structuredPublicData,
+} from './src/public-site-content';
 import { en } from './src/locale/en-GB';
 
 function escapeHtml(value: string): string {
@@ -24,18 +32,49 @@ if (!Number.isInteger(port) || port < 1 || port > 65535)
   throw new Error('Missing or invalid environment variable: PORT');
 if (!basePath?.startsWith('/'))
   throw new Error('Missing or invalid environment variable: BASE_PATH');
+const baseHref = basePath.endsWith('/') ? basePath : `${basePath}/`;
+
+function appRelativePath(pathname: string): string {
+  const prefix = basePath.endsWith('/') ? basePath : `${basePath}/`;
+  const withoutBase = pathname.startsWith(prefix)
+    ? `/${pathname.slice(prefix.length)}`
+    : pathname;
+  return withoutBase.replace(/\/+$/, '') || '/';
+}
+
+function pageDocument(
+  kind: 'faq' | 'compare',
+  stylesheetHrefs: readonly string[],
+  fontPreloadHrefs: readonly string[],
+): string {
+  const isFaq = kind === 'faq';
+  return renderPublicStaticDocument({
+    content: isFaq
+      ? renderPublicFaqHtml(basePath)
+      : renderPublicCompareHtml(basePath),
+    title: isFaq
+      ? `${config.appName}: ${en.publicSite.faqHeading}`
+      : `${config.appName}: ${en.publicSite.compareHeading}`,
+    description: isFaq
+      ? en.publicSite.faqDescription
+      : en.publicSite.compareDescription,
+    canonicalUrl: new URL(`/${kind}`, config.siteOrigin).href,
+    basePath,
+    stylesheetHrefs,
+    fontPreloadHrefs,
+  });
+}
 
 export default defineConfig({
   base: basePath,
   plugins: [
+    noncePlugin(),
     {
       name: 'identity-web-app-manifest',
       configureServer(server) {
         server.middlewares.use((request, response, next) => {
-          const pathname = new URL(
-            request.url ?? '/',
-            'http://vite.local',
-          ).pathname;
+          const pathname = new URL(request.url ?? '/', 'http://vite.local')
+            .pathname;
           if (!pathname.endsWith('/manifest.webmanifest')) {
             next();
             return;
@@ -54,11 +93,24 @@ export default defineConfig({
       },
     },
     {
-      name: 'prerender-public-home-and-metadata',
+      name: 'prerender-public-content-pages',
       transformIndexHtml: {
         order: 'pre',
-        handler: (html) =>
-          html
+        handler: (html, context) => {
+          const pathname = new URL(context.path, 'http://vite.local').pathname;
+          const route = appRelativePath(pathname);
+          if (route === '/faq' || route === '/compare') {
+            return pageDocument(
+              route === '/faq' ? 'faq' : 'compare',
+              [`${baseHref}src/index.css`, `${baseHref}src/public-home.css`],
+              [
+                `${baseHref}src/fonts/playfair-display-latin-400-normal.woff2`,
+                `${baseHref}src/fonts/dm-sans-latin-400-normal.woff2`,
+                `${baseHref}src/fonts/dm-sans-latin-500-normal.woff2`,
+              ],
+            );
+          }
+          return html
             .replaceAll('__PUBLIC_TITLE__', escapeHtml(getPublicTitle()))
             .replaceAll(
               '__PUBLIC_DESCRIPTION__',
@@ -69,12 +121,76 @@ export default defineConfig({
               '__PUBLIC_JSON_LD__',
               JSON.stringify(structuredPublicData()).replaceAll('<', '\\u003c'),
             )
-            .replaceAll('__PUBLIC_HOME__', renderPublicHomeHtml(basePath)),
+            .replaceAll('__PUBLIC_HOME__', renderPublicHomeHtml(basePath));
+        },
+      },
+      configureServer(server) {
+        server.middlewares.use((request, response, next) => {
+          const pathname = new URL(request.url ?? '/', 'http://vite.local')
+            .pathname;
+          const route = appRelativePath(pathname);
+          if (route === '/faq' || route === '/compare') {
+            const fontPreloadHrefs = [
+              `${baseHref}src/fonts/playfair-display-latin-400-normal.woff2`,
+              `${baseHref}src/fonts/dm-sans-latin-400-normal.woff2`,
+              `${baseHref}src/fonts/dm-sans-latin-500-normal.woff2`,
+            ];
+            const document = pageDocument(
+              route === '/faq' ? 'faq' : 'compare',
+              [`${baseHref}src/index.css`, `${baseHref}src/public-home.css`],
+              fontPreloadHrefs,
+            );
+            void server
+              .transformIndexHtml(request.url ?? route, document)
+              .then((html) => {
+                response.statusCode = 200;
+                response.setHeader('Content-Type', 'text/html; charset=utf-8');
+                response.end(html);
+              })
+              .catch(next);
+            return;
+          }
+          if (route !== '/llms.txt') {
+            next();
+            return;
+          }
+          response.statusCode = 200;
+          response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+          response.end(renderLlmsTxt());
+        });
+      },
+      generateBundle(_options, bundle) {
+        const stylesheet = Object.values(bundle).find(
+          (item) => item.type === 'asset' && item.fileName.endsWith('.css'),
+        );
+        if (!stylesheet || stylesheet.type !== 'asset') {
+          throw new Error('Expected a compiled stylesheet for public pages.');
+        }
+        const stylesheetHrefs = [`${baseHref}${stylesheet.fileName}`];
+        const fontPreloadHrefs = Object.values(bundle)
+          .filter(
+            (item) => item.type === 'asset' && item.fileName.endsWith('.woff2'),
+          )
+          .map((item) => `${baseHref}${item.fileName}`);
+        if (fontPreloadHrefs.length !== 3) {
+          throw new Error('Expected three self-hosted public font assets.');
+        }
+        for (const page of ['faq', 'compare'] as const) {
+          this.emitFile({
+            type: 'asset',
+            fileName: `${page}/index.html`,
+            source: pageDocument(page, stylesheetHrefs, fontPreloadHrefs),
+          });
+        }
+        this.emitFile({
+          type: 'asset',
+          fileName: 'llms.txt',
+          source: renderLlmsTxt(),
+        });
       },
     },
     react(),
     tailwindcss(),
-    noncePlugin(),
   ],
   html: { cspNonce: '__RESPONSE_NONCE__' },
   resolve: {

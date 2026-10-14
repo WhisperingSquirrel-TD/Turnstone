@@ -192,7 +192,7 @@ function Shell({
       >
         {en.skip}
       </a>
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4">
+      <header className="public-home-brand public-shell-header mx-auto w-full max-w-5xl">
         <a
           href={config.routes.home}
           aria-label={config.appName}
@@ -205,7 +205,7 @@ function Shell({
         </a>
         <nav
           aria-label={en.nav.label}
-          className="flex min-h-11 items-center gap-5 text-sm text-ash"
+          className={`public-home-nav text-sm text-ash ${isPlayer ? 'player-status-nav' : ''}`}
         >
           {!isPlayer && (
             <>
@@ -214,6 +214,18 @@ function Shell({
                 to={config.routes.home}
               >
                 {en.nav.home}
+              </Link>
+              <Link
+                className="underline-offset-4 hover:underline"
+                to={config.routes.faq}
+              >
+                {en.publicSite.faqHeading}
+              </Link>
+              <Link
+                className="underline-offset-4 hover:underline"
+                to={config.routes.compare}
+              >
+                {en.publicSite.compareHeading}
               </Link>
               <Link
                 className="underline-offset-4 hover:underline"
@@ -258,12 +270,25 @@ function Shell({
             </>
           )}
         </nav>
+        {!isPlayer && (
+          <details className="public-home-menu">
+            <summary>{en.nav.menu}</summary>
+            <div>
+              <Link to={config.routes.home}>{en.nav.home}</Link>
+              <Link to={config.routes.faq}>{en.publicSite.faqHeading}</Link>
+              <Link to={config.routes.compare}>
+                {en.publicSite.compareHeading}
+              </Link>
+              <Link to={config.routes.play}>{en.nav.play}</Link>
+            </div>
+          </details>
+        )}
         <a
           href={config.organisation.url}
           target={isPlayer ? '_blank' : undefined}
           rel={isPlayer ? 'noopener noreferrer' : undefined}
           aria-label={en.app.brandLink}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center"
+          className="public-home-brand-mark inline-flex min-h-11 min-w-11 items-center justify-center"
         >
           <img
             className="brand-mark-small"
@@ -320,17 +345,34 @@ function Home() {
             </h1>
             <p className="public-home-subtitle">{en.entry.subtitle}</p>
             <p className="public-home-byline">{en.entry.welcomeDescription}</p>
-            <p className="public-home-answer">
-              {en.publicSite.answer(config.appName)}
-            </p>
-            <Link
-              to={config.routes.play}
-              className="primary-action no-underline"
-            >
-              {en.publicSite.play}
-            </Link>
+            <nav className="public-home-actions" aria-label="Get started">
+              <Link
+                to={`${config.routes.play}?entry=create`}
+                className="primary-action no-underline"
+              >
+                {en.publicSite.play}
+              </Link>
+              <Link
+                to={config.routes.join}
+                className="secondary-action no-underline"
+              >
+                {en.publicSite.joinGame}
+              </Link>
+              <Link
+                to={config.routes.rehearsal}
+                className="quiet-action no-underline"
+              >
+                {en.publicSite.practiseAlone}
+              </Link>
+            </nav>
           </div>
           <HoldRoleDemo />
+        </section>
+
+        <section className="public-home-section public-home-answer-section">
+          <p className="public-home-answer">
+            {en.publicSite.answer(config.appName)}
+          </p>
         </section>
 
         <section
@@ -389,6 +431,82 @@ function Home() {
           <h2 id="public-faq-heading">{en.publicSite.faqHeading}</h2>
           <div className="public-home-faq">
             {en.publicSite.faq.map((item) => (
+              <details key={item.question}>
+                <summary>{item.question}</summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
+          </div>
+          <Link className="public-page-link" to={config.routes.faq}>
+            {en.publicSite.seeAllQuestions}
+          </Link>
+        </section>
+      </div>
+    </Shell>
+  );
+}
+
+function PublicFaq() {
+  return (
+    <Shell>
+      <div className="public-home-content">
+        <section
+          className="public-home-section"
+          aria-labelledby="public-faq-heading"
+        >
+          <h1 id="public-faq-heading">{en.publicSite.faqHeading}</h1>
+          <p className="public-home-answer">
+            {en.publicSite.answer(config.appName)}
+          </p>
+          <div className="public-home-faq">
+            {en.publicSite.faq.map((item) => (
+              <details key={item.question}>
+                <summary>{item.question}</summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      </div>
+    </Shell>
+  );
+}
+
+function PublicCompare() {
+  return (
+    <Shell>
+      <div className="public-home-content">
+        <section
+          className="public-home-section"
+          aria-labelledby="public-compare-heading"
+        >
+          <h1 id="public-compare-heading">{en.publicSite.compareHeading}</h1>
+          <p className="public-home-answer">{en.publicSite.compareIntro}</p>
+          <table className="public-comparison-table">
+            <caption>How different hidden-role game formats work</caption>
+            <thead>
+              <tr>
+                <th scope="col">Game format</th>
+                <th scope="col">What to expect</th>
+              </tr>
+            </thead>
+            <tbody>
+              {en.publicSite.comparisonCategories.map((category) => (
+                <tr key={category.name}>
+                  <th scope="row">{category.name}</th>
+                  <td>{category.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+        <section
+          className="public-home-section"
+          aria-labelledby="public-compare-faq-heading"
+        >
+          <h2 id="public-compare-faq-heading">{en.publicSite.faqHeading}</h2>
+          <div className="public-home-faq">
+            {en.publicSite.faq.slice(-3).map((item) => (
               <details key={item.question}>
                 <summary>{item.question}</summary>
                 <p>{item.answer}</p>
@@ -1253,7 +1371,10 @@ export function AppRoutes() {
         <CsrfProvider>
           <Routes>
             <Route path={config.routes.home} element={<Home />} />
+            <Route path={config.routes.faq} element={<PublicFaq />} />
+            <Route path={config.routes.compare} element={<PublicCompare />} />
             <Route path={config.routes.play} element={<Play />} />
+            <Route path={config.routes.join} element={<Play mode="join" />} />
             <Route path="/join/:gameId" element={<Play mode="join" />} />
             <Route
               path="/join-request/:requestId"

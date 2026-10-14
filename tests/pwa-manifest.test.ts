@@ -15,7 +15,7 @@ describe('installed website manifest', () => {
     expect(manifest.start_url).toBe('/party-game/');
     expect(manifest.icons).toEqual([
       expect.objectContaining({
-        src: '/party-game/brand/stackstone-icon.svg',
+        src: `/party-game/${config.appIconPath}`,
         type: 'image/svg+xml',
         purpose: 'maskable any',
       }),

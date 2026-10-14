@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { canPromote } from '../scripts/src/promotion-policy.mjs';
 import { browserPlan } from '../scripts/src/browser-plan.mjs';
 import { config } from '../artifacts/party-game/src/config';
@@ -58,6 +58,50 @@ describe('owner-approved delivery policy', () => {
     expect(settings.outputDirectory).toBe('artifacts/party-game/dist/public');
     expect(settings.buildCommand).toContain('--filter @workspace/party-game');
     expect(settings.buildCommand).not.toMatch(/api-server|run start|run dev/);
+  });
+  it('keeps the public home page initial JavaScript under 15 KB', () => {
+    const publicDirectory = new URL(
+      '../artifacts/party-game/dist/public/',
+      import.meta.url,
+    );
+    const html = readFileSync(new URL('index.html', publicDirectory), 'utf8');
+    const scripts = [...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(
+      ([, source]) => source,
+    );
+    const initialScriptBytes = scripts.reduce(
+      (total, source) =>
+        total +
+        statSync(new URL(source!.replace(/^\/+/, ''), publicDirectory)).size,
+      0,
+    );
+    expect(initialScriptBytes).toBeLessThan(15 * 1024);
+  });
+  it('keeps public home HTML, CSS, fonts and JavaScript under 200 KB before images', () => {
+    const publicDirectory = new URL(
+      '../artifacts/party-game/dist/public/',
+      import.meta.url,
+    );
+    const html = readFileSync(new URL('index.html', publicDirectory), 'utf8');
+    const assetSources = [...html.matchAll(/<(?:script|link)\b([^>]*)>/g)]
+      .filter(([, attributes]) => {
+        const isScript = /\bsrc="/.test(attributes!);
+        const isStylesheet = /\brel="stylesheet"/.test(attributes!);
+        const isFont = /\bas="font"/.test(attributes!);
+        return isScript || isStylesheet || isFont;
+      })
+      .map(
+        ([, attributes]) => /\b(?:src|href)="([^"]+)"/.exec(attributes!)?.[1],
+      )
+      .filter((source): source is string => Boolean(source));
+    const pageBytes =
+      Buffer.byteLength(html, 'utf8') +
+      assetSources.reduce(
+        (total, source) =>
+          total +
+          statSync(new URL(source.replace(/^\/+/, ''), publicDirectory)).size,
+        0,
+      );
+    expect(pageBytes).toBeLessThan(200 * 1024);
   });
   it('declares the API React client used by the production app', () => {
     const manifest = JSON.parse(
