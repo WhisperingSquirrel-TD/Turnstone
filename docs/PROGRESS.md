@@ -1,13 +1,13 @@
 # Status for reviewer
 
-- Updated: 15 October 2026, 17:29 UTC.
-- Current milestone/step: Milestone 5 — Round 4 item 4, Notes screen extraction. The screen is now a separate component with no intended behaviour change; copy, spacing and scroll fixes are a separate next step.
-- Last pushed code commit/CI: `08dbbed`; Verify run `38776169660` (#51) — Success. All required jobs passed, including six scenario shards, PostgreSQL integration, rehearsal-live, all four browser profiles, Lighthouse and audit; no failure annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38776169660. Origin and local Git config are credential-free.
-- Latest local verification: app and test type-checks, ESLint, Prettier and `git diff --check` passed. The Notes screen baseline test passed on Pixel after extraction. Full local verify was not run.
-- Push status: the behaviour-neutral Notes component extraction and its browser regression are ready to commit and push. Newly attached screenshots remain untracked and excluded. The ZIP is absent.
+- Updated: 15 October 2026, 18:23 UTC.
+- Current milestone/step: Milestone 5 — Round 4 item 4 complete locally. Notes now show one privacy sentence; Notes layout, scrolling and Traitor/Faithful geometry are covered by Pixel browser tests. Next: item 5 status lines.
+- Last pushed code commit/CI: `0f98490`; Verify run `38777976512` (#52) — Success. All 19 required checks passed, including six scenario shards, PostgreSQL integration, rehearsal-live, all four browser profiles, Lighthouse and audit; every check has zero annotations. Promote was skipped. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38777976512. Origin and local Git config are credential-free.
+- Latest local verification: app and test type-checks, ESLint, Prettier, `git diff --check`, the Notes copy/scroll/top-gap test, and the Traitor/Faithful geometry test passed on Pixel. Full local verify was not run.
+- Push status: the Notes copy/layout change is green locally and ready to commit and push; Verify #52 is green with zero annotations. Newly attached screenshots remain untracked and excluded. The ZIP is absent.
 - Open questions: none. Q1 is resolved; the launch-mode Lighthouse fixture remains test-only and real builds stay noindex. Q2 is implemented: permitted late joiners use fresh invitation links/QRs, approval and always-Faithful roles. Entry regressions distinguish the six-character shared code from each player's four-digit private PIN.
 - Provisional decisions: none.
-- Risks: Round 4 item 4's copy/layout work and items 5–18 remain; stop for reviewer check only after they are green. The Notes component extraction is a structural step only. PIN pepper/join-storm capacity remains queued after the M5 hands-on gate. The new Turnstone emblem is approved for later use, not part of the current in-game header. Future attachments remain excluded by default. The ZIP is absent from the current tree. `PRE_LAUNCH_NOINDEX` remains on. No publishing, deployment or paid service is authorised. The hosting NOW decision remains recorded in §28/D71/HOSTING.md; no further hosting code changes before M5 acceptance.
+- Risks: Round 4 items 5–18 remain; stop for reviewer check only after they are green. PIN pepper/join-storm capacity remains queued after the M5 hands-on gate. The new Turnstone emblem is approved for later use, not part of the current in-game header. Future attachments remain excluded by default. The ZIP is absent from the current tree. `PRE_LAUNCH_NOINDEX` remains on. No publishing, deployment or paid service is authorised. The hosting NOW decision remains recorded in §28/D71/HOSTING.md; no further hosting code changes before M5 acceptance.
 
 # Progress
 

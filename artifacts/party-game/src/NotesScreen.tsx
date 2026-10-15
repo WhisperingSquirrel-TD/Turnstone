@@ -26,7 +26,8 @@ export function NotesScreen({
       <p className="mt-2 text-sm text-ash">{en.game.notesPrivateIntro}</p>
       <div
         className="mt-4 whitespace-pre-wrap border-y border-stone py-3 text-sm text-ash"
-        aria-live="polite"
+        aria-live={privateView.role === 'traitor' ? 'polite' : undefined}
+        aria-hidden={privateView.role !== 'traitor'}
       >
         {privateView.role === 'traitor'
           ? privateView.chat
@@ -39,7 +40,7 @@ export function NotesScreen({
                 return author ? `${author}: ${message.text}` : message.text;
               })
               .join('\n') || en.game.notesTeamEmpty
-          : en.game.notesPrivateIntro}
+          : '\u00a0'}
       </div>
       <label className="mt-4 block text-sm text-ash">
         <span>{en.game.notesLabel}</span>

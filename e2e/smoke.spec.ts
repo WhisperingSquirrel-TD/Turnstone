@@ -188,7 +188,7 @@ test('private role is requested only during a hold and is removed on release', a
   });
 });
 
-test('notes open through the shield and preserve the current private panel', async ({
+test('notes show one privacy line without nested scrolling or excess top space', async ({
   page,
 }) => {
   let privateRequests = 0;
@@ -245,6 +245,7 @@ test('notes open through the shield and preserve the current private panel', asy
     });
   });
 
+  await page.setViewportSize({ width: 320, height: 568 });
   await page.clock.install();
   await page.goto(`/game/${gameId}`);
   await page.getByTestId('button-open-notes').click();
@@ -261,8 +262,33 @@ test('notes open through the shield and preserve the current private panel', asy
   await expect(page.getByTestId('private-notes-content')).toBeVisible();
   await expect(page.getByLabel('Write a note')).toBeVisible();
   await expect(
-    page.getByText('Only you can see these while you hold.', { exact: true }),
-  ).toHaveCount(2);
+    page.getByText('Only you can see your notes.', { exact: true }),
+  ).toHaveCount(1);
+  const notesBounds = await page
+    .getByTestId('private-notes-content')
+    .getByRole('heading')
+    .boundingBox();
+  const panelBounds = await page.locator('.private-moment-panel').boundingBox();
+  if (!notesBounds || !panelBounds) {
+    throw new Error('Notes heading or private panel has no visible bounds');
+  }
+  expect(
+    notesBounds.y - panelBounds.y,
+    'notes should start near the top of the private panel',
+  ).toBeLessThanOrEqual(40);
+  const nestedScrollAreas = await page
+    .getByTestId('private-notes-content')
+    .evaluate((root) => {
+      const nodes = [root, ...Array.from(root.querySelectorAll('*'))].filter(
+        (node) => !(node instanceof HTMLTextAreaElement),
+      );
+      return nodes.filter((node) => {
+        const style = getComputedStyle(node);
+        const scrollableOverflow = ['auto', 'scroll'].includes(style.overflowY);
+        return scrollableOverflow && node.scrollHeight > node.clientHeight + 1;
+      }).length;
+    });
+  expect(nestedScrollAreas).toBe(0);
   expect(privateRequests).toBe(1);
 });
 

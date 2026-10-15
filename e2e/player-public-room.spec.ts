@@ -252,6 +252,9 @@ async function revealNotes(
   const notes = page.getByTestId('private-notes-content');
   await expect(notes).toBeVisible({ timeout: 1500 });
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
+  await expect(
+    notes.getByText('Only you can see your notes.', { exact: true }),
+  ).toHaveCount(1);
   await page.evaluate(async () => {
     await document.fonts.ready;
   });

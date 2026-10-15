@@ -418,7 +418,7 @@ export const en = {
     noPublicUpdates: 'No public updates yet.',
     notesButton: 'Notes',
     notesHeading: 'Notes',
-    notesPrivateIntro: 'Only you can see these while you hold.',
+    notesPrivateIntro: 'Only you can see your notes.',
     notesTeamEmpty: 'No team messages yet.',
     notesLabel: 'Write a note',
     notesPlaceholder: 'Add a private note',
