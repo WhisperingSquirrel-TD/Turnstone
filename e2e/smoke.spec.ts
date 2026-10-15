@@ -188,6 +188,84 @@ test('private role is requested only during a hold and is removed on release', a
   });
 });
 
+test('notes open through the shield and preserve the current private panel', async ({
+  page,
+}) => {
+  let privateRequests = 0;
+  const gameId = 'notes-screen-baseline';
+  const publicView: FullView = {
+    id: gameId,
+    viewerSeatId: 'human-seat',
+    canAdvancePhase: false,
+    version: 1,
+    phase: 'DEBATE',
+    paused: false,
+    deadline: null,
+    coordinatorPlays: true,
+    cycle: 1,
+    revote: false,
+    shadowRound: 0,
+    missionsEnabled: false,
+    rehearsal: false,
+    pot: 0,
+    unit: 'points',
+    seats: [{ id: 'human-seat', name: 'Morgan', status: 'alive' }],
+    commitment: null,
+    progress: { done: 0, total: 1 },
+    voteCandidates: [],
+    ballots: {},
+    winner: null,
+    publicAnnouncement: null,
+    private: null,
+    publicLog: [],
+    coordinatorAlerts: [],
+    fairness: null,
+  };
+
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      status: 200,
+      headers: {
+        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+      },
+      json: { csrfToken: 'test-csrf' },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({ status: 200, json: { version: 1, view: publicView } }),
+  );
+  await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
+    privateRequests += 1;
+    await route.fulfill({
+      status: 200,
+      json: {
+        version: 1,
+        view: { ...publicView, private: { role: 'faithful' } },
+      },
+    });
+  });
+
+  await page.clock.install();
+  await page.goto(`/game/${gameId}`);
+  await page.getByTestId('button-open-notes').click();
+
+  const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
+  const shieldButton = shieldDialog.getByRole('button', {
+    name: /ready in|shielded/i,
+  });
+  await expect(shieldButton).toHaveText('Ready in 3');
+  await page.clock.fastForward(3000);
+  await expect(shieldButton).toHaveText('I’m shielded');
+  await shieldButton.click();
+
+  await expect(page.getByTestId('private-notes-content')).toBeVisible();
+  await expect(page.getByLabel('Write a note')).toBeVisible();
+  await expect(
+    page.getByText('Only you can see these while you hold.', { exact: true }),
+  ).toHaveCount(2);
+  expect(privateRequests).toBe(1);
+});
+
 test('entry welcome title and actions stay high in a short desktop viewport', async ({
   page,
 }, testInfo) => {
