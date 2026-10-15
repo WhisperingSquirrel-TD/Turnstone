@@ -347,6 +347,9 @@ test('phone room shows public game state without a presenter', async ({
     'data-phase',
     'DEBATE',
   );
+  await expect(
+    page.getByRole('heading', { name: 'Your room', exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByText(/players have completed this part/)).toHaveCount(
     0,
   );

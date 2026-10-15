@@ -1920,7 +1920,6 @@ function PlayerGame() {
 
             {!inPrivateMoment && (
               <div className="mt-12 border-t border-stone pt-6">
-                <h2 className="display text-2xl">{en.game.roomHeading}</h2>
                 {!full.rehearsal && activeGame && (
                   <Link
                     className="quiet-action my-3 inline-flex min-h-11 items-center"

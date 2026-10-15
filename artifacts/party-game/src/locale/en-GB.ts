@@ -395,7 +395,6 @@ export const en = {
     },
     secondsRemaining: (seconds: number) => `${seconds} seconds remaining`,
     timeLeft: 'Time left',
-    roomHeading: 'Your room',
     potSummary: (players: number, unit: string, pot: number) =>
       `${players} players in this game · ${unit} at stake: ${pot}`,
     prizePotLabel: 'Prize pot',
