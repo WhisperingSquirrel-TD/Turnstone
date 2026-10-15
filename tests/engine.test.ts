@@ -184,6 +184,30 @@ describe('Milestone 1 deterministic engine', () => {
       ),
     ).toMatchObject({ ok: false, code: 'RESERVED_NAME' });
   });
+  it('allows reserved names for configured rehearsal bot seats', () => {
+    const game = fixture(
+      5,
+      {
+        rehearsal: {
+          enabled: true,
+          botSeatIds: ['configured-bot', 'bot-2', 'bot-3', 'bot-4'],
+        },
+      },
+      0,
+    );
+    expect(
+      command(
+        game,
+        {
+          type: 'JoinGame',
+          seatId: 'configured-bot',
+          name: 'Practice player 1',
+        },
+        false,
+        { kind: 'player', seatId: 'configured-bot' },
+      ),
+    ).toMatchObject({ ok: true });
+  });
   it('acknowledges the deal and permits one anonymously announced redeal before shadow', () => {
     const game = fixture(5);
     command(game, { type: 'StartGame' });

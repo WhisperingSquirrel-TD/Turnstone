@@ -296,7 +296,11 @@ export function decide(
       if (!joiningWindowOpen(state)) return error('LOBBY_CLOSED');
       if (state.seats.some((seat) => seat.id === cmd.seatId))
         return error('DUPLICATE_SEAT');
-      if (isReservedPracticeName(cmd.name)) return error('RESERVED_NAME');
+      const configuredRehearsalBot =
+        state.config.rehearsal.enabled &&
+        state.config.rehearsal.botSeatIds.includes(cmd.seatId);
+      if (isReservedPracticeName(cmd.name) && !configuredRehearsalBot)
+        return error('RESERVED_NAME');
       const normalizedName = normalizeSeatName(cmd.name);
       if (
         state.seats.some(
