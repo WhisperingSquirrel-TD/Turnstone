@@ -50,6 +50,9 @@ test('entry distinguishes the shared game code from both players personal four-d
       json: { csrfToken: 'c'.repeat(64) },
     }),
   );
+  await page.route('**/api/join/name-check', (route) =>
+    route.fulfill({ json: { status: 'available' } }),
+  );
   await page.goto('/play');
   await page.getByRole('button', { name: 'Join a game', exact: true }).click();
   await expect(
