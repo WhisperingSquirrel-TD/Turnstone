@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
 import { canPromote } from '../scripts/src/promotion-policy.mjs';
 import { browserPlan } from '../scripts/src/browser-plan.mjs';
@@ -294,6 +295,35 @@ describe('owner-approved delivery policy', () => {
 
     const requiredChecks = workflow.split('\n  required-checks:\n')[1] ?? '';
     expect(requiredChecks).toContain('      - rehearsal-live');
+  });
+
+  it('lists mock browser tests without requiring a database URL', () => {
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      CI: 'true',
+    };
+    delete env.DATABASE_URL;
+    const result = spawnSync(
+      'pnpm',
+      [
+        'exec',
+        'playwright',
+        'test',
+        '--config=playwright.config.ts',
+        '--project=Pixel',
+        '--grep-invert',
+        '@rehearsal-live',
+        '--list',
+      ],
+      { encoding: 'utf8', env, timeout: 15_000 },
+    );
+    const output = `${result.stdout}\n${result.stderr}`;
+
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(output).toContain('Listing tests:');
+    expect(output).not.toContain('DATABASE_URL must be set');
+    expect(output).not.toContain('rehearsal-live.spec.ts');
   });
 
   it('uses Node 24-compatible pinned artifact actions in CI', () => {

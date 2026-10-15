@@ -1,6 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
 import { sql } from 'drizzle-orm';
-import { db, pool } from '@workspace/db';
 
 type Phase =
   | 'DRAFT'
@@ -313,6 +312,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
   page,
 }) => {
   test.setTimeout(90_000);
+  const { db } = await import('@workspace/db');
   let gameId: string | undefined;
   let playerRole: 'Traitor' | 'Faithful' | undefined;
   let gameDocumentLoads = 0;
@@ -579,5 +579,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
 });
 
 test.afterAll(async () => {
+  if (!process.env.DATABASE_URL) return;
+  const { pool } = await import('@workspace/db');
   await pool.end();
 });

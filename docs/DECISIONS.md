@@ -1051,5 +1051,22 @@ Include this job in the required-check aggregator.
 
 **Consequence:** The four browser profiles remain independent smoke checks,
 and the complete rehearsal remains covered end-to-end against the real
-server. The new workflow is locally tested; GitHub Verify after the fix is
-still required before the owner retries the phone flow.
+server.
+
+**Verify #26 follow-up:** All four browser profiles still failed after the
+rehearsal test was excluded. The public annotations were generic; the
+connected GitHub job logs showed that Playwright imports every test module
+before applying `--grep-invert`. The rehearsal test's top-level
+`@workspace/db` import therefore threw because the smoke jobs have no
+`DATABASE_URL`, even though that test was filtered out. The dedicated live
+rehearsal job and all other suites passed.
+
+**Choice:** Keep the mock browser jobs database-free. Import `db` only inside
+the live rehearsal test, and import and close `pool` only when that test's
+database configuration is present. Add a regression that lists the Pixel
+smoke suite with `DATABASE_URL` removed.
+
+**Consequence:** The browser suite can load and filter the real-server test
+without opening a database connection or provisioning PostgreSQL in every
+profile. Full local verification and a new GitHub Verify run are still
+required before the owner retries the phone flow.
