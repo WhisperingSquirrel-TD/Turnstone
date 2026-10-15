@@ -858,7 +858,7 @@ for (const role of ['faithful', 'traitor'] as const) {
   );
 }
 
-test('private choice names are shuffled per seat, not in roster order', async ({
+test('private choice names, including banishment votes, are shuffled per seat', async ({
   page,
   browser,
 }) => {
@@ -887,10 +887,11 @@ test('private choice names are shuffled per seat, not in roster order', async ({
     targetPage: Page,
     gameId: string,
     viewerSeatId: string,
+    phase: 'SHADOW' | 'VOTE' = 'SHADOW',
   ) => {
     const publicView = {
       ...createPublicView(gameId),
-      phase: 'SHADOW',
+      phase,
       viewerSeatId,
       seats: roster.map((seat) => ({ ...seat })),
     } as FullView;
@@ -967,6 +968,26 @@ test('private choice names are shuffled per seat, not in roster order', async ({
     expect(morganOrder).not.toEqual(jamieOrder);
     expect(isCanonicalRotation(morganOrder)).toBe(false);
     expect(isCanonicalRotation(jamieOrder)).toBe(false);
+
+    const [morganVoteOrder, jamieVoteOrder] = await Promise.all([
+      configureTraitorPage(page, 'vote-order-game', 'seat-morgan', 'VOTE'),
+      configureTraitorPage(otherPage, 'vote-order-game', 'seat-jamie', 'VOTE'),
+    ]);
+    const morganCommonVotes = morganVoteOrder.filter((name) =>
+      canonicalOptions.includes(name),
+    );
+    const jamieCommonVotes = jamieVoteOrder.filter((name) =>
+      canonicalOptions.includes(name),
+    );
+    expect(morganCommonVotes.slice().sort()).toEqual(
+      canonicalOptions.slice().sort(),
+    );
+    expect(jamieCommonVotes.slice().sort()).toEqual(
+      canonicalOptions.slice().sort(),
+    );
+    expect(morganCommonVotes).not.toEqual(jamieCommonVotes);
+    expect(isCanonicalRotation(morganCommonVotes)).toBe(false);
+    expect(isCanonicalRotation(jamieCommonVotes)).toBe(false);
   } finally {
     await otherPage.close();
   }

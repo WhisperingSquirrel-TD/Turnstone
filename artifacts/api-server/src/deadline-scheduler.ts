@@ -56,7 +56,6 @@ async function advanceDeadline(
   const state = await loadState(claim.gameId);
   if (
     !state ||
-    state.config.rehearsal.enabled ||
     state.version !== claim.version ||
     state.deadline !== claim.dueAt
   ) {

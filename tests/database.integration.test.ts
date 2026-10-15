@@ -49,6 +49,11 @@ import {
   revokeSeatViewerSessions,
 } from '../lib/db/src/seat-access-store';
 import { findCoordinatorSession } from '../lib/db/src/coordinator-access-store';
+import {
+  advance as advanceFixture,
+  command as applyFixtureCommand,
+  fixture as createFixture,
+} from './support/engine';
 
 type AppRequest = Parameters<
   NonNullable<NonNullable<Parameters<typeof createApp>[1]>['resolveViewer']>
@@ -1193,6 +1198,70 @@ it('advances an overdue phase from PostgreSQL and remains correct across repeate
   }
 });
 
+it('automatically advances an expired rehearsal voting phase and publishes it', async () => {
+  const gameId = randomUUID();
+  const game = createFixture(6, {
+    rehearsal: {
+      enabled: true,
+      botSeatIds: ['s1', 's2', 's3', 's4', 's5'],
+      speed: 'fast',
+    },
+  });
+  game.context.now = Math.max(Date.now() + 24 * 60 * 60_000, 1_800_000_001_000);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  advanceFixture(game, 'VOTE');
+  const events = [
+    eventSchema.parse({ ...game.events[0], id: gameId }),
+    ...game.events.slice(1),
+  ];
+  const before = replay(events);
+  if (before.phase !== 'VOTE' || before.deadline === null) {
+    throw new Error('Expected the rehearsal fixture to be in a timed vote.');
+  }
+
+  const published: string[] = [];
+  const processed: string[] = [];
+  const dueAt = before.deadline;
+
+  try {
+    await createGameWithEvent({
+      event: events[0]!,
+      actorId: 'coordinator:rehearsal-deadline',
+      idempotencyKey: 'rehearsal-deadline-create',
+      requestHash: 'rehearsal-deadline-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:rehearsal-deadline',
+      idempotencyKey: 'rehearsal-deadline-events',
+      requestHash: 'rehearsal-deadline-events',
+      events: events.slice(1),
+      deadline: { kind: before.phase, dueAt },
+    });
+
+    await createDeadlineScheduler({
+      now: () => dueAt + 1,
+      publishGame: async (id) => {
+        published.push(id);
+      },
+      processRehearsalGame: async (id) => {
+        processed.push(id);
+      },
+    }).runOnce();
+
+    const after = replay(await readGameEvents(gameId));
+    expect(after.version).toBeGreaterThan(before.version);
+    expect(after.phase).toBe('VOTE');
+    expect(after.revote).toBe(true);
+    expect(after.deadline).toBeGreaterThan(dueAt);
+    expect(published).toContain(gameId);
+    expect(processed).toContain(gameId);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
 it('starts and stops the durable deadline poller idempotently', async () => {
   const errors: string[] = [];
   const scheduler = createDeadlineScheduler({
@@ -1624,31 +1693,12 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
       now = Math.max(now, current.deadline ?? now);
       await scheduler.runOnce();
       const afterDeadline = await currentGame();
-      expect(afterDeadline.phase).toBe(current.phase);
+      expect(afterDeadline.version).toBeGreaterThan(current.version);
       const readyView = await request(app)
         .get(`/api/games/${gameId}/view`)
         .set('Cookie', cookie);
       expect(readyView.status).toBe(200);
-      if (readyView.body.view.canAdvancePhase) {
-        const advanced = await request(app)
-          .post(`/api/games/${gameId}/commands`)
-          .set('Cookie', shieldedCookie)
-          .set('X-CSRF-Token', csrfToken)
-          .send({
-            type: 'AdvancePhase',
-            expectedVersion: readyView.body.version,
-            idempotencyKey: randomUUID(),
-          });
-        expect(
-          advanced.status,
-          JSON.stringify({
-            phase: afterDeadline.phase,
-            version: readyView.body.version,
-            error: advanced.body.error,
-          }),
-        ).toBe(200);
-        await botRunner.processGame(gameId);
-      }
+      expect(readyView.body.view.version).toBe(afterDeadline.version);
     }
     const finished = await currentGame();
     expect(finished.phase, JSON.stringify(progress.slice(-10))).toBe(
