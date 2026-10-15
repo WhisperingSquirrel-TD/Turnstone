@@ -32,6 +32,8 @@ async function latestServerPhase(
   phase: string;
   version: number;
   progress: { done: number; total: number };
+  viewerSeatId?: string;
+  seats: { id: string; name: string; status: string }[];
 }> {
   return page.evaluate(
     async ({ id }) => {
@@ -47,6 +49,8 @@ async function latestServerPhase(
           phase: string;
           version: number;
           progress: { done: number; total: number };
+          viewerSeatId?: string;
+          seats: { id: string; name: string; status: string }[];
         };
       };
       return payload.view;
@@ -129,10 +133,32 @@ async function revealDealRole(page: Page): Promise<'Traitor' | 'Faithful'> {
 
 async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
   const choiceList = page.getByTestId('private-choice-list');
-  if (!(await choiceList.isVisible().catch(() => false))) return;
+  await expect(choiceList).toBeVisible();
   const phaseBeforeChoice = await currentPhase(page);
   const choices = choiceList.getByRole('button');
-  const choiceCount = await choices.count();
+  if (['VOTE', 'FINAL_BANISH', 'SHADOW'].includes(phaseBeforeChoice)) {
+    const roster = await latestServerPhase(page, gameId);
+    expect(roster.phase).toBe(phaseBeforeChoice);
+    expect(roster.viewerSeatId).toBeTruthy();
+    const eligibleNames = roster.seats
+      .filter(
+        (seat) => seat.status === 'alive' && seat.id !== roster.viewerSeatId,
+      )
+      .map((seat) => seat.name);
+    const displayedNames = await choices.allTextContents();
+    expect(displayedNames.length).toBeGreaterThan(0);
+    expect(new Set(displayedNames).size).toBe(displayedNames.length);
+    for (const name of displayedNames) {
+      expect(eligibleNames).toContain(name.trim());
+    }
+    for (const seat of roster.seats.filter(
+      (seat) => seat.id === roster.viewerSeatId || seat.status !== 'alive',
+    )) {
+      await expect(
+        choiceList.getByRole('button', { name: seat.name, exact: true }),
+      ).toHaveCount(0);
+    }
+  }
   const commandStatuses: number[] = [];
   const recordCommandStatus = (response: {
     url(): string;
@@ -149,84 +175,39 @@ async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
   page.on('response', recordCommandStatus);
 
   try {
-    for (let index = 0; index < choiceCount; index += 1) {
-      if ((await currentPhase(page)) !== phaseBeforeChoice) return;
-      const choice = choices.nth(index);
-      if (!(await choice.isVisible().catch(() => false))) return;
-      await choice.click({ timeout: 5_000 });
-      await page
-        .getByRole('button', { name: 'Review this choice' })
-        .click({ timeout: 5_000 });
-      await page
-        .getByRole('button', { name: 'Confirm', exact: true })
-        .click({ timeout: 5_000 });
+    await choices.first().click({ timeout: 5_000 });
+    await page
+      .getByRole('button', { name: 'Review this choice' })
+      .click({ timeout: 5_000 });
+    await page
+      .getByRole('button', { name: 'Confirm', exact: true })
+      .click({ timeout: 5_000 });
 
-      const waiting = page.getByTestId('waiting-for-everyone');
-      const rejected = page.getByText('Please choose someone else.', {
-        exact: true,
-      });
-      const deadline = Date.now() + 5_000;
-      while (Date.now() < deadline) {
-        if ((await currentPhase(page)) !== phaseBeforeChoice) return;
-        if (await waiting.isVisible().catch(() => false)) return;
-        if (await rejected.isVisible().catch(() => false)) break;
-        await page.waitForTimeout(100);
-      }
-      if (!(await rejected.isVisible().catch(() => false))) {
-        const latest = await latestServerPhase(page, gameId);
-        const waitingVisible = await waiting.isVisible().catch(() => false);
-        const rejectedVisible = await rejected.isVisible().catch(() => false);
-        const choicesVisible = await choiceList.isVisible().catch(() => false);
-        const reviewVisible = await page
-          .getByRole('button', { name: 'Review this choice' })
-          .isVisible()
-          .catch(() => false);
-        const confirmVisible = await page
-          .getByRole('button', { name: 'Confirm', exact: true })
-          .isVisible()
-          .catch(() => false);
-        const restoreVisible = await page
-          .getByRole('button', {
-            name: 'Tap to see your private screen again',
-          })
-          .isVisible()
-          .catch(() => false);
-        const content = page.getByTestId('private-choice-content');
-        const contentCount = await content.count();
-        const contentVisible = await content.isVisible().catch(() => false);
-        const privateText = await content.innerText().catch(() => '');
-        const descendantTags = await content
-          .evaluate((element) =>
-            Array.from(element.querySelectorAll('*'))
-              .map((child) => child.tagName)
-              .join(','),
-          )
-          .catch(() => 'unavailable');
-        const hasWaitingCopy = privateText.includes(
-          'Thanks. Waiting for everyone.',
-        );
-        const hasChoicePrompt = /vote|banish|suspect|final decision/i.test(
-          privateText,
-        );
-        const hasLoadingCopy = privateText.includes(
-          'Opening your private screen',
-        );
-        const dialogOpen = await page
-          .locator('dialog')
-          .evaluate((dialog) => (dialog as HTMLDialogElement).open)
-          .catch(() => false);
+    const waiting = page.getByTestId('waiting-for-everyone');
+    const rejected = page.getByText('Please choose someone else.', {
+      exact: true,
+    });
+    const deadline = Date.now() + 5_000;
+    while (Date.now() < deadline) {
+      if (
+        (await rejected.isVisible().catch(() => false)) ||
+        commandStatuses.some((status) => status >= 400)
+      ) {
         throw new Error(
-          `${phaseBeforeChoice} choice had no visible result (HTTP ${commandStatuses.join(', ') || 'none'}, server ${latest.phase} v${latest.version} progress ${latest.progress.done}/${latest.progress.total}, waiting ${waitingVisible}/${hasWaitingCopy}, rejected ${rejectedVisible}, choices ${choicesVisible}, review ${reviewVisible}, confirm ${confirmVisible}, restore ${restoreVisible}, prompt ${hasChoicePrompt}, loading ${hasLoadingCopy}, content ${contentCount}/${contentVisible} [${descendantTags}], dialog ${dialogOpen}).`,
+          `${phaseBeforeChoice} rejected the selected eligible choice (HTTP ${commandStatuses.join(', ') || 'none'}); the test does not retry another name.`,
         );
       }
+      if (await waiting.isVisible().catch(() => false)) return;
+      if ((await currentPhase(page)) !== phaseBeforeChoice) return;
+      await page.waitForTimeout(100);
     }
+    const latest = await latestServerPhase(page, gameId);
+    throw new Error(
+      `${phaseBeforeChoice} choice had no visible result (HTTP ${commandStatuses.join(', ') || 'none'}, server ${latest.phase} v${latest.version} progress ${latest.progress.done}/${latest.progress.total}).`,
+    );
   } finally {
     page.off('response', recordCommandStatus);
   }
-
-  throw new Error(
-    `No ${phaseBeforeChoice} choice was accepted (HTTP ${commandStatuses.join(', ') || 'none'}).`,
-  );
 }
 
 async function advanceIfStillOn(

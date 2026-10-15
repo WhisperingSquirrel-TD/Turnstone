@@ -1113,8 +1113,13 @@ its always-Faithful rule. Commit and push each green fix, then read its GitHub
 Verify results before the next fix.
 
 **Consequence:** The finished-role correction has a red/green full-rehearsal
-test against the real server with no presenter and no manual refresh. The
-choice-list, invite-performance and late-join corrections remain next in order.
+test against the real server with no presenter and no manual refresh, and Verify
+#29 passed all 19 jobs without annotations. The strengthened live test now checks
+every displayed vote/night list against the public roster and fails on refusal,
+without retrying other names. A separate named screen test covers the legitimate
+Jamie (fellow Traitor) refusal followed by Sam (Faithful); the six focused
+Pixel/desktop tests and the strengthened real-server rehearsal pass. Invite
+performance and the fresh late-join route remain next in order.
 These rulings do not authorise deployment or relax visitor/private-state
 allow-lists.
 

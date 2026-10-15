@@ -398,98 +398,160 @@ test('banishment voting is a shield-free tap flow and excludes self and out seat
   ).toBeVisible();
 });
 
-test('shadow choices appear after shielding without a hold and complete privately', async ({
-  page,
-}) => {
-  const gameId = 'shadow-choice';
-  const publicView = {
-    ...createPublicView(gameId),
-    phase: 'SHADOW',
-  } as FullView;
-  let privateRequests = 0;
-  const submittedCommands: unknown[] = [];
-  await page.route('**/api/csrf', (route) =>
-    route.fulfill({
-      status: 200,
-      headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
-      },
-      json: { csrfToken: 'test-csrf' },
-    }),
-  );
-  await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
-  );
-  await page.route(`**/api/games/${gameId}/commands`, async (route) => {
-    submittedCommands.push(route.request().postDataJSON());
-    await route.fulfill({
-      status: 200,
-      json: { version: 13, view: publicView },
-    });
-  });
-  await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
-    privateRequests += 1;
-    await route.fulfill({
-      status: 200,
-      json: {
-        version: 12,
-        view: {
-          ...publicView,
-          private: {
-            role: 'faithful',
-            team: [],
-            options: [{ id: 'seat-jamie', name: 'Jamie' }],
-            choices: {},
-            chat: [],
-            task: null,
-            minimumDurationMs: 5000,
+for (const role of ['faithful', 'traitor'] as const) {
+  test(
+    role === 'traitor'
+      ? 'shadow explicitly refuses fellow Traitor Jamie, then accepts Faithful Sam'
+      : 'shadow choices appear after shielding without a hold and complete privately',
+    async ({ page }) => {
+      const gameId = 'shadow-choice';
+      const publicView = {
+        ...createPublicView(gameId),
+        phase: 'SHADOW',
+        progress: { done: 0, total: 3 },
+      } as FullView;
+      publicView.seats.push({ id: 'seat-sam', name: 'Sam', status: 'alive' });
+      let privateRequests = 0;
+      const submittedCommands: unknown[] = [];
+      await page.route('**/api/csrf', (route) =>
+        route.fulfill({
+          status: 200,
+          headers: {
+            'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
           },
-        },
-      },
-    });
-  });
-
-  const viewResponse = page.waitForResponse(
-    (response) =>
-      response.url().includes(`/api/games/${gameId}/view`) &&
-      response.status() === 200,
-  );
-  await page.goto(`/game/${gameId}`);
-  await viewResponse;
-  const shieldConfirmation = page
-    .locator('dialog.privacy-shield')
-    .getByRole('button', { name: /i’m shielded/i });
-  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
-    timeout: 6500,
-  });
-  await shieldConfirmation.click();
-  await expect.poll(() => privateRequests).toBe(1);
-  await expect(page.getByTestId('private-choice-content')).toBeVisible();
-  await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
-  await expect(
-    page.getByText('Who do you suspect most right now?', { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('button', { name: 'Morgan', exact: true }),
-  ).toHaveCount(0);
-  await page.getByRole('button', { name: 'Jamie', exact: true }).click();
-  await page.getByRole('button', { name: 'Review this choice' }).click();
-  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
-  await expect
-    .poll(() => submittedCommands)
-    .toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          type: 'SubmitShadowChoice',
-          choice: 'seat-jamie',
+          json: { csrfToken: 'test-csrf' },
         }),
-        expect.objectContaining({ type: 'AcknowledgePrivate' }),
-      ]),
-    );
-  await expect(
-    page.getByText('Thanks. Waiting for everyone.', { exact: true }),
-  ).toBeVisible();
-});
+      );
+      await page.route(`**/api/games/${gameId}/view`, (route) =>
+        route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
+      );
+      await page.route(`**/api/games/${gameId}/commands`, async (route) => {
+        const command = route.request().postDataJSON();
+        submittedCommands.push(command);
+        if (
+          role === 'traitor' &&
+          command.type === 'SubmitShadowChoice' &&
+          command.choice === 'seat-jamie'
+        ) {
+          await route.fulfill({
+            status: 409,
+            json: { error: 'Command rejected' },
+          });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          json: { version: 13, view: publicView },
+        });
+      });
+      await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
+        privateRequests += 1;
+        await route.fulfill({
+          status: 200,
+          json: {
+            version: 12,
+            view: {
+              ...publicView,
+              private: {
+                role,
+                team:
+                  role === 'traitor'
+                    ? [
+                        { id: 'seat-morgan', name: 'Morgan', role: 'traitor' },
+                        { id: 'seat-jamie', name: 'Jamie', role: 'traitor' },
+                      ]
+                    : [],
+                options: [
+                  { id: 'seat-jamie', name: 'Jamie' },
+                  { id: 'seat-sam', name: 'Sam' },
+                ],
+                choices: {},
+                chat: [],
+                task: null,
+                minimumDurationMs: 5000,
+              },
+            },
+          },
+        });
+      });
+
+      const viewResponse = page.waitForResponse(
+        (response) =>
+          response.url().includes(`/api/games/${gameId}/view`) &&
+          response.status() === 200,
+      );
+      await page.goto(`/game/${gameId}`);
+      await viewResponse;
+      const shieldConfirmation = page
+        .locator('dialog.privacy-shield')
+        .getByRole('button', { name: /i’m shielded/i });
+      await expect(shieldConfirmation).toHaveAttribute(
+        'aria-disabled',
+        'false',
+        {
+          timeout: 6500,
+        },
+      );
+      await shieldConfirmation.click();
+      await expect.poll(() => privateRequests).toBe(1);
+      await expect(page.getByTestId('private-choice-content')).toBeVisible();
+      await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
+      await expect(
+        page.getByText(
+          role === 'traitor'
+            ? 'Who will the Traitors take tonight?'
+            : 'Who do you suspect most right now?',
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Morgan', exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('button', { name: 'Alex', exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole('button', { name: 'Jamie', exact: true }),
+      ).toBeEnabled();
+      await page.getByRole('button', { name: 'Jamie', exact: true }).click();
+      await page.getByRole('button', { name: 'Review this choice' }).click();
+      await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+      if (role === 'traitor') {
+        await expect(
+          page.getByText('Please choose someone else.', { exact: true }),
+        ).toBeVisible();
+        await expect(page.getByTestId('waiting-for-everyone')).toHaveCount(0);
+        expect(submittedCommands).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              type: 'SubmitShadowChoice',
+              choice: 'seat-jamie',
+            }),
+          ]),
+        );
+        await page.getByRole('button', { name: 'Sam', exact: true }).click();
+        await page.getByRole('button', { name: 'Review this choice' }).click();
+        await page
+          .getByRole('button', { name: 'Confirm', exact: true })
+          .click();
+      }
+      await expect
+        .poll(() => submittedCommands)
+        .toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              type: 'SubmitShadowChoice',
+              choice: role === 'traitor' ? 'seat-sam' : 'seat-jamie',
+            }),
+            expect.objectContaining({ type: 'AcknowledgePrivate' }),
+          ]),
+        );
+      await expect(
+        page.getByText('Thanks. Waiting for everyone.', { exact: true }),
+      ).toBeVisible();
+    },
+  );
+}
 
 test('Notes have the same geometry and colours for Traitor and Faithful', async ({
   page,

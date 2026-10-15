@@ -4,3 +4,4 @@
 - [Scenario RNG isolation](scenario-rng-isolation.md) — keep bot and engine random streams separate so captured full-game traces replay through the server.
 - [Deadline test clock isolation](deadline-test-clock-isolation.md) — DB-backed tests must keep fake deadlines ahead of the live managed scheduler's wall clock.
 - [Vite dev optimizer reload](vite-dev-optimizer.md) — prebundle lazy-route deps; reference transitive deps through their linked workspace parent under pnpm.
+- [Git trace suppression](git-trace-suppression.md) — unset GIT_CURL_VERBOSE; setting it to 0 still enables HTTP diagnostics.
