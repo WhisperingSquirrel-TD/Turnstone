@@ -12,7 +12,7 @@ test('home and play are accessible, reloadable and responsive', async ({
   );
   await expect(page.getByRole('main')).toBeVisible();
   await expect(page.getByRole('contentinfo')).toContainText(
-    'A Stackstone game',
+    'made by Stackstone Consulting',
   );
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   const firstFaqQuestion = page.locator('.public-home-faq summary').first();

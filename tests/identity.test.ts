@@ -15,7 +15,7 @@ describe('single-source owner identity', () => {
     expect(config.tagline).toBe(
       `${config.appName}: the traitor game where everyone plays.`,
     );
-    expect(config.byline).toBe('A Stackstone game');
+    expect(config.byline).toBe('made by Stackstone Consulting');
     expect(config.organisation).toEqual({
       name: config.builder,
       url: 'https://stackstoneconsulting.co.uk/',
