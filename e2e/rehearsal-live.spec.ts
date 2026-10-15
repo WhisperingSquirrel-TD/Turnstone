@@ -157,8 +157,13 @@ async function revealDealRole(page: Page): Promise<'Traitor' | 'Faithful'> {
 }
 
 async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
+  await handleShield(page, gameId);
+  const seal = page.getByTestId('button-hold-reveal');
+  await expect(seal).toBeVisible();
+  await seal.focus();
+  await page.keyboard.down('Space');
   const choiceList = page.getByTestId('private-choice-list');
-  await expect(choiceList).toBeVisible();
+  await expect(choiceList).toBeVisible({ timeout: 5_000 });
   const phaseBeforeChoice = await currentPhase(page);
   const choices = choiceList.getByRole('button');
   if (['VOTE', 'FINAL_BANISH', 'SHADOW'].includes(phaseBeforeChoice)) {
@@ -200,13 +205,15 @@ async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
   page.on('response', recordCommandStatus);
 
   try {
-    await choices.first().click({ timeout: 5_000 });
+    await choices
+      .first()
+      .evaluate((choice: HTMLButtonElement) => choice.click());
     await page
       .getByRole('button', { name: 'Review this choice' })
-      .click({ timeout: 5_000 });
+      .evaluate((button: HTMLButtonElement) => button.click());
     await page
       .getByRole('button', { name: 'Confirm', exact: true })
-      .click({ timeout: 5_000 });
+      .evaluate((button: HTMLButtonElement) => button.click());
 
     const waiting = page.getByTestId('waiting-for-everyone');
     const rejected = page.getByText('Please choose someone else.', {
@@ -231,6 +238,7 @@ async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
       `${phaseBeforeChoice} choice had no visible result (HTTP ${commandStatuses.join(', ') || 'none'}, server ${latest.phase} v${latest.version} progress ${latest.progress.done}/${latest.progress.total}).`,
     );
   } finally {
+    await page.keyboard.up('Space');
     page.off('response', recordCommandStatus);
   }
 }

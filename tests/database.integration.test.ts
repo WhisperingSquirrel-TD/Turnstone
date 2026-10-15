@@ -1623,6 +1623,32 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
       expect(current.deadline).not.toBeNull();
       now = Math.max(now, current.deadline ?? now);
       await scheduler.runOnce();
+      const afterDeadline = await currentGame();
+      expect(afterDeadline.phase).toBe(current.phase);
+      const readyView = await request(app)
+        .get(`/api/games/${gameId}/view`)
+        .set('Cookie', cookie);
+      expect(readyView.status).toBe(200);
+      if (readyView.body.view.canAdvancePhase) {
+        const advanced = await request(app)
+          .post(`/api/games/${gameId}/commands`)
+          .set('Cookie', shieldedCookie)
+          .set('X-CSRF-Token', csrfToken)
+          .send({
+            type: 'AdvancePhase',
+            expectedVersion: readyView.body.version,
+            idempotencyKey: randomUUID(),
+          });
+        expect(
+          advanced.status,
+          JSON.stringify({
+            phase: afterDeadline.phase,
+            version: readyView.body.version,
+            error: advanced.body.error,
+          }),
+        ).toBe(200);
+        await botRunner.processGame(gameId);
+      }
     }
     const finished = await currentGame();
     expect(finished.phase, JSON.stringify(progress.slice(-10))).toBe(

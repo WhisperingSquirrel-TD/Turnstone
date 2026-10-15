@@ -740,7 +740,10 @@ function PlayerGame() {
   const inPrivateMoment = Boolean(full && (phaseIsPrivate || notesOpen));
   const shieldRequired = Boolean(
     full &&
-    (['DEAL', 'SHADOW', 'FINAL_VOTE'].includes(full.phase) || notesOpen),
+    (['DEAL', 'VOTE', 'SHADOW', 'FINAL_VOTE', 'FINAL_BANISH'].includes(
+      full.phase,
+    ) ||
+      notesOpen),
   );
   const isActionPhase = Boolean(
     full &&
@@ -1055,7 +1058,7 @@ function PlayerGame() {
     setShieldPending(true);
     setHoldMessage('');
     try {
-      if (['DEAL', 'SHADOW', 'FINAL_VOTE'].includes(full?.phase ?? '')) {
+      if (phaseIsPrivate) {
         await command.mutateAsync({
           id,
           data: {
@@ -1066,22 +1069,6 @@ function PlayerGame() {
         command.reset();
       }
       setShielded(true);
-      if (full?.phase !== 'DEAL') {
-        const response = await reveal.mutateAsync({
-          id,
-          ...(notesOpen && !phaseIsPrivate
-            ? { data: { purpose: 'notes' as const } }
-            : {}),
-        });
-        const privateData = isFullView(response.view)
-          ? response.view.private
-          : null;
-        if (!privateData) {
-          setHoldMessage(en.game.privateUnavailable);
-        } else {
-          setPrivateView(privateData);
-        }
-      }
     } catch {
       command.reset();
       reveal.reset();
@@ -1128,8 +1115,7 @@ function PlayerGame() {
   function beginHold() {
     if (
       !shielded ||
-      full?.phase !== 'DEAL' ||
-      notesOpen ||
+      (!phaseIsPrivate && !notesOpen) ||
       !token ||
       heldRef.current ||
       reveal.isPending
@@ -1237,6 +1223,7 @@ function PlayerGame() {
         },
       });
       command.reset();
+      clearPrivate();
       setActionDone(true);
       setCommandMessage(en.game.waitingForEveryone);
       setSelected('');
@@ -1693,8 +1680,16 @@ function PlayerGame() {
                       aria-live="polite"
                       data-testid="private-choice-content"
                     >
-                      {notesOpen && !phaseIsPrivate ? (
-                        privateView ? (
+                      {actionDone ? (
+                        <p
+                          role="status"
+                          className="text-center text-ash"
+                          data-testid="waiting-for-everyone"
+                        >
+                          {en.game.waitingForEveryone}
+                        </p>
+                      ) : notesOpen && !phaseIsPrivate ? (
+                        held && privateView ? (
                           <div
                             className="enter"
                             data-testid="private-notes-content"
@@ -1760,15 +1755,9 @@ function PlayerGame() {
                             {holdMessage || en.game.privateLoading}
                           </p>
                         )
-                      ) : actionDone ? (
-                        <p
-                          role="status"
-                          className="text-center text-ash"
-                          data-testid="waiting-for-everyone"
-                        >
-                          {en.game.waitingForEveryone}
-                        </p>
-                      ) : isActionPhase &&
+                      ) : held &&
+                        privateView &&
+                        isActionPhase &&
                         (full.phase === 'VOTE' ||
                           full.phase === 'FINAL_BANISH' ||
                           privateView) ? (
@@ -1878,12 +1867,59 @@ function PlayerGame() {
                             </p>
                           )}
                         </div>
-                      ) : (
+                      ) : held || holdMessage ? (
                         <p role="status" className="text-sm text-ash">
                           {holdMessage || en.game.privateLoading}
                         </p>
-                      )}
+                      ) : null}
                     </div>
+                    {!actionDone && (
+                      <>
+                        <button
+                          className="hold-seal"
+                          type="button"
+                          aria-label={
+                            held ? en.game.releaseLabel : en.game.holdLabel
+                          }
+                          aria-describedby="hold-instructions"
+                          aria-pressed={held}
+                          data-held={held}
+                          style={
+                            {
+                              '--hold-progress': holdProgress,
+                            } as React.CSSProperties
+                          }
+                          data-testid="button-hold-reveal"
+                          onPointerDown={padPointerDown}
+                          onClick={() => {
+                            if (ignoreSyntheticClick.current) {
+                              ignoreSyntheticClick.current = false;
+                              return;
+                            }
+                            if (heldRef.current) clearPrivate();
+                            else beginHold();
+                          }}
+                          onPointerUp={() => clearPrivate(true)}
+                          onPointerCancel={cancelPrivate}
+                          onPointerLeave={cancelPrivate}
+                          onKeyDown={padKeyDown}
+                          onKeyUp={(event) => {
+                            if (event.key === ' ' || event.key === 'Enter')
+                              clearPrivate(true);
+                          }}
+                          onBlur={cancelPrivate}
+                        >
+                          <span className="seal-inner">
+                            <span className="seal-copy">
+                              {held ? en.game.holdKeep : en.game.holdText}
+                            </span>
+                          </span>
+                        </button>
+                        <p id="hold-instructions" className="text-sm text-ash">
+                          {en.game.holdInstructions}
+                        </p>
+                      </>
+                    )}
                     {notesOpen && !phaseIsPrivate && (
                       <button
                         className="primary-action w-full"

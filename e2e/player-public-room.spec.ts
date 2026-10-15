@@ -418,8 +418,15 @@ test('rehearsal player can move on from public and voting screens', async ({
   let publicView: FullView = {
     ...createPublicView(gameId),
     canAdvancePhase: true,
+    rehearsal: true,
   };
   const submitted: Record<string, unknown>[] = [];
+  let privateViewRequests = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.endsWith('/private-view')) {
+      privateViewRequests += 1;
+    }
+  });
 
   await page.route('**/api/csrf', (route) =>
     route.fulfill({
@@ -450,18 +457,76 @@ test('rehearsal player can move on from public and voting screens', async ({
       json: { version: publicView.version, view: publicView },
     });
   });
+  await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        version: publicView.version,
+        view: {
+          ...publicView,
+          private: {
+            role: 'faithful',
+            team: [],
+            options: [],
+            choices: {},
+            chat: [],
+            task: null,
+            minimumDurationMs: 0,
+          },
+        },
+      },
+    });
+  });
 
   await page.goto(`/game/${gameId}`);
-  await expect(page.getByRole('button', { name: 'Move on' })).toBeVisible();
+  const stepGuide = page.getByRole('dialog', {
+    name: 'How this step works',
+  });
+  await expect(stepGuide).toBeVisible();
+  await expect(stepGuide).toContainText(
+    'Computer players fill the other seats',
+  );
+  await stepGuide.getByRole('button', { name: 'Got it' }).click();
+  await expect(stepGuide).toContainText('Everyone talks it over');
+  await stepGuide.getByRole('button', { name: 'Got it' }).click();
+  await expect(stepGuide).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Next step' })).toBeVisible();
   await expect(
     page.getByText(
       'The organiser will move the game forward. Keep your phone close and your screen private.',
     ),
   ).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Move on' }).click();
-  await expect(page.getByText('Who do you vote to banish?')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Move on' })).toBeVisible();
+  await page.getByRole('button', { name: 'Next step' }).click();
+  const voteGuide = page.getByRole('dialog', { name: 'How this step works' });
+  await expect(voteGuide).toBeVisible();
+  await expect(voteGuide).toContainText('Everyone secretly votes');
+  await voteGuide.getByRole('button', { name: 'Got it' }).click();
+  await expect(voteGuide).toHaveCount(0);
+  const voteShield = page.getByRole('dialog', { name: 'Shield your screen' });
+  await expect(voteShield).toBeVisible();
+  await expect(page.getByText('Who do you vote to banish?')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Jamie' })).toHaveCount(0);
+  await expect(page.getByTestId('rehearsal-action-bar')).toHaveCount(0);
+  expect(privateViewRequests).toBe(0);
+  const shieldConfirmation = voteShield.getByRole('button', {
+    name: 'I’m shielded',
+  });
+  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
+    timeout: 6_500,
+  });
+  await shieldConfirmation.click();
+  expect(privateViewRequests).toBe(0);
+  const seal = page.getByTestId('button-hold-reveal');
+  await expect(seal).toBeVisible();
+  await seal.focus();
+  await page.keyboard.down('Space');
+  const choiceList = page.getByTestId('private-choice-list');
+  await expect(choiceList).toBeVisible({ timeout: 3_000 });
+  expect(privateViewRequests).toBe(1);
+  await page.keyboard.up('Space');
+  await expect(choiceList).toHaveCount(0);
+  await expect(page.getByText('Who do you vote to banish?')).toHaveCount(0);
   expect(submitted[0]).toMatchObject({
     type: 'AdvancePhase',
     expectedVersion: 12,
