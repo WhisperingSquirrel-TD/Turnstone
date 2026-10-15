@@ -73,6 +73,31 @@
   color: var(--ash);
 }
 
+.brand-credit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem 0.65rem;
+  min-height: 3.5rem;
+  border-top: 1px solid var(--stone);
+  color: var(--ash);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.brand-credit-link {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-credit-overlay {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
 .public-home-menu {
   display: none;
   position: relative;

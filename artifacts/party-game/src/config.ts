@@ -3,6 +3,7 @@ import { PRE_LAUNCH_NOINDEX } from '@workspace/security/deployment';
 
 const appName = 'Turnstone';
 const builder = 'Stackstone Consulting';
+const byline = `made by ${builder}`;
 const siteOrigin = 'https://turnstone.stackstoneconsulting.co.uk';
 
 export function resolveApiOrigin(
@@ -18,12 +19,11 @@ export const config = {
   appName,
   wordmarkAccentSuffix: 'stone',
   tagline: `${appName}: the traitor game where everyone plays.`,
-  byline: 'A Stackstone game',
+  byline,
   builder,
   siteOrigin,
   productionRpId: new URL(siteOrigin).hostname,
   apiOrigin: configuredApiOrigin,
-  brandMarkPath: 'brand/stackstone-logo-dark-outlined.svg',
   appIconPath: 'brand/stackstone-icon-dark-outlined.svg',
   socialLinks: [] as const,
   preLaunch: PRE_LAUNCH_NOINDEX,

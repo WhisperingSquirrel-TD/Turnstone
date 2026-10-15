@@ -1230,3 +1230,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Require the privacy shield before each private step, then let players tap choices and confirm without holding. Never require a hold while selecting anywhere in the app. Keep hold-to-reveal for read-only secrets such as the deal role. Shuffle roster-based choices with a deterministic per-seat, per-step seed so the order is stable during a step but jumbled separately across devices; the seed must not depend on role. Long choice lists use the main page's normal scrolling, never a nested scroll pane.
 
 **Consequence:** This owner ruling supersedes the hold-during-choice and hold-to-confirm details in section 10. Choice screens rely on the player following the shield prompt; a selected name is visible on that player's device while they choose. Hold-only role reveal remains unchanged.
+
+### D40 — Text-only Turnstone header and Stackstone footer (resolved)
+
+**Context:** The owner found duplicate Turnstone wording and icons in the game header and clarified that the new Turnstone emblem should wait. They want the Stackstone cairn mark and website link on every screen, but only in the footer.
+
+**Choice:** Show a single text-only Turnstone wordmark in Candle and Gilt in every header. Put the exact credit “made by Stackstone Consulting” and the Stackstone cairn mark linked to `https://stackstoneconsulting.co.uk/` in every screen's footer, including private moments. Public footer links open in the same tab; game links use a safe new tab. Do not use the approved Turnstone emblem yet.
+
+**Consequence:** The Stackstone builder name remains sourced from the shared identity config. One shared footer component is used for app screens, with matching markup in prerendered public pages; the cairn cannot appear as a role-specific tell.

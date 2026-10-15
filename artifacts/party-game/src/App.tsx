@@ -40,6 +40,7 @@ import type {
   VisitorView,
 } from '@workspace/api-client-react';
 import { config } from '@/config';
+import { BrandFooter } from './BrandFooter';
 import { apiUrl } from './api-url';
 import { en } from '@/locale/en-GB';
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
@@ -310,20 +311,6 @@ function Shell({
             </div>
           </details>
         )}
-        <a
-          href={config.organisation.url}
-          target={isPlayer ? '_blank' : undefined}
-          rel={isPlayer ? 'noopener noreferrer' : undefined}
-          aria-label={en.app.brandLink}
-          className="public-home-brand-mark inline-flex min-h-11 min-w-11 items-center justify-center"
-          data-testid="link-stackstone-mark"
-        >
-          <img
-            className="brand-mark-small"
-            src={`${import.meta.env.BASE_URL}${config.appIconPath}`}
-            alt=""
-          />
-        </a>
       </header>
       <main
         id="main"
@@ -332,24 +319,11 @@ function Shell({
       >
         {children}
       </main>
-      {!privateMode && (
-        <footer className="mx-auto mt-8 flex w-full max-w-5xl items-center justify-between border-t border-stone py-5 text-sm text-ash">
-          <small>{config.byline}</small>
-          <a
-            href={config.organisation.url}
-            target={isPlayer ? '_blank' : undefined}
-            rel={isPlayer ? 'noopener noreferrer' : undefined}
-            aria-label={en.app.brandLink}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center"
-          >
-            <img
-              className="brand-mark-small"
-              src={`${import.meta.env.BASE_URL}${config.appIconPath}`}
-              alt=""
-            />
-          </a>
-        </footer>
-      )}
+      <BrandFooter
+        context={isPlayer ? 'game' : 'public'}
+        className="mx-auto mt-8 w-full max-w-5xl py-3"
+        testId="brand-footer-shell"
+      />
     </div>
   );
 }
@@ -602,20 +576,6 @@ function TurnstonePlayerHeader() {
           {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
         </span>
         <span className="entry-gilt">{config.wordmarkAccentSuffix}</span>
-      </a>
-      <a
-        className="entry-brand-mark-link"
-        href={config.organisation.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={en.app.brandLink}
-        data-testid="link-stackstone-mark"
-      >
-        <img
-          className="entry-brand-mark"
-          src={`${import.meta.env.BASE_URL}${config.brandMarkPath}`}
-          alt=""
-        />
       </a>
     </header>
   );
@@ -1407,7 +1367,6 @@ function PlayerGame() {
 
   return (
     <Shell isPlayer privateMode={inPrivateMoment} privateRevealActive={held}>
-      <TurnstonePlayerHeader />
       <section
         className={
           inPrivateMoment
@@ -2302,6 +2261,11 @@ function PlayerGame() {
                 {en.game.guideGotIt}
               </button>
             </div>
+            <BrandFooter
+              context="game"
+              className="mt-auto w-full max-w-[480px] self-center"
+              testId="brand-footer-overlay"
+            />
           </div>
         )}
         {showShieldCard && (
@@ -2349,6 +2313,11 @@ function PlayerGame() {
                 )}
               </div>
             </div>
+            <BrandFooter
+              context="game"
+              className="brand-credit-overlay w-full max-w-[480px] self-center"
+              testId="brand-footer-overlay"
+            />
           </dialog>
         )}
       </section>

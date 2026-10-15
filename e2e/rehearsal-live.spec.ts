@@ -84,6 +84,7 @@ async function latestServerPhase(
 async function handleShield(page: Page, gameId: string): Promise<void> {
   const shield = page.getByRole('dialog', { name: 'Shield your screen' });
   if (!(await shield.isVisible().catch(() => false))) return;
+  await expect(shield.getByTestId('brand-footer-overlay')).toBeVisible();
   await expect(page.getByTestId('rehearsal-action-bar')).toHaveCount(0);
   const button = shield.getByRole('button', { name: 'I’m shielded' });
   await expect(button).toHaveAttribute('aria-disabled', 'false', {
@@ -487,6 +488,17 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       }
       await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
         explanation,
+      );
+      await expect(
+        page
+          .getByTestId('rehearsal-explainer')
+          .getByTestId('brand-footer-overlay'),
+      ).toBeVisible();
+      await expect(
+        page.locator('header.public-shell-header .turnstone-wordmark'),
+      ).toHaveCount(1);
+      await expect(page.getByTestId('brand-footer-shell')).toContainText(
+        'made by Stackstone Consulting',
       );
       await page.getByRole('button', { name: 'Got it' }).click();
       const shadowRoundBefore =

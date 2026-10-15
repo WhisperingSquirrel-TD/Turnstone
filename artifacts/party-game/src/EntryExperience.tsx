@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { recommended } from '@workspace/shared';
+import { BrandFooter } from './BrandFooter';
 import './EntryExperience.css';
 
 export type EntryScreen =
@@ -84,9 +85,6 @@ export interface EntryExperienceCopy {
   brand: string;
   brandGoldSuffix: string;
   brandDescriptor: string;
-  footer: string;
-  markAlt: string;
-  stackstoneLink: string;
   headlineFirst: string;
   headlineSecond: string;
   subtitle: string;
@@ -187,11 +185,6 @@ export interface EntryExperienceProps {
   joinCode: string;
   shareUrl: string;
   qrCode: ReactNode;
-  gameLogoSrc: string;
-  gameLogoHref: string;
-  stackstoneMarkSrc: string;
-  stackstoneHref: string;
-  stackstoneNewTab: boolean;
   players: EntryPlayer[];
   requiredPlayerCount?: number;
   pendingJoiners: EntryJoiner[];
@@ -238,11 +231,6 @@ export function EntryExperience({
   joinCode,
   shareUrl,
   qrCode,
-  gameLogoSrc,
-  gameLogoHref,
-  stackstoneMarkSrc,
-  stackstoneHref,
-  stackstoneNewTab,
   players,
   requiredPlayerCount = 5,
   pendingJoiners,
@@ -463,16 +451,6 @@ export function EntryExperience({
           <span>{copy.brand.slice(0, -copy.brandGoldSuffix.length)}</span>
           <span className="entry-gilt">{copy.brandGoldSuffix}</span>
         </span>
-        <a
-          className="entry-brand-mark-link"
-          href={gameLogoHref}
-          target={stackstoneNewTab ? '_blank' : undefined}
-          rel={stackstoneNewTab ? 'noopener noreferrer' : undefined}
-          aria-label={copy.stackstoneLink}
-          data-testid="link-stackstone-mark"
-        >
-          <img className="entry-brand-mark" src={gameLogoSrc} alt="" />
-        </a>
       </header>
 
       <main
@@ -1301,19 +1279,11 @@ export function EntryExperience({
         )}
       </main>
 
-      <footer className="entry-footer">
-        <span>{copy.footer}</span>
-        <a
-          className="entry-footer-mark-link"
-          href={stackstoneHref}
-          target={stackstoneNewTab ? '_blank' : undefined}
-          rel={stackstoneNewTab ? 'noopener noreferrer' : undefined}
-          aria-label={copy.markAlt}
-          data-testid="link-stackstone-footer-mark"
-        >
-          <img className="entry-footer-mark" src={stackstoneMarkSrc} alt="" />
-        </a>
-      </footer>
+      <BrandFooter
+        context="game"
+        className="entry-footer"
+        testId="brand-footer-entry"
+      />
     </div>
   );
 }

@@ -195,8 +195,6 @@ export const en = {
   },
   entry: {
     brandDescriptor: 'Turnstone',
-    footer: 'A Stackstone game',
-    markAlt: 'Visit Stackstone Consulting',
     headlineFirst: 'Turnstone',
     headlineSecond: '',
     subtitle: 'A game of traitors and faithful.',
@@ -525,5 +523,4 @@ export const en = {
     body: 'We could not find that page. It may have moved, or the address may be mistyped.',
     back: 'Go to the home page',
   },
-  footer: 'A Stackstone game',
 } as const;

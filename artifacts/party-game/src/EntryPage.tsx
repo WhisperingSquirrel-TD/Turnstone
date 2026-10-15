@@ -716,17 +716,12 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       </span>
     </Suspense>
   ) : null;
-  const gameLogoSrc = `${import.meta.env.BASE_URL}${config.appIconPath}`;
-  const stackstoneMarkSrc = gameLogoSrc;
-
   return (
     <EntryExperience
       copy={{
         ...en.entry,
         brand: config.appName,
         brandGoldSuffix: config.wordmarkAccentSuffix,
-        stackstoneLink: en.app.brandLink,
-        footer: config.byline,
       }}
       screen={screen}
       lateJoinMode={lateJoinMode}
@@ -755,11 +750,6 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       joinCode={lateJoinMode ? '' : joinCode}
       shareUrl={visibleShareUrl}
       qrCode={qrCode}
-      gameLogoSrc={gameLogoSrc}
-      gameLogoHref={config.organisation.url}
-      stackstoneMarkSrc={stackstoneMarkSrc}
-      stackstoneHref={config.organisation.url}
-      stackstoneNewTab
       players={playerList}
       requiredPlayerCount={
         Number(new URLSearchParams(location.search).get('players')) ||

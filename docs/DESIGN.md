@@ -82,7 +82,7 @@ E1 — /play choice
 | [Join a game]                    |
 | Practise alone first             |
 |                                  |
-| A Stackstone game                |
+| made by Stackstone Consulting    |
 +----------------------------------+
 
 E2 — join wizard (one screen at a time)
@@ -196,7 +196,7 @@ FOUNDATIONS
 - Type: Display is Playfair 400 40/44. Title is Playfair 30/36. Subtitle is Playfair 22/30 in Ash. Body is DM Sans 400 17/26. Label is DM Sans 500 15/20. Meta is DM Sans 400 14/20 in Ash. Never all caps. Every title has one key phrase in Gilt (written below as _word_).
 - Colour: background Charcoal, with one subtle 135-degree lift to Stone at the bottom right; surfaces Hearth; Stone 1px dividers; Candle text; Ash secondary text; Gilt for key phrases, 2px focus rings with a 2px offset, progress and primary buttons.
 - Buttons: Primary is a Gilt fill with Hearth text (passes AA). Secondary is transparent with a 1px Gilt border and Candle text. Disabled is a Stone fill with Ash text.
-- Header on every screen and identical for every role: "Turnstone" in Playfair 20 Candle on the left; the Turnstone emblem (24px) on the right, linking to Turnstone home. Stackstone Consulting links remain separate and point to its website. Rehearsal games add a small Meta tag, "Rehearsal".
+- Header on every screen and identical for every role: one text-only "Turnstone" wordmark in Playfair 20, with "Turn" in Candle and "stone" in Gilt. No emblem or Stackstone mark/link in the header. The footer on every screen, including private moments, says "made by Stackstone Consulting" and includes the Stackstone cairn mark linked to its website; public links stay in the same tab and in-game links open a safe new tab. Rehearsal games add a small Meta tag, "Rehearsal".
 - Motion: 200ms fade between screens and nothing else, except the seal glow, dawn reveal and verdict reveal. With reduced motion, no animation at all.
 
 PRIVATEMOMENT COMPONENT (one component for the deal, votes, shadow, tasks, recruitment and endgame)
@@ -226,7 +226,7 @@ ACCEPTANCE: Playwright screenshots of every screen on iPhone, Pixel and iPad, sa
 
 ## Amendment 10 — responsive home page and public comparison
 
-Keep section 25's Charcoal, Hearth, Stone, Gilt, Candle and Ash tokens, Playfair Display/DM Sans hierarchy, and outlined brand assets. The Turnstone emblem is used in game headers; Stackstone marks remain for Stackstone links. This is a responsive refinement, not a new visual system. Use only one radial Gilt glow behind the hero title text; it must fade to transparent before reaching the hero boundary. Remove box shadows or pseudo-elements that create visible rectangular edges, including on the role demo.
+Keep section 25's Charcoal, Hearth, Stone, Gilt, Candle and Ash tokens, Playfair Display/DM Sans hierarchy, and outlined brand assets. Headers use one text-only Turnstone wordmark; the Stackstone cairn mark and link stay in the universal footer. The Turnstone emblem stays unused until the owner asks. This is a responsive refinement, not a new visual system. Use only one radial Gilt glow behind the hero title text; it must fade to transparent before reaching the hero boundary. Remove box shadows or pseudo-elements that create visible rectangular edges, including on the role demo.
 
 Mobile priorities: the first viewport contains the separate Turnstone title text and tagline, all three entry actions in the lower thumb zone, and the beginning of the demo directly below the title card. Keep the header compact, safe-area aware and non-overlapping at 320px. Buttons and links have at least 44px targets. Use `clamp()` for fluid type and prevent horizontal overflow. At wider widths, place the title card and live hold demo side by side without removing any entry action.
 
@@ -243,7 +243,7 @@ Mobile, 320–414px                  Desktop, 1280px
 | [Start a new game]       |       | [Start a new game] [Join a game]       |
 | [Join a game]            |       | Practise alone first                    |
 | Practise alone first     |       +----------------------------------------+
-| A Stackstone game        |
+| made by Stackstone Consulting |
 +--------------------------+
 | Hold to see your role    |
 | [role-neutral seal]      |
