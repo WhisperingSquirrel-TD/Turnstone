@@ -421,6 +421,7 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     const brand = shieldDialog.getByTestId('text-entry-brand');
     const brandVisual = await brand.evaluate((element) => ({
       fontFamily: getComputedStyle(element).fontFamily,
+      fontSize: getComputedStyle(element).fontSize,
       parts: Array.from(element.querySelectorAll('span')).map((part) => ({
         text: part.textContent,
         color: getComputedStyle(part).color,
@@ -431,6 +432,26 @@ test('private role, seal and footer stay inside small phone viewports', async ({
       { text: 'Turn', color: 'rgb(250, 250, 245)' },
       { text: 'stone', color: 'rgb(200, 148, 74)' },
     ]);
+    const shellBrandVisual = await page
+      .locator('header.public-shell-header .turnstone-wordmark')
+      .evaluate((element) => ({
+        fontFamily: getComputedStyle(element).fontFamily,
+        fontSize: getComputedStyle(element).fontSize,
+      }));
+    expect(brandVisual.fontFamily).toBe(shellBrandVisual.fontFamily);
+    expect(brandVisual.fontSize).toBe(shellBrandVisual.fontSize);
+    const [shieldBrandBounds, shellBrandBounds] = await Promise.all([
+      brand.boundingBox(),
+      page
+        .locator('header.public-shell-header .turnstone-wordmark')
+        .boundingBox(),
+    ]);
+    if (!shieldBrandBounds || !shellBrandBounds) {
+      throw new Error('The shield or shell wordmark has no visible bounds.');
+    }
+    expect(shieldBrandBounds.x).toBe(shellBrandBounds.x);
+    expect(shieldBrandBounds.y).toBe(shellBrandBounds.y);
+    expect(shieldBrandBounds.height).toBe(shellBrandBounds.height);
     await shieldConfirmation.click();
 
     const progress = page.getByTestId('phase-progress-status');

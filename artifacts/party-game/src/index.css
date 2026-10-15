@@ -366,6 +366,9 @@ h2,
   color: var(--candle);
   background: var(--hearth);
 }
+.privacy-shield .entry-brand > .turnstone-wordmark {
+  min-height: 44px;
+}
 .privacy-shield::backdrop {
   background: var(--hearth);
 }
