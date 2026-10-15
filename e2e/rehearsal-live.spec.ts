@@ -340,7 +340,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
   const { db } = await import('@workspace/db');
   let gameId: string | undefined;
   let playerRole: 'Traitor' | 'Faithful' | undefined;
-  let gameDocumentLoads = 0;
+  let appDocumentLoads = 0;
+  let captureAppDocumentLoads = false;
   let socketConnections = 0;
   let socketFramesReceived = 0;
   let socketGameViewFramesReceived = 0;
@@ -415,16 +416,17 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       });
     }
     if (
+      captureAppDocumentLoads &&
       request.isNavigationRequest() &&
-      request.resourceType() === 'document' &&
-      new URL(request.url()).pathname.startsWith('/game/')
+      request.resourceType() === 'document'
     ) {
-      gameDocumentLoads += 1;
+      appDocumentLoads += 1;
     }
   });
 
   try {
     await page.goto('/play');
+    captureAppDocumentLoads = true;
     await page.getByTestId('button-practise-alone').click();
     await expect(
       page.getByRole('heading', { name: 'Practise alone first' }),
@@ -452,6 +454,22 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     }
     await page.waitForURL(/\/game\/[^/]+$/, { timeout: 15_000 });
 
+    const match = new URL(page.url()).pathname.match(/\/game\/([^/]+)$/);
+    const activeGameId = match?.[1];
+    expect(activeGameId).toBeTruthy();
+    if (!activeGameId) throw new Error('The rehearsal game id is missing.');
+    gameId = activeGameId;
+
+    await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
+      "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.",
+    );
+    await expect(page.getByTestId('text-entry-brand')).toBeVisible();
+    await page.getByTestId('text-entry-brand').click();
+    await expect(
+      page.getByRole('link', { name: 'Start a new game', exact: true }),
+    ).toBeVisible();
+    expect(appDocumentLoads).toBe(0);
+    await page.goBack();
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
       "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.",
     );
@@ -459,11 +477,6 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       .getByRole('button', { name: 'Got it' })
       .click({ timeout: 5_000 });
 
-    const match = new URL(page.url()).pathname.match(/\/game\/([^/]+)$/);
-    const activeGameId = match?.[1];
-    expect(activeGameId).toBeTruthy();
-    if (!activeGameId) throw new Error('The rehearsal game id is missing.');
-    gameId = activeGameId;
     const game = page.getByTestId('player-game');
     await expect(game).toHaveAttribute('data-phase', 'DEAL');
     await expect.poll(() => socketConnections).toBeGreaterThan(0);
@@ -487,8 +500,6 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         timeout: 2_500,
       })
       .toBeGreaterThan(0);
-    const loadsAtGameStart = gameDocumentLoads;
-
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
       const phaseStartedAt = Date.now();
@@ -584,7 +595,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       if (phase === 'SHADOW' && shadowRoundBefore === 1) {
         await expect(game).toHaveAttribute('data-shadow-round', '2');
       }
-      expect(gameDocumentLoads).toBe(loadsAtGameStart);
+      expect(appDocumentLoads).toBe(0);
     }
 
     await expect(game).toHaveAttribute('data-phase', 'FINISHED', {
@@ -644,12 +655,21 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(
       page.getByRole('button', { name: 'Back to start', exact: true }),
     ).toBeVisible({ timeout: 5_000 });
+    await page.locator('.player-shell-header .turnstone-wordmark').click();
+    await expect(
+      page.getByRole('link', { name: 'Start a new game', exact: true }),
+    ).toBeVisible();
+    expect(appDocumentLoads).toBe(0);
+    await page.goBack();
+    await expect(page.getByTestId('player-outcome')).toBeVisible();
+    expect(appDocumentLoads).toBe(0);
     await page
       .getByRole('button', { name: 'Rehearse again' })
       .click({ timeout: 5_000 });
     await expect(page.getByTestId('button-start-rehearsal')).toBeVisible({
       timeout: 5_000,
     });
+    captureAppDocumentLoads = false;
     await page.goto(`/game/${gameId}`);
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
       "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.",
@@ -663,6 +683,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await page
       .getByRole('button', { name: 'Got it' })
       .click({ timeout: 5_000 });
+    captureAppDocumentLoads = true;
     await expect(
       page.getByRole('button', { name: 'Back to start', exact: true }),
     ).toBeVisible({ timeout: 5_000 });
@@ -672,6 +693,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(
       page.getByRole('button', { name: 'Start a new game', exact: true }),
     ).toBeVisible({ timeout: 5_000 });
+    expect(appDocumentLoads).toBe(0);
 
     const presenterSessions = await db.execute(sql`
       select count(*) as count

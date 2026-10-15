@@ -230,8 +230,8 @@ function Shell({
       <header
         className={`public-home-brand public-shell-header w-full${isPlayer ? ' player-shell-header' : ' mx-auto max-w-5xl'}`}
       >
-        <a
-          href={config.routes.home}
+        <Link
+          to={config.routes.home}
           aria-label={config.appName}
           className="turnstone-wordmark"
         >
@@ -239,7 +239,7 @@ function Shell({
             {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
           </span>
           <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
-        </a>
+        </Link>
         <nav
           aria-label={en.nav.label}
           className={`public-home-nav text-sm text-ash ${isPlayer ? 'player-status-nav' : ''}`}
@@ -577,8 +577,8 @@ function TurnstonePlayerHeader() {
       aria-label={config.appName}
       data-testid="player-brand-header"
     >
-      <a
-        href={config.routes.home}
+      <Link
+        to={config.routes.home}
         className="turnstone-wordmark"
         aria-label={config.appName}
         data-testid="text-entry-brand"
@@ -587,7 +587,7 @@ function TurnstonePlayerHeader() {
           {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
         </span>
         <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
-      </a>
+      </Link>
     </header>
   );
 }

@@ -1262,3 +1262,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Only `/`, `/faq` and `/compare` may contain prerendered public copy. App and game routes use a minimal Turnstone shell with stylesheets linked in the document head, including on Vercel's static output. Keep those routes `noindex`; preserve the public content and structured data only on the public pages.
 
 **Consequence:** JavaScript-disabled first paint remains styled without showing the public hero on private app routes. CI tests the Vite development response and built production routes; static hosting rewrites app paths to the generated shell.
+
+## D79 — In-app navigation stays within the app (resolved)
+
+**Context:** The owner's Round 4 review requires that no in-app button or link reload the document. The game wordmark was a plain same-origin anchor even though the rest of the app uses React Router.
+
+**Choice:** Internal route links and buttons use the client-side router, including the game wordmark link to the home screen. External links, such as the Stackstone Consulting footer credit, remain normal links.
+
+**Consequence:** Game screens and their socket-backed state remain in the same document during in-app navigation. The live rehearsal browser test counts document requests across phase changes and the result-screen navigation actions.
