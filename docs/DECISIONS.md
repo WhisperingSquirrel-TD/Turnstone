@@ -1254,3 +1254,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Rehearsal phases have no timed deadlines and never auto-advance; bots still act immediately and the player uses "Next step". Keep the approved role-neutral explainer on every rehearsal step and behind "What's this?" in live games. The shield countdown is one disabled-then-enabled button; choices always use taps after shielding, never hold-and-select. Use a secondary organiser bar with a count-specific confirmation, suppress organiser controls on shield and hold screens, and remove misleading progress counts/headings. Banishment ballots are alphabetical; night options remain independently shuffled per seat. Every view carries server time, countdowns use a client/server clock offset, and connection status depends on socket reconnection plus a resynced view. Extract a touched screen into a component in a behavior-preserving change before changing its behavior.
 
 **Consequence:** Rehearsal is deliberately player-paced even in Fast mode, while live game timing and minimum private durations remain intact. The decision supersedes prior automatic rehearsal deadline behavior and any blanket rule that shuffled every roster-based list.
+
+## D78 — Public content and the app first-paint shell (resolved)
+
+**Context:** The Round 4 review found that app routes briefly exposed the prerendered home page and appeared unstyled when JavaScript was delayed or blocked.
+
+**Choice:** Only `/`, `/faq` and `/compare` may contain prerendered public copy. App and game routes use a minimal Turnstone shell with stylesheets linked in the document head, including on Vercel's static output. Keep those routes `noindex`; preserve the public content and structured data only on the public pages.
+
+**Consequence:** JavaScript-disabled first paint remains styled without showing the public hero on private app routes. CI tests the Vite development response and built production routes; static hosting rewrites app paths to the generated shell.

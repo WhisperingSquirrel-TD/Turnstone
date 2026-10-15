@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
@@ -11,6 +12,7 @@ import {
   renderPublicCompareHtml,
   renderPublicFaqHtml,
   renderPublicHomeHtml,
+  renderPublicAppShellHtml,
   renderPublicStaticDocument,
   structuredPublicData,
 } from './src/public-site-content';
@@ -39,7 +41,8 @@ function appRelativePath(pathname: string): string {
   const withoutBase = pathname.startsWith(prefix)
     ? `/${pathname.slice(prefix.length)}`
     : pathname;
-  return withoutBase.replace(/\/+$/, '') || '/';
+  const route = withoutBase.replace(/\/+$/, '') || '/';
+  return route === '/index.html' ? '/' : route;
 }
 
 function pageDocument(
@@ -63,6 +66,34 @@ function pageDocument(
     stylesheetHrefs,
     fontPreloadHrefs,
   });
+}
+
+function appShellDocument(html: string, basePath: string): string {
+  const shell = html.replace(
+    /(<div id="static-home" class="safe-page">)[\s\S]*?(<\/div>\s*<div id="root"><\/div>)/,
+    (_match, opening: string, closing: string) =>
+      `${opening}${renderPublicAppShellHtml(basePath)}${closing}`,
+  );
+  if (shell === html) {
+    throw new Error('Could not create the app shell from the Vite document.');
+  }
+  return shell
+    .replace(
+      /<title>[\s\S]*?<\/title>/,
+      `<title>${escapeHtml(config.appName)}</title>`,
+    )
+    .replace(/<meta name="description"[^>]*>/, '')
+    .replace(
+      /<meta name="robots"[^>]*>/,
+      '<meta name="robots" content="noindex, nofollow">',
+    )
+    .replace(/<link rel="canonical"[^>]*>/, '')
+    .replace(/<meta property="og:[^"]*"[^>]*>/g, '')
+    .replace(/<meta name="twitter:[^"]*"[^>]*>/g, '')
+    .replace(
+      /<script\b[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/i,
+      '',
+    );
 }
 
 export default defineConfig({
@@ -110,6 +141,22 @@ export default defineConfig({
               ],
             );
           }
+          if (route === '/app-shell.html') {
+            return html.replaceAll(
+              '__APP_SHELL_HEADER__',
+              renderPublicAppShellHtml(basePath),
+            );
+          }
+          if (route !== '/') {
+            return appShellDocument(
+              html
+                .replaceAll('__PUBLIC_TITLE__', escapeHtml(config.appName))
+                .replaceAll('__PUBLIC_DESCRIPTION__', '')
+                .replaceAll('__CANONICAL_URL__', '')
+                .replaceAll('__PUBLIC_JSON_LD__', ''),
+              basePath,
+            );
+          }
           return html
             .replaceAll('__PUBLIC_TITLE__', escapeHtml(getPublicTitle()))
             .replaceAll(
@@ -151,7 +198,27 @@ export default defineConfig({
             return;
           }
           if (route !== '/llms.txt') {
-            next();
+            if (
+              route === '/' ||
+              route === '/app-shell.html' ||
+              request.method !== 'GET' ||
+              !request.headers.accept?.includes('text/html')
+            ) {
+              next();
+              return;
+            }
+            const indexHtml = readFileSync(
+              path.resolve(import.meta.dirname, 'index.html'),
+              'utf8',
+            );
+            void server
+              .transformIndexHtml(request.url ?? route, indexHtml)
+              .then((html) => {
+                response.statusCode = 200;
+                response.setHeader('Content-Type', 'text/html; charset=utf-8');
+                response.end(html);
+              })
+              .catch(next);
             return;
           }
           response.statusCode = 200;
@@ -207,7 +274,16 @@ export default defineConfig({
     ],
   },
   root: import.meta.dirname,
-  build: { outDir: 'dist/public', emptyOutDir: true },
+  build: {
+    outDir: 'dist/public',
+    emptyOutDir: true,
+    rollupOptions: {
+      input: [
+        path.resolve(import.meta.dirname, 'index.html'),
+        path.resolve(import.meta.dirname, 'app-shell.html'),
+      ],
+    },
+  },
   server: {
     port,
     strictPort: true,

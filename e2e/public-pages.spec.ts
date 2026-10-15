@@ -89,3 +89,58 @@ test('the comparison route opens directly in a fresh browser page', async ({
     page.getByRole('heading', { level: 1, name: 'Compare game formats' }),
   ).toBeVisible();
 });
+
+test('home and app first paint stay styled with JavaScript disabled', async ({
+  page,
+}) => {
+  let blockedScripts = 0;
+  await page.route('**/*', async (route) => {
+    if (route.request().resourceType() === 'script') {
+      blockedScripts += 1;
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+
+  const homeResponse = await page.goto('/');
+  expect(homeResponse?.status()).toBe(200);
+  const homeBrand = page.locator(
+    '#static-home header.public-home-brand .turnstone-wordmark',
+  );
+  await expect(homeBrand).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Start a new game' }),
+  ).toBeVisible();
+  await expect(page.locator('#static-home')).toContainText(
+    'A game of traitors and faithful.',
+  );
+  expect(
+    await homeBrand.evaluate((element) => getComputedStyle(element).fontFamily),
+  ).toContain('Playfair Display');
+  expect(
+    await page
+      .locator('body')
+      .evaluate((element) => getComputedStyle(element).backgroundImage),
+  ).toContain('linear-gradient');
+
+  const playResponse = await page.goto('/play');
+  expect(playResponse?.status()).toBe(200);
+  const appBrand = page.locator(
+    '#static-home header.public-home-brand.public-shell-header .turnstone-wordmark',
+  );
+  await expect(appBrand).toBeVisible();
+  const appShellText = await page.locator('#static-home').innerText();
+  expect(appShellText).toContain('Turnstone');
+  expect(appShellText).not.toContain('Start a new game');
+  expect(appShellText).not.toContain('A game of traitors and faithful.');
+  expect(
+    await appBrand.evaluate((element) => getComputedStyle(element).fontFamily),
+  ).toContain('Playfair Display');
+  expect(
+    await page
+      .locator('body')
+      .evaluate((element) => getComputedStyle(element).backgroundImage),
+  ).toContain('linear-gradient');
+  expect(blockedScripts).toBeGreaterThan(0);
+});

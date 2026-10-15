@@ -60,6 +60,36 @@ describe('owner-approved delivery policy', () => {
     expect(settings.buildCommand).toContain('--filter @workspace/party-game');
     expect(settings.buildCommand).not.toMatch(/api-server|run start|run dev/);
   });
+  it('loads development styles from the document head and routes app pages to the static app shell', () => {
+    const entryHtml = readFileSync('artifacts/party-game/index.html', 'utf8');
+    const head = entryHtml.slice(0, entryHtml.indexOf('</head>'));
+    expect(head).toContain(
+      '<link rel="stylesheet" href="%BASE_URL%src/index.css"',
+    );
+    expect(head).toContain(
+      '<link rel="stylesheet" href="%BASE_URL%src/public-home.css"',
+    );
+
+    const rewrites = JSON.parse(readFileSync('vercel.json', 'utf8'))
+      .rewrites as Array<{ source: string; destination: string }>;
+    for (const source of [
+      '/play/:path*',
+      '/create/:path*',
+      '/join/:path*',
+      '/join-request/:path*',
+      '/coordinate/:path*',
+      '/game/:path*',
+      '/tv/:path*',
+      '/account/:path*',
+      '/admin/:path*',
+      '/recap/:path*',
+    ]) {
+      expect(rewrites).toContainEqual({
+        source,
+        destination: '/app-shell.html',
+      });
+    }
+  });
   it('keeps the public home page initial JavaScript under 15 KB', () => {
     const publicDirectory = new URL(
       '../artifacts/party-game/dist/public/',
@@ -217,7 +247,7 @@ describe('owner-approved delivery policy', () => {
       throw new Error('Production test server did not start');
 
     try {
-      for (const path of ['/', '/play', '/robots.txt']) {
+      for (const path of ['/', '/play', '/game/rehearsal-id', '/robots.txt']) {
         const response = await fetch(`http://127.0.0.1:${address.port}${path}`);
         expect(response.status).toBe(200);
         expect(response.headers.get('x-robots-tag')).toBe(
@@ -231,7 +261,11 @@ describe('owner-approved delivery policy', () => {
           expect(html).not.toMatch(
             /<script\b(?![^>]*\bsrc=)(?![^>]*type="application\/ld\+json")[^>]*>/i,
           );
-          expect(html).toContain('type="application/ld+json"');
+          if (path === '/') {
+            expect(html).toContain('type="application/ld+json"');
+          } else {
+            expect(html).not.toContain('type="application/ld+json"');
+          }
           expect(html).not.toMatch(/<style\b/i);
           expect(html).not.toMatch(/\sstyle=/i);
         }

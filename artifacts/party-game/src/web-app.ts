@@ -35,9 +35,13 @@ export function createWebApp(
       cacheControl: false,
     }),
   );
-  app.get('/{*path}', async (_req, res) => {
-    let html = await readFile(path.join(publicDirectory, 'index.html'), 'utf8');
-    if (options.forLighthouseAudit) {
+  app.get('/{*path}', async (req, res) => {
+    const isHomePage = req.path === '/';
+    let html = await readFile(
+      path.join(publicDirectory, isHomePage ? 'index.html' : 'app-shell.html'),
+      'utf8',
+    );
+    if (options.forLighthouseAudit && isHomePage) {
       html = html.replace(
         /(<meta name="robots" content=")noindex, nofollow(")/,
         '$1index, follow$2',

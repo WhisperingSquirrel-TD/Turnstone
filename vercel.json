@@ -58,13 +58,15 @@
     }
   ],
   "rewrites": [
-    { "source": "/play/:path*", "destination": "/index.html" },
-    { "source": "/create/:path*", "destination": "/index.html" },
-    { "source": "/join/:path*", "destination": "/index.html" },
-    { "source": "/coordinate/:path*", "destination": "/index.html" },
-    { "source": "/tv/:path*", "destination": "/index.html" },
-    { "source": "/account/:path*", "destination": "/index.html" },
-    { "source": "/admin/:path*", "destination": "/index.html" },
-    { "source": "/recap/:path*", "destination": "/index.html" }
+    { "source": "/play/:path*", "destination": "/app-shell.html" },
+    { "source": "/create/:path*", "destination": "/app-shell.html" },
+    { "source": "/join/:path*", "destination": "/app-shell.html" },
+    { "source": "/join-request/:path*", "destination": "/app-shell.html" },
+    { "source": "/coordinate/:path*", "destination": "/app-shell.html" },
+    { "source": "/game/:path*", "destination": "/app-shell.html" },
+    { "source": "/tv/:path*", "destination": "/app-shell.html" },
+    { "source": "/account/:path*", "destination": "/app-shell.html" },
+    { "source": "/admin/:path*", "destination": "/app-shell.html" },
+    { "source": "/recap/:path*", "destination": "/app-shell.html" }
   ]
 }

@@ -23,16 +23,28 @@ function normaliseBasePath(basePath: string): string {
   return basePath.endsWith('/') ? basePath : `${basePath}/`;
 }
 
-function renderPublicHeader(basePath: string): string {
+function renderTurnstoneWordmark(basePath: string): string {
   const firstPart = config.appName.slice(
     0,
     config.appName.length - config.wordmarkAccentSuffix.length,
   );
   return `
-    <header class="public-home-brand">
       <a class="turnstone-wordmark" href="${escapeHtml(basePath)}" aria-label="${escapeHtml(config.appName)}">
         <span>${escapeHtml(firstPart)}</span><span class="text-gilt">${escapeHtml(config.wordmarkAccentSuffix)}</span>
-      </a>
+      </a>`;
+}
+
+export function renderPublicAppShellHtml(basePath = '/'): string {
+  return `
+    <header class="public-home-brand public-shell-header player-shell-header">
+      ${renderTurnstoneWordmark(basePath)}
+    </header>`;
+}
+
+function renderPublicHeader(basePath: string): string {
+  return `
+    <header class="public-home-brand">
+      ${renderTurnstoneWordmark(basePath)}
       <nav class="public-home-nav" aria-label="${escapeHtml(en.nav.label)}">
         <a href="${escapeHtml(basePath)}">${escapeHtml(en.nav.home)}</a>
         <a href="${escapeHtml(`${basePath}faq`)}">${escapeHtml(en.publicSite.faqHeading)}</a>

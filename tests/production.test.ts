@@ -15,6 +15,29 @@ describe('actual built production website', () => {
     expect(compare.text).toContain('Compare game formats');
   });
 
+  it('serves public content only at public routes and a styled app shell elsewhere', async () => {
+    const app = createWebApp(
+      new URL('../artifacts/party-game/dist/public', import.meta.url).pathname,
+    );
+    const home = await request(app).get('/');
+    expect(home.status).toBe(200);
+    expect(home.text).toContain('Start a new game');
+
+    for (const path of ['/play', '/game/rehearsal-id']) {
+      const response = await request(app).get(path);
+      expect(response.status, path).toBe(200);
+      expect(response.text).toContain(
+        '<header class="public-home-brand public-shell-header',
+      );
+      expect(response.text).toContain('class="turnstone-wordmark"');
+      expect(response.text).toMatch(/<link\b[^>]*rel="stylesheet"/);
+      expect(response.text).not.toContain('Start a new game');
+      expect(response.text).not.toContain('A game of traitors and faithful.');
+      expect(response.text).not.toContain('Frequently asked questions');
+      expect(response.text).not.toContain('application/ld+json');
+    }
+  });
+
   it('serves external-only scripts with fresh CSP nonces and strict headers on both routes', async () => {
     const app = createWebApp(
       new URL('../artifacts/party-game/dist/public', import.meta.url).pathname,
@@ -42,14 +65,18 @@ describe('actual built production website', () => {
       const structuredData = scripts.find((script) =>
         /type="application\/ld\+json"/i.test(script),
       );
-      expect(structuredData).toBeDefined();
-      expect(() =>
-        JSON.parse(
-          structuredData!
-            .replace(/^<script\b[^>]*>/i, '')
-            .replace(/<\/script>$/i, ''),
-        ),
-      ).not.toThrow();
+      if (path === '/') {
+        expect(structuredData).toBeDefined();
+        expect(() =>
+          JSON.parse(
+            structuredData!
+              .replace(/^<script\b[^>]*>/i, '')
+              .replace(/<\/script>$/i, ''),
+          ),
+        ).not.toThrow();
+      } else {
+        expect(structuredData).toBeUndefined();
+      }
       const executableScripts = scripts.filter(
         (script) => !/type="application\/ld\+json"/i.test(script),
       );
