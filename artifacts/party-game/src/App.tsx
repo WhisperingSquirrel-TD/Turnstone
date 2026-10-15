@@ -46,6 +46,7 @@ import { attachGameView, type GameRealtimeSocket } from './game-socket';
 import { EntryPage } from './EntryPage';
 import { HoldRoleDemo } from './HoldRoleDemo';
 import { lobbyCodeJoinUrl } from './lobby-code-url';
+import { rehearsalGuideStepKey } from './rehearsal-guide-step';
 import { getPublicFacts } from './public-site-content';
 import './public-home.css';
 
@@ -750,7 +751,13 @@ function PlayerGame() {
     ? explanationKeyForPhase(full.phase, notesOpen)
     : null;
   const explanationStepKey = full
-    ? `${full.phase}:${full.cycle}:${full.shadowRound}:${notesOpen ? 'notes' : 'phase'}`
+    ? rehearsalGuideStepKey({
+        phase: full.phase,
+        cycle: full.cycle,
+        deadline: full.deadline,
+        shadowRound: full.shadowRound,
+        notesOpen,
+      })
     : '';
   const renderedRehearsalGuideKey: RehearsalGuideKey =
     full?.rehearsal && !rehearsalGuideStarted
