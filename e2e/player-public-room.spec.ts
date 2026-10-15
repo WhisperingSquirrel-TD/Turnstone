@@ -775,6 +775,120 @@ test('private Notes hide after background and idle, then return with one tap', a
   await expect(notes).toBeVisible();
 });
 
+test('held role text stays above the seal in compact phone viewports', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'desktop',
+    'Compact role geometry runs on the phone and tablet profiles',
+  );
+  const gameId = 'role-viewport';
+  const roleView = {
+    ...createPublicView(gameId),
+    phase: 'DEAL',
+  } as FullView;
+
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      status: 200,
+      headers: {
+        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+      },
+      json: { csrfToken: 'test-csrf' },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      status: 200,
+      json: { version: roleView.version, view: roleView },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, (route) =>
+    route.fulfill({
+      status: 200,
+      json: { version: roleView.version + 1, view: roleView },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/private-view`, (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        version: roleView.version,
+        view: {
+          ...roleView,
+          private: {
+            role: 'faithful',
+            team: [],
+            options: [],
+            choices: {},
+            chat: [],
+            task: null,
+            minimumDurationMs: 0,
+          },
+        },
+      },
+    }),
+  );
+
+  await page.goto(`/game/${gameId}`);
+  const shield = page.getByRole('dialog', { name: 'Shield your screen' });
+  const acknowledge = shield.getByRole('button', { name: /I’m shielded/i });
+  await expect(acknowledge).toHaveAttribute('aria-disabled', 'false', {
+    timeout: 7_000,
+  });
+  await acknowledge.click();
+
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const seal = page.getByTestId('button-hold-reveal');
+    const sealBox = await seal.boundingBox();
+    expect(
+      sealBox,
+      `seal at ${viewport.width}x${viewport.height}`,
+    ).not.toBeNull();
+    await page.mouse.move(
+      sealBox!.x + sealBox!.width / 2,
+      sealBox!.y + sealBox!.height / 2,
+    );
+    const scrollYBeforeHold = await page.evaluate(() => window.scrollY);
+    await page.mouse.down();
+    const roleContent = page.getByTestId('private-role-content');
+    await expect(roleContent).toContainText('Faithful');
+    const heldSealBox = await seal.boundingBox();
+    expect(
+      heldSealBox,
+      `held seal at ${viewport.width}x${viewport.height}`,
+    ).not.toBeNull();
+
+    const heldLayout = await roleContent.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        scrollY: window.scrollY,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      };
+    });
+    expect(heldLayout.left).toBeGreaterThanOrEqual(0);
+    expect(heldLayout.top).toBeGreaterThanOrEqual(0);
+    expect(heldLayout.right).toBeLessThanOrEqual(heldLayout.viewportWidth);
+    expect(heldLayout.bottom).toBeLessThanOrEqual(heldLayout.viewportHeight);
+    expect(heldLayout.bottom).toBeLessThanOrEqual(heldSealBox!.y);
+    expect(heldLayout.scrollY).toBe(scrollYBeforeHold);
+
+    await page.mouse.up();
+    await expect(roleContent).not.toContainText('Faithful');
+  }
+});
+
 test('Dawn, verdict, vote reveal and results appear on the phone without a presenter', async ({
   page,
 }) => {
