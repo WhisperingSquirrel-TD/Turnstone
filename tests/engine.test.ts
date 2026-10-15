@@ -40,7 +40,7 @@ describe('Milestone 1 deterministic engine', () => {
       gameConfigSchema.parse({ basics: { unexpected: 'secret' } }),
     ).toThrow();
   });
-  it('supports fast rehearsal timing without shortening the private hold window', () => {
+  it('keeps rehearsal phases player-paced regardless of the selected speed', () => {
     const botSeatIds = Array.from({ length: 4 }, (_, index) => `bot-${index}`);
     const normalConfig = gameConfigSchema.parse({
       players: { count: 5 },
@@ -54,30 +54,30 @@ describe('Milestone 1 deterministic engine', () => {
     });
     command(fast, { type: 'StartGame' });
     expect(fast.state.phase).toBe('DEAL');
-    expect(
-      fast.state.deadline! - fast.state.phaseStarted,
-    ).toBeGreaterThanOrEqual(8_000);
+    expect(fast.state.deadline).toBeNull();
 
     advance(fast, 'SHADOW');
-    expect(
-      fast.state.deadline! - fast.state.phaseStarted,
-    ).toBeGreaterThanOrEqual(8_000);
-    expect(
-      fast.state.shadowEndAt! - fast.state.phaseStarted,
-    ).toBeGreaterThanOrEqual(16_000);
+    expect(fast.state.deadline).toBeNull();
+    expect(fast.state.shadowEndAt).toBeNull();
+    fast.context.now =
+      fast.state.phaseStarted +
+      fast.state.config.privacy.shieldSeconds * 1_000 +
+      fast.state.config.privacy.holdMs +
+      1;
+    command(fast, { type: 'AdvancePhase' });
+    expect(fast.state.phase).toBe('SHADOW');
+    expect(fast.state.shadowRound).toBe(2);
+    expect(fast.state.deadline).toBeNull();
 
     const longerShield = fixture(5, {
       privacy: { holdMs: 1_000, shieldSeconds: 10 },
       rehearsal: { enabled: true, botSeatIds, speed: 'fast' },
     });
     command(longerShield, { type: 'StartGame' });
-    expect(
-      longerShield.state.deadline! - longerShield.state.phaseStarted,
-    ).toBeGreaterThanOrEqual(13_000);
+    expect(longerShield.state.deadline).toBeNull();
     advance(longerShield, 'SHADOW');
-    expect(
-      longerShield.state.deadline! - longerShield.state.phaseStarted,
-    ).toBeGreaterThanOrEqual(13_000);
+    expect(longerShield.state.deadline).toBeNull();
+    expect(longerShield.state.shadowEndAt).toBeNull();
   });
   it('deals the exact configured number, publishes only the commitment and replays exactly', () => {
     const game = fixture(15);

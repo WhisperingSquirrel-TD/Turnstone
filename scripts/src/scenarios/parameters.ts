@@ -154,10 +154,10 @@ export function configForAssignments(
   if (playerCount !== undefined) setPath(input, 'players.count', playerCount);
   const parsed = gameConfigSchema.safeParse(input);
   if (!parsed.success) return null;
-  return gameConfigSchema.parse({
+  return {
     ...parsed.data,
     schedule: { ...parsed.data.schedule, plannedCycles: null },
-  });
+  };
 }
 
 export function configForRow(indices: readonly number[]): GameConfig | null {

@@ -1,10 +1,12 @@
 import { expect, it } from 'vitest';
+import { performance } from 'node:perf_hooks';
 import { generateConstrainedArray } from '../scripts/src/scenarios/covering-array';
 import { verifyThreeWayCoverage } from '../scripts/src/scenarios/coverage-checker';
 import { gameConfigSchema } from '../lib/shared/src/index';
 import { RULE_FACTORS } from '../scripts/src/scenarios/parameters';
 
 it('covers every valid three-setting combination with valid configs', () => {
+  const startedAt = performance.now();
   const requiredFactors = [
     'players.count',
     'players.lateJoining',
@@ -63,4 +65,5 @@ it('covers every valid three-setting combination with valid configs', () => {
   const coverage = verifyThreeWayCoverage(rows);
   expect(coverage.uncovered).toEqual([]);
   expect(coverage.covered).toBeGreaterThan(0);
+  expect(performance.now() - startedAt).toBeLessThan(45_000);
 }, 60_000);
