@@ -6,6 +6,14 @@ export type RehearsalGuideStepIdentity = {
   notesOpen: boolean;
 };
 
+export type RehearsalGuideVisibility = {
+  rehearsal: boolean;
+  started: boolean;
+  explanationAvailable: boolean;
+  stepKey: string;
+  dismissedStepKey: string | null;
+};
+
 export function rehearsalGuideStepKey({
   phase,
   cycle,
@@ -14,4 +22,17 @@ export function rehearsalGuideStepKey({
   notesOpen,
 }: RehearsalGuideStepIdentity): string {
   return `${phase}:${cycle}:${deadline ?? 'manual'}:${shadowRound}:${notesOpen ? 'notes' : 'phase'}`;
+}
+
+export function shouldShowRehearsalGuide({
+  rehearsal,
+  started,
+  explanationAvailable,
+  stepKey,
+  dismissedStepKey,
+}: RehearsalGuideVisibility): boolean {
+  return (
+    rehearsal &&
+    (!started || (explanationAvailable && dismissedStepKey !== stepKey))
+  );
 }

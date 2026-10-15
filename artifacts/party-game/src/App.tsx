@@ -48,7 +48,10 @@ import { attachGameView, type GameRealtimeSocket } from './game-socket';
 import { EntryPage } from './EntryPage';
 import { HoldRoleDemo } from './HoldRoleDemo';
 import { lobbyCodeJoinUrl } from './lobby-code-url';
-import { rehearsalGuideStepKey } from './rehearsal-guide-step';
+import {
+  rehearsalGuideStepKey,
+  shouldShowRehearsalGuide,
+} from './rehearsal-guide-step';
 import { getPublicFacts } from './public-site-content';
 import './public-home.css';
 
@@ -685,9 +688,8 @@ function PlayerGame() {
   const [notesDraft, setNotesDraft] = useState('');
   const [notesStatus, setNotesStatus] = useState('');
   const [rehearsalGuideStarted, setRehearsalGuideStarted] = useState(false);
-  const [rehearsalGuideOpen, setRehearsalGuideOpen] = useState(false);
-  const [rehearsalGuideKey, setRehearsalGuideKey] =
-    useState<RehearsalGuideKey>('start');
+  const [rehearsalGuideDismissedStep, setRehearsalGuideDismissedStep] =
+    useState<string | null>(null);
   const [advanceConfirmationOpen, setAdvanceConfirmationOpen] = useState(false);
   const heldRef = useRef(false);
   const holdVersion = useRef(0);
@@ -696,7 +698,6 @@ function PlayerGame() {
   const limitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const shieldDialog = useRef<HTMLDialogElement | null>(null);
-  const lastRehearsalGuideStep = useRef('');
   const focusTime = useRef(0);
   const ignoreSyntheticClick = useRef(false);
   const request = useMemo(() => requestHeaders(token), [token]);
@@ -728,14 +729,14 @@ function PlayerGame() {
   const renderedRehearsalGuideKey: RehearsalGuideKey =
     full?.rehearsal && !rehearsalGuideStarted
       ? 'start'
-      : (explanationKey ?? rehearsalGuideKey);
-  const rehearsalGuideVisible = Boolean(
-    full?.rehearsal &&
-    (rehearsalGuideOpen ||
-      !rehearsalGuideStarted ||
-      (explanationKey &&
-        lastRehearsalGuideStep.current !== explanationStepKey)),
-  );
+      : (explanationKey ?? 'start');
+  const rehearsalGuideVisible = shouldShowRehearsalGuide({
+    rehearsal: Boolean(full?.rehearsal),
+    started: rehearsalGuideStarted,
+    explanationAvailable: Boolean(explanationKey),
+    stepKey: explanationStepKey,
+    dismissedStepKey: rehearsalGuideDismissedStep,
+  });
   const ownSeat = full?.viewerSeatId
     ? (full.seats.find((seat) => seat.id === full.viewerSeatId) ?? null)
     : null;
@@ -862,31 +863,6 @@ function PlayerGame() {
     !shielded &&
     !(full.rehearsal && rehearsalGuideVisible),
   );
-
-  useEffect(() => {
-    if (!full?.rehearsal) {
-      setRehearsalGuideOpen(false);
-      return;
-    }
-    if (!rehearsalGuideStarted) {
-      setRehearsalGuideKey('start');
-      setRehearsalGuideOpen(true);
-      return;
-    }
-    if (
-      explanationKey &&
-      lastRehearsalGuideStep.current !== explanationStepKey
-    ) {
-      lastRehearsalGuideStep.current = explanationStepKey;
-      setRehearsalGuideKey(explanationKey);
-      setRehearsalGuideOpen(true);
-    }
-  }, [
-    full?.rehearsal,
-    rehearsalGuideStarted,
-    explanationKey,
-    explanationStepKey,
-  ]);
 
   useEffect(() => {
     if (!inPrivateMoment) {
@@ -1343,16 +1319,11 @@ function PlayerGame() {
   }
 
   function dismissRehearsalGuide() {
-    if (rehearsalGuideKey === 'start' && !rehearsalGuideStarted) {
+    if (!rehearsalGuideStarted) {
       setRehearsalGuideStarted(true);
-      if (explanationKey) {
-        lastRehearsalGuideStep.current = explanationStepKey;
-        setRehearsalGuideKey(explanationKey);
-        setRehearsalGuideOpen(true);
-        return;
-      }
+      return;
     }
-    setRehearsalGuideOpen(false);
+    if (explanationKey) setRehearsalGuideDismissedStep(explanationStepKey);
   }
 
   async function saveNotes() {
