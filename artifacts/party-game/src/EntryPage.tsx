@@ -16,6 +16,8 @@ import {
   lateGameInviteResponseSchema,
   gameViewResponseSchema,
   guestJoinRequestSchema,
+  joinNameCheckRequestSchema,
+  joinNameCheckResponseSchema,
   joinRequestCreatedResponseSchema,
   joinRequestDecisionResponseSchema,
   joinRequestDecisionSchema,
@@ -39,6 +41,7 @@ import {
 } from './EntryExperience';
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
 import { lobbyCodeJoinUrl, parseLobbyCodeFragment } from './lobby-code-url';
+import { recoverSeat } from './recovery-client';
 
 const QRCode = lazy(async () => {
   const module = await import('qrcode.react');
@@ -422,6 +425,49 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     }
   }
 
+  async function checkJoinName(data: {
+    shortCode: string;
+    name: string;
+  }): Promise<'available' | 'duplicate' | 'reserved'> {
+    const requestBody = inviteToken
+      ? joinNameCheckRequestSchema.parse({
+          gameId: inviteGameId,
+          inviteToken,
+          name: data.name,
+        })
+      : joinNameCheckRequestSchema.parse({
+          shortCode: data.shortCode,
+          name: data.name,
+        });
+    const result = await postJson(
+      '/join/name-check',
+      requestBody,
+      joinNameCheckResponseSchema,
+      csrfToken,
+    );
+    return result.status;
+  }
+
+  async function recoverExistingSeat(data: {
+    shortCode: string;
+    name: string;
+    pin: string;
+  }): Promise<void> {
+    const recovered = await recoverSeat({
+      apiOrigin: config.apiOrigin,
+      csrfToken,
+      ...(inviteToken && inviteGameId
+        ? { gameId: inviteGameId, inviteToken }
+        : { shortCode: data.shortCode }),
+      name: data.name,
+      pin: data.pin,
+    });
+    if (!isFullView(recovered.view)) {
+      throw new Error(en.entry.errorFallback);
+    }
+    navigate(webPath(`/game/${encodeURIComponent(recovered.view.id)}`));
+  }
+
   const checkJoinStatus = useCallback(async () => {
     const targetRequestId = requestId ?? joinRequestId;
     if (!targetRequestId) return;
@@ -757,6 +803,8 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       }
       pendingJoiners={pendingJoiners}
       onJoin={join}
+      onCheckJoinName={checkJoinName}
+      onRecover={recoverExistingSeat}
       onCheckJoinStatus={checkJoinStatus}
       onCreate={createGame}
       onApproveJoiner={approveJoiner}

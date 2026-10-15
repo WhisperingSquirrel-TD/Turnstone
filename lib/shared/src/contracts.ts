@@ -7,6 +7,12 @@ import {
 } from './config';
 
 const id = z.string().min(1).max(128);
+const guestSeatName = z
+  .string()
+  .trim()
+  .min(2)
+  .max(20)
+  .refine((value) => !/\p{Cc}/u.test(value));
 const envelope = z.object({
   idempotencyKey: id,
   expectedVersion: z.number().int().nonnegative().optional(),
@@ -400,12 +406,7 @@ export const csrfTokenResponseSchema = z
 export const guestJoinRequestSchema = z
   .object({
     inviteToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
-    name: z
-      .string()
-      .trim()
-      .min(2)
-      .max(20)
-      .refine((v) => !/\p{Cc}/u.test(v)),
+    name: guestSeatName,
     pin: z.string().regex(/^\d{4,6}$/),
     idempotencyKey: id,
   })
@@ -427,28 +428,48 @@ export const lateGameInviteResponseSchema = z
 export const shortCodeJoinRequestSchema = z
   .object({
     shortCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),
-    name: z
-      .string()
-      .trim()
-      .min(2)
-      .max(20)
-      .refine((v) => !/\p{Cc}/u.test(v)),
+    name: guestSeatName,
     pin: z.string().regex(/^\d{4,6}$/),
     idempotencyKey: id,
   })
   .strict();
-export const seatRecoveryRequestSchema = z
+export const joinNameCheckRequestSchema = z.union([
+  z
+    .object({
+      shortCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),
+      name: guestSeatName,
+    })
+    .strict(),
+  z
+    .object({
+      gameId: id,
+      inviteToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+      name: guestSeatName,
+    })
+    .strict(),
+]);
+export const joinNameCheckResponseSchema = z
   .object({
-    shortCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),
-    name: z
-      .string()
-      .trim()
-      .min(2)
-      .max(20)
-      .refine((v) => !/\p{Cc}/u.test(v)),
-    pin: z.string().regex(/^\d{4,6}$/),
+    status: z.enum(['available', 'duplicate', 'reserved']),
   })
   .strict();
+export const seatRecoveryRequestSchema = z.union([
+  z
+    .object({
+      shortCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),
+      name: guestSeatName,
+      pin: z.string().regex(/^\d{4,6}$/),
+    })
+    .strict(),
+  z
+    .object({
+      gameId: id,
+      inviteToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+      name: guestSeatName,
+      pin: z.string().regex(/^\d{4,6}$/),
+    })
+    .strict(),
+]);
 export const seatPinResetRequestSchema = z
   .object({
     expectedVersion: z.number().int().nonnegative(),

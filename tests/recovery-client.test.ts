@@ -47,6 +47,50 @@ describe('seat recovery client', () => {
     );
   });
 
+  it('supports recovery from a game-scoped invitation', async () => {
+    const result = {
+      version: 4,
+      view: {
+        exists: true as const,
+        phase: 'LOBBY' as const,
+        lobbyOpen: true,
+        seatCount: 2,
+      },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const inviteToken = 'i'.repeat(43);
+
+    await expect(
+      recoverSeat({
+        apiOrigin: '/api-server',
+        csrfToken: 'csrf-test',
+        gameId: 'game-1',
+        inviteToken,
+        name: 'Alex',
+        pin: '1234',
+      }),
+    ).resolves.toEqual(result);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api-server/api/recover',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({
+          gameId: 'game-1',
+          inviteToken,
+          name: 'Alex',
+          pin: '1234',
+        }),
+      }),
+    );
+  });
+
   it('returns one generic error for rejected recovery attempts', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

@@ -2678,12 +2678,16 @@ it('creates a private invite and gives a joining guest a seat session', async ()
       ],
     });
 
+    const rateLimitsUsed: number[] = [];
     const app = createApp(async () => {}, {
       resolveViewer: () => ({ kind: 'coordinator' }),
       rateLimitSecret: 'integration-test-rate-limit-secret',
       publicBaseUrl: 'https://turnstone.test',
       secureCookies: true,
-      consumeRateLimit: async () => true,
+      consumeRateLimit: async (_bucketHash, limit) => {
+        rateLimitsUsed.push(limit);
+        return true;
+      },
     });
     const inviteResponse = await request(app)
       .post(`/api/games/${gameId}/invites`)
@@ -2708,6 +2712,31 @@ it('creates a private invite and gives a joining guest a seat session', async ()
     const inviteToken = joinUrl.hash.slice(1);
     expect(/^[A-Za-z0-9_-]{43}$/.test(inviteToken)).toBe(true);
 
+    const shortCodeRateLimitStart = rateLimitsUsed.length;
+    const availableByCode = await request(app)
+      .post('/api/join/name-check')
+      .send({ shortCode: inviteResponse.body.shortCode, name: 'Guest One' })
+      .expect(200);
+    expect(availableByCode.body).toEqual({ status: 'available' });
+    expect(rateLimitsUsed.slice(shortCodeRateLimitStart)).toContain(5);
+
+    const inviteRateLimitStart = rateLimitsUsed.length;
+    const availableByInvite = await request(app)
+      .post('/api/join/name-check')
+      .send({ gameId, inviteToken, name: 'Guest One' })
+      .expect(200);
+    expect(availableByInvite.body).toEqual({ status: 'available' });
+    expect(rateLimitsUsed.slice(inviteRateLimitStart)).toContain(10);
+
+    await request(app)
+      .post('/api/join/name-check')
+      .send({
+        gameId,
+        inviteToken: 'x'.repeat(43),
+        name: 'Guest One',
+      })
+      .expect(404, { error: 'Not found' });
+
     const joined = await request(app)
       .post(`/api/games/${gameId}/join`)
       .send({
@@ -2717,6 +2746,28 @@ it('creates a private invite and gives a joining guest a seat session', async ()
         idempotencyKey: 'guest-one-join',
       })
       .expect(201);
+    const duplicateByInvite = await request(app)
+      .post('/api/join/name-check')
+      .send({ gameId, inviteToken, name: 'gUEST   oNE' })
+      .expect(200);
+    expect(duplicateByInvite.body).toEqual({ status: 'duplicate' });
+    expect(Object.keys(duplicateByInvite.body)).toEqual(['status']);
+
+    const duplicateByCode = await request(app)
+      .post('/api/join/name-check')
+      .send({ shortCode: inviteResponse.body.shortCode, name: 'Guest One' })
+      .expect(200);
+    expect(duplicateByCode.body).toEqual({ status: 'duplicate' });
+
+    await request(app)
+      .post('/api/join/name-check')
+      .send({
+        gameId,
+        inviteToken,
+        name: 'Practice player 1',
+      })
+      .expect(200, { status: 'reserved' });
+
     await request(app)
       .post(`/api/games/${gameId}/join`)
       .send({
@@ -2792,7 +2843,7 @@ it('creates a private invite and gives a joining guest a seat session', async ()
       .post('/api/recover')
       .send({
         shortCode: inviteResponse.body.shortCode,
-        name: 'Guest One',
+        name: '  gUEST   oNE  ',
         pin: '1234',
       })
       .expect(200);
@@ -2819,6 +2870,16 @@ it('creates a private invite and gives a joining guest a seat session', async ()
     expect(oldSession?.revokedAt).not.toBeNull();
     expect(newSession?.revokedAt).toBeNull();
     expect(recovery.body.view.id).toBe(gameId);
+
+    await request(app)
+      .post('/api/recover')
+      .send({
+        gameId,
+        inviteToken,
+        name: 'GUEST One',
+        pin: '1234',
+      })
+      .expect(200);
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }

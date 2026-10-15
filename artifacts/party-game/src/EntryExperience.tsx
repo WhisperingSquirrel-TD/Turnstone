@@ -102,6 +102,11 @@ export interface EntryExperienceCopy {
   nameHeading: string;
   firstNameLabel: string;
   firstNamePlaceholder: string;
+  duplicateNamePrompt: (name: string) => string;
+  duplicateNameYes: string;
+  duplicateNameNo: string;
+  differentNameError: (name: string) => string;
+  reservedPracticeName: string;
   optionsHeading: string;
   tapToReveal: string;
   largeText: string;
@@ -193,6 +198,15 @@ export interface EntryExperienceProps {
     name: string;
     pin: string;
   }) => void | Promise<void>;
+  onCheckJoinName: (data: {
+    shortCode: string;
+    name: string;
+  }) => Promise<'available' | 'duplicate' | 'reserved'>;
+  onRecover: (data: {
+    shortCode: string;
+    name: string;
+    pin: string;
+  }) => void | Promise<void>;
   onCheckJoinStatus: () => void | Promise<void>;
   onCreate: (data: {
     gameName: string;
@@ -235,6 +249,8 @@ export function EntryExperience({
   requiredPlayerCount = 5,
   pendingJoiners,
   onJoin,
+  onCheckJoinName,
+  onRecover,
   onCheckJoinStatus,
   onCreate,
   onApproveJoiner,
@@ -248,6 +264,8 @@ export function EntryExperience({
   const [internalScreen, setInternalScreen] = useState<EntryScreen>('welcome');
   const [localError, setLocalError] = useState('');
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [duplicateName, setDuplicateName] = useState<string | null>(null);
+  const [recoveringSeat, setRecoveringSeat] = useState(false);
   const codeRefs = useRef<Array<HTMLInputElement | null>>([]);
   const screen = controlledScreen ?? internalScreen;
 
@@ -265,11 +283,15 @@ export function EntryExperience({
   function abandonJoin() {
     clearJoinSecrets();
     onClearSensitiveValues();
+    setDuplicateName(null);
+    setRecoveringSeat(false);
     moveTo('welcome');
   }
 
   function beginJoin() {
     setLocalError('');
+    setDuplicateName(null);
+    setRecoveringSeat(false);
     moveTo(
       VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase())
         ? 'join-name'
@@ -343,12 +365,47 @@ export function EntryExperience({
 
     setLocalError('');
     try {
+      if (recoveringSeat) {
+        await onRecover({ shortCode, name, pin });
+        clearJoinSecrets();
+        onClearSensitiveValues();
+        return;
+      }
       await onJoin({ shortCode, name, pin });
       clearJoinSecrets();
       onClearSensitiveValues();
       moveTo('join-wait');
     } catch {
       onInputChange('joinPin', '');
+      setLocalError(copy.errorFallback);
+    }
+  }
+
+  async function checkJoinName() {
+    const name = inputs.joinName.trim();
+    if (name.length < 2) {
+      setLocalError(copy.nameError);
+      return;
+    }
+    setLocalError('');
+    try {
+      const result = await onCheckJoinName({
+        shortCode: inputs.joinCodeEntry.trim().toUpperCase(),
+        name,
+      });
+      if (result === 'duplicate') {
+        setDuplicateName(name);
+        return;
+      }
+      setDuplicateName(null);
+      if (result === 'reserved') {
+        setLocalError(copy.reservedPracticeName);
+        return;
+      }
+      setRecoveringSeat(false);
+      onInputChange('joinPin', '');
+      moveTo('join-pin');
+    } catch {
       setLocalError(copy.errorFallback);
     }
   }
@@ -586,9 +643,11 @@ export function EntryExperience({
                   maxLength={20}
                   value={inputs.joinName}
                   placeholder={copy.firstNamePlaceholder}
-                  onChange={(event) =>
-                    onInputChange('joinName', event.target.value)
-                  }
+                  onChange={(event) => {
+                    onInputChange('joinName', event.target.value);
+                    setDuplicateName(null);
+                    setLocalError('');
+                  }}
                 />
                 <button
                   className="entry-disclosure"
@@ -640,15 +699,48 @@ export function EntryExperience({
                     </label>
                   </fieldset>
                 )}
-                <button
-                  className="entry-primary-action"
-                  data-testid="button-continue-name"
-                  type="button"
-                  disabled={inputs.joinName.trim().length < 2}
-                  onClick={() => moveTo('join-pin')}
-                >
-                  {copy.continue}
-                </button>
+                {duplicateName ? (
+                  <div
+                    className="entry-form-area"
+                    role="group"
+                    aria-label={copy.duplicateNamePrompt(duplicateName)}
+                    data-testid="duplicate-name-choice"
+                  >
+                    <p>{copy.duplicateNamePrompt(duplicateName)}</p>
+                    <button
+                      className="entry-primary-action"
+                      type="button"
+                      onClick={() => {
+                        setRecoveringSeat(true);
+                        onInputChange('joinPin', '');
+                        moveTo('join-pin');
+                      }}
+                    >
+                      {copy.duplicateNameYes}
+                    </button>
+                    <button
+                      className="entry-secondary-action"
+                      type="button"
+                      onClick={() => {
+                        setDuplicateName(null);
+                        setLocalError(copy.differentNameError(duplicateName));
+                        document.getElementById('entry-join-name')?.focus();
+                      }}
+                    >
+                      {copy.duplicateNameNo}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="entry-primary-action"
+                    data-testid="button-continue-name"
+                    type="button"
+                    disabled={inputs.joinName.trim().length < 2}
+                    onClick={() => void checkJoinName()}
+                  >
+                    {copy.continue}
+                  </button>
+                )}
               </div>
             )}
 
@@ -706,6 +798,7 @@ export function EntryExperience({
                   onInputChange('joinPin', '');
                   moveTo('join-code');
                 } else {
+                  setRecoveringSeat(false);
                   onInputChange('joinPin', '');
                   moveTo('join-name');
                 }

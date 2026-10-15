@@ -33,6 +33,9 @@ import {
   gameConfigSchema,
   guestJoinRequestSchema,
   gameViewResponseSchema,
+  isReservedPracticeName,
+  joinNameCheckRequestSchema,
+  joinNameCheckResponseSchema,
   joinRequestDecisionSchema,
   joinRequestStatusResponseSchema,
   pendingJoinRequestsResponseSchema,
@@ -44,6 +47,7 @@ import {
   rehearsalStartRequestSchema,
   seatPinResetRequestSchema,
   seatRecoveryRequestSchema,
+  normalizeSeatName,
   shortCodeJoinRequestSchema,
 } from '@workspace/shared';
 import {
@@ -965,6 +969,98 @@ export function createApp(
       sendError(response, 503, 'Service unavailable');
     }
   });
+  app.post('/api/join/name-check', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const parsed = joinNameCheckRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
+      const secret = options.rateLimitSecret;
+      if (!secret) {
+        sendError(response, 503, 'Service unavailable');
+        return;
+      }
+
+      const now = Date.now();
+      const { findActiveGameInvite } =
+        await import('@workspace/db/seat-access-store');
+      let gameId: string;
+      if ('shortCode' in parsed.data) {
+        const shortCodeHash = hashJoinCode(parsed.data.shortCode, secret);
+        if (
+          !(await checkRateLimit(
+            request,
+            'short-code-name-check',
+            shortCodeHash,
+            5,
+          ))
+        ) {
+          sendError(response, 429, 'Too many requests');
+          return;
+        }
+        const invite = await findActiveGameInvite({ shortCodeHash }, now);
+        if (!invite) {
+          sendError(response, 404, 'Not found');
+          return;
+        }
+        gameId = invite.gameId;
+      } else {
+        gameId = parsed.data.gameId;
+        if (!(await checkRateLimit(request, 'guest-name-check', gameId, 10))) {
+          sendError(response, 429, 'Too many requests');
+          return;
+        }
+        const inviteTokenHash = createHash('sha256')
+          .update(parsed.data.inviteToken)
+          .digest('hex');
+        const invite = await findActiveGameInvite(
+          { gameId, linkTokenHash: inviteTokenHash },
+          now,
+        );
+        if (!invite) {
+          sendError(response, 404, 'Not found');
+          return;
+        }
+      }
+
+      const state = await loadGameState(gameId);
+      if (!state) {
+        sendError(response, 404, 'Not found');
+        return;
+      }
+      if (state.phase !== 'DRAFT' && state.phase !== 'LOBBY') {
+        if (!joiningWindowOpen(state)) {
+          sendError(response, 409, 'Command rejected');
+          return;
+        }
+        if ('shortCode' in parsed.data) {
+          sendError(response, 404, 'Not found');
+          return;
+        }
+        if (
+          !(await checkRateLimit(request, 'late-invite-name-check', gameId, 5))
+        ) {
+          sendError(response, 429, 'Too many requests');
+          return;
+        }
+      }
+
+      const nameKey = normalizeSeatName(parsed.data.name);
+      const status = isReservedPracticeName(parsed.data.name)
+        ? 'reserved'
+        : state.seats.some((seat) => normalizeSeatName(seat.name) === nameKey)
+          ? 'duplicate'
+          : 'available';
+      response.json(joinNameCheckResponseSchema.parse({ status }));
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
   app.get('/api/games/:id/join-requests', async (request, response) => {
     try {
       const viewer = await coordinatorViewerForRequest(request);
@@ -1228,15 +1324,31 @@ export function createApp(
         sendError(response, 400, 'Invalid request');
         return;
       }
-      const codeHash = hashJoinCode(parsed.data.shortCode, secret);
-      if (!(await checkRateLimit(request, 'seat-recovery', codeHash, 10))) {
+      const recoveryKey =
+        'shortCode' in parsed.data
+          ? hashJoinCode(parsed.data.shortCode, secret)
+          : createHash('sha256').update(parsed.data.inviteToken).digest('hex');
+      if (!(await checkRateLimit(request, 'seat-recovery', recoveryKey, 10))) {
         sendError(response, 429, 'Recovery could not be completed');
         return;
       }
       const now = Date.now();
-      const { findGameForSeatRecovery, getSeatAccess, recordSeatPinFailure } =
-        await import('@workspace/db/seat-access-store');
-      const invite = await findGameForSeatRecovery(codeHash);
+      const {
+        findActiveGameInvite,
+        findGameForSeatRecovery,
+        getSeatAccess,
+        recordSeatPinFailure,
+      } = await import('@workspace/db/seat-access-store');
+      const invite =
+        'shortCode' in parsed.data
+          ? await findGameForSeatRecovery(recoveryKey)
+          : await findActiveGameInvite(
+              {
+                gameId: parsed.data.gameId,
+                linkTokenHash: recoveryKey,
+              },
+              now,
+            );
       if (!invite) {
         sendError(response, 401, 'Recovery could not be completed');
         return;
@@ -1246,9 +1358,9 @@ export function createApp(
         sendError(response, 401, 'Recovery could not be completed');
         return;
       }
-      const normalizedName = parsed.data.name.trim().toLowerCase();
+      const normalizedName = normalizeSeatName(parsed.data.name);
       const matches = state.seats.filter(
-        (seat) => seat.name.trim().toLowerCase() === normalizedName,
+        (seat) => normalizeSeatName(seat.name) === normalizedName,
       );
       if (matches.length !== 1) {
         sendError(response, 401, 'Recovery could not be completed');

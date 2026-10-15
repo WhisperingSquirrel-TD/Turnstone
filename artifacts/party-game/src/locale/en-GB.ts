@@ -213,6 +213,14 @@ export const en = {
     nameHeading: 'What should we call you?',
     firstNameLabel: 'Your first name',
     firstNamePlaceholder: 'First name',
+    duplicateNamePrompt: (name: string) =>
+      `Someone called ${name} is already playing. Is that you on a new phone?`,
+    duplicateNameYes: "Yes, that's me",
+    duplicateNameNo: "No, I'm someone else",
+    differentNameError: (name: string) =>
+      `Please choose a different name, for example ${name} B.`,
+    reservedPracticeName:
+      'That name is reserved for practice players. Please choose a different name.',
     optionsHeading: 'Options',
     tapToReveal: 'Tap instead of hold',
     largeText: 'Use larger text',
@@ -221,7 +229,7 @@ export const en = {
     pinLabel: '4-digit PIN',
     pinHint:
       'This is your private 4-digit PIN, not the game code. You’ll only need it if you change phones.',
-    joinButton: 'Request to join',
+    joinButton: 'Join',
     joinPending: 'Sending request…',
     waitingHeading: (organiser: string) =>
       `Waiting for ${organiser} to let you in`,

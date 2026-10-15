@@ -3,20 +3,35 @@ import {
   seatRecoveryRequestSchema,
 } from '@workspace/shared';
 
-export interface RecoverSeatInput {
+interface RecoveryRequestContext {
   apiOrigin: string | null;
   csrfToken: string | null;
-  shortCode: string;
   name: string;
   pin: string;
 }
+
+export type RecoverSeatInput = RecoveryRequestContext &
+  (
+    | {
+        shortCode: string;
+        gameId?: never;
+        inviteToken?: never;
+      }
+    | {
+        shortCode?: never;
+        gameId: string;
+        inviteToken: string;
+      }
+  );
 
 export async function recoverSeat(input: RecoverSeatInput) {
   if (!input.csrfToken) {
     throw new Error('Recovery could not be completed');
   }
   const request = seatRecoveryRequestSchema.parse({
-    shortCode: input.shortCode,
+    ...('shortCode' in input && input.shortCode
+      ? { shortCode: input.shortCode }
+      : { gameId: input.gameId, inviteToken: input.inviteToken }),
     name: input.name,
     pin: input.pin,
   });
