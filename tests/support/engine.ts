@@ -84,7 +84,13 @@ export function advance(game: TestGame, phase: State['phase']) {
     i < 100 && game.state.phase !== phase && game.state.phase !== 'FINISHED';
     i++
   ) {
-    game.context.now = (game.state.deadline ?? game.context.now) + 1;
+    game.context.now =
+      game.state.deadline !== null
+        ? game.state.deadline + 1
+        : game.state.phaseStarted +
+          game.state.config.privacy.shieldSeconds * 1_000 +
+          game.state.config.privacy.holdMs +
+          1;
     command(game, { type: 'AdvancePhase' });
   }
   if (game.state.phase !== phase)

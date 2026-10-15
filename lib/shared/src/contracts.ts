@@ -118,7 +118,7 @@ export const eventSchema = z.discriminatedUnion('type', [
   event('ShadowSubmitted', { seatId: id, choice: id }),
   event('ShadowRoundAdvanced', {
     cycle: z.number().int().positive(),
-    deadline: z.number().int().nonnegative(),
+    deadline: z.number().int().nonnegative().nullable(),
   }),
   event('TaskAssigned', {
     seatId: id,

@@ -1198,7 +1198,7 @@ it('advances an overdue phase from PostgreSQL and remains correct across repeate
   }
 });
 
-it('automatically advances an expired rehearsal voting phase and publishes it', async () => {
+it('keeps rehearsal phases player-paced and processes bots without deadline advances', async () => {
   const gameId = randomUUID();
   const game = createFixture(6, {
     rehearsal: {
@@ -1215,13 +1215,19 @@ it('automatically advances an expired rehearsal voting phase and publishes it', 
     ...game.events.slice(1),
   ];
   const before = replay(events);
-  if (before.phase !== 'VOTE' || before.deadline === null) {
-    throw new Error('Expected the rehearsal fixture to be in a timed vote.');
+  if (before.phase !== 'VOTE' || before.deadline !== null) {
+    throw new Error(
+      'Expected the rehearsal vote to have no automatic deadline.',
+    );
   }
 
   const published: string[] = [];
   const processed: string[] = [];
-  const dueAt = before.deadline;
+  const dueAt =
+    before.phaseStarted +
+    before.config.privacy.shieldSeconds * 1_000 +
+    before.config.privacy.holdMs +
+    1;
 
   try {
     await createGameWithEvent({
@@ -1251,11 +1257,10 @@ it('automatically advances an expired rehearsal voting phase and publishes it', 
     }).runOnce();
 
     const after = replay(await readGameEvents(gameId));
-    expect(after.version).toBeGreaterThan(before.version);
+    expect(after.version).toBe(before.version);
     expect(after.phase).toBe('VOTE');
-    expect(after.revote).toBe(true);
-    expect(after.deadline).toBeGreaterThan(dueAt);
-    expect(published).toContain(gameId);
+    expect(after.deadline).toBeNull();
+    expect(published).not.toContain(gameId);
     expect(processed).toContain(gameId);
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
@@ -1607,8 +1612,8 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
           order by id desc
           limit 1
         `);
-        const dueAt = activeDeadline.rows[0]?.due_at;
-        expect(new Date(String(dueAt)).getTime()).toBe(state.deadline);
+        expect(state.deadline).toBeNull();
+        expect(activeDeadline.rows).toHaveLength(0);
       }
       progress.push({
         phase: state.phase,
@@ -1689,16 +1694,49 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
       }
       const current = await currentGame();
       if (current.phase === 'FINISHED') break;
-      expect(current.deadline).not.toBeNull();
-      now = Math.max(now, current.deadline ?? now);
+      expect(current.deadline).toBeNull();
+      now = Math.max(
+        now,
+        current.phaseStarted +
+          current.config.privacy.shieldSeconds * 1_000 +
+          current.config.privacy.holdMs +
+          1,
+      );
       await scheduler.runOnce();
-      const afterDeadline = await currentGame();
-      expect(afterDeadline.version).toBeGreaterThan(current.version);
+      const afterBots = await currentGame();
+      if (afterBots.phase === 'FINISHED') break;
+      const beforeMoveView = await request(app)
+        .get(`/api/games/${gameId}/view`)
+        .set('Cookie', cookie);
+      expect(beforeMoveView.status).toBe(200);
+      expect(beforeMoveView.body.view.canAdvancePhase).toBe(true);
+      const movedOn = await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .set('Cookie', shieldedCookie)
+        .set('X-CSRF-Token', csrfToken)
+        .send({
+          type: 'AdvancePhase',
+          expectedVersion: afterBots.version,
+          idempotencyKey: randomUUID(),
+        });
+      expect(
+        movedOn.status,
+        JSON.stringify({
+          response: movedOn.body,
+          phase: afterBots.phase,
+          now,
+          phaseStarted: afterBots.phaseStarted,
+          canAdvance: beforeMoveView.body.view.canAdvancePhase,
+        }),
+      ).toBe(200);
+      await scheduler.runOnce();
+      const afterManualAdvance = await currentGame();
+      expect(afterManualAdvance.version).toBeGreaterThan(afterBots.version);
       const readyView = await request(app)
         .get(`/api/games/${gameId}/view`)
         .set('Cookie', cookie);
       expect(readyView.status).toBe(200);
-      expect(readyView.body.view.version).toBe(afterDeadline.version);
+      expect(readyView.body.view.version).toBe(afterManualAdvance.version);
     }
     const finished = await currentGame();
     expect(finished.phase, JSON.stringify(progress.slice(-10))).toBe(

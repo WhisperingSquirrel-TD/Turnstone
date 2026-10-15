@@ -217,23 +217,6 @@ export function decide(
   };
   const duration = (phase: Phase) => {
     const c = state!.config;
-    if (c.rehearsal.enabled && c.rehearsal.speed === 'fast') {
-      const privateMinimum =
-        Math.max(5, c.privacy.shieldSeconds) * 1_000 + c.privacy.holdMs + 2_000;
-      const privatePhaseDuration = Math.max(8_000, privateMinimum);
-      const rehearsalMilliseconds: Partial<Record<Phase, number>> = {
-        DEAL: privatePhaseDuration,
-        MISSION: 2_000,
-        DEBATE: 2_000,
-        VOTE: privatePhaseDuration,
-        FINAL_BANISH: privatePhaseDuration,
-        VERDICT: 2_000,
-        SHADOW: privatePhaseDuration * 2,
-        DAWN: 2_000,
-        FINAL_VOTE: privatePhaseDuration,
-      };
-      return rehearsalMilliseconds[phase] ?? 2_000;
-    }
     const value: Partial<Record<Phase, number>> = {
       DEAL:
         c.schedule.format === 'quick'
@@ -263,14 +246,21 @@ export function decide(
     return (value[phase] ?? 1) * 60_000;
   };
   const enter = (phase: Phase, nextCycle = state!.cycle) => {
-    const phaseDuration = duration(phase);
+    const phaseDuration = state!.config.rehearsal.enabled
+      ? null
+      : duration(phase);
     emit('PhaseChanged', {
       phase,
       deadline: ['DRAFT', 'LOBBY'].includes(phase)
         ? null
-        : ctx.now +
-          (phase === 'SHADOW' ? Math.ceil(phaseDuration / 2) : phaseDuration),
-      shadowEndAt: phase === 'SHADOW' ? ctx.now + phaseDuration : null,
+        : phaseDuration === null
+          ? null
+          : ctx.now +
+            (phase === 'SHADOW' ? Math.ceil(phaseDuration / 2) : phaseDuration),
+      shadowEndAt:
+        phase === 'SHADOW' && phaseDuration !== null
+          ? ctx.now + phaseDuration
+          : null,
       cycle: nextCycle,
     });
     if (phase === 'SHADOW' && state!.pendingSleeper) {
@@ -651,11 +641,13 @@ export function decide(
         if (state.shadowRound === 1) {
           if (state.deadline !== null && ctx.now < state.deadline)
             return error('SHADOW_ROUND_NOT_DUE');
-          if (state.shadowEndAt === null)
+          if (state.shadowEndAt === null && !state.config.rehearsal.enabled)
             return error('SHADOW_DEADLINE_MISSING');
           emit('ShadowRoundAdvanced', {
             cycle: state.cycle,
-            deadline: state.shadowEndAt,
+            deadline: state.config.rehearsal.enabled
+              ? null
+              : state.shadowEndAt!,
           });
           break;
         }

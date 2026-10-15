@@ -513,6 +513,11 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         'made by Stackstone Consulting',
       );
       await page.getByRole('button', { name: 'Got it' }).click();
+      await page.waitForTimeout(2_500);
+      expect(
+        await currentPhase(page),
+        `Rehearsal phase ${phase} advanced without the player choosing Next step.`,
+      ).toBe(phase);
       const shadowRoundBefore =
         phase === 'SHADOW'
           ? Number(await game.getAttribute('data-shadow-round'))
