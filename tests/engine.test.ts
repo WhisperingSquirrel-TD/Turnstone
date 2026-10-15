@@ -304,6 +304,43 @@ describe('Milestone 1 deterministic engine', () => {
       s0: 's2',
     });
   });
+  it('publishes anonymous tallies without publishing voter identifiers', () => {
+    const game = fixture(15, {
+      roundTable: { revealStyle: 'anonymous' },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'VOTE');
+
+    command(game, { type: 'SubmitVote', target: 's1' }, true, {
+      kind: 'player',
+      seatId: 's0',
+    });
+    advance(game, 'VERDICT');
+
+    command(game, { type: 'AdvancePhase' });
+    const voters = new Set(game.state.seats.map((seat) => seat.id));
+    const viewers = [
+      ...game.state.seats.map((seat) => ({
+        kind: 'player' as const,
+        seatId: seat.id,
+      })),
+      { kind: 'coordinator' as const },
+      { kind: 'presenter' as const },
+      { kind: 'admin' as const },
+      { kind: 'host' as const, reveal: true },
+      { kind: 'ghost' as const, seatId: 's0' },
+    ];
+
+    expect(game.state.votes).toEqual({ s0: 's1' });
+    expect(game.state.revealed).toContain('s0');
+    for (const view of viewers) {
+      const projected = viewFor(view, game.state);
+      expect(projected.ballots).toEqual({ 'anonymous-vote-1': 's1' });
+      expect(
+        Object.keys(projected.ballots).some((key) => voters.has(key)),
+      ).toBe(false);
+    }
+  });
   it('requires the shield acknowledgement during private voting', () => {
     const game = fixture(15);
     command(game, { type: 'StartGame' });

@@ -1349,28 +1349,56 @@ function PlayerGame() {
               </p>
             )}
 
-            {!inPrivateMoment && full.phase === 'VERDICT' && (
-              <section className="mt-6" aria-label={en.game.voteResults}>
-                <ul
-                  className="divide-y divide-stone"
-                  data-testid="list-vote-reveal"
-                >
-                  {Object.entries(full.ballots).map(([voterId, targetId]) => {
-                    const voter = full.seats.find(
-                      (seat) => seat.id === voterId,
-                    );
-                    const target = full.seats.find(
-                      (seat) => seat.id === targetId,
-                    );
-                    return voter && target ? (
-                      <li key={voterId} className="py-3 text-ash">
-                        {en.game.voteReveal(voter.name, target.name)}
-                      </li>
-                    ) : null;
-                  })}
-                </ul>
-              </section>
-            )}
+            {!inPrivateMoment &&
+              Object.keys(full.ballots).length > 0 &&
+              (full.phase === 'VERDICT' ||
+                full.phase === 'DAWN' ||
+                full.phase === 'FINISHED') && (
+                <section className="mt-6" aria-label={en.game.voteResults}>
+                  <ul
+                    className="divide-y divide-stone"
+                    data-testid="list-vote-reveal"
+                  >
+                    {Object.keys(full.ballots).every((key) =>
+                      key.startsWith('anonymous-vote-'),
+                    )
+                      ? [...new Set(Object.values(full.ballots))].map(
+                          (targetId) => {
+                            const target = full.seats.find(
+                              (seat) => seat.id === targetId,
+                            );
+                            const count = Object.values(full.ballots).filter(
+                              (id) => id === targetId,
+                            ).length;
+                            return target ? (
+                              <li
+                                key={targetId}
+                                className="py-3 text-ash"
+                                data-testid="anonymous-ballot-tally"
+                              >
+                                {en.game.voteTally(count, target.name)}
+                              </li>
+                            ) : null;
+                          },
+                        )
+                      : Object.entries(full.ballots).map(
+                          ([voterId, targetId]) => {
+                            const voter = full.seats.find(
+                              (seat) => seat.id === voterId,
+                            );
+                            const target = full.seats.find(
+                              (seat) => seat.id === targetId,
+                            );
+                            return voter && target ? (
+                              <li key={voterId} className="py-3 text-ash">
+                                {en.game.voteReveal(voter.name, target.name)}
+                              </li>
+                            ) : null;
+                          },
+                        )}
+                  </ul>
+                </section>
+              )}
 
             {inPrivateMoment && (
               <div className="private-moment-panel">

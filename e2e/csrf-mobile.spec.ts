@@ -1,5 +1,47 @@
 import { test, expect } from '@playwright/test';
 
+test('six game-code inputs remain reachable touch targets from 320px upward', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'Compact game-code targets run on the phone profiles',
+  );
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'c'.repeat(64) } }),
+  );
+  await page.goto('/play');
+  await page.getByRole('button', { name: 'Join a game', exact: true }).click();
+
+  const characters = page.getByRole('textbox', {
+    name: /Game code character/,
+  });
+  await expect(characters).toHaveCount(6);
+
+  for (const width of [320, 375, 390, 414, 768]) {
+    await page.setViewportSize({ width, height: 568 });
+    for (let index = 0; index < 6; index += 1) {
+      const box = await characters.nth(index).boundingBox();
+      expect(
+        box?.width,
+        `code box ${index + 1} at ${width}px`,
+      ).toBeGreaterThanOrEqual(44);
+      expect(
+        box?.height,
+        `code box ${index + 1} at ${width}px`,
+      ).toBeGreaterThanOrEqual(44);
+    }
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+      `no horizontal scroll at ${width}px`,
+    ).toBe(true);
+  }
+});
+
 test('entry distinguishes the shared game code from both players personal four-digit PINs', async ({
   page,
 }) => {

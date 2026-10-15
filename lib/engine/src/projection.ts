@@ -104,8 +104,23 @@ export function viewFor(
       state.config.rehearsal.enabled &&
       !state.config.rehearsal.botSeatIds.includes(own.id),
     );
-  const ballots =
-    state.phase === 'VERDICT'
+  const submittedVoters = Object.keys(state.votes);
+  const completedReveal =
+    submittedVoters.length > 0 &&
+    submittedVoters.every((id) => state.revealed.includes(id));
+  const anonymousReveal =
+    state.config.roundTable.revealStyle === 'anonymous' && completedReveal;
+  const ballots = anonymousReveal
+    ? Object.fromEntries(
+        submittedVoters
+          .filter((id) => state.revealed.includes(id))
+          .map((id, index) => [
+            `anonymous-vote-${index + 1}`,
+            state.votes[id]!,
+          ]),
+      )
+    : state.phase === 'VERDICT' &&
+        state.config.roundTable.revealStyle !== 'anonymous'
       ? Object.fromEntries(
           state.revealed
             .filter((id) => state.votes[id])

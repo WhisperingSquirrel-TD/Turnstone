@@ -6,3 +6,4 @@
 - [Vite dev optimizer reload](vite-dev-optimizer.md) — prebundle lazy-route deps; reference transitive deps through their linked workspace parent under pnpm.
 - [Git trace suppression](git-trace-suppression.md) — unset GIT_CURL_VERBOSE; setting it to 0 still enables HTTP diagnostics.
 - [Invite closure and seat recovery](invite-seat-recovery.md) — closed or rotated invitations must not lock out existing seats; recovery still requires name and PIN.
+- [HTTP timeout environment](http-timeout-environment.md) — impure fetch may lack AbortSignal; workspace Node supports timed public status requests.
