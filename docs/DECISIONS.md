@@ -1118,8 +1118,15 @@ test against the real server with no presenter and no manual refresh, and Verify
 every displayed vote/night list against the public roster and fails on refusal,
 without retrying other names. A separate named screen test covers the legitimate
 Jamie (fellow Traitor) refusal followed by Sam (Faithful); the six focused
-Pixel/desktop tests and the strengthened real-server rehearsal pass. Invite
-performance and the fresh late-join route remain next in order.
+Pixel/desktop tests and the strengthened real-server rehearsal pass; Verify #30
+also passed all 19 jobs without annotations. Invite-performance regressions then
+demonstrated that the old implementation published before deleting the code and
+performed one lookup per seat (5/40 queries). Move revocation and readable-code
+deletion into the event-store transaction for DEAL/FINISHED/ARCHIVED, so all
+writers share the same atomic boundary, and share one lookup per broadcast.
+Repeated view requests must not invoke invite revocation. The focused regressions
+now pass; the full local verify gate exited 0. Hash-only joining and viewer allow-lists
+are unchanged. The fresh late-join route remains next in order.
 These rulings do not authorise deployment or relax visitor/private-state
 allow-lists.
 

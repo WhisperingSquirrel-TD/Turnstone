@@ -146,14 +146,7 @@ function actorId(actor: Actor): string {
   return actor.kind === 'player' ? `seat:${actor.seatId}` : 'coordinator';
 }
 
-async function closeInviteIfJoiningClosed(state: State): Promise<void> {
-  if (state.phase === 'DRAFT' || state.phase === 'LOBBY') return;
-  const { revokeGameInvite } = await import('@workspace/db/seat-access-store');
-  await revokeGameInvite(state.id, Date.now());
-}
-
 async function projectState(state: State, viewer: Viewer) {
-  await closeInviteIfJoiningClosed(state);
   const maySeeLobbyCode =
     state.phase === 'LOBBY' &&
     (viewer.kind === 'presenter' ||
@@ -283,7 +276,6 @@ export function createApp(
       },
     });
     if (!stored.ok) throw new Error('Unable to store internal game command');
-    await closeInviteIfJoiningClosed(nextState);
     return nextState;
   }
   async function appendServerEvent(
@@ -1790,7 +1782,6 @@ export function createApp(
           sendError(response, 409, 'Command rejected');
           return;
         }
-        await closeInviteIfJoiningClosed(nextState);
         response.json(await projectState(nextState, viewer));
       } catch {
         sendError(response, 503, 'Service unavailable');

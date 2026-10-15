@@ -15,6 +15,7 @@ import {
   insertGameCoordinatorCapabilitySchema,
 } from './schema/coordinator-access';
 import {
+  gameInvites,
   gameSeatAccess,
   gameViewerSessions,
   insertGameViewerSessionSchema,
@@ -307,6 +308,26 @@ export async function appendGameEvents(
         recordedAt: new Date(event.at),
       })),
     );
+    const inviteClosingEvent = events.find(
+      (event) =>
+        event.type === 'GameFinished' ||
+        (event.type === 'PhaseChanged' &&
+          ['DEAL', 'FINISHED', 'ARCHIVED'].includes(event.phase)),
+    );
+    if (inviteClosingEvent) {
+      await transaction
+        .update(gameInvites)
+        .set({
+          revokedAt: new Date(inviteClosingEvent.at),
+          displayCode: null,
+        })
+        .where(
+          and(
+            eq(gameInvites.gameId, input.gameId),
+            isNull(gameInvites.revokedAt),
+          ),
+        );
+    }
     if (input.seatPinUpdate) {
       await transaction
         .update(gameSeatAccess)

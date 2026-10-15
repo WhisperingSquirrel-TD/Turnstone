@@ -35,14 +35,7 @@ export type RealtimeOptions = {
   onError?: () => void;
 };
 
-async function projectViewer(viewer: Viewer, state: State) {
-  const maySeeLobbyCode =
-    state.phase === 'LOBBY' &&
-    (viewer.kind === 'presenter' ||
-      (viewer.kind === 'player' && Boolean(viewer.seatId)));
-  const lobbyCode = maySeeLobbyCode
-    ? await getOpenGameInviteCode(state.id, Date.now())
-    : null;
+function projectViewer(viewer: Viewer, state: State, lobbyCode: string | null) {
   return viewer.kind === 'visitor'
     ? viewFor({ kind: 'visitor' }, state)
     : viewFor(viewer, state, { lobbyCode });
@@ -97,6 +90,10 @@ export async function attachRealtime(
     if (!state) return;
     const room = encodedGameRoom(gameId);
     const sockets = await io.in(room).fetchSockets();
+    const lobbyCode =
+      state.phase === 'LOBBY' && sockets.length > 0
+        ? await getOpenGameInviteCode(state.id, Date.now())
+        : null;
     for (const socket of sockets) {
       if (socket.data.gameId !== gameId) continue;
       if (
@@ -130,7 +127,7 @@ export async function attachRealtime(
       socket.data.viewer = viewer;
       const response = gameViewResponseSchema.parse({
         version: state.version,
-        view: await projectViewer(viewer, state),
+        view: projectViewer(viewer, state, lobbyCode),
       });
       socket.emit('game:view', response);
     }
@@ -268,9 +265,14 @@ export async function attachRealtime(
           socket.data.gameId = gameId;
           socket.data.gameRoom = room;
           await socket.join(room);
+          const lobbyCode =
+            state.phase === 'LOBBY' &&
+            (viewer.kind === 'player' || viewer.kind === 'presenter')
+              ? await getOpenGameInviteCode(state.id, Date.now())
+              : null;
           const response = gameViewResponseSchema.parse({
             version: state.version,
-            view: await projectViewer(viewer, state),
+            view: projectViewer(viewer, state, lobbyCode),
           });
           socket.emit('game:view', response);
           acknowledgement?.({ ok: true });

@@ -1,4 +1,5 @@
-import { afterAll, expect, it } from 'vitest';
+import { afterAll, expect, it, vi } from 'vitest';
+import * as inviteStore from '../lib/db/src/seat-access-store';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { db, pool } from '@workspace/db';
@@ -866,7 +867,15 @@ it('clears readable invite codes when the lobby closes or a game ends', async ()
         expiresAt: now + 60_000,
       });
 
+      const publishedCodes: (string | null)[] = [];
       const app = createApp(async () => {}, {
+        publishGame: async (publishedGameId) => {
+          const stored = await pool.query<{ display_code: string | null }>(
+            'select display_code from game_invites where game_id = $1',
+            [publishedGameId],
+          );
+          publishedCodes.push(stored.rows[0]?.display_code ?? null);
+        },
         resolveViewer: () => ({ kind: 'coordinator' }),
         resolveCoordinatorViewer: () => ({ kind: 'coordinator' }),
         rateLimitSecret: 'integration-test-rate-limit-secret',
@@ -890,6 +899,16 @@ it('clears readable invite codes when the lobby closes or a game ends', async ()
         [gameId],
       );
       expect(storedCode.rows[0]?.display_code).toBeNull();
+      expect(publishedCodes).toEqual([null]);
+      const revokeSpy = vi.spyOn(inviteStore, 'revokeGameInvite');
+      try {
+        for (let read = 0; read < 3; read += 1) {
+          await request(app).get(`/api/games/${gameId}/view`).expect(200);
+        }
+        expect(revokeSpy).not.toHaveBeenCalled();
+      } finally {
+        revokeSpy.mockRestore();
+      }
     } finally {
       await db.execute(sql`delete from games where id = ${gameId}`);
     }
@@ -2044,6 +2063,7 @@ async function fanOutPlayerViews(seatCount: number): Promise<void> {
     },
   );
   const clients: ClientSocket[] = [];
+  const codeLookupSpy = vi.spyOn(inviteStore, 'getOpenGameInviteCode');
   try {
     await new Promise<void>((resolve, reject) => {
       httpServer.once('error', reject);
@@ -2099,7 +2119,7 @@ async function fanOutPlayerViews(seatCount: number): Promise<void> {
       at: 1_800_000_000_001 + seatCount,
       schemaVersion: 1,
       type: 'PhaseChanged',
-      phase: 'DRAFT',
+      phase: 'LOBBY',
       deadline: null,
       shadowEndAt: null,
       cycle: 0,
@@ -2112,20 +2132,28 @@ async function fanOutPlayerViews(seatCount: number): Promise<void> {
       requestHash: 'five-socket-change',
       events: [changed],
     });
+    await createGameInvite({
+      gameId,
+      linkTokenHash: randomBytes(32).toString('hex'),
+      shortCodeHash: createHash('sha256').update('ABC234').digest('hex'),
+      displayCode: 'ABC234',
+    });
+    codeLookupSpy.mockClear();
     const updatePromises = clients.map(
       (client) =>
-        new Promise<{ version: number; view: { seats: unknown[] } }>(
-          (resolve, reject) => {
-            const timeout = setTimeout(
-              () => reject(new Error('Socket fan-out timed out')),
-              2_000,
-            );
-            client.once('game:view', (view) => {
-              clearTimeout(timeout);
-              resolve(view);
-            });
-          },
-        ),
+        new Promise<{
+          version: number;
+          view: { seats: unknown[]; lobbyCode?: string };
+        }>((resolve, reject) => {
+          const timeout = setTimeout(
+            () => reject(new Error('Socket fan-out timed out')),
+            2_000,
+          );
+          client.once('game:view', (view) => {
+            clearTimeout(timeout);
+            resolve(view);
+          });
+        }),
     );
     await publisherRealtime.publishGame(gameId);
     const updatedViews = await Promise.all(updatePromises);
@@ -2135,7 +2163,12 @@ async function fanOutPlayerViews(seatCount: number): Promise<void> {
     expect(updatedViews.map((view) => view.view.seats.length)).toEqual(
       Array(seatCount).fill(seatCount),
     );
+    expect(updatedViews.map((view) => view.view.lobbyCode)).toEqual(
+      Array(seatCount).fill('ABC234'),
+    );
+    expect(codeLookupSpy).toHaveBeenCalledTimes(1);
   } finally {
+    codeLookupSpy.mockRestore();
     for (const client of clients) client.disconnect();
     await realtime.close();
     await publisherRealtime.close();
