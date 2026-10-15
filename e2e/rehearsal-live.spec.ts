@@ -158,10 +158,7 @@ async function revealDealRole(page: Page): Promise<'Traitor' | 'Faithful'> {
 
 async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
   await handleShield(page, gameId);
-  const seal = page.getByTestId('button-hold-reveal');
-  await expect(seal).toBeVisible();
-  await seal.focus();
-  await page.keyboard.down('Space');
+  await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   const choiceList = page.getByTestId('private-choice-list');
   await expect(choiceList).toBeVisible({ timeout: 5_000 });
   const phaseBeforeChoice = await currentPhase(page);
@@ -238,7 +235,6 @@ async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
       `${phaseBeforeChoice} choice had no visible result (HTTP ${commandStatuses.join(', ') || 'none'}, server ${latest.phase} v${latest.version} progress ${latest.progress.done}/${latest.progress.total}).`,
     );
   } finally {
-    await page.keyboard.up('Space');
     page.off('response', recordCommandStatus);
   }
 }
@@ -283,6 +279,9 @@ async function advanceIfStillOn(
   )
     return;
 
+  const versionAtStart = Number(
+    await page.getByTestId('player-game').getAttribute('data-version'),
+  );
   await page.getByRole('button', { name: 'Next step', exact: true }).click();
   try {
     await expect
@@ -297,11 +296,14 @@ async function advanceIfStillOn(
                     .getAttribute('data-shadow-round'),
                 )
               : 0;
-          return `${nextPhase}:${nextRound}`;
+          const nextVersion = Number(
+            await page.getByTestId('player-game').getAttribute('data-version'),
+          );
+          return `${nextPhase}:${nextRound}:${nextVersion > versionAtStart ? 'updated' : 'same'}`;
         },
         { timeout: 15_000, intervals: [100, 250, 500, 1_000] },
       )
-      .not.toBe(`${phase}:${shadowRoundAtStart}`);
+      .not.toBe(`${phase}:${shadowRoundAtStart}:same`);
   } catch {
     const latest = await latestServerPhase(page, gameId);
     const currentRound =

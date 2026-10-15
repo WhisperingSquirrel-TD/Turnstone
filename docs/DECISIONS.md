@@ -1227,6 +1227,6 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 
 **Options:** Keep choices and confirmation behind a sustained hold; or use the privacy shield before the step and ordinary taps for choices.
 
-**Choice:** Require the privacy shield before each private step, then let players tap choices and confirm without holding. Never require a hold while selecting anywhere in the app. Keep hold-to-reveal for read-only secrets such as the deal role. Rotate roster-based choice order per seat so different players do not see the same ordering; the order must not depend on role.
+**Choice:** Require the privacy shield before each private step, then let players tap choices and confirm without holding. Never require a hold while selecting anywhere in the app. Keep hold-to-reveal for read-only secrets such as the deal role. Shuffle roster-based choices with a deterministic per-seat, per-step seed so the order is stable during a step but jumbled separately across devices; the seed must not depend on role. Long choice lists use the main page's normal scrolling, never a nested scroll pane.
 
 **Consequence:** This owner ruling supersedes the hold-during-choice and hold-to-confirm details in section 10. Choice screens rely on the player following the shield prompt; a selected name is visible on that player's device while they choose. Hold-only role reveal remains unchanged.

@@ -548,10 +548,21 @@ test('banishment voting shields then taps and excludes self and out seats', asyn
   page,
 }) => {
   const gameId = 'vote-screen';
+  await page.setViewportSize({ width: 320, height: 568 });
   const publicView = {
     ...createPublicView(gameId),
     phase: 'VOTE',
     viewerSeatId: 'seat-morgan',
+    seats: [
+      { id: 'seat-morgan', name: 'Morgan', status: 'alive' },
+      { id: 'seat-alex', name: 'Alex', status: 'departed' },
+      { id: 'seat-jamie', name: 'Jamie', status: 'alive' },
+      ...Array.from({ length: 10 }, (_, index) => ({
+        id: `seat-practice-${index + 1}`,
+        name: `Practice player ${index + 1}`,
+        status: 'alive' as const,
+      })),
+    ],
   } as FullView;
   const submittedCommands: unknown[] = [];
   await page.route('**/api/csrf', (route) =>
@@ -603,7 +614,16 @@ test('banishment voting shields then taps and excludes self and out seats', asyn
   });
   await shieldConfirmation.click();
   await expect(shieldDialog).toHaveCount(0);
-  await expect(page.getByTestId('private-choice-list')).toBeVisible();
+  const choiceList = page.getByTestId('private-choice-list');
+  await expect(choiceList).toBeVisible();
+  const contentOverflow = await page
+    .getByTestId('private-choice-content')
+    .evaluate((element) => getComputedStyle(element).overflowY);
+  expect(contentOverflow).not.toMatch(/auto|scroll/);
+  const pageCanScroll = await page.evaluate(
+    () => document.scrollingElement!.scrollHeight > window.innerHeight,
+  );
+  expect(pageCanScroll).toBe(true);
   await expect(
     page.getByRole('button', { name: 'Morgan', exact: true }),
   ).toHaveCount(0);
@@ -641,6 +661,7 @@ for (const role of ['faithful', 'traitor'] as const) {
       } as FullView;
       publicView.seats.push({ id: 'seat-sam', name: 'Sam', status: 'alive' });
       let privateRequests = 0;
+      const privateFlow: string[] = [];
       const submittedCommands: unknown[] = [];
       await page.route('**/api/csrf', (route) =>
         route.fulfill({
@@ -657,6 +678,7 @@ for (const role of ['faithful', 'traitor'] as const) {
       await page.route(`**/api/games/${gameId}/commands`, async (route) => {
         const command = route.request().postDataJSON();
         submittedCommands.push(command);
+        privateFlow.push(`command:${command.type}`);
         if (
           role === 'traitor' &&
           command.type === 'SubmitShadowChoice' &&
@@ -675,6 +697,7 @@ for (const role of ['faithful', 'traitor'] as const) {
       });
       await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
         privateRequests += 1;
+        privateFlow.push('private-view');
         await route.fulfill({
           status: 200,
           json: {
@@ -723,6 +746,10 @@ for (const role of ['faithful', 'traitor'] as const) {
       );
       await shieldConfirmation.click();
       await expect.poll(() => privateRequests).toBe(1);
+      expect(privateFlow.slice(0, 2)).toEqual([
+        'command:AcknowledgePrivate',
+        'private-view',
+      ]);
       await expect(page.getByTestId('private-choice-content')).toBeVisible();
       await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
       await expect(
@@ -782,7 +809,7 @@ for (const role of ['faithful', 'traitor'] as const) {
   );
 }
 
-test('private choice names are ordered differently for different seats', async ({
+test('private choice names are shuffled per seat, not in roster order', async ({
   page,
   browser,
 }) => {
@@ -794,7 +821,19 @@ test('private choice names are ordered differently for different seats', async (
     { id: 'seat-alex', name: 'Alex', status: 'alive' },
     { id: 'seat-jamie', name: 'Jamie', status: 'alive' },
     { id: 'seat-sam', name: 'Sam', status: 'alive' },
+    { id: 'seat-riley', name: 'Riley', status: 'alive' },
+    { id: 'seat-taylor', name: 'Taylor', status: 'alive' },
+    { id: 'seat-casey', name: 'Casey', status: 'alive' },
+    { id: 'seat-jordan', name: 'Jordan', status: 'alive' },
   ] as const;
+  const canonicalOptions = [
+    'Alex',
+    'Sam',
+    'Riley',
+    'Taylor',
+    'Casey',
+    'Jordan',
+  ];
   const configureTraitorPage = async (
     targetPage: Page,
     gameId: string,
@@ -834,10 +873,10 @@ test('private choice names are ordered differently for different seats', async (
             private: {
               role: 'traitor',
               team: [],
-              options: [
-                { id: 'seat-alex', name: 'Alex' },
-                { id: 'seat-sam', name: 'Sam' },
-              ],
+              options: canonicalOptions.map((name) => ({
+                id: `seat-${name.toLowerCase()}`,
+                name,
+              })),
               choices: {},
               chat: [],
               task: null,
@@ -862,13 +901,23 @@ test('private choice names are ordered differently for different seats', async (
       .allTextContents();
   };
 
+  const isCanonicalRotation = (order: string[]) =>
+    canonicalOptions.some((_, offset) =>
+      order.every(
+        (name, index) =>
+          name === canonicalOptions[(index + offset) % canonicalOptions.length],
+      ),
+    );
+
   try {
     const [morganOrder, jamieOrder] = await Promise.all([
-      configureTraitorPage(page, 'shadow-order-morgan', 'seat-morgan'),
-      configureTraitorPage(otherPage, 'shadow-order-jamie', 'seat-jamie'),
+      configureTraitorPage(page, 'shadow-order-game', 'seat-morgan'),
+      configureTraitorPage(otherPage, 'shadow-order-game', 'seat-jamie'),
     ]);
     expect(morganOrder.slice().sort()).toEqual(jamieOrder.slice().sort());
     expect(morganOrder).not.toEqual(jamieOrder);
+    expect(isCanonicalRotation(morganOrder)).toBe(false);
+    expect(isCanonicalRotation(jamieOrder)).toBe(false);
   } finally {
     await otherPage.close();
   }

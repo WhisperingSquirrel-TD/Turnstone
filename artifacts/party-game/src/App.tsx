@@ -176,10 +176,12 @@ function Shell({
   children,
   isPlayer = false,
   privateMode = false,
+  privateRevealActive = false,
 }: {
   children: ReactNode;
   isPlayer?: boolean;
   privateMode?: boolean;
+  privateRevealActive?: boolean;
 }) {
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(
@@ -208,7 +210,7 @@ function Shell({
   }, []);
   return (
     <div
-      className={`safe-page flex min-h-[100dvh] flex-col${privateMode ? ' private-moment-shell' : ''}`}
+      className={`safe-page flex min-h-[100dvh] flex-col${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
     >
       <a
         href="#main"
@@ -653,28 +655,40 @@ function explanationKeyForPhase(
   }
 }
 
-function orderChoicesForViewer(
+function seededChoiceRandom(seed: string) {
+  let state = 0x811c9dc5;
+  for (let index = 0; index < seed.length; index += 1) {
+    state ^= seed.charCodeAt(index);
+    state = Math.imul(state, 0x01000193) >>> 0;
+  }
+
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+
+function shuffleSeatChoices(
   choices: Array<{ id: string; name: string }>,
   seats: FullView['seats'],
-  viewerSeatId: string | null,
+  seed: string,
 ) {
-  const viewerIndex = seats.findIndex((seat) => seat.id === viewerSeatId);
-  if (viewerIndex < 0 || choices.length < 2) return choices;
+  if (
+    choices.length < 2 ||
+    choices.some((choice) => !seats.some((seat) => seat.id === choice.id))
+  )
+    return choices;
 
-  const order = new Map<string, number>();
-  seats.forEach((seat, index) => {
-    order.set(
-      seat.id,
-      (index - viewerIndex + seats.length) % seats.length || seats.length,
-    );
-  });
-
-  return choices.slice().sort((left, right) => {
-    const leftOrder = order.get(left.id);
-    const rightOrder = order.get(right.id);
-    if (leftOrder === undefined || rightOrder === undefined) return 0;
-    return leftOrder - rightOrder;
-  });
+  const random = seededChoiceRandom(seed);
+  const shuffled = choices.slice();
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const otherIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[otherIndex]] = [
+      shuffled[otherIndex],
+      shuffled[index],
+    ];
+  }
+  return shuffled;
 }
 
 function PlayerGame() {
@@ -775,7 +789,7 @@ function PlayerGame() {
   );
   const hasPlayerSeat = Boolean(full);
   const privateOptions = privateView?.options ?? [];
-  const choices = orderChoicesForViewer(
+  const choices = shuffleSeatChoices(
     ownSeat?.status !== 'alive'
       ? []
       : full?.phase === 'VOTE' || full?.phase === 'FINAL_BANISH'
@@ -791,7 +805,7 @@ function PlayerGame() {
               ]
             : [],
     full?.seats ?? [],
-    full?.viewerSeatId ?? null,
+    `${id}:${full?.viewerSeatId ?? ''}:${full?.phase ?? ''}:${full?.cycle ?? 0}:${full?.shadowRound ?? 0}`,
   );
 
   async function enterFullScreen() {
@@ -1088,16 +1102,6 @@ function PlayerGame() {
       let nextPrivateView: PrivateView | null = null;
       const notesRequest = notesOpen && !phaseIsPrivate;
       const needsPrivateView = notesRequest || full?.phase === 'SHADOW';
-      if (needsPrivateView) {
-        const response = await reveal.mutateAsync({
-          id,
-          ...(notesRequest ? { data: { purpose: 'notes' as const } } : {}),
-        });
-        nextPrivateView = isFullView(response.view)
-          ? response.view.private
-          : null;
-        if (!nextPrivateView) throw new Error('Private view unavailable');
-      }
       if (phaseIsPrivate) {
         await command.mutateAsync({
           id,
@@ -1107,6 +1111,16 @@ function PlayerGame() {
           },
         });
         command.reset();
+      }
+      if (needsPrivateView) {
+        const response = await reveal.mutateAsync({
+          id,
+          ...(notesRequest ? { data: { purpose: 'notes' as const } } : {}),
+        });
+        nextPrivateView = isFullView(response.view)
+          ? response.view.private
+          : null;
+        if (!nextPrivateView) throw new Error('Private view unavailable');
       }
       setPrivateView(nextPrivateView);
       setPrivateCovered(false);
@@ -1385,7 +1399,7 @@ function PlayerGame() {
   }
 
   return (
-    <Shell isPlayer privateMode={inPrivateMoment}>
+    <Shell isPlayer privateMode={inPrivateMoment} privateRevealActive={held}>
       <TurnstonePlayerHeader />
       <section
         className={
@@ -1744,7 +1758,7 @@ function PlayerGame() {
                               {en.game.notesPrivateIntro}
                             </p>
                             <div
-                              className="mt-4 h-24 overflow-y-auto whitespace-pre-wrap border-y border-stone py-3 text-sm text-ash"
+                              className="mt-4 whitespace-pre-wrap border-y border-stone py-3 text-sm text-ash"
                               aria-live="polite"
                             >
                               {privateView.role === 'traitor'
@@ -1820,7 +1834,7 @@ function PlayerGame() {
                           </p>
                           {full.phase === 'SHADOW' && (
                             <p
-                              className="mt-2 h-12 overflow-y-auto whitespace-pre-wrap text-left text-sm text-ash"
+                              className="mt-2 min-h-12 whitespace-pre-wrap text-left text-sm text-ash"
                               data-testid="shadow-status"
                               aria-live="polite"
                             >
