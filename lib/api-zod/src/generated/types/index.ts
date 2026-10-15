@@ -30,6 +30,8 @@ export * from './joinRequestDecisionResponseStatus';
 export * from './joinRequestInput';
 export * from './joinRequestResponse';
 export * from './joinRequestStatusResponse';
+export * from './lateGameInviteInput';
+export * from './lateGameInviteResponse';
 export * from './pendingJoinRequestsResponse';
 export * from './pendingJoinRequestsResponseRequestsItem';
 export * from './phase';

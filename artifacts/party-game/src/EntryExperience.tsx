@@ -137,6 +137,12 @@ export interface EntryExperienceCopy {
   createButton: string;
   createPending: string;
   lobbyHeading: string;
+  lateInviteHeading: string;
+  lateInviteBody: string;
+  createLateInvite: string;
+  createLateInvitePending: string;
+  backToGame: string;
+  latePlayerCount: (count: number) => string;
   qrAlt: string;
   codeCaption: string;
   share: string;
@@ -169,6 +175,7 @@ export interface EntryExperienceProps {
   copy: EntryExperienceCopy;
   screen?: EntryScreen;
   inviteMode?: boolean;
+  lateJoinMode?: boolean;
   inputs: EntryExperienceInputs;
   onInputChange: (field: EntryInputKey, value: string | number) => void;
   options: EntryExperienceOptions;
@@ -202,6 +209,7 @@ export interface EntryExperienceProps {
   }) => void | Promise<void>;
   onApproveJoiner: (joinerId: string) => void | Promise<void>;
   onStartGame: () => void | Promise<void>;
+  onCreateLateInvite?: () => void | Promise<void>;
   onRehearsal: (data: {
     playerCount: number;
     speed: 'fast' | 'normal';
@@ -218,6 +226,7 @@ export function EntryExperience({
   copy,
   screen: controlledScreen,
   inviteMode = false,
+  lateJoinMode = false,
   inputs,
   onInputChange,
   options,
@@ -242,6 +251,7 @@ export function EntryExperience({
   onCreate,
   onApproveJoiner,
   onStartGame,
+  onCreateLateInvite,
   onRehearsal,
   onShare,
   onClearSensitiveValues,
@@ -404,6 +414,7 @@ export function EntryExperience({
   }
 
   const visibleError =
+    (screen === 'lobby' ? errors.approve : undefined) ||
     errors[
       screen === 'join-wait' || screen.startsWith('join-')
         ? 'join'
@@ -414,7 +425,8 @@ export function EntryExperience({
             : screen === 'rehearsal-setup'
               ? 'rehearsal'
               : 'join'
-    ] || localError;
+    ] ||
+    localError;
   const joinCodeCharacters = inputs.joinCodeEntry
     .toUpperCase()
     .slice(0, 6)
@@ -940,8 +952,12 @@ export function EntryExperience({
               <label className="entry-label" htmlFor="entry-organiser-pin">
                 {copy.organiserPinLabel}
               </label>
+              <p id="entry-organiser-pin-help" className="entry-help">
+                {copy.pinHint}
+              </p>
               <input
                 id="entry-organiser-pin"
+                aria-describedby="entry-organiser-pin-help"
                 className="entry-field entry-pin-field"
                 data-testid="input-organiser-pin"
                 type="password"
@@ -996,8 +1012,28 @@ export function EntryExperience({
         {screen === 'lobby' && (
           <section className="entry-lobby enter" aria-labelledby="entry-title">
             <h1 id="entry-title" className="entry-heading">
-              {copy.lobbyHeading}
+              {lateJoinMode ? copy.lateInviteHeading : copy.lobbyHeading}
             </h1>
+            {lateJoinMode && (
+              <>
+                <p className="entry-help">{copy.lateInviteBody}</p>
+                <button
+                  className="entry-secondary-action"
+                  type="button"
+                  disabled={busy.share || !onCreateLateInvite}
+                  onClick={() => {
+                    setLocalError('');
+                    void Promise.resolve(onCreateLateInvite?.()).catch(() =>
+                      setLocalError(copy.errorFallback),
+                    );
+                  }}
+                >
+                  {busy.share
+                    ? copy.createLateInvitePending
+                    : copy.createLateInvite}
+                </button>
+              </>
+            )}
             <div className="entry-lobby-logistics">
               {qrCode && (
                 <div
@@ -1010,13 +1046,17 @@ export function EntryExperience({
                 </div>
               )}
               <div className="entry-code-share">
-                <p className="entry-code-caption">{copy.codeCaption}</p>
-                <strong
-                  className="entry-lobby-code"
-                  data-testid="text-lobby-code"
-                >
-                  {joinCode}
-                </strong>
+                {!lateJoinMode && (
+                  <>
+                    <p className="entry-code-caption">{copy.codeCaption}</p>
+                    <strong
+                      className="entry-lobby-code"
+                      data-testid="text-lobby-code"
+                    >
+                      {joinCode}
+                    </strong>
+                  </>
+                )}
                 <button
                   className="entry-secondary-action"
                   data-testid="button-share-game"
@@ -1031,7 +1071,7 @@ export function EntryExperience({
                 >
                   {busy.share ? copy.sharePending : copy.share}
                 </button>
-                {!shareUrl && (
+                {!shareUrl && !lateJoinMode && (
                   <p
                     className="entry-help"
                     data-testid="status-share-unavailable"
@@ -1044,12 +1084,12 @@ export function EntryExperience({
 
             <div className="entry-rosters">
               <p className="entry-help" data-testid="text-lobby-player-count">
-                {copy.lobbyPlayerCount(players.length, requiredPlayerCount)}
+                {lateJoinMode
+                  ? copy.latePlayerCount(players.length)
+                  : copy.lobbyPlayerCount(players.length, requiredPlayerCount)}
               </p>
-              {players.length < requiredPlayerCount && (
-                <p className="entry-help">
-                  {copy.minimumPlayers(requiredPlayerCount)}
-                </p>
+              {!lateJoinMode && players.length < 5 && (
+                <p className="entry-help">{copy.minimumPlayers(5)}</p>
               )}
               <section aria-labelledby="entry-roster-heading">
                 <h2 id="entry-roster-heading" className="entry-section-heading">
@@ -1129,7 +1169,7 @@ export function EntryExperience({
               className="entry-primary-action entry-start-game"
               data-testid="button-start-game"
               type="button"
-              disabled={busy.startGame || players.length < requiredPlayerCount}
+              disabled={busy.startGame || (!lateJoinMode && players.length < 5)}
               onClick={() => {
                 setLocalError('');
                 void Promise.resolve(onStartGame()).catch(() =>
@@ -1137,7 +1177,11 @@ export function EntryExperience({
                 );
               }}
             >
-              {busy.startGame ? copy.startGamePending : copy.startGame}
+              {lateJoinMode
+                ? copy.backToGame
+                : busy.startGame
+                  ? copy.startGamePending
+                  : copy.startGame}
             </button>
           </section>
         )}

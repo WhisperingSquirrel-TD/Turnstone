@@ -13,7 +13,9 @@ organiser approval, rate limits and the always-Faithful rule.
 explicitly authorised late joining and avoids making a closed code usable again.
 
 **Status:** Resolved by the owner on 15 October 2026: fresh invitation link or QR.
-Implement and test the route under the current reviewer corrections.
+Implemented with coordinator-issued links/QRs, approval, limits and an
+always-Faithful integration regression. The full local gate passed on 15 October
+2026; GitHub CI follows the push.
 
 ## Q1 — Lighthouse SEO score while pre-launch noindex is enabled
 

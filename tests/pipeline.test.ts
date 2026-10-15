@@ -142,6 +142,11 @@ describe('owner-approved delivery policy', () => {
     expect(scripts['test:server-coverage']).toContain(
       'tests/database.integration.test.ts',
     );
+    expect(scripts['test:server-coverage']).toContain(
+      'tests/late-invites.integration.test.ts',
+    );
+    expect(scripts['test:server-coverage']).toContain('--no-file-parallelism');
+    expect(scripts['test:integration']).toContain('--no-file-parallelism');
     expect(scripts.verify).toContain('pnpm run test:server-coverage');
     expect(scripts.verify).not.toContain('pnpm run test:integration');
   });

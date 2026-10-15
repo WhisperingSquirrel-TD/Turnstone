@@ -2,6 +2,7 @@
 - [Nix font rendering](nix-font-rendering.md) — verify the actual browser font before converting webfont-based SVG lettering to paths.
 - [GitHub workflow push scope](github-workflow-push-scope.md) — verify the active Replit Git connection can update workflow files before retrying a push.
 - [Scenario RNG isolation](scenario-rng-isolation.md) — keep bot and engine random streams separate so captured full-game traces replay through the server.
-- [Deadline test clock isolation](deadline-test-clock-isolation.md) — DB-backed tests must keep fake deadlines ahead of the live managed scheduler's wall clock.
+- [Deadline test clock isolation](deadline-test-clock-isolation.md) — use consistent future clocks and serialize shared-database files to avoid global scheduler interference.
 - [Vite dev optimizer reload](vite-dev-optimizer.md) — prebundle lazy-route deps; reference transitive deps through their linked workspace parent under pnpm.
 - [Git trace suppression](git-trace-suppression.md) — unset GIT_CURL_VERBOSE; setting it to 0 still enables HTTP diagnostics.
+- [Invite closure and seat recovery](invite-seat-recovery.md) — closed or rotated invitations must not lock out existing seats; recovery still requires name and PIN.

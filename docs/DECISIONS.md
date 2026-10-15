@@ -1144,6 +1144,39 @@ PIN as different inputs. Both organiser and guest entry already enforce a
 four-digit PIN; make the distinction clearer in the entry copy and protect it
 with a regression test. Joining by link/QR skips the shared-code question.
 
-**Consequence:** Q2 is resolved rather than a blocker. The route and its
-always-Faithful test remain in the next reviewer corrections; no lobby invitation
-is reopened and no PIN is shared between seats.
+**Consequence:** Q2 is resolved rather than a blocker. The organiser creates a
+short-lived, link-only invitation from the existing coordinator controls; it never
+generates a new readable room code. Its token is stored hashed, rotation invalidates
+the prior link, and the same pending-approval helper serves code and late-link joins.
+The engine and entry routes share one joining-window rule. Approval adds a publicly
+Faithful seat; an expired rule window or finished game rejects an existing link.
+Visitors, players, ghosts, presenters and admins cannot create the invitation.
+
+**Recovery compatibility:** Recovery previously used an active-invitation lookup,
+so closing the lobby also rejected a correct name/PIN. A separate hashed recovery
+locator is retained when the join token rotates, with a committed additive
+migration/backfill preserving existing code hashes. Recovery still verifies the
+PIN, applies the same limits/lockout and revokes previous devices; it does not
+make the old code usable for joining or retain its readable copy.
+
+**Verification:** Eight real-database integration checks cover approval, role,
+limits, rotation, window closure, database-failure handling and recovery after
+lobby closure and late-link rotation; strict DTO checks
+keep the response link-only. Three Pixel screen regressions cover the controls,
+closed-window explanation, six-character shared code versus four-digit personal
+PIN, and starting with five of six planned players. The lobby's former
+all-planned-seats Start restriction was inconsistent with the engine's minimum and
+made late arrival unreachable through the UI; it now uses the existing minimum.
+Full local verification passed on 15 October 2026: 264 unit, 20 property and 80
+server/integration checks, 85.19% server line coverage, 2,567 clean scenario games,
+44 local browser checks, complete real-server rehearsal without a presenter or
+refresh, Lighthouse scores of 100 and no high/critical advisories. WebKit remains
+the approved CI gate.
+
+**Shared-database test isolation:** The existing deadline test jumps 60 days
+ahead and performs global deadline claims and rate-limit pruning. Parallel files
+therefore reset another fixture's counters. Both integration commands run files
+sequentially, protected by a pipeline regression. Concurrent-client tests still
+exercise concurrency, and all assertions, real PostgreSQL hashing/limits and the
+85% server coverage threshold remain intact. The new fixture uses one simulated
+clock for its real rate limiter and deadlines, with persisted timestamp checks.

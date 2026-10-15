@@ -415,6 +415,13 @@ export const gameInviteResponseSchema = z
     shortCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),
   })
   .strict();
+export const lateGameInviteRequestSchema = z.object({}).strict();
+export const lateGameInviteResponseSchema = z
+  .object({
+    gameId: id,
+    joinUrl: z.string().url(),
+  })
+  .strict();
 export const shortCodeJoinRequestSchema = z
   .object({
     shortCode: z.string().regex(/^[A-HJ-NP-Z2-9]{6}$/),

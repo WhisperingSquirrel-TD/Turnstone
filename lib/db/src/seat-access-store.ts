@@ -228,7 +228,7 @@ export async function createGameInvite(input: {
   gameId: string;
   linkTokenHash: string;
   shortCodeHash: string;
-  displayCode: string;
+  displayCode: string | null;
   expiresAt?: number | null;
 }): Promise<void> {
   const parsed = insertGameInviteSchema.parse({
@@ -240,7 +240,11 @@ export async function createGameInvite(input: {
   });
   await db
     .insert(gameInvites)
-    .values(parsed)
+    .values({
+      ...parsed,
+      recoveryCodeHash:
+        parsed.displayCode === null ? null : parsed.shortCodeHash,
+    })
     .onConflictDoUpdate({
       target: gameInvites.gameId,
       set: {
@@ -250,8 +254,23 @@ export async function createGameInvite(input: {
         expiresAt: parsed.expiresAt ?? null,
         revokedAt: null,
         createdAt: new Date(),
+        ...(parsed.displayCode === null
+          ? {}
+          : { recoveryCodeHash: parsed.shortCodeHash }),
       },
     });
+}
+
+/** Recovery still requires the name and PIN; closing or rotating a join link must not orphan a seat. */
+export async function findGameForSeatRecovery(
+  recoveryCodeHash: string,
+): Promise<{ gameId: string } | null> {
+  const [game] = await db
+    .select({ gameId: gameInvites.gameId })
+    .from(gameInvites)
+    .where(eq(gameInvites.recoveryCodeHash, recoveryCodeHash))
+    .limit(1);
+  return game ?? null;
 }
 
 export async function findActiveGameInvite(

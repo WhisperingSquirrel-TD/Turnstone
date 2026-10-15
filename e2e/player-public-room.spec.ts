@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { FullView } from '../lib/shared/src/contracts';
+import { pendingJoinRequestsResponseSchema } from '../lib/shared/src/contracts';
 
 function createPublicView(gameId: string): FullView {
   return {
@@ -49,6 +50,139 @@ function createPublicView(gameId: string): FullView {
     fairness: null,
   } as FullView;
 }
+
+test('coordinator creates a fresh late invitation without reopening the room code', async ({
+  page,
+}) => {
+  const gameId = 'late-join-ui';
+  const view = createPublicView(gameId);
+  let pending = [
+    {
+      id: 'late-request',
+      seatId: 'late-seat',
+      name: 'Sam',
+      createdAt: Date.now(),
+    },
+  ];
+  let lobbyInviteRequests = 0;
+  const decisions: unknown[] = [];
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      json: { csrfToken: 'c'.repeat(64) },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { version: view.version, view },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({
+      json: pendingJoinRequestsResponseSchema.parse({ requests: pending }),
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/invites`, (route) => {
+    lobbyInviteRequests += 1;
+    return route.fulfill({ status: 409, json: { error: 'Command rejected' } });
+  });
+  await page.route(`**/api/games/${gameId}/late-invites`, (route) =>
+    route.fulfill({
+      status: 201,
+      json: {
+        gameId,
+        joinUrl: `https://turnstone.test/join/${gameId}#${'i'.repeat(43)}`,
+      },
+    }),
+  );
+  await page.route(
+    `**/api/games/${gameId}/join-requests/late-request/decision`,
+    (route) => {
+      decisions.push(route.request().postDataJSON());
+      pending = [];
+      return route.fulfill({
+        json: { status: 'approved', seatId: 'late-seat' },
+      });
+    },
+  );
+  await page.goto(`/coordinate/${gameId}`);
+  await expect(
+    page.getByRole('heading', { name: 'Invite a late player' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Create a fresh invitation' }).click();
+  await expect(page.getByTestId('lobby-join-qr')).toHaveAttribute(
+    'data-join-url',
+    new RegExp(`/join/${gameId}#i{43}$`),
+  );
+  await expect(page.getByTestId('text-lobby-code')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Share invitation' }),
+  ).toBeEnabled();
+  await page.getByRole('button', { name: 'Approve', exact: true }).click();
+  await expect(page.getByTestId('text-no-pending-joiners')).toBeVisible();
+  expect(decisions).toEqual([
+    { decision: 'approve', expectedVersion: view.version },
+  ]);
+  expect(lobbyInviteRequests).toBe(0);
+  await page.route(`**/api/games/${gameId}/late-invites`, (route) =>
+    route.fulfill({
+      status: 409,
+      json: { error: 'Command rejected' },
+    }),
+  );
+  await page.getByRole('button', { name: 'Create a fresh invitation' }).click();
+  await expect(page.getByRole('alert')).toHaveText(
+    'Late joining is closed or all seats are taken. You can return to the game.',
+  );
+  await expect(page.getByTestId('lobby-join-qr')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Back to game' }).click();
+  await expect(page).toHaveURL(new RegExp(`/game/${gameId}$`));
+});
+
+test('organiser can start with five players while one planned seat has not joined', async ({
+  page,
+}) => {
+  const gameId = 'early-start-ui';
+  const view = {
+    ...createPublicView(gameId),
+    phase: 'LOBBY',
+    cycle: 0,
+    seats: Array.from({ length: 5 }, (_, index) => ({
+      id: `seat-${index}`,
+      name: `Player ${index + 1}`,
+      status: 'alive',
+    })),
+  };
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      json: { csrfToken: 'c'.repeat(64) },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { version: view.version, view },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({
+      json: { requests: [] },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/invites`, (route) =>
+    route.fulfill({
+      status: 201,
+      json: {
+        gameId,
+        shortCode: 'ABC234',
+        joinUrl: `https://turnstone.test/join/${gameId}#${'i'.repeat(43)}`,
+      },
+    }),
+  );
+  await page.goto(`/coordinate/${gameId}?players=6`);
+  await expect(page.getByTestId('text-lobby-player-count')).toHaveText(
+    '5 of 6 player seats are ready.',
+  );
+  await expect(page.getByTestId('button-start-game')).toBeEnabled();
+});
 
 async function revealNotes(
   page: Page,

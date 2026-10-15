@@ -207,7 +207,8 @@ export const en = {
     joinProgress: 'Join progress',
     joinProgressStep: (step: number) => `Step ${step} of 3`,
     codeHeading: 'What’s the game code?',
-    codeHelp: 'Enter the code your organiser shared',
+    codeHelp:
+      'Enter the code your organiser shared. This shared code has six letters or numbers. It is not your PIN.',
     codeLabel: (digit: number) => `Game code character ${digit}`,
     continue: 'Continue',
     back: 'Back',
@@ -220,7 +221,8 @@ export const en = {
     simpleLanguage: 'Use simpler words',
     pinHeading: 'Choose a 4-digit PIN',
     pinLabel: '4-digit PIN',
-    pinHint: 'You’ll only need it if you change phones.',
+    pinHint:
+      'This is your private 4-digit PIN, not the game code. You’ll only need it if you change phones.',
     joinButton: 'Request to join',
     joinPending: 'Sending request…',
     waitingHeading: (organiser: string) =>
@@ -253,6 +255,17 @@ export const en = {
     createButton: 'Create game',
     createPending: 'Creating game…',
     lobbyHeading: 'Your game lobby',
+    lateInviteHeading: 'Invite a late player',
+    lateInviteBody:
+      'Create a fresh link or QR code, then approve their seat here. Late players join as Faithful. The old game code stays closed.',
+    createLateInvite: 'Create a fresh invitation',
+    createLateInvitePending: 'Creating invitation…',
+    lateInviteUnavailable:
+      'Late joining is closed or all seats are taken. You can return to the game.',
+    organiserOnly: 'Only the organiser can use these controls on this device.',
+    backToGame: 'Back to game',
+    organiserControls: 'Organiser controls',
+    latePlayerCount: (count: number) => `${count} players are seated.`,
     qrAlt: 'QR code for the game invitation',
     codeCaption: 'Game code',
     share: 'Share invitation',

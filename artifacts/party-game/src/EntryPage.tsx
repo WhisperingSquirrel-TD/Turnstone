@@ -13,6 +13,7 @@ import {
   commandSchema,
   gameConfigSchema,
   gameInviteResponseSchema,
+  lateGameInviteResponseSchema,
   gameViewResponseSchema,
   guestJoinRequestSchema,
   joinRequestCreatedResponseSchema,
@@ -198,6 +199,10 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
   const [coordinatorView, setCoordinatorView] = useState<FullView | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [shareUrl, setShareUrl] = useState('');
+  const [invitationKind, setInvitationKind] = useState<'lobby' | 'late' | null>(
+    null,
+  );
+  const [coordinatorAuthorised, setCoordinatorAuthorised] = useState(false);
   const [pendingJoiners, setPendingJoiners] = useState<
     Array<{ id: string; name: string }>
   >([]);
@@ -211,6 +216,21 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     share: false,
   });
   const mounted = useRef(true);
+  const lateJoinMode = Boolean(
+    coordinatorView && !['DRAFT', 'LOBBY'].includes(coordinatorView.phase),
+  );
+
+  useEffect(() => {
+    if (
+      coordinatorView?.phase !== 'LOBBY' &&
+      (invitationKind === 'lobby' ||
+        ['FINISHED', 'ARCHIVED'].includes(coordinatorView?.phase ?? ''))
+    ) {
+      setJoinCode('');
+      setShareUrl('');
+      setInvitationKind(null);
+    }
+  }, [coordinatorView?.phase, invitationKind]);
 
   useEffect(() => {
     mounted.current = true;
@@ -270,6 +290,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     );
     if (mounted.current) {
       setPendingJoiners(result.requests.map(({ id, name }) => ({ id, name })));
+      setCoordinatorAuthorised(true);
     }
   }, []);
 
@@ -296,6 +317,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       if (!mounted.current) return;
       setJoinCode(invite.shortCode);
       setShareUrl(invitationUrl(gameId, invite.joinUrl));
+      setInvitationKind('lobby');
     },
     [csrfToken],
   );
@@ -308,15 +330,20 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
 
     const load = async () => {
       try {
-        await loadCoordinatorView(coordinatorGameId);
+        const view = await loadCoordinatorView(coordinatorGameId);
         await loadPendingJoiners(coordinatorGameId);
-        if (!shareUrl) await createLobbyInvite(coordinatorGameId);
+        if (view.phase === 'LOBBY' && !shareUrl) {
+          await createLobbyInvite(coordinatorGameId);
+        }
         if (!active) return;
-      } catch {
+      } catch (error) {
         if (active)
           setErrors((current) => ({
             ...current,
-            approve: en.entry.errorFallback,
+            approve:
+              error instanceof ApiRequestError && error.status === 401
+                ? en.entry.organiserOnly
+                : en.entry.errorFallback,
           }));
       }
     };
@@ -581,6 +608,10 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
 
   async function startGame(): Promise<void> {
     if (!coordinatorGameId || !coordinatorView) return;
+    if (lateJoinMode) {
+      navigate(webPath(`/game/${encodeURIComponent(coordinatorGameId)}`));
+      return;
+    }
     setBusy((current) => ({ ...current, startGame: true }));
     setErrors((current) => ({ ...current, startGame: undefined }));
     try {
@@ -675,10 +706,13 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         code: joinCode,
       })
     : '';
-  const qrCode = lobbyCodeUrl ? (
+  const visibleShareUrl =
+    lateJoinMode && invitationKind !== 'late' ? '' : shareUrl;
+  const qrUrl = lateJoinMode ? visibleShareUrl : lobbyCodeUrl;
+  const qrCode = qrUrl ? (
     <Suspense fallback={<span aria-label={en.entry.qrPreparing}>…</span>}>
-      <span data-testid="lobby-join-qr" data-join-url={lobbyCodeUrl}>
-        <QRCode value={lobbyCodeUrl} />
+      <span data-testid="lobby-join-qr" data-join-url={qrUrl}>
+        <QRCode value={qrUrl} />
       </span>
     </Suspense>
   ) : null;
@@ -695,6 +729,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         footer: config.byline,
       }}
       screen={screen}
+      lateJoinMode={lateJoinMode}
       inviteMode={Boolean(inviteToken)}
       inputs={inputs}
       onInputChange={updateInput}
@@ -717,8 +752,8 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       errors={errors}
       organiserDisplayName={en.entry.defaultOrganiser}
       defaultGameName={`${config.appName} game`}
-      joinCode={joinCode}
-      shareUrl={shareUrl}
+      joinCode={lateJoinMode ? '' : joinCode}
+      shareUrl={visibleShareUrl}
       qrCode={qrCode}
       gameLogoSrc={gameLogoSrc}
       gameLogoHref={config.organisation.url}
@@ -736,6 +771,38 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       onCreate={createGame}
       onApproveJoiner={approveJoiner}
       onStartGame={startGame}
+      onCreateLateInvite={
+        coordinatorAuthorised
+          ? async () => {
+              if (!coordinatorGameId) return;
+              setBusy((current) => ({ ...current, share: true }));
+              setErrors((current) => ({ ...current, approve: undefined }));
+              try {
+                const invite = await postJson(
+                  `/games/${encodeURIComponent(coordinatorGameId)}/late-invites`,
+                  {},
+                  lateGameInviteResponseSchema,
+                  csrfToken,
+                );
+                setJoinCode('');
+                setInvitationKind('late');
+                setShareUrl(invitationUrl(coordinatorGameId, invite.joinUrl));
+              } catch (error) {
+                setShareUrl('');
+                setInvitationKind(null);
+                setErrors((current) => ({
+                  ...current,
+                  approve:
+                    error instanceof ApiRequestError && error.status === 409
+                      ? en.entry.lateInviteUnavailable
+                      : en.entry.errorFallback,
+                }));
+              } finally {
+                setBusy((current) => ({ ...current, share: false }));
+              }
+            }
+          : undefined
+      }
       onRehearsal={rehearse}
       onShare={shareInvitation}
       onClearSensitiveValues={() => {

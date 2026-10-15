@@ -1,5 +1,47 @@
 import { test, expect } from '@playwright/test';
 
+test('entry distinguishes the shared game code from both players personal four-digit PINs', async ({
+  page,
+}) => {
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      json: { csrfToken: 'c'.repeat(64) },
+    }),
+  );
+  await page.goto('/play');
+  await page.getByRole('button', { name: 'Join a game', exact: true }).click();
+  await expect(
+    page.getByText(/shared code has six letters or numbers/),
+  ).toBeVisible();
+  const characters = page.getByRole('textbox', { name: /Game code character/ });
+  await expect(characters).toHaveCount(6);
+  for (let index = 0; index < 6; index += 1) {
+    await characters.nth(index).fill('ABC234'[index]!);
+  }
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByLabel('Your first name', { exact: true }).fill('Sam');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(page.getByLabel('4-digit PIN', { exact: true })).toHaveAttribute(
+    'maxlength',
+    '4',
+  );
+  await expect(
+    page.getByText(/your private 4-digit PIN, not the game code/),
+  ).toBeVisible();
+  await page.goto('/play');
+  await page
+    .getByRole('button', { name: 'Start a new game', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(
+    page.getByLabel('Choose a 4-digit PIN', { exact: true }),
+  ).toHaveAttribute('maxlength', '4');
+  await expect(
+    page.getByText(/your private 4-digit PIN, not the game code/),
+  ).toBeVisible();
+});
+
 test('mobile join and rehearsal stay enabled after the same-origin CSRF handshake', async ({
   page,
 }, testInfo) => {

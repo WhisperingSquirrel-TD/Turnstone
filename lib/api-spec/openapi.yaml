@@ -128,6 +128,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+  /games/{id}/late-invites:
+    post:
+      operationId: createLateGameInvite
+      tags: [games]
+      summary: Create a fresh link-only invitation during the configured late-joining window
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LateGameInviteInput'
+      responses:
+        '201':
+          description: Link created; never reopens the lobby room code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LateGameInviteResponse'
+        '401':
+          description: Coordinator capability required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Late-joining window closed or no seat available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/join:
     post:
       operationId: requestToJoinByInvite
@@ -481,6 +519,21 @@ components:
         shortCode:
           type: string
           pattern: '^[A-HJ-NP-Z2-9]{6}$'
+    LateGameInviteInput:
+      type: object
+      additionalProperties: false
+    LateGameInviteResponse:
+      type: object
+      additionalProperties: false
+      required: [gameId, joinUrl]
+      properties:
+        gameId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        joinUrl:
+          type: string
+          format: uri
     PendingJoinRequestsResponse:
       type: object
       additionalProperties: false

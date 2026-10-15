@@ -2,9 +2,27 @@ import { describe, expect, it } from 'vitest';
 import {
   joinRequestCreatedResponseSchema,
   joinRequestDecisionResponseSchema,
+  lateGameInviteRequestSchema,
+  lateGameInviteResponseSchema,
 } from '../lib/shared/src/contracts';
 
 describe('entry-flow API contracts', () => {
+  it('keeps fresh late invitations link-only and rejects extra request and response fields', () => {
+    const invite = {
+      gameId: 'game-1',
+      joinUrl: `https://example.test/join/game-1#${'i'.repeat(43)}`,
+    };
+    expect(lateGameInviteResponseSchema.parse(invite)).toEqual(invite);
+    expect(
+      lateGameInviteResponseSchema.safeParse({
+        ...invite,
+        shortCode: 'ABC234',
+      }).success,
+    ).toBe(false);
+    expect(
+      lateGameInviteRequestSchema.safeParse({ role: 'traitor' }).success,
+    ).toBe(false);
+  });
   it('accepts a pending join response without exposing additional fields', () => {
     expect(
       joinRequestCreatedResponseSchema.parse({

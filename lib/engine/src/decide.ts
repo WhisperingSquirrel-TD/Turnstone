@@ -1,3 +1,4 @@
+import { joiningWindowOpen } from './joining';
 import {
   commandSchema,
   eventSchema,
@@ -300,17 +301,7 @@ export function decide(
     case 'JoinGame': {
       if (ctx.actor.kind !== 'player' || ctx.actor.seatId !== cmd.seatId)
         return error('FORBIDDEN');
-      const late = state.phase !== 'LOBBY';
-      if (
-        late &&
-        (state.phase === 'DRAFT' ||
-          state.config.players.lateJoining === 'never' ||
-          (state.config.players.lateJoining === 'first-vote' &&
-            state.firstVoteOccurred) ||
-          (state.config.players.lateJoining === 'cycle' &&
-            state.cycle > state.config.players.lateJoinCycle))
-      )
-        return error('LOBBY_CLOSED');
+      if (!joiningWindowOpen(state)) return error('LOBBY_CLOSED');
       if (state.seats.some((seat) => seat.id === cmd.seatId))
         return error('DUPLICATE_SEAT');
       if (

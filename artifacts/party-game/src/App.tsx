@@ -1692,6 +1692,14 @@ function PlayerGame() {
             {!inPrivateMoment && (
               <div className="mt-12 border-t border-stone pt-6">
                 <h2 className="display text-2xl">{en.game.roomHeading}</h2>
+                {!full.rehearsal && activeGame && (
+                  <Link
+                    className="quiet-action my-3 inline-flex min-h-11 items-center"
+                    to={webPath(`/coordinate/${encodeURIComponent(full.id)}`)}
+                  >
+                    {en.entry.organiserControls}
+                  </Link>
+                )}
                 {full.phase === 'LOBBY' && full.lobbyCode && (
                   <section
                     className="mt-5 flex flex-col items-center gap-3 border-y border-stone py-5 text-center"

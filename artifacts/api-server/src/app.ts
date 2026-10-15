@@ -27,6 +27,9 @@ import {
   csrfTokenResponseSchema,
   eventSchema,
   gameInviteResponseSchema,
+  lateGameInviteRequestSchema,
+  lateGameInviteResponseSchema,
+  joinRequestCreatedResponseSchema,
   gameConfigSchema,
   guestJoinRequestSchema,
   gameViewResponseSchema,
@@ -46,6 +49,7 @@ import {
 import {
   decide,
   isCoordinatorCommand,
+  joiningWindowOpen,
   replay,
   replayFrom,
   viewFor,
@@ -765,6 +769,161 @@ export function createApp(
       sendError(response, 503, 'Service unavailable');
     }
   });
+  app.post('/api/games/:id/late-invites', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const actor = actorFor(await coordinatorViewerForRequest(request));
+      if (actor?.kind !== 'coordinator') {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      if (!lateGameInviteRequestSchema.safeParse(request.body ?? {}).success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
+      if (
+        !(await checkRateLimit(
+          request,
+          'create-late-invite',
+          actorId(actor),
+          10,
+        ))
+      ) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const state = await loadGameState(gameId);
+      if (!state) {
+        sendError(response, 404, 'Not found');
+        return;
+      }
+      if (
+        state.phase === 'LOBBY' ||
+        state.paused ||
+        !joiningWindowOpen(state) ||
+        state.seats.length >= state.config.players.count
+      ) {
+        sendError(response, 409, 'Command rejected');
+        return;
+      }
+      if (!options.publicBaseUrl) {
+        sendError(response, 503, 'Service unavailable');
+        return;
+      }
+      const { createGameInvite } =
+        await import('@workspace/db/seat-access-store');
+      const token = randomBytes(32).toString('base64url');
+      await createGameInvite({
+        gameId,
+        linkTokenHash: createHash('sha256').update(token).digest('hex'),
+        // This random hash has no corresponding human-readable lobby code.
+        shortCodeHash: createHash('sha256')
+          .update(randomBytes(32))
+          .digest('hex'),
+        displayCode: null,
+        expiresAt: Date.now() + joinRequestCookieDurationMs,
+      });
+      const joinUrl = new URL(
+        `/join/${encodeURIComponent(gameId)}#${token}`,
+        options.publicBaseUrl,
+      ).toString();
+      response
+        .status(201)
+        .json(lateGameInviteResponseSchema.parse({ gameId, joinUrl }));
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+
+  async function queueSeatApproval(
+    gameId: string,
+    data: { name: string; pin: string; idempotencyKey: string },
+    response: Response,
+  ): Promise<void> {
+    const secret = options.rateLimitSecret;
+    if (!secret) {
+      sendError(response, 503, 'Service unavailable');
+      return;
+    }
+    const now = Date.now();
+    const {
+      createGameJoinRequest,
+      createSeatAccess,
+      findGameJoinRequestById,
+      getSeatAccess,
+    } = await import('@workspace/db/seat-access-store');
+    const requestId = createHmac('sha256', secret)
+      .update(`turnstone-request-id\u0000${gameId}\u0000${data.idempotencyKey}`)
+      .digest('hex')
+      .slice(0, 32);
+    const seatId = createHmac('sha256', secret)
+      .update(
+        `turnstone-request-seat\u0000${gameId}\u0000${data.idempotencyKey}`,
+      )
+      .digest('hex')
+      .slice(0, 32);
+    const requestToken = createHmac('sha256', secret)
+      .update(
+        `turnstone-request-token\u0000${gameId}\u0000${data.idempotencyKey}`,
+      )
+      .digest('base64url');
+    let access = await getSeatAccess(gameId, seatId);
+    if (!access) {
+      const hashedPin = await hashSeatPin(data.pin);
+      await createSeatAccess({
+        gameId,
+        seatId,
+        pinSalt: hashedPin.salt,
+        pinHash: hashedPin.hash,
+      });
+      access = await getSeatAccess(gameId, seatId);
+    }
+    if (
+      !access ||
+      !(await verifySeatPin(data.pin, access.pinSalt, access.pinHash))
+    ) {
+      sendError(response, 409, 'Join could not be completed');
+      return;
+    }
+    await createGameJoinRequest({
+      id: requestId,
+      gameId,
+      seatId,
+      requestTokenHash: createHash('sha256').update(requestToken).digest('hex'),
+      name: data.name,
+      expiresAt: now + joinRequestCookieDurationMs,
+    });
+    const joinRequest = await findGameJoinRequestById(gameId, requestId);
+    if (
+      !joinRequest ||
+      joinRequest.name !== data.name ||
+      joinRequest.expiresAt <= now ||
+      joinRequest.status === 'rejected' ||
+      joinRequest.status === 'expired'
+    ) {
+      sendError(response, 409, 'Join could not be completed');
+      return;
+    }
+    response.cookie(cookieNameForJoinRequest(requestId), requestToken, {
+      httpOnly: true,
+      secure: options.secureCookies ?? false,
+      sameSite: 'lax',
+      path: `/api/join-requests/${requestId}`,
+      maxAge: joinRequestCookieDurationMs,
+    });
+    await publishGame(gameId);
+    response.status(202).json(
+      joinRequestCreatedResponseSchema.parse({
+        requestId,
+        status: 'pending',
+      }),
+    );
+  }
+
   app.post('/api/join', async (request, response) => {
     try {
       if (!hasValidCsrf(request)) {
@@ -789,13 +948,8 @@ export function createApp(
         return;
       }
       const now = Date.now();
-      const {
-        createGameJoinRequest,
-        createSeatAccess,
-        findActiveGameInvite,
-        findGameJoinRequestById,
-        getSeatAccess,
-      } = await import('@workspace/db/seat-access-store');
+      const { findActiveGameInvite } =
+        await import('@workspace/db/seat-access-store');
       const invite = await findActiveGameInvite({ shortCodeHash }, now);
       if (!invite) {
         sendError(response, 404, 'Not found');
@@ -806,75 +960,7 @@ export function createApp(
         sendError(response, 404, 'Not found');
         return;
       }
-      const idempotencyKey = parsed.data.idempotencyKey;
-      const requestId = createHmac('sha256', secret)
-        .update(
-          `turnstone-request-id\u0000${invite.gameId}\u0000${idempotencyKey}`,
-        )
-        .digest('hex')
-        .slice(0, 32);
-      const seatId = createHmac('sha256', secret)
-        .update(
-          `turnstone-request-seat\u0000${invite.gameId}\u0000${idempotencyKey}`,
-        )
-        .digest('hex')
-        .slice(0, 32);
-      const requestToken = createHmac('sha256', secret)
-        .update(
-          `turnstone-request-token\u0000${invite.gameId}\u0000${idempotencyKey}`,
-        )
-        .digest('base64url');
-      let access = await getSeatAccess(invite.gameId, seatId);
-      if (!access) {
-        const hashedPin = await hashSeatPin(parsed.data.pin);
-        await createSeatAccess({
-          gameId: invite.gameId,
-          seatId,
-          pinSalt: hashedPin.salt,
-          pinHash: hashedPin.hash,
-        });
-        access = await getSeatAccess(invite.gameId, seatId);
-      }
-      if (
-        !access ||
-        !(await verifySeatPin(parsed.data.pin, access.pinSalt, access.pinHash))
-      ) {
-        sendError(response, 409, 'Join could not be completed');
-        return;
-      }
-      await createGameJoinRequest({
-        id: requestId,
-        gameId: invite.gameId,
-        seatId,
-        requestTokenHash: createHash('sha256')
-          .update(requestToken)
-          .digest('hex'),
-        name: parsed.data.name,
-        expiresAt: now + joinRequestCookieDurationMs,
-      });
-      const joinRequest = await findGameJoinRequestById(
-        invite.gameId,
-        requestId,
-      );
-      if (
-        !joinRequest ||
-        joinRequest.name !== parsed.data.name ||
-        joinRequest.expiresAt <= now ||
-        joinRequest.status === 'rejected' ||
-        joinRequest.status === 'expired'
-      ) {
-        sendError(response, 409, 'Join could not be completed');
-        return;
-      }
-      response.cookie(cookieNameForJoinRequest(requestId), requestToken, {
-        httpOnly: true,
-        secure: options.secureCookies ?? false,
-        sameSite: 'lax',
-        path: `/api/join-requests/${requestId}`,
-        maxAge: joinRequestCookieDurationMs,
-      });
-      await publishGame(invite.gameId);
-      response.status(202).json({ requestId, status: 'pending' });
+      await queueSeatApproval(invite.gameId, parsed.data, response);
     } catch {
       sendError(response, 503, 'Service unavailable');
     }
@@ -1148,12 +1234,9 @@ export function createApp(
         return;
       }
       const now = Date.now();
-      const { findActiveGameInvite, getSeatAccess, recordSeatPinFailure } =
+      const { findGameForSeatRecovery, getSeatAccess, recordSeatPinFailure } =
         await import('@workspace/db/seat-access-store');
-      const invite = await findActiveGameInvite(
-        { shortCodeHash: codeHash },
-        now,
-      );
+      const invite = await findGameForSeatRecovery(codeHash);
       if (!invite) {
         sendError(response, 401, 'Recovery could not be completed');
         return;
@@ -1296,6 +1379,18 @@ export function createApp(
       const state = await loadGameState(gameId);
       if (!state) {
         sendError(response, 404, 'Not found');
+        return;
+      }
+      if (state.phase !== 'DRAFT' && state.phase !== 'LOBBY') {
+        if (!joiningWindowOpen(state)) {
+          sendError(response, 409, 'Command rejected');
+          return;
+        }
+        if (!(await checkRateLimit(request, 'late-invite-join', gameId, 5))) {
+          sendError(response, 429, 'Too many requests');
+          return;
+        }
+        await queueSeatApproval(gameId, parsed.data, response);
         return;
       }
       const seatId = createHmac('sha256', options.rateLimitSecret)

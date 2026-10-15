@@ -64,6 +64,13 @@
       "when": 1791995612668,
       "tag": "0008_lobby-code-display",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792048239052,
+      "tag": "0009_invite-recovery",
+      "breakpoints": true
     }
   ]
 }
