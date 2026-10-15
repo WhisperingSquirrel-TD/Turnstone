@@ -437,8 +437,20 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     );
     await page.getByTestId('input-rehearsal-name').fill('Morgan');
     await page.getByTestId('button-speed-fast').click();
+    const rehearsalStartResponsePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/rehearsals' &&
+        response.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
     await page.getByTestId('button-start-rehearsal').click();
-    await page.waitForURL(/\/game\/[^/]+$/);
+    const rehearsalStartResponse = await rehearsalStartResponsePromise;
+    if (!rehearsalStartResponse.ok()) {
+      throw new Error(
+        `Rehearsal start failed with HTTP ${rehearsalStartResponse.status()}.`,
+      );
+    }
+    await page.waitForURL(/\/game\/[^/]+$/, { timeout: 15_000 });
 
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
       "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.",

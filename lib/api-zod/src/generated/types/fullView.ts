@@ -57,6 +57,11 @@ export interface FullView {
   /** @nullable */
   commitment: string | null;
   progress: FullViewProgress;
+  /**
+     * @items.minLength 1
+     * @items.maxLength 128
+     */
+  voteCandidates: string[];
   ballots: FullViewBallots;
   winner: Role | null;
   publicAnnouncement: FullViewPublicAnnouncement;

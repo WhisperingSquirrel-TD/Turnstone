@@ -22,6 +22,7 @@ import {
   Link,
   Route,
   Routes,
+  useLocation,
   useNavigate,
   useParams,
 } from 'react-router-dom';
@@ -133,6 +134,7 @@ function InstallPromptProvider({ children }: { children: ReactNode }) {
 function CsrfProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     let active = true;
@@ -158,7 +160,7 @@ function CsrfProvider({ children }: { children: ReactNode }) {
       {failed && (
         <div
           role="alert"
-          className="safe-page fixed inset-x-0 bottom-0 z-20 border-t border-gilt bg-hearth text-candle"
+          className={`safe-page fixed inset-x-0 bottom-0 z-20 border-t border-gilt bg-hearth text-candle${location.pathname.startsWith('/game/') ? ' game-footer-adjacent' : ''}`}
         >
           <p>{en.app.securityUnavailable}</p>
           <button
@@ -212,7 +214,7 @@ function Shell({
   }, []);
   return (
     <div
-      className={`safe-page flex min-h-[100dvh] flex-col${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
+      className={`safe-page flex min-h-[100dvh] flex-col${isPlayer ? ' game-shell' : ''}${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
     >
       <a
         href="#main"
@@ -220,7 +222,9 @@ function Shell({
       >
         {en.skip}
       </a>
-      <header className="public-home-brand public-shell-header mx-auto w-full max-w-5xl">
+      <header
+        className={`public-home-brand public-shell-header w-full${isPlayer ? ' player-shell-header' : ' mx-auto max-w-5xl'}`}
+      >
         <a
           href={config.routes.home}
           aria-label={config.appName}
@@ -315,13 +319,15 @@ function Shell({
       <main
         id="main"
         tabIndex={-1}
-        className={`mx-auto w-full max-w-5xl flex-1 py-10 sm:py-16${privateMode ? ' private-moment-main' : ''}`}
+        className={`mx-auto w-full max-w-5xl flex-1 py-10 sm:py-16${privateMode ? ' private-moment-main' : ''}${isPlayer ? ' game-shell-main' : ''}`}
       >
         {children}
       </main>
       <BrandFooter
         context={isPlayer ? 'game' : 'public'}
-        className="mx-auto mt-8 w-full max-w-5xl py-3"
+        className={
+          isPlayer ? 'game-brand-footer' : 'mx-auto mt-8 w-full max-w-5xl py-3'
+        }
         testId="brand-footer-shell"
       />
     </div>
@@ -568,14 +574,14 @@ function TurnstonePlayerHeader() {
     >
       <a
         href={config.routes.home}
-        className="entry-wordmark"
+        className="turnstone-wordmark"
         aria-label={config.appName}
         data-testid="text-entry-brand"
       >
         <span>
           {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
         </span>
-        <span className="entry-gilt">{config.wordmarkAccentSuffix}</span>
+        <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
       </a>
     </header>
   );
@@ -761,7 +767,12 @@ function PlayerGame() {
       ? []
       : full?.phase === 'VOTE' || full?.phase === 'FINAL_BANISH'
         ? eligibleSeats
-            .filter((seat) => seat.id !== full.viewerSeatId)
+            .filter(
+              (seat) =>
+                seat.id !== full.viewerSeatId &&
+                (!full.voteCandidates.length ||
+                  full.voteCandidates.includes(seat.id)),
+            )
             .map(({ id: seatId, name }) => ({ id: seatId, name }))
         : full?.phase === 'SHADOW'
           ? privateOptions
@@ -1256,7 +1267,25 @@ function PlayerGame() {
       await gameQuery.refetch();
     } catch {
       command.reset();
-      setCommandMessage(en.game.chooseSomeoneElse);
+      const latestView = (await gameQuery.refetch()).data?.view;
+      if (
+        latestView &&
+        isFullView(latestView) &&
+        latestView.phase !== view.phase
+      ) {
+        clearPrivate();
+        setSelected('');
+        setConfirmChoice(false);
+        setCommandMessage('');
+        return;
+      }
+      setCommandMessage(
+        view.phase === 'SHADOW'
+          ? en.game.chooseSomeoneElse
+          : view.phase === 'VOTE' || view.phase === 'FINAL_BANISH'
+            ? en.game.voteNotRecorded
+            : en.game.choiceNotRecorded,
+      );
       setSelected('');
       setConfirmChoice(false);
     }
@@ -2159,9 +2188,9 @@ function PlayerGame() {
                   ? en.game.rehearsalControls
                   : en.game.organiserControls
               }
-              className="fixed inset-x-0 bottom-0 z-30 border-t border-stone bg-hearth px-6 pt-3"
+              className="game-action-bar fixed inset-x-0 z-30 border-t border-stone bg-hearth px-6 pt-3"
               style={{
-                paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+                paddingBottom: '0.75rem',
               }}
               data-testid="rehearsal-action-bar"
             >
@@ -2195,12 +2224,13 @@ function PlayerGame() {
           )}
         {advanceConfirmationOpen && full && !full.rehearsal && (
           <div
-            className="fixed inset-0 z-50 grid place-items-center bg-charcoal p-6"
+            className="game-fullscreen-overlay fixed inset-0 z-50 flex flex-col bg-charcoal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="organiser-confirm-title"
           >
-            <div className="w-full max-w-[480px] border border-stone bg-hearth p-6">
+            <TurnstonePlayerHeader />
+            <div className="mx-auto my-auto w-full max-w-[480px] border border-stone bg-hearth p-6">
               <h2
                 className="display text-2xl text-candle"
                 id="organiser-confirm-title"
@@ -2224,15 +2254,16 @@ function PlayerGame() {
                 </button>
               </div>
             </div>
+            <BrandFooter
+              context="game"
+              className="game-brand-footer-overlay"
+              testId="brand-footer-confirmation"
+            />
           </div>
         )}
         {full?.rehearsal && rehearsalGuideVisible && (
           <div
-            className="fixed inset-0 z-40 flex flex-col bg-charcoal px-6"
-            style={{
-              paddingTop: 'calc(env(safe-area-inset-top) + 1rem)',
-              paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)',
-            }}
+            className="game-fullscreen-overlay fixed inset-0 z-40 flex flex-col bg-charcoal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="rehearsal-guide-title"
@@ -2263,7 +2294,7 @@ function PlayerGame() {
             </div>
             <BrandFooter
               context="game"
-              className="mt-auto w-full max-w-[480px] self-center"
+              className="game-brand-footer-overlay"
               testId="brand-footer-overlay"
             />
           </div>
@@ -2315,7 +2346,7 @@ function PlayerGame() {
             </div>
             <BrandFooter
               context="game"
-              className="brand-credit-overlay w-full max-w-[480px] self-center"
+              className="game-brand-footer-overlay"
               testId="brand-footer-overlay"
             />
           </dialog>

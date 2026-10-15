@@ -61,7 +61,7 @@ test('home and play are accessible, reloadable and responsive', async ({
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  await page.goto('/');
+  await page.goto('/play');
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -186,7 +186,40 @@ test('private role is requested only during a hold and is removed on release', a
   });
 });
 
-test('the revealed role stays above the seal and inside small phone viewports', async ({
+test('entry welcome title and actions stay high in a short desktop viewport', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !testInfo.project.name.toLowerCase().includes('desktop'),
+    'Desktop entry layout check runs once in Chromium',
+  );
+
+  const viewport = { width: 1024, height: 696 };
+  await page.setViewportSize(viewport);
+  await page.goto('/play');
+  const title = page.locator('#entry-title');
+  const actions = page.locator('.entry-choice-list');
+  await expect(title).toBeVisible();
+  await expect(actions).toBeVisible();
+
+  const [titleBounds, actionBounds] = await Promise.all([
+    title.boundingBox(),
+    actions.boundingBox(),
+  ]);
+  if (!titleBounds || !actionBounds) {
+    throw new Error('Entry title or actions have no visible bounds');
+  }
+  expect(
+    titleBounds.y,
+    'welcome title should begin in the upper third',
+  ).toBeLessThan(viewport.height * 0.35);
+  expect(
+    actionBounds.y + actionBounds.height,
+    'welcome actions should not drift into the bottom quarter',
+  ).toBeLessThan(viewport.height * 0.75);
+});
+
+test('private role, seal and footer stay inside small phone viewports', async ({
   page,
 }) => {
   const gameId = 'role-viewport-fit';
@@ -260,18 +293,46 @@ test('the revealed role stays above the seal and inside small phone viewports', 
     const shieldDialog = page.getByRole('dialog', {
       name: 'Shield your screen',
     });
+    const shieldFooter = shieldDialog.getByTestId('brand-footer-overlay');
     const shieldConfirmation = shieldDialog.getByRole('button', {
       name: /i’m shielded/i,
     });
     await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
       timeout: 6500,
     });
+    await expect(shieldFooter).toBeVisible();
+    const shieldFooterBounds = await shieldFooter.boundingBox();
+    if (!shieldFooterBounds) {
+      throw new Error('The shield footer has no visible bounds.');
+    }
+    expect(
+      Math.abs(
+        viewport.height - shieldFooterBounds.y - shieldFooterBounds.height,
+      ),
+    ).toBeLessThanOrEqual(1);
+    const brand = shieldDialog.getByTestId('text-entry-brand');
+    const brandVisual = await brand.evaluate((element) => ({
+      fontFamily: getComputedStyle(element).fontFamily,
+      parts: Array.from(element.querySelectorAll('span')).map((part) => ({
+        text: part.textContent,
+        color: getComputedStyle(part).color,
+      })),
+    }));
+    expect(brandVisual.fontFamily).toContain('Playfair Display');
+    expect(brandVisual.parts).toEqual([
+      { text: 'Turn', color: 'rgb(250, 250, 245)' },
+      { text: 'stone', color: 'rgb(200, 148, 74)' },
+    ]);
     await shieldConfirmation.click();
 
     const seal = page.getByTestId('button-hold-reveal');
     const sealBounds = await seal.boundingBox();
     if (!sealBounds) throw new Error('Hold seal has no visible bounds');
     expect(sealBounds.y).toBeGreaterThanOrEqual(0);
+    expect(
+      sealBounds.y,
+      `hold seal should stay in the upper portion at ${viewport.width}x${viewport.height}`,
+    ).toBeLessThan(viewport.height * 0.42);
     expect(sealBounds.y + sealBounds.height).toBeLessThanOrEqual(
       viewport.height,
     );
@@ -311,4 +372,253 @@ test('the revealed role stays above the seal and inside small phone viewports', 
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await page.mouse.up();
   }
+});
+
+test('game wordmark stays top-left and the action banner stays above the footer', async ({
+  page,
+}) => {
+  const gameId = 'rehearsal-footer-layout';
+  const view: FullView = {
+    id: gameId,
+    viewerSeatId: 'human-seat',
+    canAdvancePhase: true,
+    version: 1,
+    phase: 'DEBATE',
+    paused: false,
+    deadline: Date.now() + 60_000,
+    coordinatorPlays: true,
+    cycle: 1,
+    shadowRound: 0,
+    missionsEnabled: false,
+    rehearsal: true,
+    pot: 0,
+    unit: 'points',
+    seats: Array.from({ length: 12 }, (_, index) => ({
+      id: index === 0 ? 'human-seat' : `seat-${index}`,
+      name: index === 0 ? 'Morgan' : `Practice player ${index}`,
+      status: 'alive' as const,
+    })),
+    commitment: null,
+    progress: { done: 0, total: 1 },
+    voteCandidates: [],
+    ballots: {},
+    winner: null,
+    publicAnnouncement: null,
+    private: null,
+    publicLog: [],
+    coordinatorAlerts: [],
+    fairness: null,
+  };
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      status: 200,
+      headers: {
+        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+      },
+      json: { csrfToken: 'test-csrf' },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({ status: 200, json: { version: view.version, view } }),
+  );
+  await page.goto(`/game/${gameId}`);
+  const guide = page.getByTestId('rehearsal-explainer');
+  await expect(guide).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator('main#main')
+        .evaluate((main) => getComputedStyle(main).overflowY),
+    )
+    .toBe('hidden');
+  const guideFooter = guide.getByTestId('brand-footer-overlay');
+  await expect(guideFooter).toBeVisible();
+  const [guideFooterBounds, guideWordmarkBounds, shellWordmarkBounds] =
+    await Promise.all([
+      guideFooter.boundingBox(),
+      guide.getByTestId('text-entry-brand').boundingBox(),
+      page
+        .locator('header.public-shell-header .turnstone-wordmark')
+        .boundingBox(),
+    ]);
+  if (!guideFooterBounds || !guideWordmarkBounds || !shellWordmarkBounds) {
+    throw new Error('The rehearsal guide brand elements have no bounds.');
+  }
+  expect(
+    Math.abs(568 - guideFooterBounds.y - guideFooterBounds.height),
+  ).toBeLessThanOrEqual(1);
+  expect(guideWordmarkBounds.x).toBeLessThanOrEqual(24);
+  expect(guideWordmarkBounds.x).toBe(shellWordmarkBounds.x);
+  expect(guideWordmarkBounds.y).toBe(shellWordmarkBounds.y);
+  await expect(guide).toContainText('Each step explains itself');
+  await guide.getByRole('button', { name: 'Got it' }).click();
+  await expect(guide).toContainText('Everyone talks it over');
+  const guideScrollMetrics = await guide.evaluate((overlay) => ({
+    overlayHeight: overlay.clientHeight,
+    overlayScrollHeight: overlay.scrollHeight,
+    mainOverflowY: getComputedStyle(document.querySelector('main#main')!)
+      .overflowY,
+  }));
+  expect(guideScrollMetrics.overlayScrollHeight).toBeLessThanOrEqual(
+    guideScrollMetrics.overlayHeight,
+  );
+  expect(guideScrollMetrics.mainOverflowY).toBe('hidden');
+  await guide.getByRole('button', { name: 'Got it' }).click();
+
+  const actionBar = page.getByTestId('rehearsal-action-bar');
+  const footer = page.getByTestId('brand-footer-shell');
+  const wordmark = page.locator(
+    'header.public-shell-header .turnstone-wordmark',
+  );
+  await expect(actionBar).toBeVisible();
+  await expect(footer).toBeVisible();
+  await expect(wordmark).toHaveCount(1);
+  const scrollMetrics = await page.evaluate(() => {
+    const main = document.querySelector('main#main');
+    if (!main) throw new Error('Game main region is missing.');
+    return {
+      documentHeight: document.documentElement.scrollHeight,
+      viewportHeight: window.innerHeight,
+      mainHeight: main.clientHeight,
+      mainScrollHeight: main.scrollHeight,
+      mainOverflowY: getComputedStyle(main).overflowY,
+    };
+  });
+  expect(scrollMetrics.mainScrollHeight).toBeGreaterThan(
+    scrollMetrics.mainHeight,
+  );
+  expect(scrollMetrics.mainOverflowY).toBe('auto');
+  expect(scrollMetrics.documentHeight).toBeLessThanOrEqual(
+    scrollMetrics.viewportHeight,
+  );
+  await page.evaluate(() => window.scrollTo(0, 300));
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  const [actionBounds, footerBounds, wordmarkBounds] = await Promise.all([
+    actionBar.boundingBox(),
+    footer.boundingBox(),
+    wordmark.boundingBox(),
+  ]);
+  if (!actionBounds || !footerBounds || !wordmarkBounds) {
+    throw new Error(
+      'The rehearsal action bar or Stackstone footer has no bounds.',
+    );
+  }
+  expect(wordmarkBounds.x).toBeLessThanOrEqual(24);
+  expect(wordmarkBounds.y).toBeLessThanOrEqual(40);
+  expect(actionBounds.y + actionBounds.height).toBeLessThanOrEqual(
+    footerBounds.y,
+  );
+  expect(footerBounds.y + footerBounds.height).toBeLessThanOrEqual(568);
+  expect(
+    Math.abs(568 - footerBounds.y - footerBounds.height),
+  ).toBeLessThanOrEqual(1);
+  const mainRegion = page.locator('main#main');
+  await mainRegion.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const [notesBounds, scrolledActionBounds, scrolledFooterBounds] =
+    await Promise.all([
+      page.getByTestId('button-open-notes').boundingBox(),
+      actionBar.boundingBox(),
+      footer.boundingBox(),
+    ]);
+  if (!notesBounds || !scrolledActionBounds || !scrolledFooterBounds) {
+    throw new Error(
+      'The scrolled notes button, action bar or footer has no bounds.',
+    );
+  }
+  expect(notesBounds.y + notesBounds.height).toBeLessThanOrEqual(
+    scrolledActionBounds.y,
+  );
+  expect(
+    scrolledActionBounds.y + scrolledActionBounds.height,
+  ).toBeLessThanOrEqual(scrolledFooterBounds.y);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const [desktopActionBounds, desktopFooterBounds, desktopWordmarkBounds] =
+    await Promise.all([
+      actionBar.boundingBox(),
+      footer.boundingBox(),
+      wordmark.boundingBox(),
+    ]);
+  if (!desktopActionBounds || !desktopFooterBounds || !desktopWordmarkBounds) {
+    throw new Error(
+      'The desktop game header, action bar or footer has no bounds.',
+    );
+  }
+  expect(desktopWordmarkBounds.x).toBeLessThanOrEqual(24);
+  expect(desktopWordmarkBounds.y).toBeLessThanOrEqual(40);
+  expect(
+    desktopActionBounds.y + desktopActionBounds.height,
+  ).toBeLessThanOrEqual(desktopFooterBounds.y);
+  expect(
+    desktopFooterBounds.y + desktopFooterBounds.height,
+  ).toBeLessThanOrEqual(768);
+  expect(
+    Math.abs(768 - desktopFooterBounds.y - desktopFooterBounds.height),
+  ).toBeLessThanOrEqual(1);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const [wideWordmarkBounds, wideFooterBounds] = await Promise.all([
+    wordmark.boundingBox(),
+    footer.boundingBox(),
+  ]);
+  if (!wideWordmarkBounds || !wideFooterBounds) {
+    throw new Error('The wide-screen game wordmark or footer has no bounds.');
+  }
+  expect(wideWordmarkBounds.x).toBeLessThanOrEqual(24);
+
+  view.rehearsal = false;
+  await page.reload();
+  await page.getByRole('button', { name: 'Move everyone on' }).click();
+  const confirmation = page.getByRole('dialog');
+  const confirmationCard = confirmation.locator(':scope > div').first();
+  const confirmationFooter = page.getByTestId('brand-footer-confirmation');
+  const confirmationWordmark = confirmation.getByTestId('text-entry-brand');
+  await expect(confirmation).toBeVisible();
+  await expect(confirmationFooter).toBeVisible();
+  await expect(confirmationWordmark).toBeVisible();
+  const [cardBounds, confirmationFooterBounds, confirmationWordmarkBounds] =
+    await Promise.all([
+      confirmationCard.boundingBox(),
+      confirmationFooter.boundingBox(),
+      confirmationWordmark.boundingBox(),
+    ]);
+  if (!cardBounds || !confirmationFooterBounds || !confirmationWordmarkBounds) {
+    throw new Error(
+      'The organiser confirmation, header or footer has no bounds.',
+    );
+  }
+  expect(confirmationWordmarkBounds.x).toBe(desktopWordmarkBounds.x);
+  expect(confirmationWordmarkBounds.y).toBe(desktopWordmarkBounds.y);
+  expect(
+    Math.abs(confirmationFooterBounds.width - wideFooterBounds.width),
+  ).toBeLessThanOrEqual(1);
+  expect(cardBounds.y + cardBounds.height).toBeLessThanOrEqual(
+    confirmationFooterBounds.y,
+  );
+  expect(
+    confirmationFooterBounds.y + confirmationFooterBounds.height,
+  ).toBeLessThanOrEqual(900);
+  expect(
+    Math.abs(
+      900 - confirmationFooterBounds.y - confirmationFooterBounds.height,
+    ),
+  ).toBeLessThanOrEqual(1);
+
+  await page.goto('/');
+  const publicFooterBounds = await page
+    .getByTestId('brand-footer-static')
+    .boundingBox();
+  if (!publicFooterBounds) {
+    throw new Error('The public-site footer has no bounds.');
+  }
+  expect(
+    Math.abs(wideFooterBounds.x - publicFooterBounds.x),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(wideFooterBounds.width - publicFooterBounds.width),
+  ).toBeLessThanOrEqual(1);
 });

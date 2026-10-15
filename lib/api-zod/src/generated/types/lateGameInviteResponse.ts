@@ -8,9 +8,9 @@
 
 export interface LateGameInviteResponse {
   /**
-   * @minLength 1
-   * @maxLength 128
-   */
+     * @minLength 1
+     * @maxLength 128
+     */
   gameId: string;
   joinUrl: string;
 }

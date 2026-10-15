@@ -26,6 +26,7 @@ function createPublicView(gameId: string): FullView {
     ],
     commitment: null,
     progress: { done: 0, total: 2 },
+    voteCandidates: [],
     ballots: {},
     winner: null,
     publicAnnouncement: null,
@@ -415,10 +416,21 @@ test('rehearsal player can move on from public and voting screens', async ({
   page,
 }) => {
   const gameId = 'rehearsal-move-on';
+  await page.setViewportSize({ width: 320, height: 568 });
   let publicView: FullView = {
     ...createPublicView(gameId),
     canAdvancePhase: true,
     rehearsal: true,
+    seats: [
+      { id: 'seat-morgan', name: 'Morgan', status: 'alive' },
+      { id: 'seat-alex', name: 'Alex', status: 'departed' },
+      { id: 'seat-jamie', name: 'Jamie', status: 'alive' },
+      ...Array.from({ length: 4 }, (_, index) => ({
+        id: `seat-practice-${index + 1}`,
+        name: `Practice player ${index + 1}`,
+        status: 'alive' as const,
+      })),
+    ],
   };
   const submitted: Record<string, unknown>[] = [];
   let privateViewRequests = 0;
@@ -523,6 +535,14 @@ test('rehearsal player can move on from public and voting screens', async ({
   const choiceList = page.getByTestId('private-choice-list');
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   await expect(choiceList).toBeVisible();
+  await expect(choiceList.getByRole('button')).toHaveCount(5);
+  const voteLayout = await page.locator('main#main').evaluate((main) => ({
+    contentHeight: main.scrollHeight,
+    viewportHeight: main.clientHeight,
+  }));
+  expect(voteLayout.contentHeight).toBeLessThanOrEqual(
+    voteLayout.viewportHeight,
+  );
   await expect(page.getByText('Who do you vote to banish?')).toBeVisible();
   await page.getByRole('button', { name: 'Jamie', exact: true }).click();
   await page.getByRole('button', { name: 'Review this choice' }).click();
@@ -544,7 +564,7 @@ test('rehearsal player can move on from public and voting screens', async ({
   );
 });
 
-test('banishment voting shields then taps and excludes self and out seats', async ({
+test('banishment re-vote lists tied seats and reports vote failures accurately', async ({
   page,
 }) => {
   const gameId = 'vote-screen';
@@ -552,6 +572,7 @@ test('banishment voting shields then taps and excludes self and out seats', asyn
   const publicView = {
     ...createPublicView(gameId),
     phase: 'VOTE',
+    voteCandidates: ['seat-jamie', 'seat-practice-2'],
     viewerSeatId: 'seat-morgan',
     seats: [
       { id: 'seat-morgan', name: 'Morgan', status: 'alive' },
@@ -565,6 +586,7 @@ test('banishment voting shields then taps and excludes self and out seats', asyn
     ],
   } as FullView;
   const submittedCommands: unknown[] = [];
+  let rejectNextVote = true;
   await page.route('**/api/csrf', (route) =>
     route.fulfill({
       status: 200,
@@ -578,7 +600,16 @@ test('banishment voting shields then taps and excludes self and out seats', asyn
     route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
   );
   await page.route(`**/api/games/${gameId}/commands`, async (route) => {
-    submittedCommands.push(route.request().postDataJSON());
+    const submitted = route.request().postDataJSON() as { type?: string };
+    submittedCommands.push(submitted);
+    if (submitted.type === 'SubmitVote' && rejectNextVote) {
+      rejectNextVote = false;
+      await route.fulfill({
+        status: 409,
+        json: { error: 'Command rejected' },
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       json: { version: 13, view: publicView },
@@ -616,6 +647,12 @@ test('banishment voting shields then taps and excludes self and out seats', asyn
   await expect(shieldDialog).toHaveCount(0);
   const choiceList = page.getByTestId('private-choice-list');
   await expect(choiceList).toBeVisible();
+  const displayedChoices = await choiceList
+    .getByRole('button')
+    .allTextContents();
+  expect(displayedChoices.map((name) => name.trim()).sort()).toEqual(
+    ['Jamie', 'Practice player 2'].sort(),
+  );
   const contentOverflow = await page
     .getByTestId('private-choice-content')
     .evaluate((element) => getComputedStyle(element).overflowY);
@@ -623,12 +660,24 @@ test('banishment voting shields then taps and excludes self and out seats', asyn
   const pageCanScroll = await page.evaluate(
     () => document.scrollingElement!.scrollHeight > window.innerHeight,
   );
-  expect(pageCanScroll).toBe(true);
+  expect(pageCanScroll).toBe(false);
   await expect(
     page.getByRole('button', { name: 'Morgan', exact: true }),
   ).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Alex', exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Jamie', exact: true }).click();
+  await page.getByRole('button', { name: 'Review this choice' }).click();
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await expect(
+    page.getByText(
+      'Your vote was not recorded. The game may have moved on; please try again.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Please choose someone else.', { exact: true }),
   ).toHaveCount(0);
   await page.getByRole('button', { name: 'Jamie', exact: true }).click();
   await page.getByRole('button', { name: 'Review this choice' }).click();

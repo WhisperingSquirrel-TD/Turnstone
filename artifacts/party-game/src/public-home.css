@@ -21,6 +21,12 @@
   margin-inline: auto;
 }
 
+.player-shell-header {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+
 .public-home-nav {
   display: flex;
   flex-wrap: wrap;
@@ -66,7 +72,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem 1rem;
-  width: min(100%, 72rem);
+  width: min(100%, var(--brand-footer-max-width));
   min-height: 3.5rem;
   margin: 2rem auto 0;
   border-top: 1px solid var(--stone);
@@ -96,6 +102,22 @@
 
 .brand-credit-overlay {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.game-brand-footer-overlay {
+  width: min(
+    var(--brand-footer-max-width),
+    calc(
+      100vw - max(1rem, env(safe-area-inset-left)) -
+        max(1rem, env(safe-area-inset-right))
+    )
+  );
+  max-width: var(--brand-footer-max-width);
+  min-height: var(--game-footer-dock-height);
+  align-self: center;
+  margin: auto auto 0;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  background: var(--hearth);
 }
 
 .public-home-menu {

@@ -1238,3 +1238,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Show a single text-only Turnstone wordmark in Candle and Gilt in every header. Put the exact credit “made by Stackstone Consulting” and the Stackstone cairn mark linked to `https://stackstoneconsulting.co.uk/` in every screen's footer, including private moments. Public footer links open in the same tab; game links use a safe new tab. Do not use the approved Turnstone emblem yet.
 
 **Consequence:** The Stackstone builder name remains sourced from the shared identity config. One shared footer component is used for app screens, with matching markup in prerendered public pages; the cairn cannot appear as a role-specific tell.
+
+### D41 — Consistent game-screen chrome (resolved)
+
+**Context:** The owner reported inconsistent wordmark positions, a page that scrolls behind fixed game controls, and an in-game footer divider narrower than the public-site divider.
+
+**Choice:** On every game screen, keep the Turnstone wordmark at the same safe-area top-left inset. Lock the game shell to the viewport; use available main height before allowing scroll, never create an independent scroll box for a choice list, and show no scrollbar when content fits. If content genuinely exceeds the viewport, only the main region may scroll. Full-screen overlays lock the background and scroll only when their own content exceeds the viewport. Keep the “made by Stackstone Consulting” footer at the viewport bottom, safe-area-aware and visible on every game screen. Its divider must match the public-site footer width. No action bar, alert or content may cover the footer; full-screen overlays include a matching footer of their own.
+
+**Consequence:** The shared player shell reserves the footer and action areas, controls and alerts remain above them, and all footer contexts use the same maximum-width token. Shield, rehearsal and confirmation overlays follow the same placement and lock background scrolling.

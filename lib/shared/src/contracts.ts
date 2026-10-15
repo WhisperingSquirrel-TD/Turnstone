@@ -272,6 +272,7 @@ export const fullViewSchema = z
     ),
     commitment: z.string().nullable(),
     progress: z.object({ done: z.number(), total: z.number() }).strict(),
+    voteCandidates: z.array(id),
     ballots: z.record(id),
     winner: roleSchema.nullable(),
     publicAnnouncement: z

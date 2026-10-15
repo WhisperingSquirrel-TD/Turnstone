@@ -508,6 +508,10 @@ export const en = {
     chooseAgain: 'Choose again',
     recorded: 'Your choice has been recorded.',
     chooseSomeoneElse: 'Please choose someone else.',
+    voteNotRecorded:
+      'Your vote was not recorded. The game may have moved on; please try again.',
+    choiceNotRecorded:
+      'Your choice was not recorded. The game may have moved on; please try again.',
     endGame: 'End the game',
     continueGame: 'Continue playing',
     installButton: 'Install as app',

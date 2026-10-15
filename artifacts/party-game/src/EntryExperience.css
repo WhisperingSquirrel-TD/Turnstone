@@ -41,9 +41,9 @@
 .entry-brand {
   position: absolute;
   z-index: 2;
-  top: max(1.25rem, env(safe-area-inset-top));
-  left: max(1.25rem, env(safe-area-inset-left));
-  right: max(1.25rem, env(safe-area-inset-right));
+  top: max(1rem, env(safe-area-inset-top));
+  left: max(1rem, env(safe-area-inset-left));
+  right: max(1rem, env(safe-area-inset-right));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -655,7 +655,7 @@
   }
 
   .entry-welcome-copy {
-    margin-top: auto;
+    margin-top: 0;
   }
 
   .entry-panel {
@@ -767,8 +767,8 @@
   }
 
   .entry-brand {
-    left: max(0.9rem, env(safe-area-inset-left));
-    right: max(0.9rem, env(safe-area-inset-right));
+    left: max(1rem, env(safe-area-inset-left));
+    right: max(1rem, env(safe-area-inset-right));
   }
 
   .entry-wordmark {
