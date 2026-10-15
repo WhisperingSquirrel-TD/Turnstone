@@ -1426,6 +1426,24 @@ function PlayerGame() {
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
+            {!inPrivateMoment &&
+              full.publicAnnouncement?.kind === 'verdict' && (
+                <section
+                  className="mb-6 border-l-2 border-gilt pl-5"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  data-testid="shared-announcement"
+                >
+                  <h1 className="display text-3xl text-candle">
+                    {en.game.banished(full.publicAnnouncement.seat.name)}
+                  </h1>
+                  {full.publicAnnouncement.seat.role && (
+                    <p className="mt-2 text-lg text-ash">
+                      {en.game.banishedRole(full.publicAnnouncement.seat.role)}
+                    </p>
+                  )}
+                </section>
+              )}
             {!full.rehearsal && explanationKey && (
               <details className="mb-4 text-sm text-ash">
                 <summary className="min-h-11 cursor-pointer py-2">
@@ -1461,11 +1479,16 @@ function PlayerGame() {
             )}
             {!inPrivateMoment && (
               <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <h1 className="display mt-2 text-4xl leading-tight sm:text-5xl">
-                    {phaseLabel(full.phase)}
-                  </h1>
-                </div>
+                {!(
+                  full.phase === 'VERDICT' &&
+                  full.publicAnnouncement?.kind === 'verdict'
+                ) && (
+                  <div>
+                    <h1 className="display mt-2 text-4xl leading-tight sm:text-5xl">
+                      {phaseLabel(full.phase)}
+                    </h1>
+                  </div>
+                )}
                 {!full.rehearsal && secondsLeft !== null && (
                   <p
                     className="text-sm text-ash"
@@ -1505,36 +1528,33 @@ function PlayerGame() {
               />
             )}
 
-            {!inPrivateMoment && full.publicAnnouncement && (
-              <section
-                className="mt-6 border-l-2 border-gilt pl-5"
-                aria-live="polite"
-                aria-atomic="true"
-                data-testid="shared-announcement"
-              >
-                {full.publicAnnouncement.kind === 'dawn' && (
-                  <h2 className="display text-2xl">
-                    {full.publicAnnouncement.victims.length
-                      ? full.publicAnnouncement.victims
-                          .map((victim) => en.game.dawnTaken(victim.name))
-                          .join(' ')
-                      : en.game.dawnNoOneTaken}
-                  </h2>
-                )}
-                {full.publicAnnouncement.kind === 'verdict' && (
-                  <h2 className="display text-2xl">
-                    {en.game.banished(full.publicAnnouncement.seat.name)}
-                  </h2>
-                )}
-                {full.publicAnnouncement.kind === 'finished' && (
-                  <h2 className="display text-2xl">
-                    {full.publicAnnouncement.winner === 'traitor'
-                      ? en.game.resultTraitors
-                      : en.game.resultFaithful}
-                  </h2>
-                )}
-              </section>
-            )}
+            {!inPrivateMoment &&
+              full.publicAnnouncement &&
+              full.publicAnnouncement.kind !== 'verdict' && (
+                <section
+                  className="mt-6 border-l-2 border-gilt pl-5"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  data-testid="shared-announcement"
+                >
+                  {full.publicAnnouncement.kind === 'dawn' && (
+                    <h2 className="display text-2xl">
+                      {full.publicAnnouncement.victims.length
+                        ? full.publicAnnouncement.victims
+                            .map((victim) => en.game.dawnTaken(victim.name))
+                            .join(' ')
+                        : en.game.dawnNoOneTaken}
+                    </h2>
+                  )}
+                  {full.publicAnnouncement.kind === 'finished' && (
+                    <h2 className="display text-2xl">
+                      {full.publicAnnouncement.winner === 'traitor'
+                        ? en.game.resultTraitors
+                        : en.game.resultFaithful}
+                    </h2>
+                  )}
+                </section>
+              )}
             {full.phase === 'FINISHED' && ownSeat?.role && full.winner && (
               <p
                 className="mt-4 text-lg text-candle"

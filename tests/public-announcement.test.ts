@@ -124,6 +124,37 @@ describe('shared public announcements', () => {
     });
   });
 
+  it('announces the revealed role to every seated viewer when configured', () => {
+    const game = fixture(5);
+    command(game, { type: 'StartGame' });
+    const removed = game.state.seats[0]!;
+    if (!removed.role) throw new Error('The test seat has no assigned role');
+    const state = evolve(
+      game.state,
+      eventFor(game.state.version, 'SeatRemoved', {
+        seatId: removed.id,
+        reason: 'banished',
+        publicRole: true,
+      }),
+    );
+    const announcements = state.seats.map(
+      (seat) =>
+        viewFor({ kind: 'player', seatId: seat.id }, state).publicAnnouncement,
+    );
+
+    expect(announcements).toEqual(
+      state.seats.map(() => ({
+        kind: 'verdict',
+        cycle: state.cycle,
+        seat: {
+          id: removed.id,
+          name: removed.name,
+          role: removed.role,
+        },
+      })),
+    );
+  });
+
   it('publishes the final outcome identically to players and coordinators', () => {
     const game = fixture(5);
     const state = evolve(

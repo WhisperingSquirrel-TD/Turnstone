@@ -1250,12 +1250,19 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
     publicAnnouncement: {
       kind: 'verdict',
       cycle: 1,
-      seat: { id: 'seat-alex', name: 'Alex' },
+      seat: { id: 'seat-alex', name: 'Alex', role: 'traitor' },
     },
     ballots: { 'seat-morgan': 'seat-alex' },
   };
   await page.reload();
-  await expect(page.getByTestId('shared-announcement')).toContainText('Alex');
+  const verdictAnnouncement = page.getByTestId('shared-announcement');
+  await expect(verdictAnnouncement).toContainText('Alex was banished.');
+  await expect(verdictAnnouncement).toContainText('Their role was Traitor.');
+  const verdictHeadings = await page
+    .getByTestId('player-game')
+    .getByRole('heading')
+    .allTextContents();
+  expect(verdictHeadings[0]).toBe('Alex was banished.');
   await expect(page.getByTestId('list-vote-reveal')).toContainText('Morgan');
 
   currentView = {
