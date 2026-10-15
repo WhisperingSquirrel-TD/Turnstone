@@ -433,9 +433,17 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     ]);
     await shieldConfirmation.click();
 
+    const progress = page.getByTestId('phase-progress-status');
+    await expect(progress).toHaveText('0 of 5 are ready');
     const seal = page.getByTestId('button-hold-reveal');
     const sealBounds = await seal.boundingBox();
     if (!sealBounds) throw new Error('Hold seal has no visible bounds');
+    const progressBounds = await progress.boundingBox();
+    if (!progressBounds)
+      throw new Error('Phase progress has no visible bounds');
+    expect(progressBounds.y + progressBounds.height).toBeLessThanOrEqual(
+      sealBounds.y,
+    );
     expect(sealBounds.y).toBeGreaterThanOrEqual(0);
     expect(
       sealBounds.y,
@@ -462,6 +470,11 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     expect(labelBounds).not.toBeNull();
     expect(roleBounds).not.toBeNull();
     expect(revealedSealBounds).not.toBeNull();
+    const progressAfterReveal = await progress.boundingBox();
+    expect(progressAfterReveal).not.toBeNull();
+    expect(
+      progressAfterReveal!.y + progressAfterReveal!.height,
+    ).toBeLessThanOrEqual(labelBounds!.y);
     for (const bounds of [labelBounds!, roleBounds!]) {
       expect(bounds.x).toBeGreaterThanOrEqual(0);
       expect(bounds.y).toBeGreaterThanOrEqual(0);

@@ -26,8 +26,14 @@ export function PhaseProgressStatus({
   if (!message) return null;
 
   return (
-    <div className={compact ? 'mt-2' : 'status-rule mt-6 pt-6'}>
-      <p role="status" className="max-w-xl text-ash">
+    <div
+      className={compact ? 'private-phase-progress' : 'status-rule mt-6 pt-6'}
+    >
+      <p
+        role="status"
+        className="max-w-xl text-sm text-ash"
+        data-testid="phase-progress-status"
+      >
         {message}
       </p>
     </div>
