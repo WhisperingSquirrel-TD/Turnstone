@@ -343,6 +343,11 @@ test('phone room shows public game state without a presenter', async ({
   });
 
   await page.goto(`/game/${gameId}`);
+  await expect(
+    page.getByText('0 of 2 players have completed this part.', {
+      exact: true,
+    }),
+  ).toBeVisible();
 
   const phaseHelp = page.locator('details').filter({ hasText: "What's this?" });
   await expect(phaseHelp).toHaveCount(1);

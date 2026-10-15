@@ -43,6 +43,7 @@ import type {
 import { config } from '@/config';
 import { BrandFooter } from './BrandFooter';
 import { NotesScreen } from './NotesScreen';
+import { PhaseProgressStatus } from './PhaseProgressStatus';
 import { apiUrl } from './api-url';
 import { en } from '@/locale/en-GB';
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
@@ -1496,13 +1497,11 @@ function PlayerGame() {
               </p>
             )}
             {!inPrivateMoment && full.phase !== 'FINISHED' && (
-              <div className="status-rule mt-6 pt-6">
-                <p className="max-w-xl text-ash">
-                  {full.paused
-                    ? en.game.paused
-                    : en.game.progress(full.progress.done, full.progress.total)}
-                </p>
-              </div>
+              <PhaseProgressStatus
+                paused={full.paused}
+                done={full.progress.done}
+                total={full.progress.total}
+              />
             )}
 
             {!inPrivateMoment && full.publicAnnouncement && (
