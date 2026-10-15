@@ -380,8 +380,10 @@ export const en = {
     privateScreen:
       'Your private screen stays hidden until you confirm you are shielded.',
     paused: 'The game is paused. Keep this screen private.',
-    progress: (done: number, total: number) =>
-      `${done} of ${total} players have completed this part.`,
+    votesProgress: (done: number, total: number) =>
+      `${done} of ${total} have voted`,
+    readyProgress: (done: number, total: number) =>
+      `${done} of ${total} are ready`,
     playerOutcome: (
       winner: 'traitor' | 'faithful',
       role: 'traitor' | 'faithful',

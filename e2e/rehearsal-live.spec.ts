@@ -513,6 +513,11 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         'made by Stackstone Consulting',
       );
       await page.getByRole('button', { name: 'Got it' }).click();
+      if (['DEBATE', 'VERDICT', 'DAWN'].includes(phase)) {
+        await expect(
+          page.getByText(/players have completed this part/),
+        ).toHaveCount(0);
+      }
       await page.waitForTimeout(2_500);
       expect(
         await currentPhase(page),
@@ -544,6 +549,20 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           ).not.toBeVisible();
           await expect(page.getByTestId('private-choice-list')).toHaveCount(0);
         }
+      }
+
+      if (['VOTE', 'FINAL_BANISH'].includes(phase)) {
+        const done = await game.getAttribute('data-progress-done');
+        const total = await game.getAttribute('data-progress-total');
+        await expect(
+          page.getByText(`${done} of ${total} have voted`, { exact: true }),
+        ).toBeVisible();
+      } else if (['DEAL', 'SHADOW', 'FINAL_VOTE'].includes(phase)) {
+        const done = await game.getAttribute('data-progress-done');
+        const total = await game.getAttribute('data-progress-total');
+        await expect(
+          page.getByText(`${done} of ${total} are ready`, { exact: true }),
+        ).toBeVisible();
       }
 
       await expect(

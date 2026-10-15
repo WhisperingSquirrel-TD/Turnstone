@@ -192,7 +192,11 @@ export function viewFor(
     }),
     commitment: state.deal?.commitment ?? null,
     progress: {
-      done: alive(state).filter((seat) => state.acks.includes(seat.id)).length,
+      done:
+        state.phase === 'VOTE' || state.phase === 'FINAL_BANISH'
+          ? alive(state).filter((seat) => state.votes[seat.id] !== undefined)
+              .length
+          : alive(state).filter((seat) => state.acks.includes(seat.id)).length,
       total: alive(state).length,
     },
     voteCandidates: state.candidates,

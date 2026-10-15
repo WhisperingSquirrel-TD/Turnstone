@@ -304,6 +304,21 @@ describe('Milestone 1 deterministic engine', () => {
       s0: 's2',
     });
   });
+  it('counts submitted votes without exposing ballot targets', () => {
+    const game = fixture(6);
+    command(game, { type: 'StartGame' });
+    advance(game, 'VOTE');
+    const target = game.state.seats[5]!.id;
+    for (const seat of game.state.seats.slice(0, 4))
+      command(game, { type: 'SubmitVote', target }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+
+    const view = viewFor({ kind: 'presenter' }, game.state);
+    expect(view.progress).toEqual({ done: 4, total: 6 });
+    expect(view.ballots).toEqual({});
+  });
   it('publishes anonymous tallies without publishing voter identifiers', () => {
     const game = fixture(15, {
       roundTable: { revealStyle: 'anonymous' },

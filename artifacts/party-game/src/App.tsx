@@ -1498,6 +1498,7 @@ function PlayerGame() {
             )}
             {!inPrivateMoment && full.phase !== 'FINISHED' && (
               <PhaseProgressStatus
+                phase={full.phase}
                 paused={full.paused}
                 done={full.progress.done}
                 total={full.progress.total}
@@ -1597,6 +1598,15 @@ function PlayerGame() {
 
             {inPrivateMoment && (
               <div className="private-moment-panel">
+                {(!shieldRequired || shielded) && (
+                  <PhaseProgressStatus
+                    phase={full.phase}
+                    paused={full.paused}
+                    done={full.progress.done}
+                    total={full.progress.total}
+                    compact
+                  />
+                )}
                 {shieldRequired && !shielded ? null : privateCovered ? (
                   <>
                     <button
