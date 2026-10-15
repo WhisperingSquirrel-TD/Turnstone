@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { recommended } from '@workspace/shared';
 import { BrandFooter } from './BrandFooter';
+import { EntryActionError } from './entry-action-error';
 import './EntryExperience.css';
 
 export type EntryScreen =
@@ -375,9 +376,11 @@ export function EntryExperience({
       clearJoinSecrets();
       onClearSensitiveValues();
       moveTo('join-wait');
-    } catch {
+    } catch (error) {
       onInputChange('joinPin', '');
-      setLocalError(copy.errorFallback);
+      setLocalError(
+        error instanceof EntryActionError ? error.message : copy.errorFallback,
+      );
     }
   }
 
@@ -405,8 +408,10 @@ export function EntryExperience({
       setRecoveringSeat(false);
       onInputChange('joinPin', '');
       moveTo('join-pin');
-    } catch {
-      setLocalError(copy.errorFallback);
+    } catch (error) {
+      setLocalError(
+        error instanceof EntryActionError ? error.message : copy.errorFallback,
+      );
     }
   }
 

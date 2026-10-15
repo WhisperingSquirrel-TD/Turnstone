@@ -11,6 +11,7 @@ import { io } from 'socket.io-client';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   commandSchema,
+  entryFailureMessages,
   gameConfigSchema,
   gameInviteResponseSchema,
   lateGameInviteResponseSchema,
@@ -22,6 +23,7 @@ import {
   joinRequestDecisionResponseSchema,
   joinRequestDecisionSchema,
   joinRequestStatusResponseSchema,
+  isEntryFailureMessage,
   pendingJoinRequestsResponseSchema,
   rehearsalStartRequestSchema,
   shortCodeJoinRequestSchema,
@@ -42,6 +44,10 @@ import {
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
 import { lobbyCodeJoinUrl, parseLobbyCodeFragment } from './lobby-code-url';
 import { recoverSeat } from './recovery-client';
+import {
+  EntryActionError,
+  type EntryFailureMessage,
+} from './entry-action-error';
 
 const QRCode = lazy(async () => {
   const module = await import('qrcode.react');
@@ -72,14 +78,58 @@ interface EntryPageProps {
 class ApiRequestError extends Error {
   readonly status: number;
 
-  constructor(status: number) {
-    super(status === 503 ? 'busy' : 'request-failed');
+  constructor(status: number, message?: string) {
+    super(message ?? (status === 503 ? 'busy' : 'request-failed'));
     this.status = status;
   }
 }
 
-function createApiError(status: number): ApiRequestError {
-  return new ApiRequestError(status);
+async function createApiError(response: Response): Promise<ApiRequestError> {
+  const body: unknown = await response.json().catch(() => null);
+  const message =
+    typeof body === 'object' &&
+    body !== null &&
+    'error' in body &&
+    isEntryFailureMessage(body.error)
+      ? body.error
+      : undefined;
+  return new ApiRequestError(response.status, message);
+}
+
+function joinFailureMessage(error: unknown): EntryFailureMessage {
+  if (error instanceof ApiRequestError) {
+    if (isEntryFailureMessage(error.message)) return error.message;
+    if (error.status === 404) return entryFailureMessages.gameCodeUnavailable;
+    if (error.status === 409) return entryFailureMessages.joinRequestNotSaved;
+    if (error.status === 429) return entryFailureMessages.joinRateLimited;
+    if (error.status === 400 || error.status === 403) {
+      return entryFailureMessages.securityCheck;
+    }
+    if (error.status === 503) return entryFailureMessages.serviceUnavailable;
+  }
+  if (error instanceof Error && error.message === 'security-not-ready') {
+    return entryFailureMessages.securityCheck;
+  }
+  return entryFailureMessages.joinNetwork;
+}
+
+function nameCheckFailureMessage(error: unknown): EntryFailureMessage {
+  if (error instanceof ApiRequestError) {
+    if (isEntryFailureMessage(error.message)) return error.message;
+    if (error.status === 404) return entryFailureMessages.gameCodeUnavailable;
+    if (error.status === 409) {
+      return entryFailureMessages.gameNotAcceptingPlayers;
+    }
+    if (error.status === 429) return entryFailureMessages.joinRateLimited;
+    if (error.status === 403 || error.status === 400) {
+      return entryFailureMessages.securityCheck;
+    }
+    if (error.status === 503) return entryFailureMessages.nameCheckFailed;
+  }
+  if (error instanceof Error && error.message === 'security-not-ready') {
+    return entryFailureMessages.securityCheck;
+  }
+  return entryFailureMessages.nameCheckFailed;
 }
 
 function apiUrl(path: string): string {
@@ -88,7 +138,7 @@ function apiUrl(path: string): string {
 
 async function getJson<T>(path: string, schema: Schema<T>): Promise<T> {
   const response = await fetch(apiUrl(path), { credentials: 'include' });
-  if (!response.ok) throw createApiError(response.status);
+  if (!response.ok) throw await createApiError(response);
   return schema.parse(await response.json());
 }
 
@@ -108,7 +158,7 @@ async function postJson<T>(
     },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw createApiError(response.status);
+  if (!response.ok) throw await createApiError(response);
   return schema.parse(await response.json());
 }
 
@@ -410,16 +460,12 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         webPath(`/join-request/${encodeURIComponent(result.requestId)}`),
       );
     } catch (error) {
+      const message = joinFailureMessage(error);
       setErrors((current) => ({
         ...current,
-        join:
-          error instanceof Error && error.message === 'security-not-ready'
-            ? en.app.securityPreparing
-            : error instanceof ApiRequestError && error.status === 503
-              ? en.entry.busy
-              : en.entry.errorFallback,
+        join: message,
       }));
-      throw error;
+      throw new EntryActionError(message);
     } finally {
       setBusy((current) => ({ ...current, join: false }));
     }
@@ -439,13 +485,17 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
           shortCode: data.shortCode,
           name: data.name,
         });
-    const result = await postJson(
-      '/join/name-check',
-      requestBody,
-      joinNameCheckResponseSchema,
-      csrfToken,
-    );
-    return result.status;
+    try {
+      const result = await postJson(
+        '/join/name-check',
+        requestBody,
+        joinNameCheckResponseSchema,
+        csrfToken,
+      );
+      return result.status;
+    } catch (error) {
+      throw new EntryActionError(nameCheckFailureMessage(error));
+    }
   }
 
   async function recoverExistingSeat(data: {
@@ -463,7 +513,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       pin: data.pin,
     });
     if (!isFullView(recovered.view)) {
-      throw new Error(en.entry.errorFallback);
+      throw new EntryActionError(entryFailureMessages.recoveryUnavailable);
     }
     navigate(webPath(`/game/${encodeURIComponent(recovered.view.id)}`));
   }

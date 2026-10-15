@@ -393,7 +393,7 @@ export const coordinatorHandoffClaimResponseSchema = z
   .strict();
 export const apiErrorResponseSchema = z
   .object({
-    error: z.string().min(1).max(80),
+    error: z.string().min(1).max(240),
   })
   .strict();
 export const gameWatchSchema = z.object({ gameId: id }).strict();

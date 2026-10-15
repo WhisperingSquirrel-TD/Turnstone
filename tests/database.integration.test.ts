@@ -2735,7 +2735,10 @@ it('creates a private invite and gives a joining guest a seat session', async ()
         inviteToken: 'x'.repeat(43),
         name: 'Guest One',
       })
-      .expect(404, { error: 'Not found' });
+      .expect(404, {
+        error:
+          'That game code or invite is not active. Check it or ask your organiser for a fresh one.',
+      });
 
     const joined = await request(app)
       .post(`/api/games/${gameId}/join`)
@@ -2776,7 +2779,10 @@ it('creates a private invite and gives a joining guest a seat session', async ()
         pin: '9999',
         idempotencyKey: 'guest-one-join',
       })
-      .expect(401, { error: 'Join could not be completed' });
+      .expect(401, {
+        error:
+          'The PIN did not match your earlier join attempt. Check the PIN and try again, or return to the name step for PIN recovery.',
+      });
     await request(app)
       .post(`/api/games/${gameId}/join`)
       .send({
@@ -2785,7 +2791,10 @@ it('creates a private invite and gives a joining guest a seat session', async ()
         pin: '4321',
         idempotencyKey: 'guest-one-duplicate-name',
       })
-      .expect(409, { error: 'Command rejected' });
+      .expect(409, {
+        error:
+          'That name is already in this game. Choose another name, or use PIN recovery if this is your seat.',
+      });
     const setCookieHeader = joined.headers['set-cookie'];
     const setCookie = Array.isArray(setCookieHeader)
       ? setCookieHeader
@@ -2812,7 +2821,8 @@ it('creates a private invite and gives a joining guest a seat session', async ()
     });
     expect(wrongNameRecovery.status).toBe(401);
     expect(wrongNameRecovery.body).toEqual({
-      error: 'Recovery could not be completed',
+      error:
+        'We could not recover that seat. Check the game code or invitation, name and PIN, then try again. If you no longer know the PIN, ask your organiser to reset it.',
     });
     await appendGameEvents({
       gameId,
@@ -2838,7 +2848,10 @@ it('creates a private invite and gives a joining guest a seat session', async ()
         name: 'Orphan Guest',
         pin: '1234',
       })
-      .expect(401, { error: 'Recovery could not be completed' });
+      .expect(401, {
+        error:
+          'We could not recover that seat. Check the game code or invitation, name and PIN, then try again. If you no longer know the PIN, ask your organiser to reset it.',
+      });
     const recovery = await request(app)
       .post('/api/recover')
       .send({
@@ -3068,7 +3081,11 @@ it('locks PIN recovery after five failed attempts without exposing whether the n
         pin: '1357',
       });
       failures.push(failed.status);
-      expect(failed.body.error).toBe('Recovery could not be completed');
+      expect(failed.body.error).toBe(
+        attempt === 4
+          ? 'Too many recovery attempts. Wait before trying again. If your PIN is locked, ask your organiser to reset it.'
+          : 'We could not recover that seat. Check the game code or invitation, name and PIN, then try again. If you no longer know the PIN, ask your organiser to reset it.',
+      );
     }
     expect(failures).toEqual([401, 401, 401, 401, 429]);
 
@@ -3079,7 +3096,7 @@ it('locks PIN recovery after five failed attempts without exposing whether the n
     });
     expect(correctPinWhileLocked.status).toBe(429);
     expect(correctPinWhileLocked.body.error).toBe(
-      'Recovery could not be completed',
+      'Too many recovery attempts. Wait before trying again. If your PIN is locked, ask your organiser to reset it.',
     );
 
     const coordinatorView = await request(app)
@@ -3562,19 +3579,28 @@ it('enforces viewer authorization and handles malformed or unconfigured guest re
   await request(visitorApp)
     .post('/api/join')
     .send({ shortCode: 'bad' })
-    .expect(400, { error: 'Invalid request' });
-  await request(visitorApp)
-    .post('/api/join')
-    .send(joinBody)
-    .expect(404, { error: 'Not found' });
+    .expect(400, {
+      error:
+        'Check the game code, your name and your four-digit PIN, then try again.',
+    });
+  await request(visitorApp).post('/api/join').send(joinBody).expect(404, {
+    error:
+      'That game code or invite is not active. Check it or ask your organiser for a fresh one.',
+  });
   await request(visitorApp)
     .post('/api/recover')
     .send({ shortCode: 'ZZZZZZ', name: 'Unknown Guest', pin: '2468' })
-    .expect(401, { error: 'Recovery could not be completed' });
+    .expect(401, {
+      error:
+        'We could not recover that seat. Check the game code or invitation, name and PIN, then try again. If you no longer know the PIN, ask your organiser to reset it.',
+    });
   await request(visitorApp)
     .post('/api/games/not-a-game/join')
     .send(directJoinBody)
-    .expect(404, { error: 'Not found' });
+    .expect(404, {
+      error:
+        'That game code or invite is not active. Check it or ask your organiser for a fresh one.',
+    });
   const visitorView = await request(visitorApp)
     .get(`/api/games/${gameId}/view`)
     .expect(200);
@@ -3594,16 +3620,23 @@ it('enforces viewer authorization and handles malformed or unconfigured guest re
   await request(coordinatorWithoutSecret)
     .post('/api/join')
     .send(joinBody)
-    .expect(503, { error: 'Service unavailable' });
+    .expect(503, {
+      error: 'The game service is temporarily unavailable. Try again shortly.',
+    });
   await db.execute(sql`delete from games where id = ${gameId}`);
   await request(coordinatorWithoutSecret)
     .post(`/api/games/${gameId}/join`)
     .send(directJoinBody)
-    .expect(503, { error: 'Service unavailable' });
+    .expect(503, {
+      error: 'The game service is temporarily unavailable. Try again shortly.',
+    });
   await request(coordinatorWithoutSecret)
     .post('/api/recover')
     .send({ shortCode: 'ABC234', name: 'Guest player', pin: '2468' })
-    .expect(400, { error: 'Invalid request' });
+    .expect(503, {
+      error:
+        'Recovery is temporarily unavailable. Try again shortly, or ask your organiser for help.',
+    });
   await request(coordinatorWithoutSecret)
     .get(`/api/join-requests/${requestId}`)
     .expect(503, { error: 'Service unavailable' });
@@ -3649,10 +3682,9 @@ it('applies rate limits before reading or mutating game data on every write rout
   await request(app)
     .post(`/api/games/${gameId}/invites`)
     .expect(429, { error: 'Too many requests' });
-  await request(app)
-    .post('/api/join')
-    .send(shortCodeJoin)
-    .expect(429, { error: 'Too many requests' });
+  await request(app).post('/api/join').send(shortCodeJoin).expect(429, {
+    error: 'Too many join attempts. Wait a minute, then try again.',
+  });
   await request(app)
     .get(`/api/games/${gameId}/join-requests`)
     .expect(429, { error: 'Too many requests' });
@@ -3663,11 +3695,16 @@ it('applies rate limits before reading or mutating game data on every write rout
   await request(app)
     .post('/api/recover')
     .send({ shortCode: 'ABC234', name: 'Rate limited', pin: '2468' })
-    .expect(429, { error: 'Recovery could not be completed' });
+    .expect(429, {
+      error:
+        'Too many recovery attempts. Wait before trying again. If your PIN is locked, ask your organiser to reset it.',
+    });
   await request(app)
     .post(`/api/games/${gameId}/join`)
     .send(directJoin)
-    .expect(429, { error: 'Too many requests' });
+    .expect(429, {
+      error: 'Too many join attempts. Wait a minute, then try again.',
+    });
   await request(app)
     .post(`/api/games/${gameId}/commands`)
     .send({
@@ -3696,11 +3733,10 @@ it('rejects cookie-authenticated writes without a matching CSRF token', async ()
     .post('/api/games/test-game/invites')
     .set(csrfHeaders)
     .expect(403, { error: 'Invalid request' });
-  await request(app)
-    .post('/api/join')
-    .set(csrfHeaders)
-    .send({})
-    .expect(403, { error: 'Invalid request' });
+  await request(app).post('/api/join').set(csrfHeaders).send({}).expect(403, {
+    error:
+      'The security check could not be completed. Reload the page and try again.',
+  });
   await request(app)
     .post('/api/games/test-game/join-requests/test-request/decision')
     .set(csrfHeaders)
@@ -3710,12 +3746,18 @@ it('rejects cookie-authenticated writes without a matching CSRF token', async ()
     .post('/api/recover')
     .set(csrfHeaders)
     .send({})
-    .expect(403, { error: 'Invalid request' });
+    .expect(403, {
+      error:
+        'The security check could not be completed. Reload the page and try again.',
+    });
   await request(app)
     .post('/api/games/test-game/join')
     .set(csrfHeaders)
     .send({})
-    .expect(403, { error: 'Invalid request' });
+    .expect(403, {
+      error:
+        'The security check could not be completed. Reload the page and try again.',
+    });
   await request(app)
     .post('/api/games/test-game/commands')
     .set(csrfHeaders)

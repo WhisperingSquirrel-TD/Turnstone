@@ -1,9 +1,39 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { entryFailureMessages } from '../lib/shared/src/entry-failure-messages';
 import { recoverSeat } from '../artifacts/party-game/src/recovery-client';
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('seat recovery client', () => {
+  it('gives a next step when its security token is unavailable', async () => {
+    await expect(
+      recoverSeat({
+        apiOrigin: 'https://live.example',
+        csrfToken: null,
+        shortCode: 'ABCD23',
+        name: 'Alex',
+        pin: '1234',
+      }),
+    ).rejects.toThrow(
+      'The security check could not be completed. Reload the page and try again.',
+    );
+  });
+
+  it('gives a next step when the recovery request cannot reach the server', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    await expect(
+      recoverSeat({
+        apiOrigin: 'https://live.example',
+        csrfToken: 'csrf-test',
+        shortCode: 'ABCD23',
+        name: 'Alex',
+        pin: '1234',
+      }),
+    ).rejects.toThrow(
+      'We could not reach the game to recover your seat. Check your connection and try again.',
+    );
+  });
+
   it('sends the game code, name and PIN with CSRF and credentials', async () => {
     const result = {
       version: 3,
@@ -91,10 +121,10 @@ describe('seat recovery client', () => {
     );
   });
 
-  it('returns one generic error for rejected recovery attempts', async () => {
+  it('returns an actionable message for rejected recovery attempts', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
-        JSON.stringify({ error: 'Recovery could not be completed' }),
+        JSON.stringify({ error: entryFailureMessages.recoveryFailed }),
         {
           status: 401,
           headers: { 'Content-Type': 'application/json' },
@@ -111,7 +141,7 @@ describe('seat recovery client', () => {
         name: 'Alex',
         pin: '1234',
       }),
-    ).rejects.toThrow('Recovery could not be completed');
+    ).rejects.toThrow(entryFailureMessages.recoveryFailed);
     expect(fetchMock).toHaveBeenCalledWith(
       'https://live.example/api/recover',
       expect.anything(),

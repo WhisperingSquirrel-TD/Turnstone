@@ -26,6 +26,7 @@ import {
   coordinatorHandoffResponseSchema,
   csrfTokenResponseSchema,
   eventSchema,
+  entryFailureMessages,
   gameInviteResponseSchema,
   lateGameInviteRequestSchema,
   lateGameInviteResponseSchema,
@@ -850,7 +851,7 @@ export function createApp(
   ): Promise<void> {
     const secret = options.rateLimitSecret;
     if (!secret) {
-      sendError(response, 503, 'Service unavailable');
+      sendError(response, 503, entryFailureMessages.serviceUnavailable);
       return;
     }
     const now = Date.now();
@@ -890,7 +891,7 @@ export function createApp(
       !access ||
       !(await verifySeatPin(data.pin, access.pinSalt, access.pinHash))
     ) {
-      sendError(response, 409, 'Join could not be completed');
+      sendError(response, 401, entryFailureMessages.joinPinMismatch);
       return;
     }
     await createGameJoinRequest({
@@ -909,7 +910,7 @@ export function createApp(
       joinRequest.status === 'rejected' ||
       joinRequest.status === 'expired'
     ) {
-      sendError(response, 409, 'Join could not be completed');
+      sendError(response, 409, entryFailureMessages.joinRequestNotSaved);
       return;
     }
     response.cookie(cookieNameForJoinRequest(requestId), requestToken, {
@@ -931,24 +932,24 @@ export function createApp(
   app.post('/api/join', async (request, response) => {
     try {
       if (!hasValidCsrf(request)) {
-        sendError(response, 403, 'Invalid request');
+        sendError(response, 403, entryFailureMessages.securityCheck);
         return;
       }
       const parsed = shortCodeJoinRequestSchema.safeParse(request.body);
       if (!parsed.success) {
-        sendError(response, 400, 'Invalid request');
+        sendError(response, 400, entryFailureMessages.joinDetailsInvalid);
         return;
       }
       const secret = options.rateLimitSecret;
       if (!secret) {
-        sendError(response, 503, 'Service unavailable');
+        sendError(response, 503, entryFailureMessages.serviceUnavailable);
         return;
       }
       const shortCodeHash = hashJoinCode(parsed.data.shortCode, secret);
       if (
         !(await checkRateLimit(request, 'short-code-join', shortCodeHash, 5))
       ) {
-        sendError(response, 429, 'Too many requests');
+        sendError(response, 429, entryFailureMessages.joinRateLimited);
         return;
       }
       const now = Date.now();
@@ -956,33 +957,33 @@ export function createApp(
         await import('@workspace/db/seat-access-store');
       const invite = await findActiveGameInvite({ shortCodeHash }, now);
       if (!invite) {
-        sendError(response, 404, 'Not found');
+        sendError(response, 404, entryFailureMessages.gameCodeUnavailable);
         return;
       }
       const state = await loadGameState(invite.gameId);
       if (!state || (state.phase !== 'DRAFT' && state.phase !== 'LOBBY')) {
-        sendError(response, 404, 'Not found');
+        sendError(response, 409, entryFailureMessages.gameNotAcceptingPlayers);
         return;
       }
       await queueSeatApproval(invite.gameId, parsed.data, response);
     } catch {
-      sendError(response, 503, 'Service unavailable');
+      sendError(response, 503, entryFailureMessages.serviceUnavailable);
     }
   });
   app.post('/api/join/name-check', async (request, response) => {
     try {
       if (!hasValidCsrf(request)) {
-        sendError(response, 403, 'Invalid request');
+        sendError(response, 403, entryFailureMessages.securityCheck);
         return;
       }
       const parsed = joinNameCheckRequestSchema.safeParse(request.body);
       if (!parsed.success) {
-        sendError(response, 400, 'Invalid request');
+        sendError(response, 400, entryFailureMessages.joinDetailsInvalid);
         return;
       }
       const secret = options.rateLimitSecret;
       if (!secret) {
-        sendError(response, 503, 'Service unavailable');
+        sendError(response, 503, entryFailureMessages.serviceUnavailable);
         return;
       }
 
@@ -1000,19 +1001,19 @@ export function createApp(
             5,
           ))
         ) {
-          sendError(response, 429, 'Too many requests');
+          sendError(response, 429, entryFailureMessages.joinRateLimited);
           return;
         }
         const invite = await findActiveGameInvite({ shortCodeHash }, now);
         if (!invite) {
-          sendError(response, 404, 'Not found');
+          sendError(response, 404, entryFailureMessages.gameCodeUnavailable);
           return;
         }
         gameId = invite.gameId;
       } else {
         gameId = parsed.data.gameId;
         if (!(await checkRateLimit(request, 'guest-name-check', gameId, 10))) {
-          sendError(response, 429, 'Too many requests');
+          sendError(response, 429, entryFailureMessages.joinRateLimited);
           return;
         }
         const inviteTokenHash = createHash('sha256')
@@ -1023,29 +1024,37 @@ export function createApp(
           now,
         );
         if (!invite) {
-          sendError(response, 404, 'Not found');
+          sendError(response, 404, entryFailureMessages.gameCodeUnavailable);
           return;
         }
       }
 
       const state = await loadGameState(gameId);
       if (!state) {
-        sendError(response, 404, 'Not found');
+        sendError(response, 404, entryFailureMessages.gameCodeUnavailable);
         return;
       }
       if (state.phase !== 'DRAFT' && state.phase !== 'LOBBY') {
         if (!joiningWindowOpen(state)) {
-          sendError(response, 409, 'Command rejected');
+          sendError(
+            response,
+            409,
+            entryFailureMessages.gameNotAcceptingPlayers,
+          );
           return;
         }
         if ('shortCode' in parsed.data) {
-          sendError(response, 404, 'Not found');
+          sendError(
+            response,
+            409,
+            entryFailureMessages.gameNotAcceptingPlayers,
+          );
           return;
         }
         if (
           !(await checkRateLimit(request, 'late-invite-name-check', gameId, 5))
         ) {
-          sendError(response, 429, 'Too many requests');
+          sendError(response, 429, entryFailureMessages.joinRateLimited);
           return;
         }
       }
@@ -1058,7 +1067,7 @@ export function createApp(
           : 'available';
       response.json(joinNameCheckResponseSchema.parse({ status }));
     } catch {
-      sendError(response, 503, 'Service unavailable');
+      sendError(response, 503, entryFailureMessages.nameCheckFailed);
     }
   });
   app.get('/api/games/:id/join-requests', async (request, response) => {
@@ -1315,13 +1324,17 @@ export function createApp(
   app.post('/api/recover', async (request, response) => {
     try {
       if (!hasValidCsrf(request)) {
-        sendError(response, 403, 'Invalid request');
+        sendError(response, 403, entryFailureMessages.securityCheck);
         return;
       }
       const parsed = seatRecoveryRequestSchema.safeParse(request.body);
       const secret = options.rateLimitSecret;
-      if (!parsed.success || !secret) {
-        sendError(response, 400, 'Invalid request');
+      if (!parsed.success) {
+        sendError(response, 400, entryFailureMessages.recoveryFailed);
+        return;
+      }
+      if (!secret) {
+        sendError(response, 503, entryFailureMessages.recoveryUnavailable);
         return;
       }
       const recoveryKey =
@@ -1329,7 +1342,7 @@ export function createApp(
           ? hashJoinCode(parsed.data.shortCode, secret)
           : createHash('sha256').update(parsed.data.inviteToken).digest('hex');
       if (!(await checkRateLimit(request, 'seat-recovery', recoveryKey, 10))) {
-        sendError(response, 429, 'Recovery could not be completed');
+        sendError(response, 429, entryFailureMessages.recoveryRateLimited);
         return;
       }
       const now = Date.now();
@@ -1350,12 +1363,12 @@ export function createApp(
               now,
             );
       if (!invite) {
-        sendError(response, 401, 'Recovery could not be completed');
+        sendError(response, 401, entryFailureMessages.recoveryFailed);
         return;
       }
       const state = await loadGameState(invite.gameId);
       if (!state) {
-        sendError(response, 401, 'Recovery could not be completed');
+        sendError(response, 401, entryFailureMessages.recoveryFailed);
         return;
       }
       const normalizedName = normalizeSeatName(parsed.data.name);
@@ -1363,17 +1376,17 @@ export function createApp(
         (seat) => normalizeSeatName(seat.name) === normalizedName,
       );
       if (matches.length !== 1) {
-        sendError(response, 401, 'Recovery could not be completed');
+        sendError(response, 401, entryFailureMessages.recoveryFailed);
         return;
       }
       const seat = matches[0];
       const access = await getSeatAccess(invite.gameId, seat.id);
       if (!access) {
-        sendError(response, 401, 'Recovery could not be completed');
+        sendError(response, 401, entryFailureMessages.recoveryFailed);
         return;
       }
       if (access.lockedUntil !== null && access.lockedUntil > now) {
-        sendError(response, 429, 'Recovery could not be completed');
+        sendError(response, 429, entryFailureMessages.recoveryRateLimited);
         return;
       }
       if (
@@ -1403,7 +1416,9 @@ export function createApp(
           failure?.lockedUntil !== null && failure?.lockedUntil !== undefined
             ? 429
             : 401,
-          'Recovery could not be completed',
+          failure?.lockedUntil !== null && failure?.lockedUntil !== undefined
+            ? entryFailureMessages.recoveryRateLimited
+            : entryFailureMessages.recoveryFailed,
         );
         return;
       }
@@ -1429,7 +1444,7 @@ export function createApp(
         },
       );
       if (!recoveredState) {
-        sendError(response, 409, 'Recovery could not be completed');
+        sendError(response, 409, entryFailureMessages.recoveryConflict);
         return;
       }
       response.cookie(cookieNameForGame(invite.gameId), sessionToken, {
@@ -1446,27 +1461,27 @@ export function createApp(
         }),
       );
     } catch {
-      sendError(response, 503, 'Service unavailable');
+      sendError(response, 503, entryFailureMessages.recoveryUnavailable);
     }
   });
   app.post('/api/games/:id/join', async (request, response) => {
     try {
       if (!hasValidCsrf(request)) {
-        sendError(response, 403, 'Invalid request');
+        sendError(response, 403, entryFailureMessages.securityCheck);
         return;
       }
       const parsed = guestJoinRequestSchema.safeParse(request.body);
       if (!parsed.success) {
-        sendError(response, 400, 'Invalid request');
+        sendError(response, 400, entryFailureMessages.joinDetailsInvalid);
         return;
       }
       if (!options.rateLimitSecret) {
-        sendError(response, 503, 'Service unavailable');
+        sendError(response, 503, entryFailureMessages.serviceUnavailable);
         return;
       }
       const gameId = request.params.id ?? '';
       if (!(await checkRateLimit(request, 'guest-join', gameId, 10))) {
-        sendError(response, 429, 'Too many requests');
+        sendError(response, 429, entryFailureMessages.joinRateLimited);
         return;
       }
       const now = Date.now();
@@ -1485,21 +1500,25 @@ export function createApp(
         now,
       );
       if (!invite) {
-        sendError(response, 404, 'Not found');
+        sendError(response, 404, entryFailureMessages.gameCodeUnavailable);
         return;
       }
       const state = await loadGameState(gameId);
       if (!state) {
-        sendError(response, 404, 'Not found');
+        sendError(response, 404, entryFailureMessages.gameCodeUnavailable);
         return;
       }
       if (state.phase !== 'DRAFT' && state.phase !== 'LOBBY') {
         if (!joiningWindowOpen(state)) {
-          sendError(response, 409, 'Command rejected');
+          sendError(
+            response,
+            409,
+            entryFailureMessages.gameNotAcceptingPlayers,
+          );
           return;
         }
         if (!(await checkRateLimit(request, 'late-invite-join', gameId, 5))) {
-          sendError(response, 429, 'Too many requests');
+          sendError(response, 429, entryFailureMessages.joinRateLimited);
           return;
         }
         await queueSeatApproval(gameId, parsed.data, response);
@@ -1527,7 +1546,19 @@ export function createApp(
         await import('@workspace/db/game-store');
       const previous = await readGameCommandResult(idempotency);
       if (previous && !previous.ok) {
-        sendError(response, 409, 'Command rejected');
+        sendError(response, 409, entryFailureMessages.joinNotAccepted);
+        return;
+      }
+
+      if (
+        !previous &&
+        state.seats.some(
+          (seat) =>
+            normalizeSeatName(seat.name) ===
+            normalizeSeatName(parsed.data.name),
+        )
+      ) {
+        sendError(response, 409, entryFailureMessages.joinNameTaken);
         return;
       }
 
@@ -1548,7 +1579,7 @@ export function createApp(
         !(await verifySeatPin(parsed.data.pin, access.pinSalt, access.pinHash))
       ) {
         if (createdAccess) await deleteSeatAccess(gameId, seatId);
-        sendError(response, 401, 'Join could not be completed');
+        sendError(response, 401, entryFailureMessages.joinPinMismatch);
         return;
       }
 
@@ -1560,7 +1591,7 @@ export function createApp(
         });
         if (!result.ok) {
           if (createdAccess) await deleteSeatAccess(gameId, seatId);
-          sendError(response, 409, 'Command rejected');
+          sendError(response, 409, entryFailureMessages.joinNotAccepted);
           return;
         }
         const nextState = replayFrom(state, result.events);
@@ -1578,7 +1609,7 @@ export function createApp(
         });
         if (!stored.ok) {
           if (createdAccess) await deleteSeatAccess(gameId, seatId);
-          sendError(response, 409, 'Command rejected');
+          sendError(response, 409, entryFailureMessages.joinRequestNotSaved);
           return;
         }
         await publishGame(gameId);
@@ -1587,7 +1618,7 @@ export function createApp(
       const current = await loadGameState(gameId);
       if (!current?.seats.some((seat) => seat.id === seatId)) {
         if (createdAccess) await deleteSeatAccess(gameId, seatId);
-        sendError(response, 409, 'Command rejected');
+        sendError(response, 409, entryFailureMessages.joinRequestNotSaved);
         return;
       }
       const sessionToken = randomBytes(32).toString('base64url');
