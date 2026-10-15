@@ -1070,3 +1070,27 @@ smoke suite with `DATABASE_URL` removed.
 without opening a database connection or provisioning PostgreSQL in every
 profile. Full local verification and a new GitHub Verify run are still
 required before the owner retries the phone flow.
+
+## D74 — Keep WebKit smoke assertions platform-aware
+
+**Context:** GitHub Verify #27 (`38659325209`) passed every job except the
+iPhone and iPad WebKit profiles. Each failed the lobby QR test because it
+unconditionally expected a "Full screen" button, although the app only
+renders that button when `requestFullscreen` exists and iOS WebKit does not
+provide it. Each also failed the role viewport test because Playwright's
+`mouse.wheel` is unsupported in mobile WebKit.
+
+**Options:** Change the app to expose a fullscreen control on iOS, remove the
+WebKit checks, or keep the product behaviour and make the tests reflect
+browser capabilities.
+
+**Choice:** Keep the app's feature detection. In the lobby test, require the
+button only when `document.documentElement.requestFullscreen` is available
+and require its absence otherwise. In the hold test, assert the root and body
+overflow locks are hidden, attempt a programmatic scroll, and verify the
+page remains at scroll position zero.
+
+**Consequence:** The iPhone and iPad profiles continue checking the required
+behaviour without depending on an unsupported automation input or pretending
+iOS has the Fullscreen API. Verify #27 still blocks further milestone work;
+the corrected WebKit profiles must pass in a new GitHub run.

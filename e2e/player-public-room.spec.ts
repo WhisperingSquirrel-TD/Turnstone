@@ -645,5 +645,13 @@ test('the lobby code and join QR are shared on each seated player phone', async 
 
   await expect(page.getByTestId('lobby-room-code')).toHaveText('ABC234');
   await expect(page.getByTestId('lobby-join-qr')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Full screen' })).toBeVisible();
+  const supportsFullscreen = await page.evaluate(
+    () => typeof document.documentElement.requestFullscreen === 'function',
+  );
+  const fullscreenButton = page.getByRole('button', { name: 'Full screen' });
+  if (supportsFullscreen) {
+    await expect(fullscreenButton).toBeVisible();
+  } else {
+    await expect(fullscreenButton).toHaveCount(0);
+  }
 });

@@ -294,7 +294,12 @@ test('the revealed role stays above the seal and inside small phone viewports', 
     expect(roleBounds!.y + roleBounds!.height).toBeLessThan(
       revealedSealBounds!.y,
     );
-    await page.mouse.wheel(0, 400);
+    const scrollLock = await page.evaluate(() => ({
+      root: getComputedStyle(document.documentElement).overflow,
+      body: getComputedStyle(document.body).overflow,
+    }));
+    expect(scrollLock).toEqual({ root: 'hidden', body: 'hidden' });
+    await page.evaluate(() => window.scrollTo(0, 400));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await page.mouse.up();
   }
