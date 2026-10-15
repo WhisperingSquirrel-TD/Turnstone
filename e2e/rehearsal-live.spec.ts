@@ -661,6 +661,11 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     ).toBeVisible();
     expect(appDocumentLoads).toBe(0);
     await page.goBack();
+    await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
+      rehearsalExplanationByPhase.FINISHED!,
+    );
+    await page.getByRole('button', { name: 'Got it' }).click();
+    await expect(page.getByTestId('rehearsal-explainer')).toHaveCount(0);
     await expect(page.getByTestId('player-outcome')).toBeVisible();
     expect(appDocumentLoads).toBe(0);
     await page
