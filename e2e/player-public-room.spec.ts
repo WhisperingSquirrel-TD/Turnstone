@@ -143,6 +143,23 @@ test('phone room shows public game state without a presenter', async ({
 }) => {
   const gameId = 'phone-room';
   const publicView = createPublicView(gameId);
+  const nextPublicLogSeq =
+    Math.max(0, ...publicView.publicLog.map((entry) => entry.seq)) + 1;
+  publicView.publicLog = [
+    ...publicView.publicLog,
+    {
+      seq: nextPublicLogSeq,
+      at: 1,
+      action: 'dawn',
+      victims: [{ id: 'seat-morgan', name: 'Morgan' }],
+    },
+    {
+      seq: nextPublicLogSeq + 1,
+      at: 2,
+      action: 'dawn',
+      victims: [],
+    },
+  ];
   let privateRequests = 0;
 
   await page.route('**/api/csrf', (route) =>
@@ -191,9 +208,10 @@ test('phone room shows public game state without a presenter', async ({
   await expect(page.getByTestId('player-seat-seat-morgan')).toBeVisible();
   await expect(page.getByTestId('player-seat-seat-alex')).toContainText('Out');
   await expect(page.getByTestId('status-prize-pot')).toContainText('18 points');
-  await expect(page.getByTestId('list-public-log')).toContainText(
-    'Alex moved to a new device',
-  );
+  const publicLog = page.getByTestId('list-public-log');
+  await expect(publicLog).toContainText('Alex moved to a new device');
+  await expect(publicLog).toContainText('Morgan was taken in the night.');
+  await expect(publicLog).toContainText('No one was taken.');
   await expect(page.getByRole('button', { name: 'Full screen' })).toHaveCount(
     0,
   );

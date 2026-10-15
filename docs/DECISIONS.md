@@ -1092,5 +1092,6 @@ page remains at scroll position zero.
 
 **Consequence:** The iPhone and iPad profiles continue checking the required
 behaviour without depending on an unsupported automation input or pretending
-iOS has the Fullscreen API. Verify #27 still blocks further milestone work;
-the corrected WebKit profiles must pass in a new GitHub run.
+iOS has the Fullscreen API. Verify #28 (`38661237240`) passed all 19 jobs,
+including both WebKit profiles and the scenario-report merge, with no failure
+annotations; this CI blocker is cleared.
