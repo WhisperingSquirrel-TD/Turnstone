@@ -130,8 +130,9 @@ test('home and app first paint stay styled with JavaScript disabled', async ({
     '#static-home header.public-home-brand.public-shell-header .turnstone-wordmark',
   );
   await expect(appBrand).toBeVisible();
+  await expect(appBrand.locator('.text-gilt')).toBeVisible();
+  expect((await appBrand.innerText()).replace(/\s+/g, '')).toBe('Turnstone');
   const appShellText = await page.locator('#static-home').innerText();
-  expect(appShellText).toContain('Turnstone');
   expect(appShellText).not.toContain('Start a new game');
   expect(appShellText).not.toContain('A game of traitors and faithful.');
   expect(
