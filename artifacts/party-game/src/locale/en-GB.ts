@@ -432,7 +432,41 @@ export const en = {
     notesDone: 'Done',
     roomNote:
       'The organiser will move the game forward. Keep your phone close and your screen private.',
-    moveOn: 'Move on',
+    organiserControls: 'Organiser controls',
+    organiserMoveOn: 'Move everyone on',
+    organiserConfirmMoveOn: (count: number) =>
+      `${count} ${count === 1 ? "player hasn't" : "players haven't"} finished. Move everyone on anyway?`,
+    organiserConfirm: 'Move everyone on',
+    organiserKeepWaiting: 'Keep waiting',
+    rehearsalControls: 'Rehearsal',
+    nextRehearsalStep: 'Next step',
+    guideTitle: 'How this step works',
+    guideGotIt: 'Got it',
+    whatsThis: "What's this?",
+    rehearsalGuide: {
+      start:
+        "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.",
+      role: 'Everyone is secretly dealt a role: Traitor or Faithful. Shield your screen, then hold the seal to see yours. Let go and it hides.',
+      conversation:
+        'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
+      mission:
+        'Work together to complete the mission. Your organiser records the result and any prize earned.',
+      vote: 'Everyone secretly votes for the player they think is a Traitor. Votes are revealed one by one once everyone has voted.',
+      verdict:
+        'The player with the most votes is banished, and their role is revealed to everyone.',
+      night:
+        'Night falls. The Traitors secretly choose someone to take. Everyone sees a private screen at the same moment, so nobody can tell who is choosing.',
+      dawn: 'Morning. Everyone finds out who was taken in the night, then a new day begins.',
+      notes: 'Your private notebook. Only you can see your notes.',
+      endgame:
+        'Choose whether to end the game or banish again. The final result depends on who remains.',
+      finalVote:
+        'Everyone secretly decides whether to end the game or continue playing.',
+      finalBanish:
+        'The remaining players vote to banish someone before the final result.',
+      complete:
+        'The Faithful win by banishing every Traitor. The Traitors win if any of them make it to the end. Every role is now revealed.',
+    },
     moveOnFailed: 'This step cannot move on yet. Try again in a moment.',
     shieldHeading: 'Shield your screen',
     shieldDetail: 'Turn away and cover your phone.',

@@ -618,6 +618,41 @@ function TurnstonePlayerHeader() {
   );
 }
 
+type RehearsalGuideKey = keyof typeof en.game.rehearsalGuide;
+
+function explanationKeyForPhase(
+  phase: string,
+  notesOpen: boolean,
+): RehearsalGuideKey | null {
+  if (notesOpen) return 'notes';
+  switch (phase) {
+    case 'DEAL':
+      return 'role';
+    case 'MISSION':
+      return 'mission';
+    case 'DEBATE':
+      return 'conversation';
+    case 'VOTE':
+      return 'vote';
+    case 'VERDICT':
+      return 'verdict';
+    case 'SHADOW':
+      return 'night';
+    case 'DAWN':
+      return 'dawn';
+    case 'ENDGAME':
+      return 'endgame';
+    case 'FINAL_VOTE':
+      return 'finalVote';
+    case 'FINAL_BANISH':
+      return 'finalBanish';
+    case 'FINISHED':
+      return 'complete';
+    default:
+      return null;
+  }
+}
+
 function PlayerGame() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -644,6 +679,11 @@ function PlayerGame() {
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesStatus, setNotesStatus] = useState('');
+  const [rehearsalGuideStarted, setRehearsalGuideStarted] = useState(false);
+  const [rehearsalGuideOpen, setRehearsalGuideOpen] = useState(false);
+  const [rehearsalGuideKey, setRehearsalGuideKey] =
+    useState<RehearsalGuideKey>('start');
+  const [advanceConfirmationOpen, setAdvanceConfirmationOpen] = useState(false);
   const heldRef = useRef(false);
   const holdVersion = useRef(0);
   const privateResult = useRef<PrivateView | null>(null);
@@ -651,6 +691,7 @@ function PlayerGame() {
   const limitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const shieldDialog = useRef<HTMLDialogElement | null>(null);
+  const lastRehearsalGuideStep = useRef('');
   const focusTime = useRef(0);
   const ignoreSyntheticClick = useRef(false);
   const request = useMemo(() => requestHeaders(token), [token]);
@@ -667,6 +708,23 @@ function PlayerGame() {
   const view = response?.view;
   const full = view && isFullView(view) ? view : null;
   const visitor = view && !isFullView(view) ? (view as VisitorView) : null;
+  const explanationKey = full
+    ? explanationKeyForPhase(full.phase, notesOpen)
+    : null;
+  const explanationStepKey = full
+    ? `${full.phase}:${full.cycle}:${full.shadowRound}:${notesOpen ? 'notes' : 'phase'}`
+    : '';
+  const renderedRehearsalGuideKey: RehearsalGuideKey =
+    full?.rehearsal && !rehearsalGuideStarted
+      ? 'start'
+      : (explanationKey ?? rehearsalGuideKey);
+  const rehearsalGuideVisible = Boolean(
+    full?.rehearsal &&
+    (rehearsalGuideOpen ||
+      !rehearsalGuideStarted ||
+      (explanationKey &&
+        lastRehearsalGuideStep.current !== explanationStepKey)),
+  );
   const ownSeat = full?.viewerSeatId
     ? (full.seats.find((seat) => seat.id === full.viewerSeatId) ?? null)
     : null;
@@ -767,15 +825,51 @@ function PlayerGame() {
   const activeGame = Boolean(
     full && !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
   );
+  const unfinishedCount = Math.max(
+    0,
+    (full?.progress.total ?? 0) - (full?.progress.done ?? 0),
+  );
+  const privateInteractionInProgress = Boolean(
+    inPrivateMoment && (!actionDone || notesOpen),
+  );
   const isDealPhase = full?.phase === 'DEAL';
   const showShieldCard = Boolean(
-    full && inPrivateMoment && shieldRequired && !shielded,
+    full &&
+    inPrivateMoment &&
+    shieldRequired &&
+    !shielded &&
+    !(full.rehearsal && rehearsalGuideVisible),
   );
+
+  useEffect(() => {
+    if (!full?.rehearsal) {
+      setRehearsalGuideOpen(false);
+      return;
+    }
+    if (!rehearsalGuideStarted) {
+      setRehearsalGuideKey('start');
+      setRehearsalGuideOpen(true);
+      return;
+    }
+    if (
+      explanationKey &&
+      lastRehearsalGuideStep.current !== explanationStepKey
+    ) {
+      lastRehearsalGuideStep.current = explanationStepKey;
+      setRehearsalGuideKey(explanationKey);
+      setRehearsalGuideOpen(true);
+    }
+  }, [
+    full?.rehearsal,
+    rehearsalGuideStarted,
+    explanationKey,
+    explanationStepKey,
+  ]);
 
   useEffect(() => {
     if (!inPrivateMoment) {
       setShielded(false);
-      setShieldCountdown(5);
+      setShieldCountdown(3);
       return;
     }
     clearPrivate();
@@ -783,14 +877,22 @@ function PlayerGame() {
     setRoleSeen(false);
     setPrivateCovered(false);
     setShieldCountdown(shieldRequired ? 3 : 0);
+    if (full?.rehearsal && rehearsalGuideVisible) return;
     if (!shieldRequired) return;
     const startedAt = Date.now();
     const timer = window.setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
-      setShieldCountdown(Math.max(0, 5 - elapsedSeconds));
+      setShieldCountdown(Math.max(0, 3 - elapsedSeconds));
     }, 100);
     return () => window.clearInterval(timer);
-  }, [privateStepKey, inPrivateMoment, shieldRequired, clearPrivate]);
+  }, [
+    privateStepKey,
+    inPrivateMoment,
+    shieldRequired,
+    clearPrivate,
+    full?.rehearsal,
+    rehearsalGuideVisible,
+  ]);
 
   useEffect(() => {
     const dialog = shieldDialog.current;
@@ -1151,17 +1253,33 @@ function PlayerGame() {
 
   async function moveOn() {
     if (!full?.canAdvancePhase || command.isPending) return;
+    const currentPhase = full.phase;
     setCommandMessage('');
     try {
+      const latestResult = await gameQuery.refetch();
+      const latestView = latestResult.data?.view;
+      if (!latestView || !isFullView(latestView)) {
+        setCommandMessage(en.game.moveOnFailed);
+        return;
+      }
+      if (latestView.phase !== currentPhase) {
+        setAdvanceConfirmationOpen(false);
+        return;
+      }
+      if (!latestView.canAdvancePhase) {
+        setCommandMessage(en.game.moveOnFailed);
+        return;
+      }
       await command.mutateAsync({
         id,
         data: {
           type: 'AdvancePhase',
-          expectedVersion: full.version,
+          expectedVersion: latestView.version,
           idempotencyKey: idempotencyKey(),
         },
       });
       command.reset();
+      setAdvanceConfirmationOpen(false);
       setActionDone(false);
       setPrivateView(null);
       setSelected('');
@@ -1174,6 +1292,27 @@ function PlayerGame() {
         refreshed.data?.view.phase === full.phase ? en.game.moveOnFailed : '',
       );
     }
+  }
+
+  function requestMoveOn() {
+    if (!full?.rehearsal && unfinishedCount > 0) {
+      setAdvanceConfirmationOpen(true);
+      return;
+    }
+    void moveOn();
+  }
+
+  function dismissRehearsalGuide() {
+    if (rehearsalGuideKey === 'start' && !rehearsalGuideStarted) {
+      setRehearsalGuideStarted(true);
+      if (explanationKey) {
+        lastRehearsalGuideStep.current = explanationStepKey;
+        setRehearsalGuideKey(explanationKey);
+        setRehearsalGuideOpen(true);
+        return;
+      }
+    }
+    setRehearsalGuideOpen(false);
   }
 
   async function saveNotes() {
@@ -1274,6 +1413,14 @@ function PlayerGame() {
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
+            {!full.rehearsal && explanationKey && (
+              <details className="mb-4 text-sm text-ash">
+                <summary className="min-h-11 cursor-pointer py-2">
+                  {en.game.whatsThis}
+                </summary>
+                <p className="mt-2">{en.game.rehearsalGuide[explanationKey]}</p>
+              </details>
+            )}
             {full.phase === 'LOBBY' && (
               <section className="status-rule mb-7 pt-5">
                 {install.available && (
@@ -1306,7 +1453,7 @@ function PlayerGame() {
                     {phaseLabel(full.phase)}
                   </h1>
                 </div>
-                {secondsLeft !== null && (
+                {!full.rehearsal && secondsLeft !== null && (
                   <p
                     className="text-sm text-ash"
                     aria-label={
@@ -1943,27 +2090,118 @@ function PlayerGame() {
             )}
           </div>
         )}
-        {full?.canAdvancePhase && activeGame && !showShieldCard && (
+        {full?.canAdvancePhase &&
+          activeGame &&
+          !showShieldCard &&
+          !held &&
+          !privateInteractionInProgress &&
+          !rehearsalGuideVisible && (
+            <section
+              aria-label={
+                full.rehearsal
+                  ? en.game.rehearsalControls
+                  : en.game.organiserControls
+              }
+              className="fixed inset-x-0 bottom-0 z-30 border-t border-stone bg-hearth px-6 pt-3"
+              style={{
+                paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+              }}
+              data-testid="rehearsal-action-bar"
+            >
+              <div className="mx-auto w-full max-w-[480px]">
+                {!full.rehearsal && (
+                  <p className="mb-2 text-sm text-ash">
+                    {en.game.organiserControls}
+                  </p>
+                )}
+                {commandMessage && (
+                  <p role="status" className="mb-2 text-sm text-ash">
+                    {commandMessage}
+                  </p>
+                )}
+                <button
+                  className={
+                    full.rehearsal
+                      ? 'primary-action w-full'
+                      : 'quiet-action w-full'
+                  }
+                  type="button"
+                  disabled={command.isPending}
+                  onClick={requestMoveOn}
+                >
+                  {full.rehearsal
+                    ? en.game.nextRehearsalStep
+                    : en.game.organiserMoveOn}
+                </button>
+              </div>
+            </section>
+          )}
+        {advanceConfirmationOpen && full && !full.rehearsal && (
           <div
-            className="fixed inset-x-0 bottom-0 z-30 border-t border-stone bg-hearth px-6 pt-3"
-            style={{
-              paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
-            }}
-            data-testid="rehearsal-action-bar"
+            className="fixed inset-0 z-50 grid place-items-center bg-charcoal p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="organiser-confirm-title"
           >
-            <div className="mx-auto w-full max-w-[480px]">
-              {commandMessage && (
-                <p role="status" className="mb-2 text-sm text-ash">
-                  {commandMessage}
-                </p>
-              )}
-              <button
-                className="primary-action w-full"
-                type="button"
-                disabled={command.isPending}
-                onClick={() => void moveOn()}
+            <div className="w-full max-w-[480px] border border-stone bg-hearth p-6">
+              <h2
+                className="display text-2xl text-candle"
+                id="organiser-confirm-title"
               >
-                {en.game.moveOn}
+                {en.game.organiserConfirmMoveOn(unfinishedCount)}
+              </h2>
+              <div className="mt-6 grid gap-3">
+                <button
+                  className="primary-action w-full"
+                  type="button"
+                  onClick={() => void moveOn()}
+                >
+                  {en.game.organiserConfirm}
+                </button>
+                <button
+                  className="quiet-action w-full"
+                  type="button"
+                  onClick={() => setAdvanceConfirmationOpen(false)}
+                >
+                  {en.game.organiserKeepWaiting}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {full?.rehearsal && rehearsalGuideVisible && (
+          <div
+            className="fixed inset-0 z-40 flex flex-col bg-charcoal px-6"
+            style={{
+              paddingTop: 'calc(env(safe-area-inset-top) + 1rem)',
+              paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)',
+            }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rehearsal-guide-title"
+            data-testid="rehearsal-explainer"
+          >
+            <TurnstonePlayerHeader />
+            <div className="mx-auto my-auto w-full max-w-[480px]">
+              <h2
+                className="display text-3xl text-candle"
+                id="rehearsal-guide-title"
+              >
+                {en.game.guideTitle}
+              </h2>
+              <p
+                className="mt-5 text-lg leading-relaxed text-ash"
+                data-testid="rehearsal-explanation-copy"
+              >
+                {en.game.rehearsalGuide[renderedRehearsalGuideKey]}
+              </p>
+              <button
+                className="primary-action mt-8 w-full"
+                type="button"
+                autoFocus
+                onClick={dismissRehearsalGuide}
+              >
+                {en.game.guideGotIt}
               </button>
             </div>
           </div>
@@ -1999,16 +2237,6 @@ function PlayerGame() {
                       ? en.game.countdown(shieldCountdown)
                       : en.game.shieldConfirm}
                 </button>
-                {full?.canAdvancePhase && activeGame && (
-                  <button
-                    className="quiet-action mt-3 w-full"
-                    type="button"
-                    disabled={command.isPending}
-                    onClick={() => void moveOn()}
-                  >
-                    {en.game.moveOn}
-                  </button>
-                )}
                 {notesOpen && !phaseIsPrivate && (
                   <button
                     className="quiet-action mt-3 w-full"

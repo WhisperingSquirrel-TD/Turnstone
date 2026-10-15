@@ -1180,3 +1180,43 @@ sequentially, protected by a pipeline regression. Concurrent-client tests still
 exercise concurrency, and all assertions, real PostgreSQL hashing/limits and the
 85% server coverage threshold remain intact. The new fixture uses one simulated
 clock for its real rate limiter and deadlines, with persisted timestamp checks.
+
+### D35 — Rehearsal advances from the latest game version
+
+**Context:** Rehearsal bots can submit actions between the player's last view and their tap on “Next step”. Using the older view version makes an otherwise valid advance stale.
+
+**Options:** Trust the cached view and let the command fail; or re-fetch the player's projected view immediately before advancing.
+
+**Choice:** Fetch the latest view, confirm the game is still in the same phase and still permits the player's rehearsal advance, then submit `AdvancePhase` with that version. If the phase already changed, use the refreshed view rather than sending a stale command.
+
+**Consequence:** Bot activity cannot silently strand the rehearsal on a stale version, while server-side version checks remain enabled.
+
+### D36 — Owner-approved duplicate-name recovery
+
+**Context:** The owner approved a change to SPEC section 3 so a returning player can distinguish a duplicate-name recovery from a genuinely different player.
+
+**Options:** Reject all duplicate names; or compare normalised names and offer the existing PIN recovery path without disclosing other seat details.
+
+**Choice:** Trim, case-fold, collapse repeated spaces and Unicode NFKC-normalise names. A matching seated name gets “Yes, that's me” for existing PIN recovery or “No, I'm someone else” to return to name entry with an example alternative. Apply join rate limits, never reveal this to visitors, and reserve “Practice player `<n>`” for rehearsal bots.
+
+**Consequence:** Duplicate-name recovery uses the existing seat PIN, lockout and device-revocation rules; the player can instead choose a distinct name.
+
+### D37 — Explicit join and recovery failures; one Turnstone header wordmark
+
+**Context:** The owner reported silent or unclear join/recovery failures and a duplicated Turnstone wordmark.
+
+**Options:** Keep generic failure states and repeated branding; or provide a specific next step for every failed entry operation and retain one wordmark in the shared header.
+
+**Choice:** Every failed join or recovery shows a plain-English reason and a next step. The shared header displays the Turnstone wordmark once.
+
+**Consequence:** Entry failures are actionable without weakening rate limits or exposing seat details, and the header remains clear.
+
+### D38 — Completion timing differs between live games and rehearsal
+
+**Context:** A live end-or-continue vote remained on its timer after every living player had acted. Rehearsal is intentionally player-paced and must not auto-advance.
+
+**Options:** Always wait for the deadline; auto-advance every game when actions complete; or advance live games after the configured minimum while keeping rehearsal manual.
+
+**Choice:** In live games, advance as soon as all required actions are complete and the minimum private duration has elapsed. In rehearsal, bots act immediately but the human taps “Next step”.
+
+**Consequence:** Live endgame votes do not wait out an unnecessary timer, while practice remains under the player's control and preserves the same minimum private duration.

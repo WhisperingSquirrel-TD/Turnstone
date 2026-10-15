@@ -339,6 +339,12 @@ test('phone room shows public game state without a presenter', async ({
 
   await page.goto(`/game/${gameId}`);
 
+  const phaseHelp = page.locator('details').filter({ hasText: "What's this?" });
+  await expect(phaseHelp).toHaveCount(1);
+  await phaseHelp.locator('summary').click();
+  await expect(phaseHelp).toContainText(
+    'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
+  );
   await expect(page.getByTestId('player-seat-seat-morgan')).toBeVisible();
   await expect(page.getByTestId('player-seat-seat-alex')).toContainText('Out');
   await expect(page.getByTestId('status-prize-pot')).toContainText('18 points');
@@ -985,4 +991,68 @@ test('the lobby code and join QR are shared on each seated player phone', async 
   } else {
     await expect(fullscreenButton).toHaveCount(0);
   }
+});
+
+test('organiser confirms before moving on when players are unfinished', async ({
+  page,
+}) => {
+  const gameId = 'organiser-advance-confirmation';
+  const publicView = createPublicView(gameId);
+  publicView.canAdvancePhase = true;
+  publicView.progress = { done: 1, total: 3 };
+  let serverVersion = 12;
+  let commandRequests = 0;
+  let commandExpectedVersion: number | undefined;
+
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      status: 200,
+      json: { csrfToken: 'c'.repeat(64) },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      status: 200,
+      json: {
+        version: serverVersion,
+        view: { ...publicView, version: serverVersion },
+      },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, async (route) => {
+    commandRequests += 1;
+    commandExpectedVersion = route.request().postDataJSON().expectedVersion;
+    await route.fulfill({
+      status: 200,
+      json: { version: 14, view: publicView },
+    });
+  });
+
+  await page.goto(`/game/${gameId}`);
+  await expect(
+    page.getByRole('region', { name: 'Organiser controls' }),
+  ).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Move everyone on', exact: true })
+    .click();
+
+  const confirmation = page.getByRole('dialog');
+  await expect(confirmation).toContainText(
+    "2 players haven't finished. Move everyone on anyway?",
+  );
+  expect(commandRequests).toBe(0);
+  await confirmation.getByRole('button', { name: 'Keep waiting' }).click();
+  await expect(confirmation).toHaveCount(0);
+  expect(commandRequests).toBe(0);
+
+  serverVersion = 13;
+  await page
+    .getByRole('button', { name: 'Move everyone on', exact: true })
+    .click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Move everyone on', exact: true })
+    .click();
+  await expect.poll(() => commandRequests).toBe(1);
+  expect(commandExpectedVersion).toBe(13);
 });

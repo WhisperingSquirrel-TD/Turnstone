@@ -17,6 +17,28 @@ type Phase =
   | 'FINISHED'
   | 'ARCHIVED';
 
+const rehearsalExplanationByPhase: Partial<Record<Phase, string>> = {
+  DEAL: 'Everyone is secretly dealt a role: Traitor or Faithful. Shield your screen, then hold the seal to see yours. Let go and it hides.',
+  MISSION:
+    'Work together to complete the mission. Your organiser records the result and any prize earned.',
+  DEBATE:
+    'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
+  VOTE: 'Everyone secretly votes for the player they think is a Traitor. Votes are revealed one by one once everyone has voted.',
+  VERDICT:
+    'The player with the most votes is banished, and their role is revealed to everyone.',
+  SHADOW:
+    'Night falls. The Traitors secretly choose someone to take. Everyone sees a private screen at the same moment, so nobody can tell who is choosing.',
+  DAWN: 'Morning. Everyone finds out who was taken in the night, then a new day begins.',
+  ENDGAME:
+    'Choose whether to end the game or banish again. The final result depends on who remains.',
+  FINAL_VOTE:
+    'Everyone secretly decides whether to end the game or continue playing.',
+  FINAL_BANISH:
+    'The remaining players vote to banish someone before the final result.',
+  FINISHED:
+    'The Faithful win by banishing every Traitor. The Traitors win if any of them make it to the end. Every role is now revealed.',
+};
+
 async function currentPhase(page: Page): Promise<Phase> {
   const phase = await page
     .getByTestId('player-game')
@@ -62,6 +84,7 @@ async function latestServerPhase(
 async function handleShield(page: Page, gameId: string): Promise<void> {
   const shield = page.getByRole('dialog', { name: 'Shield your screen' });
   if (!(await shield.isVisible().catch(() => false))) return;
+  await expect(page.getByTestId('rehearsal-action-bar')).toHaveCount(0);
   const button = shield.getByRole('button', { name: 'I’m shielded' });
   await expect(button).toHaveAttribute('aria-disabled', 'false', {
     timeout: 12_000,
@@ -75,6 +98,7 @@ async function handleShield(page: Page, gameId: string): Promise<void> {
     )
     .catch(() => null);
   await button.click();
+  await expect(page.getByTestId('rehearsal-action-bar')).toHaveCount(0);
   const response = await responsePromise;
   try {
     await expect(shield).not.toBeVisible();
@@ -116,6 +140,7 @@ async function ownSeatStatus(
 async function revealDealRole(page: Page): Promise<'Traitor' | 'Faithful'> {
   const seal = page.getByTestId('button-hold-reveal');
   await expect(seal).toBeVisible();
+  await expect(page.getByTestId('rehearsal-action-bar')).toHaveCount(0);
   await seal.focus();
   await page.keyboard.down('Space');
   const content = page.getByTestId('private-role-content');
@@ -233,7 +258,15 @@ async function advanceIfStillOn(
         : 0;
   const remainingMinimum = privateMinimum - (Date.now() - phaseStartedAt);
   if (remainingMinimum > 0) await page.waitForTimeout(remainingMinimum);
-  if ((await currentPhase(page)) !== phase) return;
+  if (phase === 'DEAL') {
+    await page.waitForTimeout(1_200);
+    const phaseAfterWaiting = await currentPhase(page);
+    if (phaseAfterWaiting !== phase) {
+      throw new Error(
+        `Rehearsal advanced from ${phase} to ${phaseAfterWaiting} without the player choosing Next step.`,
+      );
+    }
+  }
   if (
     phase === 'SHADOW' &&
     Number(
@@ -242,7 +275,7 @@ async function advanceIfStillOn(
   )
     return;
 
-  await page.getByRole('button', { name: 'Move on', exact: true }).click();
+  await page.getByRole('button', { name: 'Next step', exact: true }).click();
   try {
     await expect
       .poll(
@@ -396,6 +429,13 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await page.getByTestId('button-start-rehearsal').click();
     await page.waitForURL(/\/game\/[^/]+$/);
 
+    await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
+      "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.",
+    );
+    await page
+      .getByRole('button', { name: 'Got it' })
+      .click({ timeout: 5_000 });
+
     const match = new URL(page.url()).pathname.match(/\/game\/([^/]+)$/);
     const activeGameId = match?.[1];
     expect(activeGameId).toBeTruthy();
@@ -419,6 +459,11 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     );
     expect(initialProgressDone).toBeGreaterThanOrEqual(0);
     expect(initialProgressDone).toBeLessThanOrEqual(6);
+    await expect
+      .poll(async () => Number(await game.getAttribute('data-progress-done')), {
+        timeout: 2_500,
+      })
+      .toBeGreaterThan(0);
     const loadsAtGameStart = gameDocumentLoads;
 
     for (let step = 0; step < 80; step += 1) {
@@ -426,14 +471,18 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       const phaseStartedAt = Date.now();
       const seatStatus = await ownSeatStatus(page, activeGameId);
       if (phase === 'FINISHED') break;
+      const explanation = rehearsalExplanationByPhase[phase];
+      if (!explanation) {
+        throw new Error(`Rehearsal step ${phase} has no explanation copy.`);
+      }
+      await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
+        explanation,
+      );
+      await page.getByRole('button', { name: 'Got it' }).click();
       const shadowRoundBefore =
         phase === 'SHADOW'
           ? Number(await game.getAttribute('data-shadow-round'))
           : 0;
-      await expect(
-        page.getByRole('button', { name: 'Move on', exact: true }),
-      ).toBeVisible();
-
       if (phase === 'DEAL') {
         await handleShield(page, activeGameId);
         playerRole = await revealDealRole(page);
@@ -458,6 +507,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         }
       }
 
+      await expect(
+        page.getByRole('button', { name: 'Next step', exact: true }),
+      ).toBeVisible();
       await rejectStuckZero(page, phase);
       try {
         await advanceIfStillOn(page, activeGameId, phase, phaseStartedAt);
@@ -480,6 +532,10 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(game).toHaveAttribute('data-phase', 'FINISHED', {
       timeout: 5_000,
     });
+    await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
+      rehearsalExplanationByPhase.FINISHED!,
+    );
+    await page.getByRole('button', { name: 'Got it' }).click();
     await expect(page.getByTestId('shared-announcement')).toContainText(/win/);
     await expect(
       page.getByText(/players have completed this part/),
@@ -524,18 +580,40 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     const updates = publicUpdates.join('\n');
     expect(updates).toMatch(/was banished/);
     expect(updates).toMatch(/The Traitors won|The Faithful won/);
-    await page.getByRole('button', { name: 'Rehearse again' }).click();
-    await expect(page.getByTestId('button-start-rehearsal')).toBeVisible();
-    await page.goBack();
+    await expect(
+      page.getByRole('button', { name: 'Rehearse again' }),
+    ).toBeVisible({ timeout: 5_000 });
     await expect(
       page.getByRole('button', { name: 'Back to start', exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 5_000 });
+    await page
+      .getByRole('button', { name: 'Rehearse again' })
+      .click({ timeout: 5_000 });
+    await expect(page.getByTestId('button-start-rehearsal')).toBeVisible({
+      timeout: 5_000,
+    });
+    await page.goto(`/game/${gameId}`);
+    await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
+      "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.",
+    );
+    await page
+      .getByRole('button', { name: 'Got it' })
+      .click({ timeout: 5_000 });
+    await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
+      rehearsalExplanationByPhase.FINISHED!,
+    );
+    await page
+      .getByRole('button', { name: 'Got it' })
+      .click({ timeout: 5_000 });
+    await expect(
+      page.getByRole('button', { name: 'Back to start', exact: true }),
+    ).toBeVisible({ timeout: 5_000 });
     await page
       .getByRole('button', { name: 'Back to start', exact: true })
-      .click();
+      .click({ timeout: 5_000 });
     await expect(
       page.getByRole('button', { name: 'Start a new game', exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 5_000 });
 
     const presenterSessions = await db.execute(sql`
       select count(*) as count
