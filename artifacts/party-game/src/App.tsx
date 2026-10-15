@@ -653,6 +653,30 @@ function explanationKeyForPhase(
   }
 }
 
+function orderChoicesForViewer(
+  choices: Array<{ id: string; name: string }>,
+  seats: FullView['seats'],
+  viewerSeatId: string | null,
+) {
+  const viewerIndex = seats.findIndex((seat) => seat.id === viewerSeatId);
+  if (viewerIndex < 0 || choices.length < 2) return choices;
+
+  const order = new Map<string, number>();
+  seats.forEach((seat, index) => {
+    order.set(
+      seat.id,
+      (index - viewerIndex + seats.length) % seats.length || seats.length,
+    );
+  });
+
+  return choices.slice().sort((left, right) => {
+    const leftOrder = order.get(left.id);
+    const rightOrder = order.get(right.id);
+    if (leftOrder === undefined || rightOrder === undefined) return 0;
+    return leftOrder - rightOrder;
+  });
+}
+
 function PlayerGame() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -751,7 +775,7 @@ function PlayerGame() {
   );
   const hasPlayerSeat = Boolean(full);
   const privateOptions = privateView?.options ?? [];
-  const choices =
+  const choices = orderChoicesForViewer(
     ownSeat?.status !== 'alive'
       ? []
       : full?.phase === 'VOTE' || full?.phase === 'FINAL_BANISH'
@@ -765,7 +789,10 @@ function PlayerGame() {
                 { id: 'end', name: 'End the game' },
                 { id: 'continue', name: 'Continue playing' },
               ]
-            : [];
+            : [],
+    full?.seats ?? [],
+    full?.viewerSeatId ?? null,
+  );
 
   async function enterFullScreen() {
     try {
@@ -1058,6 +1085,19 @@ function PlayerGame() {
     setShieldPending(true);
     setHoldMessage('');
     try {
+      let nextPrivateView: PrivateView | null = null;
+      const notesRequest = notesOpen && !phaseIsPrivate;
+      const needsPrivateView = notesRequest || full?.phase === 'SHADOW';
+      if (needsPrivateView) {
+        const response = await reveal.mutateAsync({
+          id,
+          ...(notesRequest ? { data: { purpose: 'notes' as const } } : {}),
+        });
+        nextPrivateView = isFullView(response.view)
+          ? response.view.private
+          : null;
+        if (!nextPrivateView) throw new Error('Private view unavailable');
+      }
       if (phaseIsPrivate) {
         await command.mutateAsync({
           id,
@@ -1068,6 +1108,8 @@ function PlayerGame() {
         });
         command.reset();
       }
+      setPrivateView(nextPrivateView);
+      setPrivateCovered(false);
       setShielded(true);
     } catch {
       command.reset();
@@ -1115,7 +1157,8 @@ function PlayerGame() {
   function beginHold() {
     if (
       !shielded ||
-      (!phaseIsPrivate && !notesOpen) ||
+      full?.phase !== 'DEAL' ||
+      notesOpen ||
       !token ||
       heldRef.current ||
       reveal.isPending
@@ -1689,7 +1732,7 @@ function PlayerGame() {
                           {en.game.waitingForEveryone}
                         </p>
                       ) : notesOpen && !phaseIsPrivate ? (
-                        held && privateView ? (
+                        shielded && privateView ? (
                           <div
                             className="enter"
                             data-testid="private-notes-content"
@@ -1755,12 +1798,10 @@ function PlayerGame() {
                             {holdMessage || en.game.privateLoading}
                           </p>
                         )
-                      ) : held &&
-                        privateView &&
+                      ) : shielded &&
+                        !privateCovered &&
                         isActionPhase &&
-                        (full.phase === 'VOTE' ||
-                          full.phase === 'FINAL_BANISH' ||
-                          privateView) ? (
+                        (full.phase !== 'SHADOW' || privateView) ? (
                         <div className="enter">
                           {full.phase === 'SHADOW' && privateView?.task && (
                             <p className="mb-4 text-left text-candle">
@@ -1867,13 +1908,13 @@ function PlayerGame() {
                             </p>
                           )}
                         </div>
-                      ) : held || holdMessage ? (
+                      ) : held || reveal.isPending || holdMessage ? (
                         <p role="status" className="text-sm text-ash">
                           {holdMessage || en.game.privateLoading}
                         </p>
                       ) : null}
                     </div>
-                    {!actionDone && (
+                    {!actionDone && full.phase === 'DEAL' && !notesOpen && (
                       <>
                         <button
                           className="hold-seal"

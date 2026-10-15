@@ -448,9 +448,12 @@ test('rehearsal player can move on from public and voting screens', async ({
     submitted.push(body);
     publicView = {
       ...publicView,
-      phase: 'VOTE',
+      phase: body.type === 'AdvancePhase' ? 'VOTE' : publicView.phase,
       version: publicView.version + 1,
-      deadline: Date.now() + 60_000,
+      deadline:
+        body.type === 'AdvancePhase'
+          ? Date.now() + 60_000
+          : publicView.deadline,
     };
     await route.fulfill({
       status: 200,
@@ -517,23 +520,31 @@ test('rehearsal player can move on from public and voting screens', async ({
   });
   await shieldConfirmation.click();
   expect(privateViewRequests).toBe(0);
-  const seal = page.getByTestId('button-hold-reveal');
-  await expect(seal).toBeVisible();
-  await seal.focus();
-  await page.keyboard.down('Space');
   const choiceList = page.getByTestId('private-choice-list');
-  await expect(choiceList).toBeVisible({ timeout: 3_000 });
-  expect(privateViewRequests).toBe(1);
-  await page.keyboard.up('Space');
+  await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
+  await expect(choiceList).toBeVisible();
+  await expect(page.getByText('Who do you vote to banish?')).toBeVisible();
+  await page.getByRole('button', { name: 'Jamie', exact: true }).click();
+  await page.getByRole('button', { name: 'Review this choice' }).click();
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  expect(privateViewRequests).toBe(0);
   await expect(choiceList).toHaveCount(0);
-  await expect(page.getByText('Who do you vote to banish?')).toHaveCount(0);
+  await expect(page.getByTestId('waiting-for-everyone')).toBeVisible();
   expect(submitted[0]).toMatchObject({
     type: 'AdvancePhase',
     expectedVersion: 12,
   });
+  expect(submitted).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        type: 'SubmitVote',
+        target: 'seat-jamie',
+      }),
+    ]),
+  );
 });
 
-test('banishment voting is a shield-free tap flow and excludes self and out seats', async ({
+test('banishment voting shields then taps and excludes self and out seats', async ({
   page,
 }) => {
   const gameId = 'vote-screen';
@@ -577,9 +588,22 @@ test('banishment voting is a shield-free tap flow and excludes self and out seat
   await page.goto(`/game/${gameId}`);
   await viewResponse;
 
-  await expect(page.locator('dialog.privacy-shield')).not.toBeVisible();
+  const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
+  await expect(shieldDialog).toBeVisible();
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   await expect(page.getByText('Your private role')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Jamie', exact: true }),
+  ).toHaveCount(0);
+  const shieldConfirmation = shieldDialog.getByRole('button', {
+    name: /i’m shielded/i,
+  });
+  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
+    timeout: 6500,
+  });
+  await shieldConfirmation.click();
+  await expect(shieldDialog).toHaveCount(0);
+  await expect(page.getByTestId('private-choice-list')).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Morgan', exact: true }),
   ).toHaveCount(0);
@@ -757,6 +781,98 @@ for (const role of ['faithful', 'traitor'] as const) {
     },
   );
 }
+
+test('private choice names are ordered differently for different seats', async ({
+  page,
+  browser,
+}) => {
+  const otherPage = await browser.newPage({
+    viewport: page.viewportSize() ?? { width: 402, height: 874 },
+  });
+  const roster = [
+    { id: 'seat-morgan', name: 'Morgan', status: 'alive' },
+    { id: 'seat-alex', name: 'Alex', status: 'alive' },
+    { id: 'seat-jamie', name: 'Jamie', status: 'alive' },
+    { id: 'seat-sam', name: 'Sam', status: 'alive' },
+  ] as const;
+  const configureTraitorPage = async (
+    targetPage: Page,
+    gameId: string,
+    viewerSeatId: string,
+  ) => {
+    const publicView = {
+      ...createPublicView(gameId),
+      phase: 'SHADOW',
+      viewerSeatId,
+      seats: roster.map((seat) => ({ ...seat })),
+    } as FullView;
+    await targetPage.route('**/api/csrf', (route) =>
+      route.fulfill({
+        status: 200,
+        headers: {
+          'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        },
+        json: { csrfToken: 'test-csrf' },
+      }),
+    );
+    await targetPage.route(`**/api/games/${gameId}/view`, (route) =>
+      route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
+    );
+    await targetPage.route(`**/api/games/${gameId}/commands`, (route) =>
+      route.fulfill({
+        status: 200,
+        json: { version: 13, view: publicView },
+      }),
+    );
+    await targetPage.route(`**/api/games/${gameId}/private-view`, (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          version: 12,
+          view: {
+            ...publicView,
+            private: {
+              role: 'traitor',
+              team: [],
+              options: [
+                { id: 'seat-alex', name: 'Alex' },
+                { id: 'seat-sam', name: 'Sam' },
+              ],
+              choices: {},
+              chat: [],
+              task: null,
+              minimumDurationMs: 0,
+            },
+          },
+        },
+      }),
+    );
+    await targetPage.goto(`/game/${gameId}`);
+    const shield = targetPage
+      .getByRole('dialog', { name: 'Shield your screen' })
+      .getByRole('button', { name: /i’m shielded/i });
+    await expect(shield).toHaveAttribute('aria-disabled', 'false', {
+      timeout: 6500,
+    });
+    await shield.click();
+    await expect(targetPage.getByTestId('private-choice-list')).toBeVisible();
+    return targetPage
+      .getByTestId('private-choice-list')
+      .getByRole('button')
+      .allTextContents();
+  };
+
+  try {
+    const [morganOrder, jamieOrder] = await Promise.all([
+      configureTraitorPage(page, 'shadow-order-morgan', 'seat-morgan'),
+      configureTraitorPage(otherPage, 'shadow-order-jamie', 'seat-jamie'),
+    ]);
+    expect(morganOrder.slice().sort()).toEqual(jamieOrder.slice().sort());
+    expect(morganOrder).not.toEqual(jamieOrder);
+  } finally {
+    await otherPage.close();
+  }
+});
 
 test('Notes have the same geometry and colours for Traitor and Faithful', async ({
   page,

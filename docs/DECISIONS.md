@@ -1220,3 +1220,13 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** In live games, advance as soon as all required actions are complete and the minimum private duration has elapsed. In rehearsal, bots act immediately but the human taps “Next step”.
 
 **Consequence:** Live endgame votes do not wait out an unnecessary timer, while practice remains under the player's control and preserves the same minimum private duration.
+
+### D39 — Shield first, then tap private choices
+
+**Context:** The owner identified that holding the seal while selecting a banishment target does not work well on a phone and approved the same interaction rule for all choices.
+
+**Options:** Keep choices and confirmation behind a sustained hold; or use the privacy shield before the step and ordinary taps for choices.
+
+**Choice:** Require the privacy shield before each private step, then let players tap choices and confirm without holding. Never require a hold while selecting anywhere in the app. Keep hold-to-reveal for read-only secrets such as the deal role. Rotate roster-based choice order per seat so different players do not see the same ordering; the order must not depend on role.
+
+**Consequence:** This owner ruling supersedes the hold-during-choice and hold-to-confirm details in section 10. Choice screens rely on the player following the shield prompt; a selected name is visible on that player's device while they choose. Hold-only role reveal remains unchanged.
