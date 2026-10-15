@@ -159,6 +159,31 @@ describe('Milestone 1 deterministic engine', () => {
       ),
     ).toMatchObject({ ok: false, code: 'DUPLICATE_NAME' });
   });
+  it('normalizes duplicate names and reserves rehearsal bot names', () => {
+    const game = fixture(5, {}, 4);
+    for (const name of [' PLAYER 0 ', 'Player  0', 'Ｐｌａｙｅｒ 0']) {
+      expect(
+        command(
+          game,
+          { type: 'JoinGame', seatId: `duplicate-${name}`, name },
+          false,
+          { kind: 'player', seatId: `duplicate-${name}` },
+        ),
+      ).toMatchObject({ ok: false, code: 'DUPLICATE_NAME' });
+    }
+    expect(
+      command(
+        game,
+        {
+          type: 'JoinGame',
+          seatId: 'reserved-bot-name',
+          name: 'Ｐｒａｃｔｉｃｅ　player　1',
+        },
+        false,
+        { kind: 'player', seatId: 'reserved-bot-name' },
+      ),
+    ).toMatchObject({ ok: false, code: 'RESERVED_NAME' });
+  });
   it('acknowledges the deal and permits one anonymously announced redeal before shadow', () => {
     const game = fixture(5);
     command(game, { type: 'StartGame' });

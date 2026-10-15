@@ -2,6 +2,8 @@ import { joiningWindowOpen } from './joining';
 import {
   commandSchema,
   eventSchema,
+  isReservedPracticeName,
+  normalizeSeatName,
   recommended,
   taskDefinitionSchema,
 } from '../../shared/src/index';
@@ -294,11 +296,11 @@ export function decide(
       if (!joiningWindowOpen(state)) return error('LOBBY_CLOSED');
       if (state.seats.some((seat) => seat.id === cmd.seatId))
         return error('DUPLICATE_SEAT');
+      if (isReservedPracticeName(cmd.name)) return error('RESERVED_NAME');
+      const normalizedName = normalizeSeatName(cmd.name);
       if (
         state.seats.some(
-          (seat) =>
-            seat.name.toLocaleLowerCase('en-GB') ===
-            cmd.name.toLocaleLowerCase('en-GB'),
+          (seat) => normalizeSeatName(seat.name) === normalizedName,
         )
       )
         return error('DUPLICATE_NAME');
