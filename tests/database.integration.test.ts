@@ -1267,6 +1267,102 @@ it('keeps rehearsal phases player-paced and processes bots without deadline adva
   }
 });
 
+it('advances a completed live endgame vote from its persisted private minimum', async () => {
+  const gameId = randomUUID();
+  const game = createFixture(5, {
+    privacy: { shieldSeconds: 3, holdMs: 500 },
+    endgame: { trigger: 'time', at: '2020-01-01T00:00:00Z' },
+  });
+  game.context.now = Math.max(Date.now() + 24 * 60 * 60_000, 1_800_000_001_000);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  advanceFixture(game, 'FINAL_VOTE');
+
+  const events = [
+    eventSchema.parse({ ...game.events[0], id: gameId }),
+    ...game.events.slice(1),
+  ];
+  game.state = replay(events);
+  game.events = events;
+  const minimumAt =
+    game.state.phaseStarted +
+    game.state.config.privacy.shieldSeconds * 1_000 +
+    game.state.config.privacy.holdMs;
+  game.context.now = minimumAt - 1;
+
+  try {
+    await createGameWithEvent({
+      event: events[0]!,
+      actorId: 'coordinator:endgame-minimum',
+      idempotencyKey: `endgame-create-${gameId}`,
+      requestHash: `endgame-create-${gameId}`,
+    });
+    const seeded = await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:endgame-minimum',
+      idempotencyKey: `endgame-seed-${gameId}`,
+      requestHash: `endgame-seed-${gameId}`,
+      events: events.slice(1),
+      deadline: { kind: game.state.phase, dueAt: game.state.deadline },
+    });
+    expect(seeded.ok).toBe(true);
+
+    const persistAction = async (
+      seatId: string,
+      command: Record<string, unknown>,
+    ) => {
+      const expectedVersion = game.state.version;
+      const eventOffset = game.events.length;
+      applyFixtureCommand(game, command, true, { kind: 'player', seatId });
+      const appended = await appendGameEvents({
+        gameId,
+        expectedVersion,
+        actorId: `seat:${seatId}`,
+        idempotencyKey: randomUUID(),
+        requestHash: randomUUID(),
+        events: game.events.slice(eventOffset),
+        deadline: { kind: game.state.phase, dueAt: game.state.deadline },
+      });
+      expect(appended.ok).toBe(true);
+    };
+
+    for (const seat of game.state.seats) {
+      await persistAction(seat.id, {
+        type: 'SubmitEndgameVote',
+        choice: 'continue',
+      });
+      await persistAction(seat.id, { type: 'AcknowledgePrivate' });
+    }
+
+    const activeDeadline = await db.execute(sql`
+      select due_at
+      from game_deadlines
+      where game_id = ${gameId} and completed_at is null
+      order by id desc
+      limit 1
+    `);
+    expect(activeDeadline.rows).toHaveLength(1);
+    expect(
+      new Date(
+        activeDeadline.rows[0]!.due_at as Date | string | number,
+      ).getTime(),
+    ).toBe(minimumAt);
+
+    const published: string[] = [];
+    await createDeadlineScheduler({
+      now: () => minimumAt,
+      publishGame: async (id) => {
+        published.push(id);
+      },
+    }).runOnce();
+
+    expect(replay(await readGameEvents(gameId)).phase).toBe('FINAL_BANISH');
+    expect(published).toContain(gameId);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
 it('starts and stops the durable deadline poller idempotently', async () => {
   const errors: string[] = [];
   const scheduler = createDeadlineScheduler({

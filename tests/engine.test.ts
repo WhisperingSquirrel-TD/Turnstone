@@ -858,6 +858,99 @@ describe('Milestone 1 deterministic engine', () => {
     expect(game.state.phase).toBe('FINAL_BANISH');
     expect(game.state.winner).toBeNull();
   });
+  it('schedules a completed endgame vote for its private minimum', () => {
+    const game = fixture(5, {
+      privacy: { shieldSeconds: 3, holdMs: 500 },
+      endgame: { trigger: 'time', at: '2020-01-01T00:00:00Z' },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'FINAL_VOTE');
+
+    const minimumAt =
+      game.state.phaseStarted +
+      game.state.config.privacy.shieldSeconds * 1000 +
+      game.state.config.privacy.holdMs;
+    const originalDeadline = game.state.deadline;
+    game.context.now = minimumAt - 1;
+    for (const seat of game.state.seats) {
+      command(game, { type: 'SubmitEndgameVote', choice: 'continue' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    }
+
+    expect(game.state.phase).toBe('FINAL_VOTE');
+    expect(game.state.deadline).toBe(minimumAt);
+    expect(game.state.deadline).toBeLessThan(originalDeadline!);
+    expect(
+      command(game, { type: 'AdvancePhase' }, false, { kind: 'system' }),
+    ).toMatchObject({ ok: false, code: 'TOO_EARLY' });
+
+    game.context.now = minimumAt;
+    command(game, { type: 'AdvancePhase' }, true, { kind: 'system' });
+    expect(game.state.phase).toBe('FINAL_BANISH');
+  });
+  it('does not wait beyond the last action when the endgame minimum has passed', () => {
+    const game = fixture(5, {
+      privacy: { shieldSeconds: 3, holdMs: 500 },
+      endgame: { trigger: 'time', at: '2020-01-01T00:00:00Z' },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'FINAL_VOTE');
+
+    const minimumAt =
+      game.state.phaseStarted +
+      game.state.config.privacy.shieldSeconds * 1000 +
+      game.state.config.privacy.holdMs;
+    game.context.now = minimumAt + 1;
+    const lastActionAt = game.context.now;
+    for (const seat of game.state.seats) {
+      command(game, { type: 'SubmitEndgameVote', choice: 'continue' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    }
+
+    expect(game.state.deadline).toBe(lastActionAt);
+  });
+  it('keeps the endgame step player-paced in rehearsal', () => {
+    const game = fixture(5, {
+      privacy: { shieldSeconds: 3, holdMs: 500 },
+      endgame: { trigger: 'time', at: '2020-01-01T00:00:00Z' },
+      rehearsal: {
+        enabled: true,
+        botSeatIds: ['bot-0', 'bot-1', 'bot-2', 'bot-3'],
+        speed: 'fast',
+      },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'FINAL_VOTE');
+    game.context.now =
+      game.state.phaseStarted +
+      game.state.config.privacy.shieldSeconds * 1000 +
+      game.state.config.privacy.holdMs +
+      1;
+    for (const seat of game.state.seats) {
+      command(game, { type: 'SubmitEndgameVote', choice: 'continue' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+      command(game, { type: 'AcknowledgePrivate' }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    }
+    expect(game.state.phase).toBe('FINAL_VOTE');
+    expect(game.state.deadline).toBeNull();
+  });
   it('uses the forced re-vote then random rule in ENDGAME and completes each round', () => {
     const game = fixture(5, {
       traitors: { sleeper: false },

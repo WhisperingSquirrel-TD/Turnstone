@@ -1,6 +1,32 @@
 import { eventSchema, recommended } from '../../shared/src/index';
 import type { State, Event } from './model';
 
+function scheduleCompletedEndgameVote(state: State, actionAt: number): void {
+  if (
+    state.phase !== 'FINAL_VOTE' ||
+    state.config.rehearsal.enabled ||
+    state.deadline === null
+  )
+    return;
+
+  const living = state.seats.filter((seat) => seat.status === 'alive');
+  if (
+    !living.length ||
+    !living.every(
+      (seat) =>
+        state.endVotes[seat.id] !== undefined && state.acks.includes(seat.id),
+    )
+  )
+    return;
+
+  const minimumAt =
+    state.phaseStarted +
+    state.config.privacy.shieldSeconds * 1000 +
+    state.config.privacy.holdMs;
+  const nextDeadline = Math.max(minimumAt, actionAt);
+  if (state.deadline > nextDeadline) state.deadline = nextDeadline;
+}
+
 export function evolve(previous: State | null, input: unknown): State {
   const event = eventSchema.parse(input);
   if (event.seq !== (previous?.version ?? 0) + 1)
@@ -165,6 +191,7 @@ export function evolve(previous: State | null, input: unknown): State {
     case 'PrivateAcknowledged':
       if (!previous.acks.includes(event.seatId))
         state.acks = [...previous.acks, event.seatId];
+      scheduleCompletedEndgameVote(state, event.at);
       break;
     case 'VoteSubmitted':
       state.votes = { ...previous.votes, [event.seatId]: event.target };
@@ -352,6 +379,7 @@ export function evolve(previous: State | null, input: unknown): State {
       break;
     case 'EndgameVote':
       state.endVotes = { ...previous.endVotes, [event.seatId]: event.choice };
+      scheduleCompletedEndgameVote(state, event.at);
       break;
     case 'GameFinished':
       state.phase = 'FINISHED';
