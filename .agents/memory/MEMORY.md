@@ -8,3 +8,4 @@
 - [Invite closure and seat recovery](invite-seat-recovery.md) — closed or rotated invitations must not lock out existing seats; recovery still requires name and PIN.
 - [HTTP timeout environment](http-timeout-environment.md) — impure fetch may lack AbortSignal; workspace Node supports timed public status requests.
 - [Game chrome placement](game-chrome-placement.md) — lock game pages to the viewport, align the header, and match the full-width footer across public and game screens.
+- [Attachment commit scope](attachment-commit-scope.md) — keep user-supplied attachments out of commits by default.
