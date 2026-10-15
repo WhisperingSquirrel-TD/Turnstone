@@ -1,5 +1,20 @@
 # Open owner questions
 
+## Q2 — How late joiners enter after the lobby invitation closes
+
+**Question:** How does a permitted late joiner enter after the original room
+code/link has closed at game start?
+
+**Recommendation:** The organiser issues a fresh invitation link or QR, without
+reopening the original room code. Apply the configured late-joining window,
+organiser approval, rate limits and the always-Faithful rule.
+
+**Reasoning:** A fresh invitation separates the public lobby invitation from
+explicitly authorised late joining and avoids making a closed code usable again.
+
+**Status:** Resolved by the owner on 15 October 2026: fresh invitation link or QR.
+Implement and test the route under the current reviewer corrections.
+
 ## Q1 — Lighthouse SEO score while pre-launch noindex is enabled
 
 **Question:** Should the SEO score be measured against an isolated launch-mode

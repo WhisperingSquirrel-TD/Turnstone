@@ -1095,3 +1095,43 @@ behaviour without depending on an unsupported automation input or pretending
 iOS has the Fullscreen API. Verify #28 (`38661237240`) passed all 19 jobs,
 including both WebKit profiles and the scenario-report merge, with no failure
 annotations; this CI blocker is cleared.
+
+## D75 — Reviewer rehearsal corrections (owner ruling, 14 October)
+
+**Context:** The reviewer requires smaller green pushes and stronger real-server
+rehearsal checks before the M5 phone-review gate.
+
+**Choice:** At FINISHED, show every seat's role, including removed seats as
+"Out, Faithful" or "Out, Traitor"; before FINISHED, removed seats remain "Out".
+Reverse the old browser assertion rather than retain its incorrect expectation.
+Every vote and night-choice list must exclude the viewer and removed players.
+Do not silently retry rejected choices in the full-rehearsal test: exercise any
+legitimate refusal explicitly by name. Close the readable lobby invitation once
+when leaving the lobby, not on view reads; fetch its readable code once per
+broadcast rather than per viewer. Record and test the late-join route, including
+its always-Faithful rule. Commit and push each green fix, then read its GitHub
+Verify results before the next fix.
+
+**Consequence:** The finished-role correction has a red/green full-rehearsal
+test against the real server with no presenter and no manual refresh. The
+choice-list, invite-performance and late-join corrections remain next in order.
+These rulings do not authorise deployment or relax visitor/private-state
+allow-lists.
+
+## D76 — Fresh invitations for late joiners; distinguish code from PIN (resolved)
+
+**Context:** The original lobby invitation closes when play begins. The owner
+selected a fresh invitation link or QR for permitted late joiners and noted that
+six-character game codes could be confused with personal PINs.
+
+**Choice:** The organiser may issue a fresh late-join link/QR only within the
+configured late-joining window. Keep the original room code closed, require
+organiser approval, apply rate limits and give late joiners the Faithful role.
+Treat the six-character shared game code and each player's four-digit personal
+PIN as different inputs. Both organiser and guest entry already enforce a
+four-digit PIN; make the distinction clearer in the entry copy and protect it
+with a regression test. Joining by link/QR skips the shared-code question.
+
+**Consequence:** Q2 is resolved rather than a blocker. The route and its
+always-Faithful test remain in the next reviewer corrections; no lobby invitation
+is reopened and no PIN is shared between seats.

@@ -509,17 +509,19 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     const rowTexts = await playerRows.allTextContents();
     expect(rowTexts.some((text) => text.includes('Playing'))).toBe(false);
     expect(rowTexts.some((text) => /Traitor|Faithful/.test(text))).toBe(true);
+    for (const text of rowTexts) {
+      expect(text).toMatch(/Traitor|Faithful/);
+    }
     for (const text of rowTexts.filter((row) => row.includes('Out'))) {
-      expect(text).not.toMatch(/Traitor|Faithful/);
+      expect(text).toMatch(/Out,\s*(Traitor|Faithful)/);
     }
     expect(playerRole).toBeDefined();
     const ownSeat = playerRows.filter({ hasText: 'Morgan' });
     await expect(ownSeat).toHaveCount(1);
     const ownSeatText = await ownSeat.innerText();
+    await expect(ownSeat).toContainText(playerRole!);
     if (ownSeatText.includes('Out')) {
-      await expect(ownSeat).toContainText('Out');
-    } else {
-      await expect(ownSeat).toContainText(playerRole!);
+      await expect(ownSeat).toContainText(`Out, ${playerRole!}`);
     }
 
     const winningRole = (

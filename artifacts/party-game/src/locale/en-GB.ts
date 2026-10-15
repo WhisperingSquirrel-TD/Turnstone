@@ -388,6 +388,8 @@ export const en = {
     playersHeading: 'Players',
     playerPlaying: 'Playing',
     playerOut: 'Out',
+    playerOutRole: (role: 'traitor' | 'faithful') =>
+      `Out, ${role === 'traitor' ? 'Traitor' : 'Faithful'}`,
     latestUpdates: 'Latest updates',
     publicLogDeviceRecovered: (name: string) => `${name} moved to a new device`,
     publicLogPinReset: (name: string) => `${name}’s PIN was reset`,

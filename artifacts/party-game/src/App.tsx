@@ -1778,10 +1778,12 @@ function PlayerGame() {
                           <span
                             className={`shrink-0 text-sm ${isAlive ? 'text-candle' : 'text-ash'}`}
                           >
-                            {isAlive && full.phase === 'FINISHED' && seat.role
-                              ? seat.role === 'traitor'
-                                ? en.game.roleTraitor
-                                : en.game.roleFaithful
+                            {full.phase === 'FINISHED' && seat.role
+                              ? !isAlive
+                                ? en.game.playerOutRole(seat.role)
+                                : seat.role === 'traitor'
+                                  ? en.game.roleTraitor
+                                  : en.game.roleFaithful
                               : isAlive
                                 ? en.game.playerPlaying
                                 : en.game.playerOut}

@@ -242,12 +242,15 @@ test('phone room shows public game state without a presenter', async ({
 test('shows Moving on instead of a frozen zero when a deadline passes', async ({
   page,
 }) => {
-  await page.clock.install();
+  const clockStart = new Date('2030-01-01T12:00:00.000Z');
+  const pausedAt = new Date(clockStart.getTime() + 10_000);
+  await page.clock.install({ time: clockStart });
+  await page.clock.pauseAt(pausedAt);
   const gameId = 'deadline-transition-pending';
   const view = {
     ...createPublicView(gameId),
     phase: 'DEBATE' as const,
-    deadline: Date.now() + 1000,
+    deadline: pausedAt.getTime() + 1000,
   };
   await page.route('**/api/csrf', (route) =>
     route.fulfill({
