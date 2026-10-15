@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../artifacts/api-server/src/app';
 import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
-import { gameConfigSchema } from '../lib/shared/src';
+import { entryFailureMessages, gameConfigSchema } from '../lib/shared/src';
 
 describe('health and readiness', () => {
   it('health is independent of database availability', async () => {
@@ -208,7 +208,15 @@ describe('health and readiness', () => {
         .set('Origin', 'https://turnstone.stackstoneconsulting.co.uk')
         .send({});
       expect(response.status, path).toBe(403);
-      expect(response.body, path).toEqual({ error: 'Invalid request' });
+      expect(response.body, path).toEqual({
+        error: [
+          '/api/recover',
+          '/api/games/test-game/join',
+          '/api/join',
+        ].includes(path)
+          ? entryFailureMessages.securityCheck
+          : 'Invalid request',
+      });
     }
   });
 
@@ -228,7 +236,14 @@ describe('health and readiness', () => {
         .set('X-CSRF-Token', token)
         .send({});
       expect(response.status, path).toBe(400);
-      expect(response.body, path).toEqual({ error: 'Invalid request' });
+      expect(response.body, path).toEqual({
+        error:
+          path === '/api/recover'
+            ? entryFailureMessages.recoveryFailed
+            : path === '/api/join'
+              ? entryFailureMessages.joinDetailsInvalid
+              : 'Invalid request',
+      });
     }
   });
 
