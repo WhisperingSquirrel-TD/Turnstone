@@ -722,6 +722,7 @@ function PlayerGame() {
         phase: full.phase,
         cycle: full.cycle,
         deadline: full.deadline,
+        revote: full.revote,
         shadowRound: full.shadowRound,
         notesOpen,
       })

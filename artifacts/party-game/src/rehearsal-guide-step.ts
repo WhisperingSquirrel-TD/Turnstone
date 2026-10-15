@@ -2,6 +2,7 @@ export type RehearsalGuideStepIdentity = {
   phase: string;
   cycle: number;
   deadline: number | null;
+  revote: boolean;
   shadowRound: number;
   notesOpen: boolean;
 };
@@ -18,10 +19,11 @@ export function rehearsalGuideStepKey({
   phase,
   cycle,
   deadline,
+  revote,
   shadowRound,
   notesOpen,
 }: RehearsalGuideStepIdentity): string {
-  return `${phase}:${cycle}:${deadline ?? 'manual'}:${shadowRound}:${notesOpen ? 'notes' : 'phase'}`;
+  return `${phase}:${cycle}:${deadline ?? 'manual'}:${revote ? 'revote' : 'initial'}:${shadowRound}:${notesOpen ? 'notes' : 'phase'}`;
 }
 
 export function shouldShowRehearsalGuide({

@@ -43,6 +43,7 @@ export interface FullView {
   coordinatorPlays: boolean;
   /** @minimum 0 */
   cycle: number;
+  revote: boolean;
   /**
      * @minimum 0
      * @maximum 2

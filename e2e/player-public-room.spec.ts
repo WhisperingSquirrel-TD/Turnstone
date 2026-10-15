@@ -14,6 +14,7 @@ function createPublicView(gameId: string): FullView {
     deadline: Date.now() + 60_000,
     coordinatorPlays: true,
     cycle: 2,
+    revote: false,
     shadowRound: 0,
     missionsEnabled: true,
     rehearsal: false,

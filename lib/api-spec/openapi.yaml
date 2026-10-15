@@ -699,6 +699,7 @@ components:
         - deadline
         - coordinatorPlays
         - cycle
+        - revote
         - shadowRound
         - missionsEnabled
         - rehearsal
@@ -746,6 +747,8 @@ components:
         cycle:
           type: integer
           minimum: 0
+        revote:
+          type: boolean
         shadowRound:
           type: integer
           minimum: 0

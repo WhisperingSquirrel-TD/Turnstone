@@ -811,6 +811,7 @@ describe('Milestone 1 deterministic engine', () => {
     game.context.now = game.state.phaseStarted + minimum;
     command(game, { type: 'AdvancePhase' });
     expect(game.state.revote).toBe(true);
+    expect(viewFor({ kind: 'coordinator' }, game.state).revote).toBe(true);
     expect(game.state.steps).toBe(steps);
 
     game.context.now = game.state.phaseStarted + minimum;

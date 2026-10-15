@@ -255,6 +255,7 @@ export const fullViewSchema = z
     deadline: z.number().nullable(),
     coordinatorPlays: z.boolean(),
     cycle: z.number(),
+    revote: z.boolean().default(false),
     shadowRound: z.number().int().min(0).max(2),
     missionsEnabled: z.boolean(),
     rehearsal: z.boolean(),

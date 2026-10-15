@@ -6,6 +6,7 @@ describe('rehearsal guide step identity', () => {
     const step = {
       phase: 'VOTE',
       cycle: 2,
+      revote: false,
       shadowRound: 0,
       notesOpen: false,
     };

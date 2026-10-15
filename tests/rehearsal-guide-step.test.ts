@@ -1,5 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { shouldShowRehearsalGuide } from '../artifacts/party-game/src/rehearsal-guide-step';
+import {
+  rehearsalGuideStepKey,
+  shouldShowRehearsalGuide,
+} from '../artifacts/party-game/src/rehearsal-guide-step';
+
+describe('rehearsal guide step identity', () => {
+  it('treats a public re-vote as a new occurrence of the vote step', () => {
+    const initialVote = rehearsalGuideStepKey({
+      phase: 'VOTE',
+      cycle: 1,
+      deadline: null,
+      shadowRound: 0,
+      notesOpen: false,
+      revote: false,
+    });
+    const tiedReVote = rehearsalGuideStepKey({
+      phase: 'VOTE',
+      cycle: 1,
+      deadline: null,
+      shadowRound: 0,
+      notesOpen: false,
+      revote: true,
+    });
+
+    expect(tiedReVote).not.toBe(initialVote);
+    expect(
+      shouldShowRehearsalGuide({
+        rehearsal: true,
+        started: true,
+        explanationAvailable: true,
+        stepKey: tiedReVote,
+        dismissedStepKey: initialVote,
+      }),
+    ).toBe(true);
+  });
+});
 
 describe('rehearsal guide visibility', () => {
   it('shows a new phase guide after the previous phase was dismissed', () => {

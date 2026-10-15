@@ -14,6 +14,8 @@ import * as zod from 'zod';
 export const ReadinessCheckResponse = zod.object({
   "status": zod.enum(['ready', 'unavailable'])
 })
+
+
 /**
  * Returns server health status
  * @summary Health check
@@ -125,6 +127,7 @@ export const StartRehearsalResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(startRehearsalResponseViewTwoCycleMin),
+  "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(startRehearsalResponseViewTwoShadowRoundMin).max(startRehearsalResponseViewTwoShadowRoundMax),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
@@ -252,6 +255,7 @@ export const StartRehearsalResponse = zod.object({
 })])
 })
 
+
 /**
  * @summary Create a game and issue the coordinator capability cookie
  */
@@ -344,6 +348,7 @@ export const CreateGameResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(createGameResponseViewTwoCycleMin),
+  "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(createGameResponseViewTwoShadowRoundMin).max(createGameResponseViewTwoShadowRoundMax),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
@@ -470,6 +475,8 @@ export const CreateGameResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Create a short code and private join link
  */
@@ -716,6 +723,7 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoCycleMin),
+  "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMin).max(getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMax),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
@@ -964,6 +972,7 @@ export const GetGameViewResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(getGameViewResponseViewTwoCycleMin),
+  "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(getGameViewResponseViewTwoShadowRoundMin).max(getGameViewResponseViewTwoShadowRoundMax),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
@@ -1090,6 +1099,8 @@ export const GetGameViewResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Request the current player's private projection while holding
  */
@@ -1186,6 +1197,7 @@ export const RevealPrivateViewResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(revealPrivateViewResponseViewTwoCycleMin),
+  "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(revealPrivateViewResponseViewTwoShadowRoundMin).max(revealPrivateViewResponseViewTwoShadowRoundMax),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
@@ -1414,6 +1426,7 @@ export const SubmitGameCommandResponse = zod.object({
   "deadline": zod.number().int().nullable(),
   "coordinatorPlays": zod.boolean(),
   "cycle": zod.number().int().min(submitGameCommandResponseViewTwoCycleMin),
+  "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(submitGameCommandResponseViewTwoShadowRoundMin).max(submitGameCommandResponseViewTwoShadowRoundMax),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
