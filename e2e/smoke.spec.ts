@@ -131,20 +131,28 @@ test('private role is requested only during a hold and is removed on release', a
     });
   });
 
+  await page.clock.install();
   await page.goto(`/game/${gameId}`);
   const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
-  const shieldConfirmation = shieldDialog.getByRole('button', {
-    name: /i’m shielded/i,
-  });
-  await expect(shieldConfirmation).toBeVisible();
+  const shieldButton = shieldDialog.getByRole('button');
+  await expect(shieldButton).toBeVisible();
+  await expect(
+    shieldDialog.getByText('Turnstone', { exact: true }),
+  ).toBeVisible();
   await expect(shieldDialog).toBeVisible();
-  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'true');
+  await expect(shieldButton).toHaveText('Ready in 3');
+  await expect(shieldButton).toBeDisabled();
+  await expect(shieldDialog.getByText(/Continue in/)).toHaveCount(0);
   await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
   expect(privateRequests).toBe(0);
-  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
-    timeout: 6500,
-  });
-  await shieldConfirmation.click();
+  await page.clock.fastForward(1000);
+  await expect(shieldButton).toHaveText('Ready in 2');
+  await page.clock.fastForward(1000);
+  await expect(shieldButton).toHaveText('Ready in 1');
+  await page.clock.fastForward(1000);
+  await expect(shieldButton).toHaveText('I’m shielded');
+  await expect(shieldButton).toBeEnabled();
+  await shieldButton.click();
 
   const holdPad = page.getByRole('button', {
     name: /hold the seal to see your role/i,

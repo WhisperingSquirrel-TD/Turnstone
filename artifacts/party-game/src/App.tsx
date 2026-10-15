@@ -582,6 +582,42 @@ function webPath(path: string): string {
   return `${base}${path}`;
 }
 
+function TurnstonePlayerHeader() {
+  return (
+    <header
+      className="entry-brand"
+      aria-label={config.appName}
+      data-testid="player-brand-header"
+    >
+      <a
+        href={config.routes.home}
+        className="entry-wordmark"
+        aria-label={config.appName}
+        data-testid="text-entry-brand"
+      >
+        <span>
+          {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
+        </span>
+        <span className="entry-gilt">{config.wordmarkAccentSuffix}</span>
+      </a>
+      <a
+        className="entry-brand-mark-link"
+        href={config.organisation.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={en.app.brandLink}
+        data-testid="link-stackstone-mark"
+      >
+        <img
+          className="entry-brand-mark"
+          src={`${import.meta.env.BASE_URL}${config.brandMarkPath}`}
+          alt=""
+        />
+      </a>
+    </header>
+  );
+}
+
 function PlayerGame() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -592,7 +628,7 @@ function PlayerGame() {
   const [shieldPending, setShieldPending] = useState(false);
   const [held, setHeld] = useState(false);
   const [roleSeen, setRoleSeen] = useState(false);
-  const [shieldCountdown, setShieldCountdown] = useState(5);
+  const [shieldCountdown, setShieldCountdown] = useState(3);
   const [holdProgress, setHoldProgress] = useState(0);
   const [privateView, setPrivateView] = useState<PrivateView | null>(null);
   const [privateCovered, setPrivateCovered] = useState(false);
@@ -746,7 +782,7 @@ function PlayerGame() {
     setShielded(!shieldRequired);
     setRoleSeen(false);
     setPrivateCovered(false);
-    setShieldCountdown(shieldRequired ? 5 : 0);
+    setShieldCountdown(shieldRequired ? 3 : 0);
     if (!shieldRequired) return;
     const startedAt = Date.now();
     const timer = window.setInterval(() => {
@@ -1181,6 +1217,7 @@ function PlayerGame() {
 
   return (
     <Shell isPlayer privateMode={inPrivateMoment}>
+      <TurnstonePlayerHeader />
       <section
         className={
           inPrivateMoment
@@ -1938,19 +1975,7 @@ function PlayerGame() {
             aria-labelledby="privacy-shield-title"
             onCancel={(event) => event.preventDefault()}
           >
-            <a
-              className="absolute left-4 top-[calc(1rem+env(safe-area-inset-top))] z-10 inline-flex min-h-11 items-center"
-              href={config.organisation.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={en.app.brandLink}
-            >
-              <img
-                src={`${import.meta.env.BASE_URL}${config.brandMarkPath}`}
-                alt={en.app.brandName}
-                className="h-7 w-auto"
-              />
-            </a>
+            <TurnstonePlayerHeader />
             <div className="privacy-shield-content">
               <div className="mx-auto w-full max-w-md text-center">
                 <h1
@@ -1960,24 +1985,19 @@ function PlayerGame() {
                   {en.game.shieldHeading}
                 </h1>
                 <p className="mt-4 text-ash">{en.game.shieldDetail}</p>
-                <p
-                  className="mt-6 min-h-9 text-2xl tabular-nums text-candle"
-                  aria-live="polite"
-                >
-                  {shieldCountdown > 0
-                    ? en.game.countdown(shieldCountdown)
-                    : en.game.shieldReady}
-                </p>
                 <button
                   autoFocus
-                  className="primary-action mt-6 w-full"
+                  className="primary-action mt-8 min-h-14 w-full"
                   type="button"
+                  disabled={!token || shieldPending || shieldCountdown > 0}
                   aria-disabled={!token || shieldPending || shieldCountdown > 0}
                   onClick={() => void acknowledge()}
                 >
                   {shieldPending
                     ? en.game.shieldConfirming
-                    : en.game.shieldConfirm}
+                    : shieldCountdown > 0
+                      ? en.game.countdown(shieldCountdown)
+                      : en.game.shieldConfirm}
                 </button>
                 {full?.canAdvancePhase && activeGame && (
                   <button

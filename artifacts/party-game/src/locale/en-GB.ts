@@ -436,7 +436,7 @@ export const en = {
     moveOnFailed: 'This step cannot move on yet. Try again in a moment.',
     shieldHeading: 'Shield your screen',
     shieldDetail: 'Turn away and cover your phone.',
-    countdown: (seconds: number) => `Continue in ${seconds}`,
+    countdown: (seconds: number) => `Ready in ${seconds}`,
     shieldReady: 'You can continue when you are ready.',
     shieldConfirming: 'Confirming…',
     shieldConfirm: 'I’m shielded',
