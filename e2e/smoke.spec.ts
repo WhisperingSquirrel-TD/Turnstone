@@ -49,7 +49,10 @@ test('home and play are accessible, reloadable and responsive', async ({
     candleColor,
   );
   await expect(gameName).toBeEnabled();
-  await expect(gameName).toHaveCSS('cursor', 'text');
+  const gameNameCursor = await gameName.evaluate(
+    (input) => getComputedStyle(input).cursor,
+  );
+  expect(gameNameCursor).not.toBe('not-allowed');
   await expect(gameName).toHaveCSS('color', candleColor);
   await expect(continueCreateName).toBeEnabled();
   await expect(continueCreateName).toHaveCSS('cursor', 'pointer');

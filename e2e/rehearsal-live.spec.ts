@@ -1081,7 +1081,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             );
             if (!voteToTie) {
               throw new Error(
-                `The fixed rehearsal seed cannot force a tie: ${JSON.stringify(
+                `The test-only first-vote pattern did not create a tie: ${JSON.stringify(
                   Object.fromEntries(
                     livingSeats.map((seat) => [
                       seat.name,

@@ -28,7 +28,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        'pnpm --filter @workspace/api-server run build && cd artifacts/api-server && node --enable-source-maps ./dist/index.mjs --test-only-force-human-removal',
+        'pnpm --filter @workspace/api-server run build && cd artifacts/api-server && node --enable-source-maps ./dist/index.mjs --test-only-force-human-removal --test-only-force-first-vote-tie',
       url: `http://127.0.0.1:${apiPort}/healthz`,
       timeout: 120_000,
       reuseExistingServer: false,

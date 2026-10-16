@@ -32,6 +32,9 @@ const rehearsalBots = createRehearsalBotRunner({
   testOnlyForceHumanTargetAfterFirstNight:
     environment.NODE_ENV === 'test' &&
     process.argv.includes('--test-only-force-human-removal'),
+  testOnlyForceFirstVoteTie:
+    environment.NODE_ENV === 'test' &&
+    process.argv.includes('--test-only-force-first-vote-tie'),
 });
 const serverOptions = createServerAppOptions({
   environment,

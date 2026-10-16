@@ -234,6 +234,30 @@ describe('server rehearsal bot policy', () => {
     ).toBe(true);
   });
 
+  it('uses a test-only first-vote pattern that lets the human force a tie', async () => {
+    const { nextRehearsalBotCommand } = await loadBotPolicy();
+    const botSeatIds = Array.from({ length: 7 }, (_, index) => `s${index + 1}`);
+    const game = fixture(8, {
+      rehearsal: { enabled: true, botSeatIds },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'VOTE');
+    const voteState = { ...game.state, acks: botSeatIds };
+    const testOnlyOptions = { testOnlyForceFirstVoteTie: true };
+
+    const targets = botSeatIds.map((seatId) => {
+      const choice = nextRehearsalBotCommand(
+        voteState,
+        seatId,
+        testOnlyOptions,
+      );
+      expect(choice?.type).toBe('SubmitVote');
+      return choice?.type === 'SubmitVote' ? choice.target : null;
+    });
+
+    expect(targets).toEqual(['s2', 's1', 's1', 's3', 's4', 's5', 's6']);
+  });
+
   it.each(['VOTE', 'SHADOW'] as const)(
     'allows a bot to target the human after the first full cycle during %s',
     async (phase) => {

@@ -44,7 +44,10 @@ function choose<T>(
 export function nextRehearsalBotCommand(
   state: State,
   seatId: string,
-  options: { testOnlyForceHumanTargetAfterFirstNight?: boolean } = {},
+  options: {
+    testOnlyForceHumanTargetAfterFirstNight?: boolean;
+    testOnlyForceFirstVoteTie?: boolean;
+  } = {},
 ): Record<string, unknown> | null {
   if (!state.config.rehearsal.enabled) return null;
   if (!state.config.rehearsal.botSeatIds.includes(seatId)) return null;
@@ -81,12 +84,30 @@ export function nextRehearsalBotCommand(
         (!revoteCandidates || revoteCandidates.has(candidate.id)) &&
         (firstNightComplete || candidate.id !== humanSeatId),
     );
+    const firstVoteTieTargetIndexes = [1, 0, 0, 2, 3, 4, 5];
+    const botIndex = state.config.rehearsal.botSeatIds.indexOf(seatId);
+    const tieTargetIndex =
+      options.testOnlyForceFirstVoteTie &&
+      state.phase === 'VOTE' &&
+      !state.revote &&
+      state.cycle === 1 &&
+      state.config.rehearsal.botSeatIds.length ===
+        firstVoteTieTargetIndexes.length
+        ? firstVoteTieTargetIndexes[botIndex]
+        : undefined;
+    const tieTargetId =
+      tieTargetIndex === undefined
+        ? undefined
+        : state.config.rehearsal.botSeatIds[tieTargetIndex];
+    const testOnlyTieTarget = candidates.find(
+      (candidate) => candidate.id === tieTargetId,
+    );
     const target =
       options.testOnlyForceHumanTargetAfterFirstNight &&
       firstNightComplete &&
       humanSeatId
         ? (candidates.find((candidate) => candidate.id === humanSeatId) ?? null)
-        : choose(state.id, state, seatId, candidates);
+        : (testOnlyTieTarget ?? choose(state.id, state, seatId, candidates));
     return target ? { type: 'SubmitVote', target: target.id } : null;
   }
 
@@ -140,6 +161,7 @@ export function createRehearsalBotRunner(
   options: {
     publishGame?: (gameId: string) => Promise<void>;
     testOnlyForceHumanTargetAfterFirstNight?: boolean;
+    testOnlyForceFirstVoteTie?: boolean;
   } = {},
 ) {
   async function processGame(gameId: string): Promise<void> {
@@ -154,6 +176,7 @@ export function createRehearsalBotRunner(
           command: nextRehearsalBotCommand(state!, seatId, {
             testOnlyForceHumanTargetAfterFirstNight:
               options.testOnlyForceHumanTargetAfterFirstNight,
+            testOnlyForceFirstVoteTie: options.testOnlyForceFirstVoteTie,
           }),
         }))
         .find((candidate) => candidate.command !== null);
