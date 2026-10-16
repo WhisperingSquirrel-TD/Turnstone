@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 10:01 UTC.
-- Current milestone/step: Repair Verify #81 before continuing SPEC §30. Local fixes address the missing `shadowSlot` fixture (in unpushed `f67b29c`), malformed synthetic event fixtures, speculative random-draw consumption in oracle transition validation, and stale browser mocks missing `choiceSlots`/`serverNow`. Fix batch is ready to push.
-- Last pushed code commit/CI: `a406d0a`; Verify #81 (`38869224162`) — Failure. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38869224162. `f67b29c` and the current fix batch are not pushed yet.
-- Local verification for this step: 309/309 unit tests, typecheck, test typecheck, lint, format, production build, scenario-worker smoke and scenario coverage-sharding test passed.
+- Updated: 16 October 2026, 10:12 UTC.
+- Current milestone/step: Repair Verify #82's formatting failure before continuing SPEC §30. The public log identifies only `tests/scenario-reference.test.ts` as unformatted; the assertion has been corrected.
+- Last pushed code commit/CI: `3b33f2e`; Verify #82 (`38884908304`) — Failure only in `static-checks` (`format:check`) and dependent `required-checks`; every other job passed, including six scenario shards, merge, four browser profiles, and live rehearsal. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38884908304.
+- Local verification for this step: 309/309 unit tests, typecheck, test typecheck, lint, format, production build, scenario-worker smoke and scenario coverage-sharding test passed before the one-line formatting fix. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
 - Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
 - Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
 - Risk: local WebKit still closes during page creation in Replit Nix. Verify #80 confirmed iPhone and iPad WebKit passed on GitHub.

@@ -201,9 +201,7 @@ it('validates the exact candidate set and chosen seat for a random tie-break', (
     referenceReplay(
       injectScenarioEngineFault(events, 'wrong-random-candidate-set'),
     ),
-  ).toThrow(
-    'Reference: random cycle-vote-tie-break choice is invalid',
-  );
+  ).toThrow('Reference: random cycle-vote-tie-break choice is invalid');
 });
 
 it('applies the configured timeout rule after a split unanimous shadow re-vote', () => {
