@@ -44,6 +44,9 @@ import { config } from '@/config';
 import { BrandFooter } from './BrandFooter';
 import { GameConnectionStatus } from './GameConnectionStatus';
 import { NotesScreen } from './NotesScreen';
+import { BanishmentVoteScreen } from './BanishmentVoteScreen';
+import { PrivateChoiceControls } from './PrivateChoiceControls';
+import { ShieldCard } from './ShieldCard';
 import { PhaseProgressStatus } from './PhaseProgressStatus';
 import { apiUrl } from './api-url';
 import { en } from '@/locale/en-GB';
@@ -1388,6 +1391,24 @@ function PlayerGame() {
     }
   }
 
+  const choiceControlProps = {
+    choices,
+    selected,
+    confirmChoice,
+    isPending: command.isPending,
+    hasToken: Boolean(token),
+    commandMessage,
+    onSelect: (choiceId: string) => {
+      setSelected(choiceId);
+      setConfirmChoice(false);
+      setActionDone(false);
+      setCommandMessage('');
+    },
+    onReview: () => setConfirmChoice(true),
+    onConfirm: () => void submitAction(),
+    onChooseAgain: () => setConfirmChoice(false),
+  };
+
   return (
     <Shell
       isPlayer
@@ -1795,104 +1816,48 @@ function PlayerGame() {
                               {privateView.task.instruction}
                             </p>
                           )}
-                          <p className="display text-2xl">
-                            {full.phase === 'VOTE' ||
-                            full.phase === 'FINAL_BANISH'
-                              ? en.game.votePrompt
-                              : full.phase === 'SHADOW'
-                                ? privateView?.role === 'traitor'
-                                  ? en.game.shadowTraitorPrompt
-                                  : en.game.shadowFaithfulPrompt
-                                : en.game.finalDecision}
-                          </p>
-                          {full.phase === 'SHADOW' && (
-                            <p
-                              className="mt-2 min-h-12 whitespace-pre-wrap text-left text-sm text-ash"
-                              data-testid="shadow-status"
-                              aria-live="polite"
-                            >
-                              {privateView?.role === 'traitor'
-                                ? Object.entries(privateView.choices)
-                                    .flatMap(([seatId, targetId]) => {
-                                      const picker = full.seats.find(
-                                        (seat) => seat.id === seatId,
-                                      );
-                                      const target = full.seats.find(
-                                        (seat) => seat.id === targetId,
-                                      );
-                                      return picker && target
-                                        ? [
-                                            en.game.shadowPick(
-                                              picker.name,
-                                              target.name,
-                                            ),
-                                          ]
-                                        : [];
-                                    })
-                                    .join('\n') || en.game.shadowWaiting
-                                : en.game.shadowFaithfulStatus}
-                            </p>
-                          )}
-                          <div
-                            className="mt-3 grid gap-2"
-                            data-testid="private-choice-list"
-                          >
-                            {choices.map((choice) => (
-                              <button
-                                key={choice.id}
-                                type="button"
-                                className="choice-action"
-                                aria-pressed={selected === choice.id}
-                                onClick={() => {
-                                  setSelected(choice.id);
-                                  setConfirmChoice(false);
-                                  setActionDone(false);
-                                  setCommandMessage('');
-                                }}
-                              >
-                                {choice.name}
-                              </button>
-                            ))}
-                          </div>
-                          {selected && !confirmChoice && (
-                            <button
-                              className="quiet-action mt-4 w-full"
-                              type="button"
-                              onClick={() => setConfirmChoice(true)}
-                            >
-                              {en.game.reviewChoice}
-                            </button>
-                          )}
-                          {selected && confirmChoice && (
-                            <div className="mt-4 border-t border-stone pt-4">
-                              <p className="text-candle">
-                                {en.game.confirmChoice}
+                          {full.phase === 'VOTE' ||
+                          full.phase === 'FINAL_BANISH' ? (
+                            <BanishmentVoteScreen {...choiceControlProps} />
+                          ) : (
+                            <>
+                              <p className="display text-2xl">
+                                {full.phase === 'SHADOW'
+                                  ? privateView?.role === 'traitor'
+                                    ? en.game.shadowTraitorPrompt
+                                    : en.game.shadowFaithfulPrompt
+                                  : en.game.finalDecision}
                               </p>
-                              <div className="mt-3 flex flex-wrap gap-3">
-                                <button
-                                  type="button"
-                                  className="primary-action flex-1"
-                                  disabled={command.isPending || !token}
-                                  onClick={() => void submitAction()}
+                              {full.phase === 'SHADOW' && (
+                                <p
+                                  className="mt-2 min-h-12 whitespace-pre-wrap text-left text-sm text-ash"
+                                  data-testid="shadow-status"
+                                  aria-live="polite"
                                 >
-                                  {command.isPending
-                                    ? en.game.recording
-                                    : en.game.confirm}
-                                </button>
-                                <button
-                                  type="button"
-                                  className="quiet-action flex-1"
-                                  onClick={() => setConfirmChoice(false)}
-                                >
-                                  {en.game.chooseAgain}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          {commandMessage && !actionDone && (
-                            <p role="status" className="mt-4 text-sm text-ash">
-                              {commandMessage}
-                            </p>
+                                  {privateView?.role === 'traitor'
+                                    ? Object.entries(privateView.choices)
+                                        .flatMap(([seatId, targetId]) => {
+                                          const picker = full.seats.find(
+                                            (seat) => seat.id === seatId,
+                                          );
+                                          const target = full.seats.find(
+                                            (seat) => seat.id === targetId,
+                                          );
+                                          return picker && target
+                                            ? [
+                                                en.game.shadowPick(
+                                                  picker.name,
+                                                  target.name,
+                                                ),
+                                              ]
+                                            : [];
+                                        })
+                                        .join('\n') || en.game.shadowWaiting
+                                    : en.game.shadowFaithfulStatus}
+                                </p>
+                              )}
+                              <PrivateChoiceControls {...choiceControlProps} />
+                            </>
                           )}
                         </div>
                       ) : held || reveal.isPending || holdMessage ? (
@@ -2277,56 +2242,26 @@ function PlayerGame() {
           </div>
         )}
         {showShieldCard && (
-          <dialog
+          <ShieldCard
             ref={shieldDialog}
-            className="privacy-shield"
-            aria-labelledby="privacy-shield-title"
-            onCancel={(event) => event.preventDefault()}
-          >
-            <TurnstonePlayerHeader />
-            <div className="privacy-shield-content">
-              <div className="mx-auto w-full max-w-md text-center">
-                <h1
-                  id="privacy-shield-title"
-                  className="display text-3xl sm:text-4xl"
-                >
-                  {en.game.shieldHeading}
-                </h1>
-                <p className="mt-4 text-ash">{en.game.shieldDetail}</p>
-                <button
-                  autoFocus
-                  className="primary-action mt-8 min-h-14 w-full"
-                  type="button"
-                  disabled={!token || shieldPending || shieldCountdown > 0}
-                  aria-disabled={!token || shieldPending || shieldCountdown > 0}
-                  onClick={() => void acknowledge()}
-                >
-                  {shieldPending
-                    ? en.game.shieldConfirming
-                    : shieldCountdown > 0
-                      ? en.game.countdown(shieldCountdown)
-                      : en.game.shieldConfirm}
-                </button>
-                {notesOpen && !phaseIsPrivate && (
-                  <button
-                    className="quiet-action mt-3 w-full"
-                    type="button"
-                    onClick={() => {
-                      clearPrivate();
-                      setNotesOpen(false);
-                    }}
-                  >
-                    {en.game.notesDone}
-                  </button>
-                )}
-              </div>
-            </div>
-            <BrandFooter
-              context="game"
-              className="game-brand-footer-overlay"
-              testId="brand-footer-overlay"
-            />
-          </dialog>
+            countdown={shieldCountdown}
+            pending={shieldPending}
+            hasToken={Boolean(token)}
+            showNotesDone={notesOpen && !phaseIsPrivate}
+            onAcknowledge={() => void acknowledge()}
+            onNotesDone={() => {
+              clearPrivate();
+              setNotesOpen(false);
+            }}
+            header={<TurnstonePlayerHeader />}
+            footer={
+              <BrandFooter
+                context="game"
+                className="game-brand-footer-overlay"
+                testId="brand-footer-overlay"
+              />
+            }
+          />
         )}
       </section>
     </Shell>

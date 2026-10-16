@@ -1017,7 +1017,6 @@ test('private choice names, including banishment votes, are shuffled per seat', 
           name === canonicalOptions[(index + offset) % canonicalOptions.length],
       ),
     );
-
   try {
     const [morganOrder, jamieOrder] = await Promise.all([
       configureTraitorPage(page, 'shadow-order-game', 'seat-morgan'),
