@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 10:22 UTC.
-- Current milestone/step: SPEC §30 coverage additions are locally green and ready for Verify #84: a separate fully abstained initial-vote golden, shard count/coverage updates, and explicit end-to-end checks for both murder slots in the real-server rehearsal.
-- Last pushed code commit/CI: `85b5a35`; Verify #83 (`38885763113`) — Success across all jobs, including all six scenario shards, merged report, four browser profiles, and live rehearsal; 0 annotations across 20 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38885763113.
-- Local verification for this step: 310/310 unit tests across 60 files, scenario sharding/coverage assertions, scenario worker smoke, typecheck, test typecheck, lint, format, production build and diff checks passed. The new golden was first confirmed red, then passed through the full golden replay and independent oracle.
+- Updated: 16 October 2026, 10:30 UTC.
+- Current milestone/step: §30 screen coverage is ready for Verify #85: the shadow UI test now checks both Traitor pick lines and both Faithful decoy lines.
+- Last pushed code commit/CI: `6ffe25d`; Verify #84 (`38886941723`) — Success across all jobs, including six scenario shards, merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38886941723.
+- Local verification for this step: the new screen test passed test typecheck, lint and formatting checks. The preceding step passed 310/310 unit tests across 60 files, scenario sharding/coverage assertions (17 goldens assigned exactly once), scenario worker smoke, typecheck, lint, format, production build and diff checks. The initial-abstention golden was first confirmed red, then passed through full golden replay and the independent oracle.
 - Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
 - Risk: local WebKit still closes during page creation in Replit Nix; GitHub WebKit profiles passed in #83. The local API workflow also logs repeated deadline-scheduler iteration errors after restart; cause unverified, while GitHub integration and rehearsal jobs passed. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
 - Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.

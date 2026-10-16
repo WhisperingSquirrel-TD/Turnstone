@@ -790,10 +790,15 @@ for (const role of ['faithful', 'traitor'] as const) {
         ...createPublicView(gameId),
         phase: 'SHADOW',
         shadowRound: 1,
-        shadowSlot: 1,
+        shadowSlot: 2,
         progress: { done: 0, total: 3 },
       } as FullView;
       publicView.seats.push({ id: 'seat-sam', name: 'Sam', status: 'alive' });
+      publicView.seats.push({
+        id: 'seat-taylor',
+        name: 'Taylor',
+        status: 'alive',
+      });
       let privateRequests = 0;
       const privateFlow: string[] = [];
       const submittedCommands: unknown[] = [];
@@ -854,6 +859,7 @@ for (const role of ['faithful', 'traitor'] as const) {
                 options: [
                   { id: 'seat-jamie', name: 'Jamie' },
                   { id: 'seat-sam', name: 'Sam' },
+                  { id: 'seat-taylor', name: 'Taylor' },
                 ],
                 choices: {},
                 choiceSlots:
@@ -867,7 +873,9 @@ for (const role of ['faithful', 'traitor'] as const) {
                         {
                           slot: 2,
                           round: 1,
-                          picks: [{ seatId: 'seat-jamie', choice: 'seat-sam' }],
+                          picks: [
+                            { seatId: 'seat-jamie', choice: 'seat-taylor' },
+                          ],
                         },
                       ]
                     : [],
@@ -913,6 +921,21 @@ for (const role of ['faithful', 'traitor'] as const) {
           { exact: true },
         ),
       ).toBeVisible();
+      const shadowStatusLines = page.getByTestId('shadow-status').locator('p');
+      await expect(shadowStatusLines).toHaveCount(2);
+      await expect(shadowStatusLines.nth(0)).toHaveText(
+        role === 'traitor'
+          ? 'First choice: Jamie picked: Sam'
+          : 'First choice: Your answer stays private',
+      );
+      await expect(shadowStatusLines.nth(1)).toHaveText(
+        role === 'traitor'
+          ? 'Second choice: Jamie picked: Taylor'
+          : 'Second choice: Your answer stays private',
+      );
+      await expect(page.getByTestId('shadow-slot-label')).toHaveText(
+        'Second choice',
+      );
       await expect(
         page.getByRole('button', { name: 'Morgan', exact: true }),
       ).toHaveCount(0);
