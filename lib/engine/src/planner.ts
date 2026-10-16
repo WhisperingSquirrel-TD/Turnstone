@@ -513,7 +513,7 @@ function settingsFor(
     missionMinutes: durations.MISSION,
     missionLimit: Number.POSITIVE_INFINITY,
     extraMission: false,
-    banishments: config.roundTable.banishments,
+    banishments: Math.min(1, config.roundTable.banishments),
     murders: config.traitors.murders,
     finalSize,
     adjustments: [],
@@ -657,12 +657,6 @@ export function planSchedule(
       adjustment: 'Missions dropped after cycle one.',
     });
   }
-  if (standardSettings.banishments < 2) {
-    compressionSteps.push({
-      settings: { banishments: 2 },
-      adjustment: 'Up to two banishments scheduled per cycle.',
-    });
-  }
   if (standardSettings.murders < 2) {
     compressionSteps.push({
       settings: { murders: 2 },
@@ -740,6 +734,11 @@ export function planSchedule(
 
   const plans = [relaxed, standard, compressed];
   for (const plan of plans) {
+    if (config.roundTable.banishments > 1) {
+      plan.warnings.push(
+        'Only one banishment per round is estimated until engine support is added.',
+      );
+    }
     if (traitors > config.players.count * 0.3) {
       plan.warnings.push('Traitors exceed 30% of the seats.');
     }

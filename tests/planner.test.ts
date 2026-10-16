@@ -12,6 +12,7 @@ type ConfigOverrides = {
   blocked?: { start: string; end: string }[];
   quiet?: { start: string; end: string }[];
   missions?: boolean;
+  banishments?: number;
 };
 
 function makeConfig(overrides: ConfigOverrides = {}) {
@@ -20,6 +21,7 @@ function makeConfig(overrides: ConfigOverrides = {}) {
     traitors: { number: overrides.traitors ?? 3 },
     endgame: { size: overrides.finalSize ?? 4 },
     missions: { enabled: overrides.missions ?? true },
+    roundTable: { banishments: overrides.banishments ?? 1 },
     schedule: {
       format: overrides.format ?? 'day',
       window: {
@@ -154,6 +156,67 @@ it('applies compression in the documented order and stops once it fits', () => {
     'Debates shortened to the two-minute minimum.',
     'Missions dropped after cycle one.',
   ]);
+});
+
+it('never compresses a plan by scheduling two banishments in one cycle', () => {
+  const result = requirePlans(
+    planSchedule(
+      makeConfig({
+        start: '2027-06-12T09:00:00.000Z',
+        end: '2027-06-12T12:15:00.000Z',
+        blocked: [],
+      }),
+      { timeZone: 'Europe/London' },
+    ),
+  );
+  const compressed = result.plans.find((plan) => plan.variant === 'Compressed');
+  if (!compressed) throw new Error('Compressed plan is missing');
+  const votes = compressed.steps.filter((step) => step.kind === 'VOTE');
+  const verdicts = compressed.steps.filter((step) => step.kind === 'VERDICT');
+
+  expect(compressed).toMatchObject({
+    fits: true,
+    cycles: 4,
+    finalSize: 5,
+    adjustments: [
+      'Debates shortened to the two-minute minimum.',
+      'Missions dropped after cycle one.',
+      'Up to two murders scheduled per cycle.',
+      'Final size raised by one player.',
+    ],
+  });
+  expect(verdicts).toHaveLength(votes.length);
+  for (const verdict of verdicts) {
+    const vote = votes.find((step) => step.cycle === verdict.cycle);
+    expect(vote).toBeDefined();
+    expect(
+      vote!.playersRemaining - verdict.playersRemaining,
+    ).toBeLessThanOrEqual(1);
+  }
+});
+
+it('caps a configured two-banishment setting until engine support exists', () => {
+  const result = requirePlans(
+    planSchedule(makeConfig({ players: 15, banishments: 2, blocked: [] }), {
+      timeZone: 'Europe/London',
+    }),
+  );
+
+  for (const plan of result.plans) {
+    const votes = plan.steps.filter((step) => step.kind === 'VOTE');
+    const verdicts = plan.steps.filter((step) => step.kind === 'VERDICT');
+    expect(verdicts).toHaveLength(votes.length);
+    for (const verdict of verdicts) {
+      const vote = votes.find((step) => step.cycle === verdict.cycle);
+      expect(vote).toBeDefined();
+      expect(
+        vote!.playersRemaining - verdict.playersRemaining,
+      ).toBeLessThanOrEqual(1);
+    }
+    expect(plan.warnings).toContain(
+      'Only one banishment per round is estimated until engine support is added.',
+    );
+  }
 });
 
 it('includes configuration balance warnings with every plan option', () => {

@@ -1270,3 +1270,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Internal route links and buttons use the client-side router, including the game wordmark link to the home screen. External links, such as the Stackstone Consulting footer credit, remain normal links.
 
 **Consequence:** Game screens and their socket-backed state remain in the same document during in-app navigation. The live rehearsal browser test counts document requests across phase changes and the result-screen navigation actions.
+
+## D80 — Owner-approved rule changes, 15 October 2026 (clarified 16 October)
+
+**Context:** The owner approved three gameplay changes: two distinct Traitor picks for double-murder nights, a no-ballot outcome for non-endgame banishment rounds, and removal of unsupported two-banishment compression from planner estimates. The reviewer clarified that an empty tie re-vote also means no banishment, while an empty endgame banishment retains random selection among finalists.
+
+**Choice:** Apply the rules in SPEC §30. Resolve double-murder slots independently with existing decision and fallback rules; preserve the task-miss cancellation for the whole night and stop later slots after an earlier terminal result. For regular votes, zero ballots in either the initial round or tie re-vote means no banishment and no further re-vote; one or more ballots keep the existing tie behavior. Keep the existing endgame random rule. Do not plan more than one banishment per cycle until the engine supports it.
+
+**Consequence:** Implement each rule under TDD, extending the independent reference oracle and golden coverage with each engine change. Double-murder UI keeps first/second prompt wording separate from resolution logic; Traitors see live picks in both slots, bots submit both, and fairness/reveal records include both outcomes. The public verdict and log disclose the no-vote outcome without changing the visitor allow-list. A real-server rehearsal must complete a double-murder night. Push only green increments and stop when this brief is green.
