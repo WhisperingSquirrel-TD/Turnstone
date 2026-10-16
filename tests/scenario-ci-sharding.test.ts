@@ -23,7 +23,7 @@ it('partitions the complete sample into disjoint scenario suites', () => {
   expect(suites.map((suite) => suite.jobs.length)).toEqual([942, 788, 792, 0]);
   expect(suites.map((suite) => suite.fuzzGames)).toEqual([0, 0, 0, 32]);
   expect(suites.map((suite) => suite.goldenScenarios.length)).toEqual([
-    0, 0, 0, 13,
+    0, 0, 0, 15,
   ]);
   expect(suites.flatMap((suite) => suite.coverageFailures)).toEqual([]);
 
@@ -119,8 +119,8 @@ it('distributes fuzz and golden samples once, and projects every shard under fiv
   );
 
   expect(fuzzCount).toBe(32);
-  expect(new Set(goldenIds).size).toBe(13);
-  expect(goldenIds).toHaveLength(13);
+  expect(new Set(goldenIds).size).toBe(15);
+  expect(goldenIds).toHaveLength(15);
   expect(
     Math.max(...shards.map((shard) => scenarioShardProjectionMs(shard))),
   ).toBeLessThan(SCENARIO_SHARD_BUDGET_MS);
