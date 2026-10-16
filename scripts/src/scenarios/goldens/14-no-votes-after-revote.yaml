@@ -28,4 +28,5 @@ expected:
   alive: 2
   eliminated: 13
 assertions:
+  noVoteRound: true
   noVoteRevote: true

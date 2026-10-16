@@ -22,6 +22,7 @@ export type GoldenScenario = {
   assertions?: {
     shadowSplitAfterRevote?: boolean;
     noVoteRound?: boolean;
+    noVoteInitialRound?: boolean;
     noVoteRevote?: boolean;
     abstainedEndgameBanishment?: boolean;
     doubleMurderSplit?: boolean;
@@ -64,6 +65,7 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
     [
       'shadowSplitAfterRevote',
       'noVoteRound',
+      'noVoteInitialRound',
       'noVoteRevote',
       'abstainedEndgameBanishment',
       'doubleMurderSplit',
@@ -95,6 +97,9 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
               : {}),
             ...(typeof assertions.noVoteRound === 'boolean'
               ? { noVoteRound: assertions.noVoteRound }
+              : {}),
+            ...(typeof assertions.noVoteInitialRound === 'boolean'
+              ? { noVoteInitialRound: assertions.noVoteInitialRound }
               : {}),
             ...(typeof assertions.noVoteRevote === 'boolean'
               ? { noVoteRevote: assertions.noVoteRevote }

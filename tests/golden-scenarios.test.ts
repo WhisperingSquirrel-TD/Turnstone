@@ -84,6 +84,7 @@ function findAbstentionOutcomes(events: readonly Event[]) {
   let ballotsInCurrentRound = 0;
   const outcomes = {
     noVoteRound: false,
+    noVoteInitialRound: false,
     noVoteRevote: false,
     abstainedEndgameBanishment: false,
   };
@@ -101,6 +102,7 @@ function findAbstentionOutcomes(events: readonly Event[]) {
     } else if (event.type === 'VoteSkipped' && phase === 'VOTE') {
       outcomes.noVoteRound = true;
       if (waitingForVoteRevote) outcomes.noVoteRevote = true;
+      else outcomes.noVoteInitialRound = true;
       waitingForVoteRevote = false;
     }
   }
@@ -136,6 +138,7 @@ it('replays every implemented complete-game golden scenario exactly', () => {
     const abstentionOutcomes = findAbstentionOutcomes(result.events);
     for (const assertion of [
       'noVoteRound',
+      'noVoteInitialRound',
       'noVoteRevote',
       'abstainedEndgameBanishment',
     ] as const) {
@@ -158,6 +161,20 @@ it('keeps golden coverage for abstained regular, tie-revote and endgame ballots'
       (scenario) => scenario.assertions?.abstainedEndgameBanishment,
     ),
   ).toBe(true);
+});
+
+it('has a separate golden for a fully abstained initial regular vote', () => {
+  const scenarios = loadGoldenScenarios();
+  const initialAbstention = scenarios.find((scenario) =>
+    Reflect.get(scenario.assertions ?? {}, 'noVoteInitialRound'),
+  );
+  const emptyRevote = scenarios.find(
+    (scenario) => scenario.assertions?.noVoteRevote,
+  );
+
+  expect(initialAbstention).toBeDefined();
+  expect(emptyRevote).toBeDefined();
+  expect(initialAbstention?.id).not.toBe(emptyRevote?.id);
 });
 
 it('includes a complete-game golden where Traitors split after their re-vote', () => {

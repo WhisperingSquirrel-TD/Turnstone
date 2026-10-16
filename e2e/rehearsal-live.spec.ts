@@ -515,6 +515,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         timeout: 2_500,
       })
       .toBeGreaterThan(0);
+    const seenShadowSlots = new Set<number>();
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
       const phaseStartedAt = Date.now();
@@ -557,6 +558,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         phase === 'SHADOW'
           ? Number(await game.getAttribute('data-shadow-slot'))
           : 0;
+      if (phase === 'SHADOW') seenShadowSlots.add(shadowSlotBefore);
       if (phase === 'DEAL') {
         await handleShield(page, activeGameId);
         playerRole = await revealDealRole(page);
@@ -650,6 +652,13 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(page.getByTestId('fairness-murder-slots')).toContainText(
       'Second choice',
     );
+    expect([...seenShadowSlots].sort()).toEqual([1, 2]);
+    const firstNightRecords = murderSlotRecords.filter({
+      hasText: 'Night 1',
+    });
+    await expect(firstNightRecords).toHaveCount(2);
+    await expect(firstNightRecords.nth(0)).toContainText('First choice');
+    await expect(firstNightRecords.nth(1)).toContainText('Second choice');
 
     const playerRows = page.locator('[data-testid^="player-seat-"]');
     const rowTexts = await playerRows.allTextContents();

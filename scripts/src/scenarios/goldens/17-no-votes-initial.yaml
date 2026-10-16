@@ -1,0 +1,36 @@
+id: no-votes-initial-regular-round
+description: Every player abstains in the first regular banishment vote.
+seed: 20261053
+strategy: non-voter
+config:
+  players:
+    count: 7
+  traitors:
+    number: 1
+    sleeper: false
+    recruitment: off
+    timeoutChoice: none
+  missions:
+    enabled: false
+    shields: off
+  tasks:
+    enabled: false
+  roundTable:
+    tieRule: revote-random
+    revealRole: always
+    banishments: 1
+  endgame:
+    size: 3
+    parity: false
+  schedule:
+    format: quick
+    plannedCycles: 1
+expected:
+  phase: FINISHED
+  winner: faithful
+  reason: no-traitors
+  alive: 3
+  eliminated: 4
+assertions:
+  noVoteRound: true
+  noVoteInitialRound: true

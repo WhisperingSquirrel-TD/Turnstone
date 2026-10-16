@@ -1,12 +1,13 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 10:12 UTC.
-- Current milestone/step: Repair Verify #82's formatting failure before continuing SPEC §30. The public log identifies only `tests/scenario-reference.test.ts` as unformatted; the assertion has been corrected.
-- Last pushed code commit/CI: `3b33f2e`; Verify #82 (`38884908304`) — Failure only in `static-checks` (`format:check`) and dependent `required-checks`; every other job passed, including six scenario shards, merge, four browser profiles, and live rehearsal. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38884908304.
-- Local verification for this step: 309/309 unit tests, typecheck, test typecheck, lint, format, production build, scenario-worker smoke and scenario coverage-sharding test passed before the one-line formatting fix. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
+- Updated: 16 October 2026, 10:22 UTC.
+- Current milestone/step: SPEC §30 coverage additions are locally green and ready for Verify #84: a separate fully abstained initial-vote golden, shard count/coverage updates, and explicit end-to-end checks for both murder slots in the real-server rehearsal.
+- Last pushed code commit/CI: `85b5a35`; Verify #83 (`38885763113`) — Success across all jobs, including all six scenario shards, merged report, four browser profiles, and live rehearsal; 0 annotations across 20 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38885763113.
+- Local verification for this step: 310/310 unit tests across 60 files, scenario sharding/coverage assertions, scenario worker smoke, typecheck, test typecheck, lint, format, production build and diff checks passed. The new golden was first confirmed red, then passed through the full golden replay and independent oracle.
 - Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
+- Risk: local WebKit still closes during page creation in Replit Nix; GitHub WebKit profiles passed in #83. The local API workflow also logs repeated deadline-scheduler iteration errors after restart; cause unverified, while GitHub integration and rehearsal jobs passed. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
 - Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
-- Risk: local WebKit still closes during page creation in Replit Nix. Verify #80 confirmed iPhone and iPad WebKit passed on GitHub.
+- Risk: local WebKit still closes during page creation in Replit Nix; GitHub WebKit profiles passed in #83. The local API workflow also logs repeated deadline-scheduler iteration errors after restart; cause unverified, while GitHub integration and rehearsal jobs passed.
 
 ## Previous verification history
 
