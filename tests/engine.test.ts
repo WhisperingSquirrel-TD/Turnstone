@@ -710,6 +710,144 @@ describe('Milestone 1 deterministic engine', () => {
     ).toMatchObject({ victims: [target.id] });
     expect(game.state.phase).toBe('FINISHED');
   });
+  it('stores Faithful night predictions by cycle and exposes each only to its owner', () => {
+    const game = fixture(6);
+    command(game, { type: 'StartGame' });
+    advance(game, 'SHADOW');
+
+    const traitor = game.state.seats.find(
+      (seat) => seat.status === 'alive' && seat.role === 'traitor',
+    )!;
+    const faithful = game.state.seats.filter(
+      (seat) => seat.status === 'alive' && seat.role === 'faithful',
+    );
+    const faithfulOwner = faithful[0]!;
+    const otherFaithful = faithful[1]!;
+    const faithfulTarget = faithful[2]!;
+    const traitorTarget = faithful[3]!;
+
+    command(
+      game,
+      { type: 'SubmitShadowChoice', choice: faithfulTarget.id },
+      true,
+      { kind: 'player', seatId: faithfulOwner.id },
+    );
+    command(
+      game,
+      { type: 'SubmitShadowChoice', choice: traitorTarget.id },
+      true,
+      { kind: 'player', seatId: traitor.id },
+    );
+
+    expect(game.state.shadowPicks).toContainEqual(
+      expect.objectContaining({
+        cycle: 1,
+        slot: 1,
+        round: 1,
+        seatId: faithfulOwner.id,
+        choice: faithfulTarget.id,
+      }),
+    );
+
+    const faithfulView = viewFor(
+      { kind: 'player', seatId: faithfulOwner.id, reveal: true },
+      game.state,
+    );
+    expect(faithfulView.private?.choiceSlots).toContainEqual({
+      slot: 1,
+      round: 1,
+      picks: [{ seatId: faithfulOwner.id, choice: faithfulTarget.id }],
+    });
+    expect(JSON.stringify(faithfulView.private?.choiceSlots)).not.toContain(
+      traitorTarget.id,
+    );
+
+    const otherFaithfulView = viewFor(
+      { kind: 'player', seatId: otherFaithful.id, reveal: true },
+      game.state,
+    );
+    expect(
+      JSON.stringify(otherFaithfulView.private?.choiceSlots),
+    ).not.toContain(faithfulTarget.id);
+
+    const traitorView = viewFor(
+      { kind: 'player', seatId: traitor.id, reveal: true },
+      game.state,
+    );
+    expect(JSON.stringify(traitorView.private?.choiceSlots)).not.toContain(
+      faithfulTarget.id,
+    );
+    expect(JSON.stringify(traitorView.private?.choiceSlots)).toContain(
+      traitorTarget.id,
+    );
+    expect(
+      JSON.stringify(viewFor({ kind: 'visitor' }, game.state)),
+    ).not.toContain(faithfulTarget.id);
+    const coordinatorView = viewFor(
+      { kind: 'coordinator', seatId: faithfulOwner.id, reveal: true },
+      game.state,
+    );
+    expect(coordinatorView.private).toBeNull();
+  });
+  it('updates the private Traitor choice view as fellow Traitors pick', () => {
+    const game = fixture(8, {
+      missions: { enabled: false, shields: 'off' },
+      traitors: {
+        number: 2,
+        sleeper: false,
+        recruitment: 'off',
+        murders: 1,
+        victimDecision: 'first',
+        timeoutChoice: 'none',
+      },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'SHADOW');
+
+    const traitors = game.state.seats.filter(
+      (seat) => seat.status === 'alive' && seat.role === 'traitor',
+    );
+    const faithful = game.state.seats.filter(
+      (seat) => seat.status === 'alive' && seat.role === 'faithful',
+    );
+    const firstTarget = faithful[0]!;
+    const secondTarget = faithful[1]!;
+    command(
+      game,
+      { type: 'SubmitShadowChoice', choice: firstTarget.id },
+      true,
+      { kind: 'player', seatId: traitors[0]!.id },
+    );
+
+    const partnerViewBeforeChoosing = viewFor(
+      { kind: 'player', seatId: traitors[1]!.id, reveal: true },
+      game.state,
+    );
+    expect(
+      partnerViewBeforeChoosing.private?.choiceSlots.find(
+        (entry) => entry.slot === 1 && entry.round === 1,
+      )?.picks,
+    ).toEqual([{ seatId: traitors[0]!.id, choice: firstTarget.id }]);
+
+    command(
+      game,
+      { type: 'SubmitShadowChoice', choice: secondTarget.id },
+      true,
+      { kind: 'player', seatId: traitors[1]!.id },
+    );
+    const updatedPartnerView = viewFor(
+      { kind: 'player', seatId: traitors[0]!.id, reveal: true },
+      game.state,
+    );
+    expect(
+      updatedPartnerView.private?.choiceSlots.find(
+        (entry) => entry.slot === 1 && entry.round === 1,
+      )?.picks,
+    ).toEqual([
+      { seatId: traitors[0]!.id, choice: firstTarget.id },
+      { seatId: traitors[1]!.id, choice: secondTarget.id },
+    ]);
+  });
   it('resolves a double-murder night from separate first- and second-slot picks', () => {
     const game = fixture(8, {
       missions: { enabled: false, shields: 'off' },

@@ -9,7 +9,11 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['tests/**/*.test.ts', 'artifacts/party-game/src/**/*.test.tsx'],
+    include: [
+      'tests/**/*.test.ts',
+      'artifacts/party-game/src/**/*.test.ts',
+      'artifacts/party-game/src/**/*.test.tsx',
+    ],
     exclude: ['e2e/**'],
     environment: 'node',
   },

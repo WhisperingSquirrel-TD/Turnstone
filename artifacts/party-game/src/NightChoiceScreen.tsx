@@ -27,12 +27,19 @@ export function NightChoiceScreen({
       </p>
       <p className="mt-2 text-left text-candle">{prompt}</p>
       <div
-        className="mt-2 grid min-h-12 grid-rows-2 gap-1 whitespace-pre-wrap text-left text-sm text-ash"
+        className="mt-2 grid h-20 grid-rows-4 overflow-hidden text-left text-xs leading-5 text-ash"
         data-testid="shadow-status"
         aria-live="polite"
       >
-        {statusLines.map((line, index) => (
-          <p key={index}>{line}</p>
+        {Array.from({ length: 4 }, (_, index) => (
+          <p
+            key={index}
+            className="truncate"
+            title={statusLines[index] ?? ''}
+            aria-label={statusLines[index] ?? ''}
+          >
+            {statusLines[index] ?? ''}
+          </p>
         ))}
       </div>
       <PrivateChoiceControls {...choiceControls} />

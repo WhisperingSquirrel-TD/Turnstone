@@ -123,6 +123,7 @@ async function latestSynchronizedServerPhase(
 }
 
 type ShadowPrivateContext = {
+  role: 'traitor' | 'faithful';
   teamNames: string[];
   options: { id: string; name: string }[];
 };
@@ -180,6 +181,7 @@ async function handleShield(
     view?: {
       viewerSeatId?: string;
       private?: {
+        role?: string | null;
         team?: { name: string; role: string }[];
         options?: { id: string; name: string }[];
       };
@@ -187,10 +189,15 @@ async function handleShield(
   };
   const viewerSeatId = payload.view?.viewerSeatId;
   const privateView = payload.view?.private;
-  if (!viewerSeatId || !privateView) {
+  if (
+    !viewerSeatId ||
+    !privateView ||
+    (privateView.role !== 'traitor' && privateView.role !== 'faithful')
+  ) {
     throw new Error('The private night view omitted the seat choice context.');
   }
   return {
+    role: privateView.role,
     teamNames: (privateView.team ?? [])
       .filter((member) => member.role === 'traitor')
       .map((member) => member.name),
@@ -319,6 +326,13 @@ async function submitPrivateChoice(
     const displayedNameSet = new Set(displayedNames);
     expect(displayedNames.length).toBeGreaterThan(0);
     expect(displayedNameSet.size).toBe(displayedNames.length);
+    if (phaseBeforeChoice !== 'SHADOW') {
+      expect(displayedNames).toEqual(
+        [...displayedNames].sort((left, right) =>
+          left.localeCompare(right, 'en', { sensitivity: 'base' }),
+        ),
+      );
+    }
     const voteCandidates = new Set(roster.voteCandidates ?? []);
     const expectedNames = shadowOptions
       ? shadowOptions.map((option) => option.name)
@@ -1031,6 +1045,37 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               shadowContextByCycle.get(shadowCycleBefore) ?? null;
             if (!shadowContext)
               throw new Error('The night choice has no private team context.');
+            await expect(
+              page.getByText(
+                shadowContext.role === 'traitor'
+                  ? 'Who will the Traitors take tonight?'
+                  : 'Who do you think the Traitors will take tonight?',
+                { exact: true },
+              ),
+            ).toBeVisible();
+            const statusLines = page.getByTestId('shadow-status').locator('p');
+            await expect(statusLines).toHaveCount(4);
+            if (shadowContext.role === 'faithful') {
+              await expect(statusLines.nth(0)).toContainText(
+                /^(Your guess: .+|You haven't guessed yet)$/,
+              );
+              await expect(statusLines.nth(1)).toHaveText(
+                'Guesses stay secret until the end.',
+              );
+              await expect(statusLines.nth(2)).toHaveText(
+                'Think about who the Traitors fear most.',
+              );
+              await expect(statusLines.nth(3)).toHaveText(
+                'You can change your guess until the night ends.',
+              );
+            } else {
+              await expect(statusLines.nth(0)).toContainText(
+                /^(You picked: .+|You haven't picked yet)$/,
+              );
+              await expect(statusLines.nth(3)).toContainText(
+                /^(All agreed: .+|You can change your pick until the night ends\.)$/,
+              );
+            }
             try {
               await expect(page.getByTestId('shadow-slot-label')).toHaveText(
                 shadowSlotBefore === 1 ? 'First choice' : 'Second choice',
@@ -1235,6 +1280,41 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
 
       if (['VOTE', 'FINAL_BANISH'].includes(phase)) {
         await expect(page.getByTestId('phase-progress-status')).toHaveCount(0);
+        try {
+          await expect
+            .poll(
+              async () => {
+                const latest = await latestServerPhase(page, activeGameId);
+                return latest.phase === phase &&
+                  latest.progress.total > 0 &&
+                  latest.progress.done === latest.progress.total
+                  ? latest.progress.done
+                  : -1;
+              },
+              { timeout: 10_000 },
+            )
+            .toBeGreaterThan(0);
+        } catch (error) {
+          const latest = await latestServerPhase(page, activeGameId);
+          const { readGameEvents } = await import('@workspace/db/game-store');
+          const recentVotes = (await readGameEvents(activeGameId))
+            .filter((event) =>
+              ['VoteSubmitted', 'VoteClosed', 'SeatRemoved'].includes(
+                event.type,
+              ),
+            )
+            .slice(-16)
+            .map((event) => ({
+              type: event.type,
+              ...('seatId' in event ? { seatId: event.seatId } : {}),
+              ...('target' in event ? { target: event.target } : {}),
+              ...('cycle' in event ? { cycle: event.cycle } : {}),
+            }));
+          throw new Error(
+            `Vote progress stalled: expected phase ${phase}; server phase ${latest.phase}, cycle ${latest.cycle}, revote=${latest.revote}, progress=${latest.progress.done}/${latest.progress.total}, viewer=${latest.viewerSeatId}, voted=${latest.votedSeatIds.join(',')}, recent=${JSON.stringify(recentVotes)}, screen=${JSON.stringify((await page.locator('body').innerText()).slice(0, 800))}`,
+            { cause: error },
+          );
+        }
         const completedVoteView = await latestSynchronizedServerPhase(
           page,
           activeGameId,

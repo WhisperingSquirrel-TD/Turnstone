@@ -41,7 +41,7 @@ describe('NightChoiceScreen', () => {
     expect(html).toContain('Who will the Traitors take tonight?');
     expect(html).toContain('Complete tonight&#x27;s task.');
     expect(statusMarkup).toBeDefined();
-    expect(statusMarkup?.match(/<p>/g)).toHaveLength(4);
+    expect(statusMarkup?.match(/<p(?:\s|>)/g)).toHaveLength(4);
     expect(html).toContain('data-testid="private-choice-list"');
     expect(html).toContain('Alex');
     expect(html).not.toContain('Shield your screen');
@@ -67,5 +67,47 @@ describe('NightChoiceScreen', () => {
     expect(html).toContain('Choose again');
     expect(html.match(/class="enter"/g)).toHaveLength(1);
     expect(html).not.toContain('<dialog');
+  });
+
+  it('uses the same fixed four-line status area for Traitor and Faithful prompts', () => {
+    const renderNight = (prompt: string, statusLines: string[]) =>
+      renderToString(
+        <NightChoiceScreen
+          {...controls}
+          slotLabel="First choice"
+          prompt={prompt}
+          statusLines={statusLines}
+        />,
+      );
+    const traitorHtml = renderNight('Who will the Traitors take tonight?', [
+      "You haven't picked yet",
+      'Waiting for Sam',
+      '',
+      'You can change your pick until the night ends.',
+    ]);
+    const faithfulHtml = renderNight(
+      'Who do you think the Traitors will take tonight?',
+      [
+        "You haven't guessed yet",
+        'Guesses stay secret until the end.',
+        'Think about who the Traitors fear most.',
+        'You can change your guess until the night ends.',
+      ],
+    );
+    const statusMarkup = (html: string) =>
+      html.match(/data-testid="shadow-status"[^>]*>([\s\S]*?)<\/div>/)?.[1];
+
+    const traitorStatus = statusMarkup(traitorHtml);
+    const faithfulStatus = statusMarkup(faithfulHtml);
+    expect(traitorHtml).toContain('h-20 grid-rows-4');
+    expect(faithfulHtml).toContain('h-20 grid-rows-4');
+    expect(traitorStatus?.match(/<p(?:\s|>)/g)).toHaveLength(4);
+    expect(faithfulStatus?.match(/<p(?:\s|>)/g)).toHaveLength(4);
+    expect(
+      traitorHtml.match(/data-testid="private-choice-list"/g),
+    ).toHaveLength(1);
+    expect(
+      faithfulHtml.match(/data-testid="private-choice-list"/g),
+    ).toHaveLength(1);
   });
 });

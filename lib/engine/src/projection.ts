@@ -320,28 +320,30 @@ export function viewFor(
                   .map((seat) => [seat.id, state.shadow[seat.id]!]),
               )
             : {},
-          choiceSlots: isTraitor
-            ? [1, 2].flatMap((slot) =>
-                [1, 2].flatMap((round) => {
-                  const picks = state.shadowPicks
-                    .filter(
-                      (pick) =>
-                        pick.cycle === state.cycle &&
-                        pick.slot === slot &&
-                        pick.round === round &&
-                        alive(state).some(
+          choiceSlots: [1, 2].flatMap((slot) =>
+            [1, 2].flatMap((round) => {
+              const picks = state.shadowPicks
+                .filter(
+                  (pick) =>
+                    pick.cycle === state.cycle &&
+                    pick.slot === slot &&
+                    pick.round === round &&
+                    (isTraitor
+                      ? alive(state).some(
                           (seat) =>
                             seat.id === pick.seatId && seat.role === 'traitor',
-                        ),
-                    )
-                    .sort((left, right) => left.seq - right.seq)
-                    .map(({ seatId, choice }) => ({ seatId, choice }));
-                  return picks.length
-                    ? [{ slot: slot as 1 | 2, round: round as 1 | 2, picks }]
-                    : [];
-                }),
-              )
-            : [],
+                        )
+                      : viewer.kind === 'player' &&
+                        own?.role === 'faithful' &&
+                        own.id === pick.seatId),
+                )
+                .sort((left, right) => left.seq - right.seq)
+                .map(({ seatId, choice }) => ({ seatId, choice }));
+              return picks.length
+                ? [{ slot: slot as 1 | 2, round: round as 1 | 2, picks }]
+                : [];
+            }),
+          ),
           chat: host
             ? state.chat.map((item) => ({
                 seatId: item.seatId,

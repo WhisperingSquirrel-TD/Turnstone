@@ -53,6 +53,8 @@ import { BanishmentVoteScreen } from './BanishmentVoteScreen';
 import { PrivateChoiceControls } from './PrivateChoiceControls';
 import { NightChoiceScreen } from './NightChoiceScreen';
 import { GameStepAnnouncement } from './GameStepAnnouncement';
+import { buildNightChoiceStatusLines } from './night-choice-status';
+import { orderChoiceOptions } from './choice-order';
 import {
   privateStepKeyFor,
   shouldPreserveShadowChoice,
@@ -634,42 +636,6 @@ function explanationKeyForPhase(
   }
 }
 
-function seededChoiceRandom(seed: string) {
-  let state = 0x811c9dc5;
-  for (let index = 0; index < seed.length; index += 1) {
-    state ^= seed.charCodeAt(index);
-    state = Math.imul(state, 0x01000193) >>> 0;
-  }
-
-  return () => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return state / 4294967296;
-  };
-}
-
-function shuffleSeatChoices(
-  choices: Array<{ id: string; name: string }>,
-  seats: FullView['seats'],
-  seed: string,
-) {
-  if (
-    choices.length < 2 ||
-    choices.some((choice) => !seats.some((seat) => seat.id === choice.id))
-  )
-    return choices;
-
-  const random = seededChoiceRandom(seed);
-  const shuffled = choices.slice();
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const otherIndex = Math.floor(random() * (index + 1));
-    [shuffled[index], shuffled[otherIndex]] = [
-      shuffled[otherIndex],
-      shuffled[index],
-    ];
-  }
-  return shuffled;
-}
-
 function PlayerGame() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -797,29 +763,31 @@ function PlayerGame() {
   );
   const hasPlayerSeat = Boolean(full);
   const privateOptions = privateView?.options ?? [];
-  const choices = shuffleSeatChoices(
-    ownSeat?.status !== 'alive'
-      ? []
-      : full?.phase === 'VOTE' || full?.phase === 'FINAL_BANISH'
-        ? eligibleSeats
-            .filter(
-              (seat) =>
-                seat.id !== full.viewerSeatId &&
-                (!full.voteCandidates.length ||
-                  full.voteCandidates.includes(seat.id)),
-            )
-            .map(({ id: seatId, name }) => ({ id: seatId, name }))
-        : full?.phase === 'SHADOW'
-          ? privateOptions
-          : full?.phase === 'FINAL_VOTE'
-            ? [
-                { id: 'end', name: 'End the game' },
-                { id: 'continue', name: 'Continue playing' },
-              ]
-            : [],
-    full?.seats ?? [],
-    `${id}:${full?.viewerSeatId ?? ''}:${full?.phase ?? ''}:${full?.cycle ?? 0}:${full?.shadowSlot ?? 0}`,
-  );
+  const choices = orderChoiceOptions({
+    choices:
+      ownSeat?.status !== 'alive'
+        ? []
+        : full?.phase === 'VOTE' || full?.phase === 'FINAL_BANISH'
+          ? eligibleSeats
+              .filter(
+                (seat) =>
+                  seat.id !== full.viewerSeatId &&
+                  (!full.voteCandidates.length ||
+                    full.voteCandidates.includes(seat.id)),
+              )
+              .map(({ id: seatId, name }) => ({ id: seatId, name }))
+          : full?.phase === 'SHADOW'
+            ? privateOptions
+            : full?.phase === 'FINAL_VOTE'
+              ? [
+                  { id: 'end', name: 'End the game' },
+                  { id: 'continue', name: 'Continue playing' },
+                ]
+              : [],
+    seats: full?.seats ?? [],
+    phase: full?.phase,
+    seed: `${id}:${full?.viewerSeatId ?? ''}:${full?.phase ?? ''}:${full?.cycle ?? 0}:${full?.shadowSlot ?? 0}`,
+  });
   const tieCandidateNames =
     full?.revote && (full.phase === 'VOTE' || full.phase === 'FINAL_BANISH')
       ? full.voteCandidates.flatMap((seatId) => {
@@ -852,36 +820,17 @@ function PlayerGame() {
   );
   const shadowStatusLines =
     full && privateView
-      ? ([1, 2] as const).map((slot) => {
-          const picks =
-            privateView.choiceSlots.find(
-              (entry) =>
-                entry.slot === slot && entry.round === full.shadowRound,
-            )?.picks ?? [];
-          if (privateView.role !== 'traitor')
-            return en.game.murderSlotStatus(slot, en.game.shadowFaithfulStatus);
-          const details =
-            picks
-              .map((pick) => {
-                const picker = full.seats.find(
-                  (seat) => seat.id === pick.seatId,
-                );
-                const target = full.seats.find(
-                  (seat) => seat.id === pick.choice,
-                );
-                return picker && target
-                  ? en.game.murderSlotPick(
-                      picker.name,
-                      target.name,
-                      full.shadowRound,
-                    )
-                  : null;
-              })
-              .filter((line): line is string => Boolean(line))
-              .join('\n') || en.game.shadowWaiting;
-          return en.game.murderSlotStatus(slot, details);
+      ? buildNightChoiceStatusLines({
+          role: privateView.role,
+          viewerSeatId: full.viewerSeatId ?? '',
+          murderSlots: full.murderSlots,
+          traitorTeam: privateView.team
+            .filter((member) => member.role === 'traitor')
+            .map(({ id, name }) => ({ id, name })),
+          choiceSlots: privateView.choiceSlots,
+          seats: full.seats.map(({ id, name }) => ({ id, name })),
         })
-      : [];
+      : ['', '', '', ''];
 
   async function enterFullScreen() {
     try {
@@ -1064,6 +1013,7 @@ function PlayerGame() {
               setPrivateCovered(true);
               return;
             }
+            privateVersionRef.current = response.version;
             setPrivateView(nextPrivateView);
             setPrivateCovered(false);
             setHoldMessage('');
@@ -1480,11 +1430,14 @@ function PlayerGame() {
       full.phase !== 'SHADOW' ||
       !token ||
       notesOpen ||
-      !held ||
+      !shielded ||
+      privateCovered ||
+      !privateView ||
       full.version <= privateVersionRef.current
     )
       return;
-    const holdVersionAtRequest = holdVersion.current;
+    const shadowKey = shadowPrivateViewKey;
+    if (!shadowKey) return;
     let stale = false;
     void reveal
       .mutateAsync({ id })
@@ -1494,8 +1447,7 @@ function PlayerGame() {
         if (
           stale ||
           !privateData ||
-          !heldRef.current ||
-          holdVersion.current !== holdVersionAtRequest ||
+          currentShadowPrivateViewKeyRef.current !== shadowKey ||
           response.version < privateVersionRef.current
         )
           return;
@@ -1509,9 +1461,13 @@ function PlayerGame() {
       stale = true;
     };
   }, [
+    currentShadowPrivateViewKeyRef,
     full?.phase,
     full?.version,
-    held,
+    privateCovered,
+    privateView,
+    shielded,
+    shadowPrivateViewKey,
     id,
     notesOpen,
     reveal.mutateAsync,

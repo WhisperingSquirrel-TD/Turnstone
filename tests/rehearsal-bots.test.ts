@@ -234,6 +234,33 @@ describe('server rehearsal bot policy', () => {
     ).toBe(true);
   });
 
+  it('keeps endgame re-vote bot choices inside the tied finalists', async () => {
+    const { nextRehearsalBotCommand } = await loadBotPolicy();
+    const game = rehearsalGame();
+    const tiedFinalists = ['s2', 's3'];
+    const state = {
+      ...game.state,
+      phase: 'FINAL_BANISH' as const,
+      revote: true,
+      candidates: tiedFinalists,
+      votes: {},
+      acks: game.state.config.rehearsal.botSeatIds,
+    };
+
+    const choicesAcrossVersions = Array.from(
+      { length: 64 },
+      (_, version) =>
+        nextRehearsalBotCommand({ ...state, version }, 's1')?.target,
+    );
+
+    expect(
+      choicesAcrossVersions.every(
+        (choice) =>
+          typeof choice === 'string' && tiedFinalists.includes(choice),
+      ),
+    ).toBe(true);
+  });
+
   it('uses a test-only first-vote pattern that lets the human force a tie', async () => {
     const { nextRehearsalBotCommand } = await loadBotPolicy();
     const botSeatIds = Array.from({ length: 7 }, (_, index) => `s${index + 1}`);

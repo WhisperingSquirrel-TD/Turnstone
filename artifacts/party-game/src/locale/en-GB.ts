@@ -531,7 +531,7 @@ export const en = {
       return `It's a tie between ${tiedNames}. Vote again, choosing between them.`;
     },
     shadowTraitorPrompt: 'Who will the Traitors take tonight?',
-    shadowFaithfulPrompt: 'Who do you suspect most right now?',
+    shadowFaithfulPrompt: 'Who do you think the Traitors will take tonight?',
     firstChoice: 'First choice',
     secondChoice: 'Second choice',
     shadowFaithfulStatus: 'Your answer stays private',
