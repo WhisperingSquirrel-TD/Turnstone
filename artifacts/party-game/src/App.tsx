@@ -55,6 +55,11 @@ import {
   shouldShowRehearsalGuide,
 } from './rehearsal-guide-step';
 import { getPublicFacts } from './public-site-content';
+import {
+  secondsUntilServerDeadline,
+  serverClockOffset,
+  serverTimeNow,
+} from './server-clock';
 import './public-home.css';
 
 setBaseUrl(config.apiOrigin);
@@ -701,6 +706,7 @@ function PlayerGame() {
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const shieldDialog = useRef<HTMLDialogElement | null>(null);
   const focusTime = useRef(0);
+  const serverClockOffsetMs = useRef(0);
   const ignoreSyntheticClick = useRef(false);
   const request = useMemo(() => requestHeaders(token), [token]);
   const gameQuery = useGetGameView(id, {
@@ -716,6 +722,14 @@ function PlayerGame() {
   const view = response?.view;
   const full = view && isFullView(view) ? view : null;
   const visitor = view && !isFullView(view) ? (view as VisitorView) : null;
+  useEffect(() => {
+    if (response) {
+      serverClockOffsetMs.current = serverClockOffset(
+        response.serverNow,
+        Date.now(),
+      );
+    }
+  }, [response?.serverNow]);
   const explanationKey = full
     ? explanationKeyForPhase(full.phase, notesOpen)
     : null;
@@ -880,9 +894,12 @@ function PlayerGame() {
     setShieldCountdown(shieldRequired ? 3 : 0);
     if (full?.rehearsal && rehearsalGuideVisible) return;
     if (!shieldRequired) return;
-    const startedAt = Date.now();
+    const startedAt = serverTimeNow(Date.now(), serverClockOffsetMs.current);
     const timer = window.setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+      const elapsedSeconds = Math.floor(
+        (serverTimeNow(Date.now(), serverClockOffsetMs.current) - startedAt) /
+          1000,
+      );
       setShieldCountdown(Math.max(0, 3 - elapsedSeconds));
     }, 100);
     return () => window.clearInterval(timer);
@@ -1036,15 +1053,26 @@ function PlayerGame() {
   }, []);
 
   useEffect(() => {
-    const view = gameQuery.data?.view;
-    if (!view || !isFullView(view) || view.deadline === null || view.paused) {
+    const currentView = gameQuery.data?.view;
+    if (
+      !currentView ||
+      !isFullView(currentView) ||
+      currentView.deadline === null ||
+      currentView.paused
+    ) {
       setSecondsLeft(null);
       return;
     }
-    const update = () =>
+    const deadline = currentView.deadline;
+    const update = () => {
       setSecondsLeft(
-        Math.max(0, Math.ceil((view.deadline! - Date.now()) / 1000)),
+        secondsUntilServerDeadline(
+          deadline,
+          Date.now(),
+          serverClockOffsetMs.current,
+        ),
       );
+    };
     update();
     const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
@@ -1137,7 +1165,7 @@ function PlayerGame() {
       return;
     heldRef.current = true;
     const version = ++holdVersion.current;
-    focusTime.current = Date.now();
+    focusTime.current = serverTimeNow(Date.now(), serverClockOffsetMs.current);
     setHeld(true);
     setHoldMessage('');
     setCommandMessage('');
@@ -1173,7 +1201,11 @@ function PlayerGame() {
         }
         if (heldRef.current && version === holdVersion.current) {
           privateResult.current = privateData;
-          if (Date.now() - focusTime.current >= 500) {
+          if (
+            serverTimeNow(Date.now(), serverClockOffsetMs.current) -
+              focusTime.current >=
+            500
+          ) {
             setPrivateView(privateData);
             setRoleSeen(true);
             setHoldProgress(100);

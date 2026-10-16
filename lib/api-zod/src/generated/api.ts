@@ -48,6 +48,8 @@ export const StartRehearsalBody = zod.object({
   "speed": zod.enum(['fast', 'normal'])
 })
 
+export const startRehearsalResponseServerNowMin = 0;
+
 export const startRehearsalResponseVersionMin = 0;
 
 export const startRehearsalResponseViewOneSeatCountMin = 0;
@@ -109,6 +111,7 @@ export const startRehearsalResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 
 
 
 export const StartRehearsalResponse = zod.object({
+  "serverNow": zod.number().int().min(startRehearsalResponseServerNowMin),
   "version": zod.number().int().min(startRehearsalResponseVersionMin),
   "view": zod.union([zod.object({
   "exists": zod.literal(true),
@@ -269,6 +272,8 @@ export const CreateGameBody = zod.object({
   "idempotencyKey": zod.string().min(1).max(createGameBodyIdempotencyKeyMax)
 })
 
+export const createGameResponseServerNowMin = 0;
+
 export const createGameResponseVersionMin = 0;
 
 export const createGameResponseViewOneSeatCountMin = 0;
@@ -330,6 +335,7 @@ export const createGameResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
 
 
 export const CreateGameResponse = zod.object({
+  "serverNow": zod.number().int().min(createGameResponseServerNowMin),
   "version": zod.number().int().min(createGameResponseVersionMin),
   "view": zod.union([zod.object({
   "exists": zod.literal(true),
@@ -638,6 +644,8 @@ export const GetJoinRequestStatusParams = zod.object({
   "requestId": zod.coerce.string().min(1).max(getJoinRequestStatusPathRequestIdMax)
 })
 
+export const getJoinRequestStatusResponseThreeGameServerNowMin = 0;
+
 export const getJoinRequestStatusResponseThreeGameVersionMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewOneSeatCountMin = 0;
@@ -705,6 +713,7 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
 }),zod.object({
   "status": zod.literal("approved"),
   "game": zod.object({
+  "serverNow": zod.number().int().min(getJoinRequestStatusResponseThreeGameServerNowMin),
   "version": zod.number().int().min(getJoinRequestStatusResponseThreeGameVersionMin),
   "view": zod.union([zod.object({
   "exists": zod.literal(true),
@@ -893,6 +902,8 @@ export const GetGameViewParams = zod.object({
   "id": zod.coerce.string().min(1).max(getGameViewPathIdMax)
 })
 
+export const getGameViewResponseServerNowMin = 0;
+
 export const getGameViewResponseVersionMin = 0;
 
 export const getGameViewResponseViewOneSeatCountMin = 0;
@@ -954,6 +965,7 @@ export const getGameViewResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
 
 
 export const GetGameViewResponse = zod.object({
+  "serverNow": zod.number().int().min(getGameViewResponseServerNowMin),
   "version": zod.number().int().min(getGameViewResponseVersionMin),
   "view": zod.union([zod.object({
   "exists": zod.literal(true),
@@ -1118,6 +1130,8 @@ export const RevealPrivateViewBody = zod.object({
   "purpose": zod.enum(['phase', 'notes']).default(revealPrivateViewBodyPurposeDefault)
 })
 
+export const revealPrivateViewResponseServerNowMin = 0;
+
 export const revealPrivateViewResponseVersionMin = 0;
 
 export const revealPrivateViewResponseViewOneSeatCountMin = 0;
@@ -1179,6 +1193,7 @@ export const revealPrivateViewResponseViewTwoCoordinatorAlertsItemLockedUntilMin
 
 
 export const RevealPrivateViewResponse = zod.object({
+  "serverNow": zod.number().int().min(revealPrivateViewResponseServerNowMin),
   "version": zod.number().int().min(revealPrivateViewResponseVersionMin),
   "view": zod.union([zod.object({
   "exists": zod.literal(true),
@@ -1347,6 +1362,8 @@ export const SubmitGameCommandBody = zod.object({
   "idempotencyKey": zod.string().min(1).max(submitGameCommandBodyIdempotencyKeyMax)
 })
 
+export const submitGameCommandResponseServerNowMin = 0;
+
 export const submitGameCommandResponseVersionMin = 0;
 
 export const submitGameCommandResponseViewOneSeatCountMin = 0;
@@ -1408,6 +1425,7 @@ export const submitGameCommandResponseViewTwoCoordinatorAlertsItemLockedUntilMin
 
 
 export const SubmitGameCommandResponse = zod.object({
+  "serverNow": zod.number().int().min(submitGameCommandResponseServerNowMin),
   "version": zod.number().int().min(submitGameCommandResponseVersionMin),
   "view": zod.union([zod.object({
   "exists": zod.literal(true),

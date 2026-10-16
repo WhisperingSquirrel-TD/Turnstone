@@ -24,6 +24,7 @@ import { getOpenGameInviteCode } from '@workspace/db/seat-access-store';
 
 export type RealtimeOptions = {
   allowedOrigins: readonly string[];
+  now?: () => number;
   resolveViewer: (
     headers: IncomingHttpHeaders,
     gameId?: string,
@@ -88,11 +89,12 @@ export async function attachRealtime(
   async function publishLocal(gameId: string): Promise<void> {
     const state = await loadGameState(gameId);
     if (!state) return;
+    const serverNow = options.now?.() ?? Date.now();
     const room = encodedGameRoom(gameId);
     const sockets = await io.in(room).fetchSockets();
     const lobbyCode =
       state.phase === 'LOBBY' && sockets.length > 0
-        ? await getOpenGameInviteCode(state.id, Date.now())
+        ? await getOpenGameInviteCode(state.id, serverNow)
         : null;
     for (const socket of sockets) {
       if (socket.data.gameId !== gameId) continue;
@@ -126,6 +128,7 @@ export async function attachRealtime(
       }
       socket.data.viewer = viewer;
       const response = gameViewResponseSchema.parse({
+        serverNow,
         version: state.version,
         view: projectViewer(viewer, state, lobbyCode),
       });
@@ -259,6 +262,7 @@ export async function attachRealtime(
             acknowledgement?.({ error: 'Not found' });
             return;
           }
+          const serverNow = options.now?.() ?? Date.now();
           const previousRoom = socket.data.gameRoom as string | undefined;
           if (previousRoom) await socket.leave(previousRoom);
           const room = encodedGameRoom(gameId);
@@ -268,9 +272,10 @@ export async function attachRealtime(
           const lobbyCode =
             state.phase === 'LOBBY' &&
             (viewer.kind === 'player' || viewer.kind === 'presenter')
-              ? await getOpenGameInviteCode(state.id, Date.now())
+              ? await getOpenGameInviteCode(state.id, serverNow)
               : null;
           const response = gameViewResponseSchema.parse({
+            serverNow,
             version: state.version,
             view: projectViewer(viewer, state, lobbyCode),
           });

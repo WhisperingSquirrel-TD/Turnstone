@@ -468,6 +468,8 @@ export interface FullView {
 
 export interface GameViewResponse {
   /** @minimum 0 */
+  serverNow: number;
+  /** @minimum 0 */
   version: number;
   view: VisitorView | FullView;
 }

@@ -417,13 +417,58 @@ test('shows Moving on instead of a frozen zero when a deadline passes', async ({
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 12, view } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: pausedAt.getTime(), version: 12, view },
+    }),
   );
   await page.goto(`/game/${gameId}`);
   await expect(page.getByText('Time left')).toBeVisible();
   await page.clock.fastForward(1100);
   await expect(page.getByText('Moving on...')).toBeVisible();
   await expect(page.getByText('0:00')).toHaveCount(0);
+});
+
+test('uses server time when the device clock is two minutes fast or slow', async ({
+  browser,
+}) => {
+  const serverNow = Date.parse('2030-01-01T12:00:00.000Z');
+  for (const skew of [120_000, -120_000]) {
+    const page = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+    });
+    const gameId = `clock-skew-${skew}`;
+    const view = {
+      ...createPublicView(gameId),
+      phase: 'DEBATE' as const,
+      deadline: serverNow + 60_000,
+    };
+    try {
+      await page.clock.install({ time: new Date(serverNow + skew) });
+      await page.route('**/api/csrf', (route) =>
+        route.fulfill({
+          status: 200,
+          headers: {
+            'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+          },
+          json: { csrfToken: 'test-csrf' },
+        }),
+      );
+      await page.route(`**/api/games/${gameId}/view`, (route) =>
+        route.fulfill({
+          status: 200,
+          json: { serverNow, version: view.version, view },
+        }),
+      );
+      await page.goto(`/game/${gameId}`);
+      await expect(page.getByText('Time left')).toBeVisible();
+      await expect(page.getByText('1:00')).toBeVisible();
+      await page.clock.fastForward(1_100);
+      await expect(page.getByText('0:59')).toBeVisible();
+    } finally {
+      await page.close();
+    }
+  }
 });
 
 test('rehearsal player can move on from public and voting screens', async ({

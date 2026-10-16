@@ -10,6 +10,8 @@ import type { VisitorView } from './visitorView';
 
 export interface GameViewResponse {
   /** @minimum 0 */
+  serverNow: bigint;
+  /** @minimum 0 */
   version: number;
   view: VisitorView | FullView;
 }

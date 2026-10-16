@@ -663,8 +663,12 @@ components:
     GameViewResponse:
       type: object
       additionalProperties: false
-      required: [version, view]
+      required: [serverNow, version, view]
       properties:
+        serverNow:
+          type: integer
+          format: int64
+          minimum: 0
         version:
           type: integer
           minimum: 0

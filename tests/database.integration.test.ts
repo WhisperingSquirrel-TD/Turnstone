@@ -138,10 +138,15 @@ it('creates a game with a hashed, game-scoped coordinator capability cookie', as
         token_hash: createHash('sha256').update(token!).digest('hex'),
       },
     ]);
+    const requestStartedAt = Date.now();
     const view = await request(app)
       .get(`/api/games/${gameId}/view`)
       .set('Cookie', coordinatorCookie!.split(';')[0]!);
     expect(view.status).toBe(200);
+    expect(view.body.serverNow).toBeGreaterThanOrEqual(
+      requestStartedAt - 5_000,
+    );
+    expect(view.body.serverNow).toBeLessThanOrEqual(Date.now() + 1_000);
     expect(view.body.view.id).toBe(gameId);
     expect(view.body.view.private).toBeNull();
     expect(view.body.view.fairness).toBeNull();
@@ -326,8 +331,10 @@ it('transfers coordinator capability once to an authenticated target seat', asyn
     expect(newCoordinator.status).toBe(200);
 
     const httpServer = createServer(app);
+    const socketServerNow = Date.now();
     const realtime = await attachRealtime(httpServer, {
       allowedOrigins: ['http://127.0.0.1'],
+      now: () => socketServerNow,
       resolveViewer: (headers, requestedGameId) =>
         requestedGameId
           ? seatResolver({
@@ -359,6 +366,7 @@ it('transfers coordinator capability once to an authenticated target seat', asyn
         socket!.once('connect_error', reject);
       });
       const firstView = new Promise<{
+        serverNow: number;
         version: number;
         view: { id: string; private: unknown; fairness: unknown };
       }>((resolve, reject) => {
@@ -386,6 +394,7 @@ it('transfers coordinator capability once to an authenticated target seat', asyn
         );
       });
       await expect(firstView).resolves.toMatchObject({
+        serverNow: socketServerNow,
         view: { id: gameId, private: null, fairness: null },
       });
       const invalidWatch = await new Promise<unknown>((resolve) => {
@@ -1509,6 +1518,7 @@ it('returns only the allow-listed visitor projection from the HTTP game endpoint
     );
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
+      serverNow: expect.any(Number),
       version: 1,
       view: {
         exists: true,

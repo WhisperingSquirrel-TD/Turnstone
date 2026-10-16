@@ -372,6 +372,7 @@ export type VisitorView = z.infer<typeof visitorViewSchema>;
 export type View = z.infer<typeof viewSchema>;
 export const gameViewResponseSchema = z
   .object({
+    serverNow: z.number().int().nonnegative(),
     version: z.number().int().nonnegative(),
     view: viewSchema,
   })

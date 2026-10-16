@@ -156,6 +156,7 @@ function actorId(actor: Actor): string {
 }
 
 async function projectState(state: State, viewer: Viewer) {
+  const serverNow = Date.now();
   const maySeeLobbyCode =
     state.phase === 'LOBBY' &&
     (viewer.kind === 'presenter' ||
@@ -170,7 +171,11 @@ async function projectState(state: State, viewer: Viewer) {
     viewer.kind === 'visitor'
       ? viewFor({ kind: 'visitor' }, state)
       : viewFor(viewer, state, { lobbyCode });
-  return gameViewResponseSchema.parse({ version: state.version, view });
+  return gameViewResponseSchema.parse({
+    serverNow,
+    version: state.version,
+    view,
+  });
 }
 
 function requestHash(command: unknown): string {
