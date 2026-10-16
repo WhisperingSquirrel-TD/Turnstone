@@ -1318,3 +1318,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Apply SPEC §32. Render the reason from public game state without passing the player's role into the component. Use the exact approved double-murder, no-agreement, endgame-stakes and Continue messages. Endgame ties use the same tie prompt and existing one-re-vote fallback as other banishment ties. Keep the public end rule and number of murder slots in the projected full view; do not expose other configuration or private picks. Replace visible night-pick “round 1/2” labels with “First pick” and “Final pick”.
 
 **Consequence:** Every player receives the explanation before the next choices open, while the secret choices remain private. Tests cover the role-neutral copy, configured end rule, shared tie prompt, final-banish context and absence of round-number labels.
+
+## D86 — Pepper guest PINs and upgrade hashes on verification (owner-approved, 16 October 2026)
+
+**Context:** A four-to-six-digit PIN remains cheaply brute-forceable from a database dump even when its hash uses scrypt. The Milestone 4 review requires a server-side pepper and safe rotation without storing the pepper in the database.
+
+**Choice:** HMAC-SHA256 the PIN with the required `PIN_PEPPER` environment secret before the existing salted scrypt derivation. Store a `pin_pepper_version` with each hash. Configure a current pepper version and, during rotation, one previous pepper/version; after successful verification with the previous key, immediately re-hash with the current key and update the row conditionally so a concurrent PIN reset is not overwritten. Fail API startup when the current pepper is missing or invalid, and never include secret values in logs or validation errors. Keep the current scrypt cost; do not lower it without the owner's decision. Existing guest seats are short-lived test data, so the additive version column is the only data change.
+
+**Consequence:** A rotation keeps the old key available only during the rehash window; once all active rows have moved to the current version, the previous key can be removed. The owner explicitly authorized this queued security work to proceed before the repeat phone rehearsal; this does not authorize deployment, production-secret changes or paid services.

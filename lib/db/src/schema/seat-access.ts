@@ -21,6 +21,7 @@ export const gameSeatAccess = pgTable(
     seatId: text('seat_id').notNull(),
     pinSalt: text('pin_salt').notNull(),
     pinHash: text('pin_hash').notNull(),
+    pinPepperVersion: integer('pin_pepper_version').notNull().default(1),
     failedPinAttempts: integer('failed_pin_attempts').notNull().default(0),
     lockedUntil: timestamp('locked_until', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -113,6 +114,7 @@ export const insertGameSeatAccessSchema = z.object({
   seatId: z.string().min(1).max(128),
   pinSalt: z.string().regex(/^[a-f0-9]{32}$/),
   pinHash: z.string().regex(/^[a-f0-9]{64}$/),
+  pinPepperVersion: z.number().int().min(1).default(1),
 });
 
 export const insertGameViewerSessionSchema = z.object({

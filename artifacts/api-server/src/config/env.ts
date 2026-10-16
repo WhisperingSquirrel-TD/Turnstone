@@ -7,6 +7,10 @@ const environmentSchema = z
       .url()
       .refine((value) => /^postgres(ql)?:\/\//.test(value)),
     SESSION_SECRET: z.string().min(32),
+    PIN_PEPPER: z.string().min(32),
+    PIN_PEPPER_VERSION: z.coerce.number().int().min(1).default(1),
+    PIN_PEPPER_PREVIOUS: z.string().min(32).optional(),
+    PIN_PEPPER_PREVIOUS_VERSION: z.coerce.number().int().min(1).optional(),
     PORT: z.coerce.number().int().min(1).max(65535),
     NODE_ENV: z
       .enum(['development', 'production', 'test'])
@@ -20,6 +24,30 @@ const environmentSchema = z
     MAX_ACTIVE_GAMES: z.coerce.number().int().min(1).optional(),
   })
   .superRefine((environment, context) => {
+    const hasPreviousPepper = environment.PIN_PEPPER_PREVIOUS !== undefined;
+    const hasPreviousVersion =
+      environment.PIN_PEPPER_PREVIOUS_VERSION !== undefined;
+    if (hasPreviousPepper !== hasPreviousVersion) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [
+          hasPreviousPepper
+            ? 'PIN_PEPPER_PREVIOUS_VERSION'
+            : 'PIN_PEPPER_PREVIOUS',
+        ],
+        message: 'Previous PIN pepper and version must be configured together',
+      });
+    }
+    if (
+      environment.PIN_PEPPER_PREVIOUS_VERSION !== undefined &&
+      environment.PIN_PEPPER_PREVIOUS_VERSION >= environment.PIN_PEPPER_VERSION
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['PIN_PEPPER_PREVIOUS_VERSION'],
+        message: 'Previous PIN pepper version must be lower than current',
+      });
+    }
     if (environment.NODE_ENV === 'production' && !environment.APP_BASE_URL) {
       context.addIssue({
         code: z.ZodIssueCode.custom,

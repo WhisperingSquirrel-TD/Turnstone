@@ -71,6 +71,13 @@
       "when": 1792048239052,
       "tag": "0009_invite-recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792179087946,
+      "tag": "0010_pin-pepper-version",
+      "breakpoints": true
     }
   ]
 }

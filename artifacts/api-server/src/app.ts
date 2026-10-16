@@ -63,7 +63,11 @@ import {
   type State,
   type Viewer,
 } from '@workspace/engine';
-import { hashSeatPin, verifySeatPin } from '@workspace/security/seat-pin';
+import {
+  hashSeatPin,
+  verifySeatPinWithRotation,
+  type PinPepperConfig,
+} from '@workspace/security/seat-pin';
 import { gameRandom } from '@workspace/security/game-random';
 import {
   cookieNameForCoordinatorGame,
@@ -87,6 +91,7 @@ export type AppOptions = {
   countActiveGames?: () => Promise<number>;
   secureCookies?: boolean;
   rateLimitSecret?: string;
+  pinPepperConfig?: PinPepperConfig;
   publicBaseUrl?: string;
   consumeRateLimit?: (
     bucketHash: string,
@@ -227,6 +232,57 @@ export function createApp(
     }),
   );
   app.use(express.json({ limit: '32kb', strict: true }));
+  function getPinPepperConfig(): PinPepperConfig {
+    if (options.pinPepperConfig) return options.pinPepperConfig;
+    const currentSecret = process.env.PIN_PEPPER;
+    if (!currentSecret) throw new Error('PIN_PEPPER is required');
+    const currentVersion = Number(process.env.PIN_PEPPER_VERSION ?? '1');
+    return { current: { version: currentVersion, secret: currentSecret } };
+  }
+  async function hashConfiguredSeatPin(pin: string) {
+    return hashSeatPin(pin, getPinPepperConfig().current);
+  }
+  async function verifyAndUpgradeSeatPin(
+    gameId: string,
+    seatId: string,
+    pin: string,
+    stored: {
+      pinSalt: string;
+      pinHash: string;
+      pinPepperVersion: number;
+    },
+  ): Promise<boolean> {
+    const result = await verifySeatPinWithRotation(
+      pin,
+      {
+        salt: stored.pinSalt,
+        hash: stored.pinHash,
+        pinPepperVersion: stored.pinPepperVersion,
+      },
+      getPinPepperConfig(),
+    );
+    if (!result.valid) return false;
+    if (result.replacement) {
+      const { updateSeatAccessPinHash } =
+        await import('@workspace/db/seat-access-store');
+      const updated = await updateSeatAccessPinHash({
+        gameId,
+        seatId,
+        expected: {
+          pinSalt: stored.pinSalt,
+          pinHash: stored.pinHash,
+          pinPepperVersion: stored.pinPepperVersion,
+        },
+        replacement: {
+          salt: result.replacement.salt,
+          hash: result.replacement.hash,
+          pepperVersion: result.replacement.pepperVersion,
+        },
+      });
+      if (!updated) return false;
+    }
+    return true;
+  }
   async function checkRateLimit(
     request: Request,
     scope: string,
@@ -301,6 +357,7 @@ export function createApp(
         seatId: string;
         pinSalt: string;
         pinHash: string;
+        pinPepperVersion: number;
       };
       seatSessionReplacement?: {
         seatId: string;
@@ -672,12 +729,13 @@ export function createApp(
       const { createSeatAccess, createViewerSession } =
         await import('@workspace/db/seat-access-store');
       const internalPin = randomInt(0, 1_000_000).toString().padStart(6, '0');
-      const internalPinHash = await hashSeatPin(internalPin);
+      const internalPinHash = await hashConfiguredSeatPin(internalPin);
       const accessCreated = await createSeatAccess({
         gameId,
         seatId: humanSeatId,
         pinSalt: internalPinHash.salt,
         pinHash: internalPinHash.hash,
+        pinPepperVersion: internalPinHash.pepperVersion,
       });
       if (!accessCreated) {
         sendError(response, 409, 'Rehearsal could not be started');
@@ -884,18 +942,19 @@ export function createApp(
       .digest('base64url');
     let access = await getSeatAccess(gameId, seatId);
     if (!access) {
-      const hashedPin = await hashSeatPin(data.pin);
+      const hashedPin = await hashConfiguredSeatPin(data.pin);
       await createSeatAccess({
         gameId,
         seatId,
         pinSalt: hashedPin.salt,
         pinHash: hashedPin.hash,
+        pinPepperVersion: hashedPin.pepperVersion,
       });
       access = await getSeatAccess(gameId, seatId);
     }
     if (
       !access ||
-      !(await verifySeatPin(data.pin, access.pinSalt, access.pinHash))
+      !(await verifyAndUpgradeSeatPin(gameId, seatId, data.pin, access))
     ) {
       sendError(response, 401, entryFailureMessages.joinPinMismatch);
       return;
@@ -1396,7 +1455,12 @@ export function createApp(
         return;
       }
       if (
-        !(await verifySeatPin(parsed.data.pin, access.pinSalt, access.pinHash))
+        !(await verifyAndUpgradeSeatPin(
+          invite.gameId,
+          seat.id,
+          parsed.data.pin,
+          access,
+        ))
       ) {
         const failure = await recordSeatPinFailure(invite.gameId, seat.id, now);
         if (failure?.failedPinAttempts === 5 && failure.lockedUntil !== null) {
@@ -1571,18 +1635,24 @@ export function createApp(
       let access = await getSeatAccess(gameId, seatId);
       let createdAccess = false;
       if (!access) {
-        const hashedPin = await hashSeatPin(parsed.data.pin);
+        const hashedPin = await hashConfiguredSeatPin(parsed.data.pin);
         createdAccess = await createSeatAccess({
           gameId,
           seatId,
           pinSalt: hashedPin.salt,
           pinHash: hashedPin.hash,
+          pinPepperVersion: hashedPin.pepperVersion,
         });
         access = await getSeatAccess(gameId, seatId);
       }
       if (
         !access ||
-        !(await verifySeatPin(parsed.data.pin, access.pinSalt, access.pinHash))
+        !(await verifyAndUpgradeSeatPin(
+          gameId,
+          seatId,
+          parsed.data.pin,
+          access,
+        ))
       ) {
         if (createdAccess) await deleteSeatAccess(gameId, seatId);
         sendError(response, 401, entryFailureMessages.joinPinMismatch);
@@ -2006,7 +2076,7 @@ export function createApp(
           sendError(response, 409, 'Command rejected');
           return;
         }
-        const pin = await hashSeatPin(parsed.data.newPin);
+        const pin = await hashConfiguredSeatPin(parsed.data.newPin);
         const now = Date.now();
         const event = eventSchema.parse({
           seq: state.version + 1,
@@ -2020,6 +2090,7 @@ export function createApp(
             seatId,
             pinSalt: pin.salt,
             pinHash: pin.hash,
+            pinPepperVersion: pin.pepperVersion,
           },
         });
         if (!nextState) {

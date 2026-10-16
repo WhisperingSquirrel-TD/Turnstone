@@ -73,6 +73,7 @@ type AppendEventsInput = IdempotencyInput & {
     seatId: string;
     pinSalt: string;
     pinHash: string;
+    pinPepperVersion: number;
   };
   seatSessionReplacement?: {
     seatId: string;
@@ -334,6 +335,7 @@ export async function appendGameEvents(
         .set({
           pinSalt: input.seatPinUpdate.pinSalt,
           pinHash: input.seatPinUpdate.pinHash,
+          pinPepperVersion: input.seatPinUpdate.pinPepperVersion,
           failedPinAttempts: 0,
           lockedUntil: null,
         })

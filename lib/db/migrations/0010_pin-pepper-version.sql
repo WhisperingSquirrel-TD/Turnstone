@@ -1,0 +1,1 @@
+ALTER TABLE "game_seat_access" ADD COLUMN "pin_pepper_version" integer DEFAULT 1 NOT NULL;

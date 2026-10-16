@@ -1,4 +1,5 @@
 import type { Request } from 'express';
+import type { PinPepperConfig } from '@workspace/security/seat-pin';
 import type { AppOptions } from './app';
 
 type ServerEnvironment = {
@@ -6,6 +7,10 @@ type ServerEnvironment = {
   APP_BASE_URL?: string;
   REPLIT_DEV_DOMAIN?: string;
   SESSION_SECRET: string;
+  PIN_PEPPER: string;
+  PIN_PEPPER_VERSION: number;
+  PIN_PEPPER_PREVIOUS?: string;
+  PIN_PEPPER_PREVIOUS_VERSION?: number;
   MAX_ACTIVE_GAMES?: number;
 };
 
@@ -47,6 +52,21 @@ export function createServerAppOptions({
     countActiveGames,
     secureCookies: environment.NODE_ENV === 'production',
     rateLimitSecret: environment.SESSION_SECRET,
+    pinPepperConfig: {
+      current: {
+        version: environment.PIN_PEPPER_VERSION,
+        secret: environment.PIN_PEPPER,
+      },
+      ...(environment.PIN_PEPPER_PREVIOUS !== undefined &&
+      environment.PIN_PEPPER_PREVIOUS_VERSION !== undefined
+        ? {
+            previous: {
+              version: environment.PIN_PEPPER_PREVIOUS_VERSION,
+              secret: environment.PIN_PEPPER_PREVIOUS,
+            },
+          }
+        : {}),
+    } satisfies PinPepperConfig,
     publicBaseUrl,
   };
 }

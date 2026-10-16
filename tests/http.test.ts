@@ -146,6 +146,47 @@ describe('health and readiness', () => {
     });
   });
 
+  it('rate-limits rehearsal starts and rejects them before capacity is exceeded', async () => {
+    const origin = 'https://turnstone.stackstoneconsulting.co.uk';
+    const payload = {
+      gameId: 'practice-game',
+      idempotencyKey: 'practice-request',
+      name: 'Morgan',
+      playerCount: 6,
+      speed: 'fast',
+    };
+    async function postWithCsrf(app: ReturnType<typeof createApp>) {
+      const tokenResponse = await request(app).get('/api/csrf');
+      const cookie = tokenResponse.headers['set-cookie']?.[0] ?? '';
+      return request(app)
+        .post('/api/rehearsals')
+        .set('Origin', origin)
+        .set('Cookie', cookie.split(';')[0]!)
+        .set('X-CSRF-Token', tokenResponse.body.csrfToken)
+        .send(payload);
+    }
+
+    const rateLimited = createApp(async () => {}, {
+      allowedOrigins: [origin],
+      rateLimitSecret: 'test-only-rehearsal-rate-limit',
+      consumeRateLimit: async () => false,
+    });
+    const rateLimitedResponse = await postWithCsrf(rateLimited);
+    expect(rateLimitedResponse.status).toBe(429);
+    expect(rateLimitedResponse.body).toEqual({ error: 'Too many requests' });
+
+    const atCapacity = createApp(async () => {}, {
+      allowedOrigins: [origin],
+      maxActiveGames: 10,
+      countActiveGames: async () => 9,
+    });
+    const capacityResponse = await postWithCsrf(atCapacity);
+    expect(capacityResponse.status).toBe(503);
+    expect(capacityResponse.body).toEqual({
+      error: 'Busy right now, try again in a few minutes',
+    });
+  });
+
   it('issues a host-only CSRF cookie and requires its token on browser mutations', async () => {
     const origin = 'https://turnstone.stackstoneconsulting.co.uk';
     const app = createApp(async () => {}, {
@@ -184,12 +225,20 @@ describe('health and readiness', () => {
       });
     expect(allowed.status).toBe(401);
     expect(allowed.body).toEqual({ error: 'Authentication required' });
+    await request(app)
+      .post('/api/rehearsals')
+      .set('Origin', origin)
+      .set('Cookie', setCookie.split(';')[0]!)
+      .set('X-CSRF-Token', tokenResponse.body.csrfToken)
+      .send({})
+      .expect(400, { error: 'Invalid request' });
   });
 
   it('requires a valid CSRF token on every game-scoped write route', async () => {
     const app = createApp(async () => {});
     const paths = [
       '/api/games/test-game/private-view',
+      '/api/rehearsals',
       '/api/games/test-game/presenter-pairings',
       '/api/presenter/pair',
       '/api/recover',

@@ -1,13 +1,12 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 18:54 UTC.
-- Current milestone/step: Round 5 is green through item 35. Verify #108 passed; the owner can repeat the hands-on phone rehearsal. Stop here for that review.
+- Updated: 16 October 2026, 20:00 UTC.
+- Current milestone/step: Round 5 remains green through item 35. Owner authorized proceeding with the queued PIN-pepper and join-capacity work before the repeat phone rehearsal. PIN pepper/versioning is implemented and locally verified; preparing its push.
 - Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7 passed Verify #103; item 33 accepted by Verify #105; item 34 accepted by Verify #107; item 35 accepted by Verify #108.
 - Last pushed commit/CI: `d9f8fc5`; Verify #108 (`38950413086`) — Success. All 19 jobs passed: static-checks, unit, property, integration, audit, Lighthouse, rehearsal-live, all four browser profiles, scenario shards 0–5, merge-scenario-reports and required-checks. `promote` was skipped; zero annotations. Run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38950413086.
-- Local verification for the item 34 correction: 11/11 rehearsal-bot tests, API and test typechecks, lint, formatting and diff checks pass; desktop smoke tests 6/6, Pixel smoke tests 5 passed/1 skipped, and the real-server Pixel rehearsal passed with no presenter and no refresh. Local iPhone/iPad WebKit could not launch because the host lacks `libatomic.so.1`, `libjpeg.so.8` and `libjxl.so.0.8`; both GitHub WebKit profiles passed in #107.
-- Local verification for item 35: the copy regression failed before the wording change, then passed on desktop and Pixel; typecheck, test typecheck, lint, formatting and diff checks pass. The home page and FAQ now use “vote together”; no “vote at the round table” remains in app copy.
-- Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued after the M5 hands-on gate.
-- Risks: The API workflow still logs generic deadline-scheduler iteration errors; cause remains unverified. Local iPhone WebKit remains unavailable because of the host ABI libraries listed above.
+- PIN-pepper local verification: the new security tests were written first and failed before implementation; they now pass, including wrong-pepper rejection, rotation/rehash on recovery, missing-secret handling and log non-disclosure. Dev migration applied. Full unit (352), typechecks, lint, format, build, 2,571-scenario sample and server coverage (85.16% lines) pass.
+- Open questions: none. Provisional decisions: none. Next: push PIN-pepper/versioning, check its public Verify run, then measure real PIN-hash join throughput and set/document the production threadpool default without changing scrypt cost.
+- Risks: The API workflow serves `/healthz` but continues logging generic deadline-scheduler iteration errors; cause remains unverified. Local iPhone WebKit remains unavailable because the host lacks `libatomic.so.1`, `libjpeg.so.8` and `libjxl.so.0.8`; GitHub WebKit profiles passed in #107.
 
 ## Previous verification history
 

@@ -4,6 +4,7 @@ import { parseEnvironment } from '../artifacts/api-server/src/config/env';
 const valid = {
   DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
   SESSION_SECRET: 'x'.repeat(32),
+  PIN_PEPPER: 'test-only-pin-pepper-secret-0123456789abcdef',
   PORT: '5000',
   NODE_ENV: 'test',
 };
@@ -32,17 +33,48 @@ describe('environment validation', () => {
       }),
     ).toThrow('MAX_ACTIVE_GAMES');
   });
-  for (const key of ['DATABASE_URL', 'SESSION_SECRET', 'PORT'] as const) {
+  for (const key of [
+    'DATABASE_URL',
+    'SESSION_SECRET',
+    'PIN_PEPPER',
+    'PORT',
+  ] as const) {
     it(`fails clearly when ${key} is missing without exposing values`, () => {
       const input = { ...valid, [key]: undefined };
       expect(() => parseEnvironment(input)).toThrow(key);
       expect(() => parseEnvironment(input)).not.toThrow(valid.SESSION_SECRET);
     });
   }
+  it('supports a previous pepper only with its matching version and never echoes secrets', () => {
+    const previousPepper = 'previous-test-pin-pepper-0123456789abcdef';
+    const rotated = parseEnvironment({
+      ...valid,
+      PIN_PEPPER_VERSION: '2',
+      PIN_PEPPER_PREVIOUS: previousPepper,
+      PIN_PEPPER_PREVIOUS_VERSION: '1',
+    });
+    expect(rotated.PIN_PEPPER_VERSION).toBe(2);
+    expect(rotated.PIN_PEPPER_PREVIOUS_VERSION).toBe(1);
+
+    let errorMessage = '';
+    try {
+      parseEnvironment({
+        ...valid,
+        PIN_PEPPER_PREVIOUS: previousPepper,
+      });
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+    }
+    expect(errorMessage).toContain('PIN_PEPPER_PREVIOUS_VERSION');
+    expect(errorMessage).not.toContain(previousPepper);
+  });
   it('rejects short secrets, invalid database protocols and invalid ports', () => {
     expect(() =>
       parseEnvironment({ ...valid, SESSION_SECRET: 'short' }),
     ).toThrow();
+    expect(() => parseEnvironment({ ...valid, PIN_PEPPER: 'short' })).toThrow(
+      'PIN_PEPPER',
+    );
     expect(() =>
       parseEnvironment({ ...valid, DATABASE_URL: 'https://example.com' }),
     ).toThrow();

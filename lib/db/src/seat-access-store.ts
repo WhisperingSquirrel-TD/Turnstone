@@ -16,6 +16,7 @@ const pinLockoutMs = 15 * 60_000;
 export type SeatPinAccess = {
   pinSalt: string;
   pinHash: string;
+  pinPepperVersion: number;
   failedPinAttempts: number;
   lockedUntil: number | null;
 };
@@ -25,6 +26,7 @@ export async function createSeatAccess(input: {
   seatId: string;
   pinSalt: string;
   pinHash: string;
+  pinPepperVersion?: number;
 }): Promise<boolean> {
   const parsed = insertGameSeatAccessSchema.parse(input);
   const inserted = await db
@@ -61,9 +63,40 @@ export async function getSeatAccess(
   return {
     pinSalt: row.pinSalt,
     pinHash: row.pinHash,
+    pinPepperVersion: row.pinPepperVersion,
     failedPinAttempts: row.failedPinAttempts,
     lockedUntil: row.lockedUntil?.getTime() ?? null,
   };
+}
+
+export async function updateSeatAccessPinHash(input: {
+  gameId: string;
+  seatId: string;
+  expected: Pick<SeatPinAccess, 'pinSalt' | 'pinHash' | 'pinPepperVersion'>;
+  replacement: {
+    salt: string;
+    hash: string;
+    pepperVersion: number;
+  };
+}): Promise<boolean> {
+  const updated = await db
+    .update(gameSeatAccess)
+    .set({
+      pinSalt: input.replacement.salt,
+      pinHash: input.replacement.hash,
+      pinPepperVersion: input.replacement.pepperVersion,
+    })
+    .where(
+      and(
+        eq(gameSeatAccess.gameId, input.gameId),
+        eq(gameSeatAccess.seatId, input.seatId),
+        eq(gameSeatAccess.pinSalt, input.expected.pinSalt),
+        eq(gameSeatAccess.pinHash, input.expected.pinHash),
+        eq(gameSeatAccess.pinPepperVersion, input.expected.pinPepperVersion),
+      ),
+    )
+    .returning({ seatId: gameSeatAccess.seatId });
+  return updated.length === 1;
 }
 
 export async function createViewerSession(input: {

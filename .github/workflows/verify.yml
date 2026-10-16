@@ -67,6 +67,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run test:build
+      - name: Create isolated test PIN pepper
+        shell: bash
+        run: |
+          pin_pepper="$(openssl rand -hex 32)"
+          echo "::add-mask::$pin_pepper"
+          echo "PIN_PEPPER=$pin_pepper" >> "$GITHUB_ENV"
       - run: pnpm run test:unit
 
   property:
@@ -120,6 +126,9 @@ jobs:
           value="$(openssl rand -hex 32)"
           echo "::add-mask::$value"
           echo "SESSION_SECRET=$value" >> "$GITHUB_ENV"
+          pin_pepper="$(openssl rand -hex 32)"
+          echo "::add-mask::$pin_pepper"
+          echo "PIN_PEPPER=$pin_pepper" >> "$GITHUB_ENV"
       - run: pnpm run db:migrate:dev
       - run: pnpm run test:integration
 
@@ -271,6 +280,9 @@ jobs:
           value="$(openssl rand -hex 32)"
           echo "::add-mask::$value"
           echo "SESSION_SECRET=$value" >> "$GITHUB_ENV"
+          pin_pepper="$(openssl rand -hex 32)"
+          echo "::add-mask::$pin_pepper"
+          echo "PIN_PEPPER=$pin_pepper" >> "$GITHUB_ENV"
       - run: pnpm run db:migrate:dev
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -309,6 +321,9 @@ jobs:
           value="$(openssl rand -hex 32)"
           echo "::add-mask::$value"
           echo "SESSION_SECRET=$value" >> "$GITHUB_ENV"
+          pin_pepper="$(openssl rand -hex 32)"
+          echo "::add-mask::$pin_pepper"
+          echo "PIN_PEPPER=$pin_pepper" >> "$GITHUB_ENV"
       - run: pnpm run test:accessibility
 
   audit:

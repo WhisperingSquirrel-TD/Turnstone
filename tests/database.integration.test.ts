@@ -1542,8 +1542,10 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
   const seatResolver = createSeatViewerResolver({
     findSession: findViewerSession,
   });
+  const origin = 'https://turnstone.test';
   const app = createApp(async () => {}, {
     secureCookies: true,
+    allowedOrigins: [origin],
     testOnlyNow: () => now,
     processRehearsalGame: (id) => botRunner.processGame(id),
     resolveViewer: (request) =>
@@ -1568,6 +1570,43 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
     expect(created.body.view.private).toBeNull();
     expect(created.body.view.canAdvancePhase).toBe(true);
     expect(created.body.view.progress.done).toBe(5);
+    const initialSeatCookie = cookieValues(created.headers['set-cookie']).find(
+      (cookie) => cookie.startsWith('turnstone-seat-'),
+    );
+    expect(initialSeatCookie).toBeDefined();
+    const seatCookiePair = initialSeatCookie!.split(';')[0]!;
+    const resumeCsrf = await request(app)
+      .get('/api/csrf')
+      .set('Origin', origin)
+      .set('Cookie', seatCookiePair)
+      .expect(200);
+    const resumeCsrfCookie = cookieValues(
+      resumeCsrf.headers['set-cookie'],
+    ).find((cookie) => cookie.startsWith('turnstone-csrf='));
+    expect(resumeCsrfCookie).toBeDefined();
+    const authenticatedCookie = `${seatCookiePair}; ${resumeCsrfCookie!.split(';')[0]!}`;
+    const rehearsalRequest = {
+      gameId,
+      idempotencyKey: 'resume-rehearsal',
+      name: 'Morgan',
+      playerCount: 6,
+      speed: 'fast',
+    };
+    const resumed = await request(app)
+      .post('/api/rehearsals')
+      .set('Origin', origin)
+      .set('Cookie', authenticatedCookie)
+      .set('X-CSRF-Token', resumeCsrf.body.csrfToken)
+      .send(rehearsalRequest)
+      .expect(200);
+    expect(resumed.body.view.id).toBe(gameId);
+    await request(app)
+      .post('/api/rehearsals')
+      .set('Origin', origin)
+      .set('Cookie', authenticatedCookie)
+      .set('X-CSRF-Token', resumeCsrf.body.csrfToken)
+      .send({ ...rehearsalRequest, name: 'Someone else' })
+      .expect(401, { error: 'Rehearsal could not be resumed' });
     const { listActiveRehearsalGameIds } =
       await import('@workspace/db/game-store');
     expect(await listActiveRehearsalGameIds()).toContain(gameId);
@@ -3068,6 +3107,15 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
       })
       .expect(202);
     expect(joinRequest.body.status).toBe('pending');
+    await request(app)
+      .post('/api/join')
+      .send({
+        shortCode,
+        name: 'Short Guest',
+        pin: '9999',
+        idempotencyKey: 'short-guest-join',
+      })
+      .expect(401);
     expect(publishedGames).toContain(gameId);
     const requestId = joinRequest.body.requestId as string;
     const cookieHeader = joinRequest.headers['set-cookie'];

@@ -12,13 +12,25 @@ import { replay } from '../lib/engine/src/index';
 import { eventSchema, gameConfigSchema } from '../lib/shared/src/index';
 import { createApp } from '../artifacts/api-server/src/app';
 import * as inviteStore from '../lib/db/src/seat-access-store';
-import { hashSeatPin } from '../lib/security/src/seat-pin';
+import { hashSeatPin, verifySeatPin } from '../lib/security/src/seat-pin';
 import { consumeRateLimit } from '../lib/db/src/rate-limit';
 
 afterAll(() => pool.end());
 
+const pinPepperConfig = {
+  current: {
+    version: 2,
+    secret: 'current-test-pin-pepper-0123456789abcdef',
+  },
+  previous: {
+    version: 1,
+    secret: 'previous-test-pin-pepper-0123456789abcdef',
+  },
+};
+
 async function startedGame(
   lateJoining: 'never' | 'first-vote' | 'cycle' = 'first-vote',
+  useEnvironmentPepper = false,
 ) {
   const gameId = randomUUID();
   const now = Date.now() + 86_400_000;
@@ -79,6 +91,7 @@ async function startedGame(
       return { kind: 'coordinator' };
     },
     rateLimitSecret: `test-only-${gameId}`,
+    ...(useEnvironmentPepper ? {} : { pinPepperConfig }),
     consumeRateLimit: (bucket, limit, window) => {
       rateLimitBuckets.add(bucket);
       return consumeRateLimit(bucket, limit, window, now + 1000);
@@ -265,12 +278,13 @@ it('fails closed without leaking invitation data on a database failure', async (
 it('recovers a seat after lobby closure and after a fresh link rotates without reopening joins', async () => {
   const { app, gameId, original } = await startedGame();
   try {
-    const pin = await hashSeatPin('1234');
+    const pin = await hashSeatPin('1234', pinPepperConfig.previous);
     await inviteStore.createSeatAccess({
       gameId,
       seatId: 'seat-0',
       pinSalt: pin.salt,
       pinHash: pin.hash,
+      pinPepperVersion: pin.pepperVersion,
     });
     const recovery = {
       shortCode: original.shortCode,
@@ -290,6 +304,16 @@ it('recovers a seat after lobby closure and after a fresh link rotates without r
       viewerSeatId: 'seat-0',
       private: null,
     });
+    const upgraded = await inviteStore.getSeatAccess(gameId, 'seat-0');
+    expect(upgraded?.pinPepperVersion).toBe(pinPepperConfig.current.version);
+    await expect(
+      verifySeatPin(
+        '1234',
+        upgraded!.pinSalt,
+        upgraded!.pinHash,
+        pinPepperConfig.current,
+      ),
+    ).resolves.toBe(true);
     await request(app).post(`/api/games/${gameId}/late-invites`).expect(201);
     const next = await request(app)
       .post('/api/recover')
@@ -405,3 +429,28 @@ it.each(['never', 'first-vote', 'cycle', 'finished'] as const)(
     }
   },
 );
+
+it('uses the configured environment pepper and fails safely when it is missing', async () => {
+  const { app, gameId } = await startedGame('first-vote', true);
+  try {
+    const fresh = await request(app)
+      .post(`/api/games/${gameId}/late-invites`)
+      .expect(201);
+    const body = {
+      inviteToken: new URL(fresh.body.joinUrl).hash.slice(1),
+      name: 'Environment guest',
+      pin: '1234',
+      idempotencyKey: 'environment-pepper-join',
+    };
+
+    vi.stubEnv('PIN_PEPPER', '');
+    await request(app).post(`/api/games/${gameId}/join`).send(body).expect(503);
+
+    vi.stubEnv('PIN_PEPPER', 'environment-test-pin-pepper-0123456789');
+    vi.stubEnv('PIN_PEPPER_VERSION', '1');
+    await request(app).post(`/api/games/${gameId}/join`).send(body).expect(202);
+  } finally {
+    vi.unstubAllEnvs();
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
