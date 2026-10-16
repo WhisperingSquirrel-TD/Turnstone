@@ -705,6 +705,7 @@ components:
         - cycle
         - revote
         - shadowRound
+        - shadowSlot
         - missionsEnabled
         - rehearsal
         - pot
@@ -754,6 +755,10 @@ components:
         revote:
           type: boolean
         shadowRound:
+          type: integer
+          minimum: 0
+          maximum: 2
+        shadowSlot:
           type: integer
           minimum: 0
           maximum: 2
@@ -896,7 +901,8 @@ components:
     PrivateView:
       type: object
       additionalProperties: false
-      required: [role, team, options, choices, chat, task, minimumDurationMs]
+      required:
+        [role, team, options, choices, choiceSlots, chat, task, minimumDurationMs]
       properties:
         role:
           oneOf:
@@ -925,6 +931,24 @@ components:
           type: object
           additionalProperties:
             type: string
+        choiceSlots:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [slot, round, picks]
+            properties:
+              slot: { type: integer, enum: [1, 2] }
+              round: { type: integer, enum: [1, 2] }
+              picks:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [seatId, choice]
+                  properties:
+                    seatId: { type: string }
+                    choice: { type: string }
         chat:
           type: array
           items:
@@ -1033,7 +1057,7 @@ components:
     FairnessView:
       type: object
       additionalProperties: false
-      required: [salt, roles, sleeper, tasks, decoys]
+      required: [salt, roles, sleeper, tasks, decoys, murderSlots]
       properties:
         salt: { type: string }
         roles:
@@ -1068,6 +1092,47 @@ components:
               seatId: { type: string }
               cycle: { type: integer, minimum: 1 }
               answer: { type: string }
+        murderSlots:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [cycle, slot, picks, chosen, outcome]
+            properties:
+              cycle: { type: integer, minimum: 1 }
+              slot: { type: integer, enum: [1, 2] }
+              picks:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                    [
+                      seatId,
+                      seatName,
+                      choiceSeatId,
+                      choiceName,
+                      round,
+                    ]
+                  properties:
+                    seatId: { type: string }
+                    seatName: { type: string }
+                    choiceSeatId: { type: string }
+                    choiceName: { type: string }
+                    round: { type: integer, enum: [1, 2] }
+              chosen:
+                oneOf:
+                  - type: object
+                    additionalProperties: false
+                    required: [id, name]
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                  - type: 'null'
+              outcome:
+                type: string
+                enum:
+                  [murdered, protected, no-target, cancelled, game-ended]
     Role:
       type: string
       enum: [traitor, faithful]

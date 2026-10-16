@@ -76,12 +76,14 @@ export function decide(
     choices: readonly string[],
     purpose:
       'cycle-vote-tie-break' | 'endgame-vote-tie-break' | 'murder-target',
+    slot?: 1 | 2,
   ) => {
     const chosen = choose(choices);
     emit('RandomChoiceRecorded', {
       purpose,
       candidates: [...choices].sort(),
       chosen,
+      ...(slot === undefined ? {} : { slot }),
     });
     return chosen;
   };
@@ -344,7 +346,8 @@ export function decide(
       break;
     case 'SubmitTaskReport': {
       if (state.phase !== 'SHADOW') return error('WRONG_PHASE');
-      if (state.shadowRound !== 1) return error('TASK_REPORT_CLOSED');
+      if (state.shadowRound !== 1 || state.shadowSlot !== 1)
+        return error('TASK_REPORT_CLOSED');
       if (state.deadline !== null && ctx.now >= state.deadline)
         return error('DEADLINE_PASSED');
       const assignment = state.taskAssignments.find(
@@ -401,50 +404,72 @@ export function decide(
       if (state.phase !== 'SHADOW') return error('WRONG_PHASE');
       if (state.deadline !== null && ctx.now >= state.deadline)
         return error('DEADLINE_PASSED');
-      if (
-        state.config.tasks.enabled &&
-        !state.taskReports.some(
-          (report) =>
-            report.seatId === actingSeat!.id && report.cycle === state!.cycle,
-        ) &&
-        !state.taskAssignments.some(
-          (task) =>
-            task.seatId === actingSeat!.id &&
-            task.cycle === state!.cycle &&
-            task.taskId !== null &&
-            task.status !== 'void',
+      {
+        const slot = cmd.slot ?? state.shadowSlot;
+        if (slot !== state.shadowSlot) return error('WRONG_SHADOW_SLOT');
+        const firstSlotChoice =
+          slot === 2
+            ? state.shadowPicks
+                .filter(
+                  (pick) =>
+                    pick.cycle === state!.cycle &&
+                    pick.slot === 1 &&
+                    pick.seatId === actingSeat!.id,
+                )
+                .sort((left, right) => right.seq - left.seq)[0]?.choice
+            : undefined;
+        if (firstSlotChoice === cmd.choice)
+          return error('DUPLICATE_SHADOW_CHOICE');
+        if (
+          state.config.tasks.enabled &&
+          !state.taskReports.some(
+            (report) =>
+              report.seatId === actingSeat!.id && report.cycle === state!.cycle,
+          ) &&
+          !state.taskAssignments.some(
+            (task) =>
+              task.seatId === actingSeat!.id &&
+              task.cycle === state!.cycle &&
+              task.taskId !== null &&
+              task.status !== 'void',
+          )
         )
-      )
-        return error('TASK_REPORT_REQUIRED');
-      if (
-        state.config.tasks.enabled &&
-        state.taskAssignments.some(
-          (task) =>
-            task.seatId === actingSeat!.id &&
-            task.cycle === state!.cycle &&
-            task.taskId !== null &&
-            task.status !== 'void',
-        ) &&
-        !state.taskAssignments.some(
-          (task) =>
-            task.seatId === actingSeat!.id &&
-            task.cycle === state!.cycle &&
-            task.taskId !== null &&
-            task.status !== 'assigned' &&
-            task.status !== 'void',
+          return error('TASK_REPORT_REQUIRED');
+        if (
+          state.config.tasks.enabled &&
+          state.taskAssignments.some(
+            (task) =>
+              task.seatId === actingSeat!.id &&
+              task.cycle === state!.cycle &&
+              task.taskId !== null &&
+              task.status !== 'void',
+          ) &&
+          !state.taskAssignments.some(
+            (task) =>
+              task.seatId === actingSeat!.id &&
+              task.cycle === state!.cycle &&
+              task.taskId !== null &&
+              task.status !== 'assigned' &&
+              task.status !== 'void',
+          )
         )
-      )
-        return error('TASK_REPORT_REQUIRED');
-      if (
-        !alive(state).some(
-          (seat) =>
-            seat.id === cmd.choice &&
-            seat.id !== actingSeat!.id &&
-            (actingSeat!.role !== 'traitor' || seat.role !== 'traitor'),
+          return error('TASK_REPORT_REQUIRED');
+        if (
+          !alive(state).some(
+            (seat) =>
+              seat.id === cmd.choice &&
+              seat.id !== actingSeat!.id &&
+              (actingSeat!.role !== 'traitor' || seat.role !== 'traitor'),
+          )
         )
-      )
-        return error('INVALID_TARGET');
-      emit('ShadowSubmitted', { seatId: actingSeat!.id, choice: cmd.choice });
+          return error('INVALID_TARGET');
+        emit('ShadowSubmitted', {
+          seatId: actingSeat!.id,
+          choice: cmd.choice,
+          slot,
+          round: state.shadowRound as 1 | 2,
+        });
+      }
       break;
     case 'MarkDeparted':
       if (!alive(state).some((seat) => seat.id === cmd.seatId))
@@ -660,6 +685,7 @@ export function decide(
             deadline: state.config.rehearsal.enabled
               ? null
               : state.shadowEndAt!,
+            slot: state.shadowSlot as 1 | 2,
           });
           break;
         }
@@ -700,93 +726,152 @@ export function decide(
           state.config.tasks.missedConsequence === 'lose-next-murder' &&
           state.config.traitors.murders > 0 &&
           (missedIndividualTask || missedSharedTask);
-        const eligible = alive(state)
-          .filter((seat) => seat.role === 'faithful')
-          .map((seat) => seat.id);
-        const submittedPicks = Object.entries(state.shadow)
-          .filter(([seatId]) =>
-            alive(state!).some(
-              (seat) => seat.id === seatId && seat.role === 'traitor',
-            ),
-          )
-          .map(([seatId, choice]) => ({ seatId, choice }));
-        const picks = submittedPicks
-          .map((pick) => pick.choice)
-          .filter((id) => eligible.includes(id));
-        const selected: string[] = [];
-        for (
-          let i = 0;
-          !taskPenalty && i < state.config.traitors.murders;
-          i++
-        ) {
-          const available = eligible.filter((id) => !selected.includes(id));
-          if (!available.length) break;
-          const currentPicks = picks.filter((id) => available.includes(id));
-          if (state.config.traitors.victimDecision === 'unanimous') {
-            const submittedByEveryTraitor =
-              submittedPicks.length === livingTraitors.length;
+        const slotCount = Math.min(2, state.config.traitors.murders);
+        const slot = state.shadowSlot as 1 | 2;
+        if (slotCount > 0 && slot <= slotCount) {
+          const previousResolutions = state.murderResolutions.filter(
+            (resolution) => resolution.cycle === state!.cycle,
+          );
+          const previouslySelected = previousResolutions.flatMap(
+            (resolution) => (resolution.chosen ? [resolution.chosen] : []),
+          );
+          const previousMurders = previousResolutions.filter(
+            (resolution) => resolution.outcome === 'murdered',
+          ).length;
+          const remainingSeats = alive(state).length - previousMurders;
+          const remainingFaithful = remainingSeats - livingTraitors.length;
+          const gameEndedBeforeSlot =
+            remainingSeats <= 2 ||
+            (state.config.endgame.parity &&
+              livingTraitors.length >= remainingFaithful);
+          const eligible = alive(state)
+            .filter((seat) => seat.role === 'faithful')
+            .map((seat) => seat.id);
+          const available = eligible.filter(
+            (id) => !previouslySelected.includes(id),
+          );
+          const roundTwoPicks = state.shadowPicks
+            .filter(
+              (pick) =>
+                pick.cycle === state!.cycle &&
+                pick.slot === slot &&
+                pick.round === 2 &&
+                livingTraitors.some((seat) => seat.id === pick.seatId),
+            )
+            .sort((left, right) => left.seq - right.seq);
+          const currentPicks = roundTwoPicks
+            .map((pick) => pick.choice)
+            .filter((id) => available.includes(id));
+          const submittedByEveryTraitor =
+            new Set(roundTwoPicks.map((pick) => pick.seatId)).size ===
+            livingTraitors.length;
+          let chosen: string | null = null;
+          let outcome:
+            | 'murdered'
+            | 'protected'
+            | 'no-target'
+            | 'cancelled'
+            | 'game-ended'
+            | null = null;
+          if (taskPenalty) outcome = 'cancelled';
+          else if (gameEndedBeforeSlot) outcome = 'game-ended';
+          else if (!available.length) outcome = 'no-target';
+          else if (state.config.traitors.victimDecision === 'unanimous') {
             const unanimousChoice =
-              submittedByEveryTraitor &&
-              new Set(submittedPicks.map((pick) => pick.choice)).size === 1
-                ? submittedPicks[0]?.choice
+              submittedByEveryTraitor && new Set(currentPicks).size === 1
+                ? currentPicks[0]
                 : undefined;
-            if (unanimousChoice && available.includes(unanimousChoice)) {
-              selected.push(unanimousChoice);
-              continue;
+            if (unanimousChoice && available.includes(unanimousChoice))
+              chosen = unanimousChoice;
+            else if (state.config.traitors.timeoutChoice === 'none')
+              outcome = 'no-target';
+            else if (state.config.traitors.timeoutChoice === 'random') {
+              const scores = available.map((id) => ({
+                id,
+                score: currentPicks.filter((pick) => pick === id).length,
+              }));
+              const maximum = Math.max(...scores.map((item) => item.score));
+              const leading = currentPicks.length
+                ? scores
+                    .filter((item) => item.score === maximum)
+                    .map((item) => item.id)
+                : available;
+              chosen = chooseSeat(leading, 'murder-target', slot);
             }
-            if (state.config.traitors.timeoutChoice === 'none') break;
-            if (state.config.traitors.timeoutChoice === 'random') {
-              selected.push(chooseSeat(available, 'murder-target'));
-              continue;
-            }
-          } else if (
-            !currentPicks.length &&
-            state.config.traitors.timeoutChoice === 'none'
+          }
+          if (
+            chosen === null &&
+            outcome !== 'cancelled' &&
+            outcome !== 'game-ended' &&
+            outcome !== 'no-target'
           ) {
+            if (
+              !currentPicks.length &&
+              state.config.traitors.timeoutChoice === 'none'
+            )
+              outcome = 'no-target';
+            else {
+              const scores = available.map((id) => ({
+                id,
+                score: currentPicks.filter((pick) => pick === id).length,
+              }));
+              const maximum = Math.max(...scores.map((item) => item.score));
+              const leading = scores
+                .filter((item) => item.score === maximum)
+                .map((item) => item.id);
+              const firstPick =
+                state.config.traitors.victimDecision === 'first'
+                  ? currentPicks[0]
+                  : undefined;
+              const randomCandidates =
+                state.config.traitors.victimDecision !== 'unanimous' &&
+                !currentPicks.length &&
+                state.config.traitors.timeoutChoice === 'random'
+                  ? available
+                  : leading;
+              chosen =
+                state.config.traitors.victimDecision === 'first' && firstPick
+                  ? firstPick
+                  : chooseSeat(randomCandidates, 'murder-target', slot);
+            }
+          }
+          if (chosen !== null && outcome === null) {
+            outcome = state.shields.includes(chosen) ? 'protected' : 'murdered';
+          }
+          if (outcome === null) return error('MURDER_OUTCOME_MISSING');
+          const picks = state.shadowPicks
+            .filter(
+              (pick) =>
+                pick.cycle === state!.cycle &&
+                pick.slot === slot &&
+                livingTraitors.some((seat) => seat.id === pick.seatId),
+            )
+            .sort((left, right) => left.seq - right.seq)
+            .map(({ seatId, choice, round }) => ({ seatId, choice, round }));
+          emit('MurderSlotResolved', {
+            cycle: state.cycle,
+            slot,
+            picks,
+            chosen,
+            outcome,
+          });
+
+          if (slot < slotCount) {
+            const shadowDuration = state.config.rehearsal.enabled
+              ? null
+              : duration('SHADOW');
+            emit('ShadowSlotAdvanced', {
+              cycle: state.cycle,
+              slot: 2,
+              deadline:
+                shadowDuration === null
+                  ? null
+                  : ctx.now + Math.ceil(shadowDuration / 2),
+              shadowEndAt:
+                shadowDuration === null ? null : ctx.now + shadowDuration,
+            });
             break;
           }
-          const scores = available.map((id) => ({
-            id,
-            score: currentPicks.filter((pick) => pick === id).length,
-          }));
-          const maximum = Math.max(...scores.map((v) => v.score));
-          const leading = scores
-            .filter((v) => v.score === maximum)
-            .map((v) => v.id);
-          const firstPick =
-            state.config.traitors.victimDecision === 'first'
-              ? currentPicks[0]
-              : undefined;
-          const randomCandidates =
-            state.config.traitors.victimDecision !== 'unanimous' &&
-            !currentPicks.length &&
-            state.config.traitors.timeoutChoice === 'random'
-              ? available
-              : leading;
-          selected.push(
-            state.config.traitors.victimDecision === 'first'
-              ? (firstPick ?? chooseSeat(randomCandidates, 'murder-target'))
-              : chooseSeat(randomCandidates, 'murder-target'),
-          );
-        }
-        const protectedIds = selected.filter((id) =>
-          state!.shields.includes(id),
-        );
-        const selectedVictims = selected.filter(
-          (id) => !state!.shields.includes(id),
-        );
-        const traitorCount = livingTraitors.length;
-        let remainingSeats = alive(state).length;
-        const victims: string[] = [];
-        for (const victim of selectedVictims) {
-          victims.push(victim);
-          remainingSeats--;
-          const remainingFaithful = remainingSeats - traitorCount;
-          if (
-            remainingSeats <= 2 ||
-            (state.config.endgame.parity && traitorCount >= remainingFaithful)
-          )
-            break;
         }
         if (state.config.tasks.enabled)
           emit('TaskMurderCancelled', {
@@ -794,6 +879,19 @@ export function decide(
             cancelled: taskPenalty,
             traitors: taskPenalty ? livingTraitors.map((seat) => seat.id) : [],
           });
+        const cycleResolutions = state.murderResolutions.filter(
+          (resolution) => resolution.cycle === state!.cycle,
+        );
+        const victims = cycleResolutions.flatMap((resolution) =>
+          resolution.outcome === 'murdered' && resolution.chosen
+            ? [resolution.chosen]
+            : [],
+        );
+        const protectedIds = cycleResolutions.flatMap((resolution) =>
+          resolution.outcome === 'protected' && resolution.chosen
+            ? [resolution.chosen]
+            : [],
+        );
         enter('DAWN');
         emit('DawnResolved', { victims, protected: protectedIds });
         for (const id of victims) {

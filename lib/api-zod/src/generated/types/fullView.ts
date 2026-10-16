@@ -49,6 +49,11 @@ export interface FullView {
      * @maximum 2
      */
   shadowRound: number;
+  /**
+     * @minimum 0
+     * @maximum 2
+     */
+  shadowSlot: number;
   missionsEnabled: boolean;
   rehearsal: boolean;
   /** @minimum 0 */

@@ -690,6 +690,7 @@ function PlayerGame() {
   const heldRef = useRef(false);
   const holdVersion = useRef(0);
   const privateResult = useRef<PrivateView | null>(null);
+  const privateVersionRef = useRef(0);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const limitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -729,6 +730,7 @@ function PlayerGame() {
         deadline: full.deadline,
         revote: full.revote,
         shadowRound: full.shadowRound,
+        shadowSlot: full.shadowSlot,
         notesOpen,
       })
     : '';
@@ -790,8 +792,40 @@ function PlayerGame() {
               ]
             : [],
     full?.seats ?? [],
-    `${id}:${full?.viewerSeatId ?? ''}:${full?.phase ?? ''}:${full?.cycle ?? 0}:${full?.shadowRound ?? 0}`,
+    `${id}:${full?.viewerSeatId ?? ''}:${full?.phase ?? ''}:${full?.cycle ?? 0}:${full?.shadowSlot ?? 0}:${full?.shadowRound ?? 0}`,
   );
+  const shadowStatusLines =
+    full && privateView
+      ? ([1, 2] as const).map((slot) => {
+          const picks =
+            privateView.choiceSlots.find(
+              (entry) =>
+                entry.slot === slot && entry.round === full.shadowRound,
+            )?.picks ?? [];
+          if (privateView.role !== 'traitor')
+            return en.game.murderSlotStatus(slot, en.game.shadowFaithfulStatus);
+          const details =
+            picks
+              .map((pick) => {
+                const picker = full.seats.find(
+                  (seat) => seat.id === pick.seatId,
+                );
+                const target = full.seats.find(
+                  (seat) => seat.id === pick.choice,
+                );
+                return picker && target
+                  ? en.game.murderSlotPick(
+                      picker.name,
+                      target.name,
+                      full.shadowRound,
+                    )
+                  : null;
+              })
+              .filter((line): line is string => Boolean(line))
+              .join('\n') || en.game.shadowWaiting;
+          return en.game.murderSlotStatus(slot, details);
+        })
+      : [];
 
   async function enterFullScreen() {
     try {
@@ -834,6 +868,7 @@ function PlayerGame() {
       setHeld(false);
       setPrivateView(null);
       privateResult.current = null;
+      privateVersionRef.current = 0;
       setSelected('');
       setConfirmChoice(false);
       setActionDone(false);
@@ -851,7 +886,7 @@ function PlayerGame() {
   );
   const cancelPrivate = useCallback(() => clearPrivate(), [clearPrivate]);
   const privateStepKey = full
-    ? `${full.phase}:${full.cycle}:${full.deadline ?? 'manual'}:${full.shadowRound}:${notesOpen ? 'notes' : 'phase'}`
+    ? `${full.phase}:${full.cycle}:${full.deadline ?? 'manual'}:${full.shadowSlot}:${full.shadowRound}:${notesOpen ? 'notes' : 'phase'}`
     : 'none';
   const activeGame = Boolean(
     full && !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
@@ -1162,6 +1197,7 @@ function PlayerGame() {
     setCommandMessage('');
     setPrivateView(null);
     privateResult.current = null;
+    privateVersionRef.current = full?.version ?? 0;
     revealTimer.current = setTimeout(() => {
       if (
         heldRef.current &&
@@ -1191,6 +1227,10 @@ function PlayerGame() {
           return;
         }
         if (heldRef.current && version === holdVersion.current) {
+          privateVersionRef.current = Math.max(
+            privateVersionRef.current,
+            response.version,
+          );
           privateResult.current = privateData;
           if (
             serverTimeNow(Date.now(), serverClockOffsetMs.current) -
@@ -1212,6 +1252,51 @@ function PlayerGame() {
         reveal.reset();
       });
   }
+
+  useEffect(() => {
+    if (
+      !full ||
+      full.phase !== 'SHADOW' ||
+      !token ||
+      notesOpen ||
+      !held ||
+      full.version <= privateVersionRef.current
+    )
+      return;
+    const holdVersionAtRequest = holdVersion.current;
+    let stale = false;
+    void reveal
+      .mutateAsync({ id })
+      .then((response) => {
+        const view = response.view;
+        const privateData = isFullView(view) ? view.private : null;
+        if (
+          stale ||
+          !privateData ||
+          !heldRef.current ||
+          holdVersion.current !== holdVersionAtRequest ||
+          response.version < privateVersionRef.current
+        )
+          return;
+        privateVersionRef.current = response.version;
+        privateResult.current = privateData;
+        setPrivateView(privateData);
+      })
+      .catch(() => undefined)
+      .finally(() => reveal.reset());
+    return () => {
+      stale = true;
+    };
+  }, [
+    full?.phase,
+    full?.version,
+    held,
+    id,
+    notesOpen,
+    reveal.mutateAsync,
+    reveal.reset,
+    token,
+  ]);
 
   function padPointerDown(event: PointerEvent<HTMLButtonElement>) {
     if (event.button !== 0 && event.pointerType !== 'touch') return;
@@ -1242,6 +1327,7 @@ function PlayerGame() {
           ? {
               type: 'SubmitShadowChoice',
               choice: selected,
+              slot: view.shadowSlot,
               idempotencyKey: idempotencyKey(),
             }
           : {
@@ -1471,6 +1557,7 @@ function PlayerGame() {
             data-phase={full.phase}
             data-version={full.version}
             data-shadow-round={full.shadowRound}
+            data-shadow-slot={full.shadowSlot}
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
@@ -1627,6 +1714,47 @@ function PlayerGame() {
                 {en.game.playerOutcome(full.winner, ownSeat.role)}
               </p>
             )}
+            {full.phase === 'FINISHED' &&
+              full.fairness &&
+              full.fairness.murderSlots.length > 0 && (
+                <section
+                  className="mt-6"
+                  aria-label="Night choices"
+                  data-testid="fairness-murder-slots"
+                >
+                  <h2 className="title text-xl text-candle">Night choices</h2>
+                  <ol className="mt-3 grid gap-3">
+                    {full.fairness.murderSlots.map((slot) => (
+                      <li
+                        key={`${slot.cycle}:${slot.slot}`}
+                        className="rounded-xl border border-stone p-4"
+                        data-testid="murder-slot-record"
+                      >
+                        <h3 className="text-candle">
+                          {en.game.murderSlotTitle(slot.cycle, slot.slot)}
+                        </h3>
+                        <ul className="mt-2 grid gap-1 text-sm text-ash">
+                          {slot.picks.map((pick, index) => (
+                            <li key={`${pick.seatId}:${pick.round}:${index}`}>
+                              {en.game.murderSlotPick(
+                                pick.seatName,
+                                pick.choiceName,
+                                pick.round,
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-2 text-sm text-ash">
+                          {en.game.murderSlotOutcome(
+                            slot.outcome,
+                            slot.chosen?.name ?? null,
+                          )}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
 
             {!inPrivateMoment &&
               Object.keys(full.ballots).length > 0 &&
@@ -1836,40 +1964,37 @@ function PlayerGame() {
                             <BanishmentVoteScreen {...choiceControlProps} />
                           ) : (
                             <>
-                              <p className="display text-2xl">
+                              <p
+                                className="display text-2xl"
+                                data-testid={
+                                  full.phase === 'SHADOW'
+                                    ? 'shadow-slot-label'
+                                    : undefined
+                                }
+                              >
                                 {full.phase === 'SHADOW'
-                                  ? privateView?.role === 'traitor'
-                                    ? en.game.shadowTraitorPrompt
-                                    : en.game.shadowFaithfulPrompt
+                                  ? full.shadowSlot === 1
+                                    ? en.game.firstChoice
+                                    : en.game.secondChoice
                                   : en.game.finalDecision}
                               </p>
                               {full.phase === 'SHADOW' && (
-                                <p
-                                  className="mt-2 min-h-12 whitespace-pre-wrap text-left text-sm text-ash"
+                                <p className="mt-2 text-left text-candle">
+                                  {privateView?.role === 'traitor'
+                                    ? en.game.shadowTraitorPrompt
+                                    : en.game.shadowFaithfulPrompt}
+                                </p>
+                              )}
+                              {full.phase === 'SHADOW' && (
+                                <div
+                                  className="mt-2 grid min-h-12 grid-rows-2 gap-1 whitespace-pre-wrap text-left text-sm text-ash"
                                   data-testid="shadow-status"
                                   aria-live="polite"
                                 >
-                                  {privateView?.role === 'traitor'
-                                    ? Object.entries(privateView.choices)
-                                        .flatMap(([seatId, targetId]) => {
-                                          const picker = full.seats.find(
-                                            (seat) => seat.id === seatId,
-                                          );
-                                          const target = full.seats.find(
-                                            (seat) => seat.id === targetId,
-                                          );
-                                          return picker && target
-                                            ? [
-                                                en.game.shadowPick(
-                                                  picker.name,
-                                                  target.name,
-                                                ),
-                                              ]
-                                            : [];
-                                        })
-                                        .join('\n') || en.game.shadowWaiting
-                                    : en.game.shadowFaithfulStatus}
-                                </p>
+                                  {shadowStatusLines.map((line, index) => (
+                                    <p key={index}>{line}</p>
+                                  ))}
+                                </div>
                               )}
                               <PrivateChoiceControls {...choiceControlProps} />
                             </>

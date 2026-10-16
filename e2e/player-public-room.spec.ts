@@ -16,6 +16,7 @@ function createPublicView(gameId: string): FullView {
     cycle: 2,
     revote: false,
     shadowRound: 0,
+    shadowSlot: 0,
     missionsEnabled: true,
     rehearsal: false,
     pot: 18,

@@ -20,6 +20,7 @@ export const BOT_STRATEGIES = [
   'tie-then-abstain',
   'serial-disconnector',
   'coordinator-probes-for-secrets',
+  'double-murder-split',
 ] as const;
 
 export type BotStrategy = (typeof BOT_STRATEGIES)[number];
@@ -331,6 +332,18 @@ export function runCompleteGame(
       ? botRandom.int(count)
       : (state.version + seatIndex) % count;
   const chooseVote = (state: State, seatIndex: number, seatId: string) => {
+    if (options.strategy === 'double-murder-split') {
+      const actor = state.seats.find((seat) => seat.id === seatId)!;
+      if (actor.role === 'faithful') {
+        const traitor = state.seats.find(
+          (seat) =>
+            seat.status === 'alive' &&
+            seat.role === 'traitor' &&
+            seat.id !== seatId,
+        );
+        if (traitor) return traitor.id;
+      }
+    }
     if (
       options.strategy === 'tie-then-abstain' &&
       state.phase === 'VOTE' &&
@@ -446,7 +459,11 @@ export function runCompleteGame(
       for (const [index, seat] of state.seats.entries()) {
         if (seat.status !== 'alive' || strategySkipsSeat(index, state))
           continue;
-        if (config.tasks.enabled && state.shadowRound === 1) {
+        if (
+          config.tasks.enabled &&
+          state.shadowSlot === 1 &&
+          state.shadowRound === 1
+        ) {
           const isTraitorTask = state.taskAssignments.some(
             (task) =>
               task.seatId === seat.id &&
@@ -466,17 +483,37 @@ export function runCompleteGame(
           (other) =>
             other.status === 'alive' &&
             other.id !== seat.id &&
+            other.id !==
+              (state.shadowSlot === 2
+                ? state.shadowPicks
+                    .filter(
+                      (pick) =>
+                        pick.cycle === state.cycle &&
+                        pick.slot === 1 &&
+                        pick.seatId === seat.id,
+                    )
+                    .sort((left, right) => right.seq - left.seq)[0]?.choice
+                : undefined) &&
             (seat.role !== 'traitor' || other.role !== 'traitor'),
         );
-        if (candidates.length)
+        if (candidates.length) {
+          const target =
+            options.strategy === 'double-murder-split' &&
+            seat.role === 'traitor'
+              ? candidates
+                  .filter((candidate) => candidate.role === 'faithful')
+                  .sort((left, right) => left.id.localeCompare(right.id))[0]
+              : candidates[pickIndex(candidates.length, state, index)];
+          if (!target) continue;
           issue(
             {
               type: 'SubmitShadowChoice',
-              choice:
-                candidates[pickIndex(candidates.length, state, index)]!.id,
+              choice: target.id,
+              slot: state.shadowSlot as 1 | 2,
             },
             { kind: 'player', seatId: seat.id },
           );
+        }
       }
     } else if (state.phase === 'FINAL_VOTE') {
       state.seats.forEach((seat, index) => {

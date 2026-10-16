@@ -34,6 +34,7 @@ export const VIEW_ALLOW_LIST = [
   'cycle',
   'revote',
   'shadowRound',
+  'shadowSlot',
   'missionsEnabled',
   'rehearsal',
   'pot',
@@ -165,6 +166,17 @@ export function viewFor(
       winner: announcement.winner,
     };
   }
+  const previousSlotChoice =
+    state.phase === 'SHADOW' && state.shadowSlot === 2 && own
+      ? state.shadowPicks
+          .filter(
+            (pick) =>
+              pick.cycle === state.cycle &&
+              pick.slot === 1 &&
+              pick.seatId === own.id,
+          )
+          .sort((left, right) => right.seq - left.seq)[0]?.choice
+      : undefined;
   return fullViewSchema.parse({
     id: state.id,
     ...(ownSeatViewer ? { viewerSeatId: ownSeatViewer.id } : {}),
@@ -181,6 +193,7 @@ export function viewFor(
     cycle: state.cycle,
     revote: state.revote,
     shadowRound: state.shadowRound,
+    shadowSlot: state.shadowSlot,
     missionsEnabled: state.config.missions.enabled,
     rehearsal: state.config.rehearsal.enabled,
     pot: state.pot,
@@ -283,7 +296,11 @@ export function viewFor(
               role: seat.role!,
             })),
           options: alive(state)
-            .filter((seat) => seat.id !== own?.id)
+            .filter(
+              (seat) =>
+                seat.id !== own?.id &&
+                seat.id !== previousSlotChoice,
+            )
             .map((seat) => ({ id: seat.id, name: seat.name })),
           choices: isTraitor
             ? Object.fromEntries(
@@ -294,6 +311,29 @@ export function viewFor(
                   .map((seat) => [seat.id, state.shadow[seat.id]!]),
               )
             : {},
+          choiceSlots: isTraitor
+            ? [1, 2].flatMap((slot) =>
+                [1, 2].flatMap((round) => {
+                  const picks = state.shadowPicks
+                    .filter(
+                      (pick) =>
+                        pick.cycle === state.cycle &&
+                        pick.slot === slot &&
+                        pick.round === round &&
+                        alive(state).some(
+                          (seat) =>
+                            seat.id === pick.seatId &&
+                            seat.role === 'traitor',
+                        ),
+                    )
+                    .sort((left, right) => left.seq - right.seq)
+                    .map(({ seatId, choice }) => ({ seatId, choice }));
+                  return picks.length
+                    ? [{ slot: slot as 1 | 2, round: round as 1 | 2, picks }]
+                    : [];
+                }),
+              )
+            : [],
           chat: host
             ? state.chat.map((item) => ({
                 seatId: item.seatId,
@@ -379,6 +419,39 @@ export function viewFor(
               seatId: response.seatId,
               cycle: response.cycle,
               answer: response.answer,
+            })),
+            murderSlots: state.murderResolutions.map((resolution) => ({
+              cycle: resolution.cycle,
+              slot: resolution.slot,
+              picks: resolution.picks.flatMap((pick) => {
+                const player = state.seats.find(
+                  (seat) => seat.id === pick.seatId,
+                );
+                const target = state.seats.find(
+                  (seat) => seat.id === pick.choice,
+                );
+                return player && target
+                  ? [
+                      {
+                        seatId: player.id,
+                        seatName: player.name,
+                        choiceSeatId: target.id,
+                        choiceName: target.name,
+                        round: pick.round,
+                      },
+                    ]
+                  : [];
+              }),
+              chosen: resolution.chosen
+                ? {
+                    id: resolution.chosen,
+                    name:
+                      state.seats.find(
+                        (seat) => seat.id === resolution.chosen,
+                      )?.name ?? '',
+                  }
+                : null,
+              outcome: resolution.outcome,
             })),
           }
         : null,

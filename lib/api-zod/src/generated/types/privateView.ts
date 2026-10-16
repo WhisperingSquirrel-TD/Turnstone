@@ -7,6 +7,7 @@
  */
 import type { PrivateViewChatItem } from './privateViewChatItem';
 import type { PrivateViewChoices } from './privateViewChoices';
+import type { PrivateViewChoiceSlotsItem } from './privateViewChoiceSlotsItem';
 import type { PrivateViewOptionsItem } from './privateViewOptionsItem';
 import type { PrivateViewTask } from './privateViewTask';
 import type { PrivateViewTeamItem } from './privateViewTeamItem';
@@ -17,6 +18,7 @@ export interface PrivateView {
   team: PrivateViewTeamItem[];
   options: PrivateViewOptionsItem[];
   choices: PrivateViewChoices;
+  choiceSlots: PrivateViewChoiceSlotsItem[];
   chat: PrivateViewChatItem[];
   task: PrivateViewTask;
   /** @minimum 0 */

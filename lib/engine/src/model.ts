@@ -75,6 +75,27 @@ export type State = {
   candidates: string[];
   shadow: Record<string, string>;
   shadowRound: 0 | 1 | 2;
+  shadowSlot: 0 | 1 | 2;
+  shadowPicks: {
+    cycle: number;
+    slot: 1 | 2;
+    round: 1 | 2;
+    seatId: string;
+    choice: string;
+    seq: number;
+  }[];
+  murderResolutions: {
+    cycle: number;
+    slot: 1 | 2;
+    picks: { seatId: string; choice: string; round: 1 | 2 }[];
+    chosen: string | null;
+    outcome:
+      | 'murdered'
+      | 'protected'
+      | 'no-target'
+      | 'cancelled'
+      | 'game-ended';
+  }[];
   shields: string[];
   protected: string[];
   pendingSleeper: boolean;

@@ -572,7 +572,7 @@ export function createApp(
           number: gameRecommendation.traitors,
           sleeper: false,
           recruitment: 'off',
-          murders: 1,
+          murders: 2,
         },
         roundTable: {
           debateMinutes: speed === 'fast' ? 2 : 15,

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { FairnessViewDecoysItem } from './fairnessViewDecoysItem';
+import type { FairnessViewMurderSlotsItem } from './fairnessViewMurderSlotsItem';
 import type { FairnessViewRoles } from './fairnessViewRoles';
 import type { FairnessViewTasksItem } from './fairnessViewTasksItem';
 
@@ -16,4 +17,5 @@ export interface FairnessView {
   sleeper: string | null;
   tasks: FairnessViewTasksItem[];
   decoys: FairnessViewDecoysItem[];
+  murderSlots: FairnessViewMurderSlotsItem[];
 }

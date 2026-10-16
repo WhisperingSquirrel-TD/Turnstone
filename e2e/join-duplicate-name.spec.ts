@@ -13,6 +13,7 @@ const recoveredView: FullView = {
   cycle: 0,
   revote: false,
   shadowRound: 0,
+  shadowSlot: 0,
   missionsEnabled: false,
   rehearsal: false,
   pot: 0,

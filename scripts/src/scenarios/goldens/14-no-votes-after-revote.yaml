@@ -25,7 +25,7 @@ expected:
   phase: FINISHED
   winner: faithful
   reason: no-traitors
-  alive: 7
-  eliminated: 8
+  alive: 2
+  eliminated: 13
 assertions:
   noVoteRevote: true

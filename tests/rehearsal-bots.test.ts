@@ -90,4 +90,62 @@ describe('server rehearsal bot policy', () => {
       expect(eligible).toContain(choice.choice);
     }
   });
+
+  it('rehearses a distinct second shadow choice in murder slot two', async () => {
+    const { nextRehearsalBotCommand } = await loadBotPolicy();
+    const game = fixture(7, {
+      traitors: {
+        number: 2,
+        sleeper: false,
+        recruitment: 'off',
+        murders: 2,
+        victimDecision: 'first',
+      },
+      missions: { enabled: false, shields: 'off' },
+      rehearsal: {
+        enabled: true,
+        botSeatIds: ['s1', 's2', 's3', 's4', 's5', 's6'],
+      },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'SHADOW');
+    const bot = game.state.seats.find(
+      (seat) =>
+        seat.role === 'traitor' &&
+        game.state.config.rehearsal.botSeatIds.includes(seat.id),
+    );
+    expect(bot).toBeDefined();
+    if (!bot) return;
+
+    const submitBotChoice = () => {
+      const pending = nextRehearsalBotCommand(game.state as State, bot.id);
+      if (pending?.type === 'AcknowledgePrivate')
+        command(game, pending, true, { kind: 'player', seatId: bot.id });
+      const choice = nextRehearsalBotCommand(game.state as State, bot.id);
+      expect(choice?.type).toBe('SubmitShadowChoice');
+      if (choice?.type !== 'SubmitShadowChoice')
+        throw new Error('Expected a rehearsal shadow choice');
+      command(game, choice, true, { kind: 'player', seatId: bot.id });
+      return choice;
+    };
+
+    const first = submitBotChoice();
+    expect(first.slot).toBe(1);
+    const advanceShadowWindow = () => {
+      game.context.now =
+        game.state.deadline !== null
+          ? game.state.deadline + 1
+          : game.state.phaseStarted +
+            game.state.config.privacy.shieldSeconds * 1_000 +
+            game.state.config.privacy.holdMs +
+            1;
+      command(game, { type: 'AdvancePhase' });
+    };
+    advanceShadowWindow();
+    advanceShadowWindow();
+    expect(game.state.shadowSlot).toBe(2);
+    const second = submitBotChoice();
+    expect(second.slot).toBe(2);
+    expect(second.choice).not.toBe(first.choice);
+  });
 });

@@ -73,16 +73,34 @@ export function nextRehearsalBotCommand(
 
   if (state.phase === 'SHADOW') {
     if (state.shadow[seatId]) return null;
+    const firstChoice =
+      state.shadowSlot === 2
+        ? state.shadowPicks
+            .filter(
+              (pick) =>
+                pick.cycle === state.cycle &&
+                pick.slot === 1 &&
+                pick.seatId === seatId,
+            )
+            .sort((left, right) => right.seq - left.seq)[0]?.choice
+        : undefined;
     const candidates = state.seats.filter(
       (candidate) =>
         candidate.status === 'alive' &&
         candidate.id !== seatId &&
+        candidate.id !== firstChoice &&
         (seat.role !== 'traitor' ||
           (candidate.role !== 'traitor' &&
             !state.protected.includes(candidate.id))),
     );
     const target = choose(state.id, state, seatId, candidates);
-    return target ? { type: 'SubmitShadowChoice', choice: target.id } : null;
+    return target
+      ? {
+          type: 'SubmitShadowChoice',
+          choice: target.id,
+          slot: state.shadowSlot as 1 | 2,
+        }
+      : null;
   }
 
   if (state.phase === 'FINAL_VOTE') {

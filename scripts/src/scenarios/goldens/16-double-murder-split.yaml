@@ -1,0 +1,34 @@
+id: double-murder-split
+description: The Traitors use different targets for their first and second murder choices.
+seed: 20261052
+strategy: double-murder-split
+config:
+  players:
+    count: 8
+  traitors:
+    number: 2
+    sleeper: false
+    recruitment: off
+    murders: 2
+    victimDecision: unanimous
+    timeoutChoice: none
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-random
+    revealStyle: all
+  endgame:
+    size: 4
+    parity: false
+  schedule:
+    format: quick
+    plannedCycles: 4
+expected:
+  phase: FINISHED
+  winner: faithful
+  reason: no-traitors
+  alive: 4
+  eliminated: 4
+assertions:
+  doubleMurderSplit: true

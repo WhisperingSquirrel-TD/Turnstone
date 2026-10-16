@@ -63,6 +63,9 @@ export function evolve(previous: State | null, input: unknown): State {
       candidates: [],
       shadow: {},
       shadowRound: 0,
+      shadowSlot: 0,
+      shadowPicks: [],
+      murderResolutions: [],
       shields: [],
       protected: [],
       pendingSleeper: false,
@@ -183,8 +186,10 @@ export function evolve(previous: State | null, input: unknown): State {
       if (event.phase === 'SHADOW') {
         state.shadow = {};
         state.shadowRound = 1;
+        state.shadowSlot = 1;
       } else {
         state.shadowRound = 0;
+        state.shadowSlot = 0;
       }
       if (event.phase === 'FINAL_VOTE') state.endVotes = {};
       break;
@@ -226,16 +231,73 @@ export function evolve(previous: State | null, input: unknown): State {
       break;
     case 'ShadowSubmitted':
       state.shadow = { ...previous.shadow, [event.seatId]: event.choice };
+      {
+        const slot = event.slot ?? previous.shadowSlot;
+        const round = event.round ?? previous.shadowRound;
+        const pick = {
+          cycle: previous.cycle,
+          slot: slot as 1 | 2,
+          round: round as 1 | 2,
+          seatId: event.seatId,
+          choice: event.choice,
+          seq: event.seq,
+        };
+        const priorPickIndex = previous.shadowPicks.findIndex(
+          (prior) =>
+            prior.cycle === pick.cycle &&
+            prior.slot === pick.slot &&
+            prior.round === pick.round &&
+            prior.seatId === pick.seatId,
+        );
+        state.shadowPicks =
+          priorPickIndex < 0
+            ? [...previous.shadowPicks, pick]
+            : previous.shadowPicks.map((prior, index) =>
+                index === priorPickIndex ? pick : prior,
+              );
+      }
       if (!previous.acks.includes(event.seatId))
         state.acks = [...previous.acks, event.seatId];
       break;
     case 'ShadowRoundAdvanced':
-      if (state.phase !== 'SHADOW' || state.shadowRound !== 1)
+      if (
+        state.phase !== 'SHADOW' ||
+        state.shadowRound !== 1 ||
+        (event.slot ?? state.shadowSlot) !== state.shadowSlot
+      )
         throw new Error('Invalid shadow round transition');
       state.shadowRound = 2;
       state.deadline = event.deadline;
       state.shadow = {};
       state.acks = [];
+      break;
+    case 'ShadowSlotAdvanced':
+      if (
+        state.phase !== 'SHADOW' ||
+        state.shadowSlot !== 1 ||
+        state.shadowRound !== 2 ||
+        event.cycle !== state.cycle
+      )
+        throw new Error('Invalid shadow slot transition');
+      state.shadowSlot = event.slot;
+      state.shadowRound = 1;
+      state.phaseStarted = event.at;
+      state.deadline = event.deadline;
+      state.shadowEndAt = event.shadowEndAt;
+      state.shadow = {};
+      state.acks = [];
+      break;
+    case 'MurderSlotResolved':
+      state.murderResolutions = [
+        ...previous.murderResolutions,
+        {
+          cycle: event.cycle,
+          slot: event.slot,
+          picks: event.picks,
+          chosen: event.chosen,
+          outcome: event.outcome,
+        },
+      ];
       break;
     case 'TaskAssigned':
       state.taskAssignments = [

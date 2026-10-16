@@ -504,9 +504,28 @@ export const en = {
     votePrompt: 'Who do you vote to banish?',
     shadowTraitorPrompt: 'Who will the Traitors take tonight?',
     shadowFaithfulPrompt: 'Who do you suspect most right now?',
+    firstChoice: 'First choice',
+    secondChoice: 'Second choice',
     shadowFaithfulStatus: 'Your answer stays private',
     shadowWaiting: 'The Traitors are choosing.',
     shadowPick: (name: string, target: string) => `${name} picked: ${target}`,
+    murderSlotStatus: (slot: 1 | 2, status: string) =>
+      `${slot === 1 ? 'First choice' : 'Second choice'}: ${status}`,
+    murderSlotTitle: (cycle: number, slot: 1 | 2) =>
+      `Night ${cycle} · ${slot === 1 ? 'First choice' : 'Second choice'}`,
+    murderSlotOutcome: (
+      outcome:
+        'murdered' | 'protected' | 'no-target' | 'cancelled' | 'game-ended',
+      target: string | null,
+    ) => {
+      if (outcome === 'murdered' && target) return `${target} was taken.`;
+      if (outcome === 'protected' && target) return `${target} was protected.`;
+      if (outcome === 'cancelled') return 'This murder was cancelled.';
+      if (outcome === 'game-ended') return 'The game ended before this murder.';
+      return 'No target was chosen.';
+    },
+    murderSlotPick: (picker: string, target: string, round: number) =>
+      `${picker} · round ${round}: ${target}`,
     waitingForEveryone: 'Thanks. Waiting for everyone.',
     movingOn: 'Moving on...',
     chooseOption: 'Choose an option',

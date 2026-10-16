@@ -11,6 +11,7 @@ describe('rehearsal guide step identity', () => {
       cycle: 1,
       deadline: null,
       shadowRound: 0,
+      shadowSlot: 0,
       notesOpen: false,
       revote: false,
     });
@@ -19,6 +20,7 @@ describe('rehearsal guide step identity', () => {
       cycle: 1,
       deadline: null,
       shadowRound: 0,
+      shadowSlot: 0,
       notesOpen: false,
       revote: true,
     });
@@ -31,6 +33,38 @@ describe('rehearsal guide step identity', () => {
         explanationAvailable: true,
         stepKey: tiedReVote,
         dismissedStepKey: initialVote,
+      }),
+    ).toBe(true);
+  });
+
+  it('treats the second murder slot as a new rehearsal step', () => {
+    const firstChoice = rehearsalGuideStepKey({
+      phase: 'SHADOW',
+      cycle: 1,
+      deadline: null,
+      revote: false,
+      shadowRound: 1,
+      shadowSlot: 1,
+      notesOpen: false,
+    });
+    const secondChoice = rehearsalGuideStepKey({
+      phase: 'SHADOW',
+      cycle: 1,
+      deadline: null,
+      revote: false,
+      shadowRound: 1,
+      shadowSlot: 2,
+      notesOpen: false,
+    });
+
+    expect(secondChoice).not.toBe(firstChoice);
+    expect(
+      shouldShowRehearsalGuide({
+        rehearsal: true,
+        started: true,
+        explanationAvailable: true,
+        stepKey: secondChoice,
+        dismissedStepKey: firstChoice,
       }),
     ).toBe(true);
   });

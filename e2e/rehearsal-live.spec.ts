@@ -437,8 +437,10 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     const players = page.getByTestId('input-rehearsal-player-count');
     await players.focus();
     await players.press('Home');
+    await page.getByTestId('input-rehearsal-player-count').press('ArrowRight');
+    await page.getByTestId('input-rehearsal-player-count').press('ArrowRight');
     await expect(page.getByTestId('text-rehearsal-player-count')).toHaveText(
-      '6',
+      '8',
     );
     await page.getByTestId('input-rehearsal-name').fill('Morgan');
     await page.getByTestId('button-speed-fast').click();
@@ -502,12 +504,12 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await page.context().setOffline(false);
     await expect(connectionStatus).toHaveText('Online', { timeout: 15_000 });
     await expect(game).toHaveAttribute('data-version', /\d+/);
-    await expect(game).toHaveAttribute('data-progress-total', '6');
+    await expect(game).toHaveAttribute('data-progress-total', '8');
     const initialProgressDone = Number(
       await game.getAttribute('data-progress-done'),
     );
     expect(initialProgressDone).toBeGreaterThanOrEqual(0);
-    expect(initialProgressDone).toBeLessThanOrEqual(6);
+    expect(initialProgressDone).toBeLessThanOrEqual(7);
     await expect
       .poll(async () => Number(await game.getAttribute('data-progress-done')), {
         timeout: 2_500,
@@ -551,12 +553,20 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         phase === 'SHADOW'
           ? Number(await game.getAttribute('data-shadow-round'))
           : 0;
+      const shadowSlotBefore =
+        phase === 'SHADOW'
+          ? Number(await game.getAttribute('data-shadow-slot'))
+          : 0;
       if (phase === 'DEAL') {
         await handleShield(page, activeGameId);
         playerRole = await revealDealRole(page);
       } else if (['SHADOW', 'FINAL_VOTE'].includes(phase)) {
         if (seatStatus === 'alive') {
           await handleShield(page, activeGameId);
+          if (phase === 'SHADOW')
+            await expect(page.getByTestId('shadow-slot-label')).toHaveText(
+              shadowSlotBefore === 1 ? 'First choice' : 'Second choice',
+            );
           await submitPrivateChoice(page, activeGameId);
         } else {
           await expect(
@@ -608,6 +618,13 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       if (phase === 'SHADOW' && shadowRoundBefore === 1) {
         await expect(game).toHaveAttribute('data-shadow-round', '2');
       }
+      if (
+        phase === 'SHADOW' &&
+        shadowSlotBefore === 1 &&
+        shadowRoundBefore === 2
+      ) {
+        await expect(game).toHaveAttribute('data-shadow-slot', '2');
+      }
       expect(appDocumentLoads).toBe(0);
     }
 
@@ -623,6 +640,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       page.getByText(/players have completed this part/),
     ).toHaveCount(0);
     await expect(page.getByTestId('status-prize-pot')).toHaveCount(0);
+    const murderSlotRecords = page.getByTestId('murder-slot-record');
+    await expect
+      .poll(() => murderSlotRecords.count(), { timeout: 10_000 })
+      .toBeGreaterThanOrEqual(2);
+    await expect(page.getByTestId('fairness-murder-slots')).toContainText(
+      'First choice',
+    );
+    await expect(page.getByTestId('fairness-murder-slots')).toContainText(
+      'Second choice',
+    );
 
     const playerRows = page.locator('[data-testid^="player-seat-"]');
     const rowTexts = await playerRows.allTextContents();

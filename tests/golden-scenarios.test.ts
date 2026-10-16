@@ -33,6 +33,51 @@ function hasSplitAfterShadowRevote(events: readonly Event[]): boolean {
   return false;
 }
 
+function hasDoubleMurderSplit(events: readonly Event[]): boolean {
+  const traitors = new Set<string>();
+  for (const event of events)
+    if (event.type === 'RolesDealt')
+      for (const [seatId, role] of Object.entries(event.roles))
+        if (role === 'traitor') traitors.add(seatId);
+  const resolutions = events.filter(
+    (event) =>
+      event.type === 'MurderSlotResolved' && event.outcome === 'murdered',
+  );
+  const first = resolutions.find(
+    (event) => event.type === 'MurderSlotResolved' && event.slot === 1,
+  );
+  const second = resolutions.find(
+    (event) => event.type === 'MurderSlotResolved' && event.slot === 2,
+  );
+  if (
+    first?.type !== 'MurderSlotResolved' ||
+    second?.type !== 'MurderSlotResolved' ||
+    first.cycle !== second.cycle ||
+    first.chosen === second.chosen
+  )
+    return false;
+  const finalPicks = (resolution: typeof first) =>
+    new Map(
+      resolution.picks
+        .filter((pick) => pick.round === 2 && traitors.has(pick.seatId))
+        .map((pick) => [pick.seatId, pick.choice]),
+    );
+  const firstPicks = finalPicks(first);
+  const secondPicks = finalPicks(second);
+  const activeTraitors = [...firstPicks.keys()].filter((seatId) =>
+    secondPicks.has(seatId),
+  );
+  return (
+    activeTraitors.length > 0 &&
+    activeTraitors.every(
+      (seatId) =>
+        firstPicks.has(seatId) &&
+        secondPicks.has(seatId) &&
+        firstPicks.get(seatId) !== secondPicks.get(seatId),
+    )
+  );
+}
+
 function findAbstentionOutcomes(events: readonly Event[]) {
   let phase = '';
   let waitingForVoteRevote = false;
@@ -86,6 +131,8 @@ it('replays every implemented complete-game golden scenario exactly', () => {
     ).toEqual(scenario.expected);
     if (scenario.assertions?.shadowSplitAfterRevote)
       expect(hasSplitAfterShadowRevote(result.events), scenario.id).toBe(true);
+    if (scenario.assertions?.doubleMurderSplit)
+      expect(hasDoubleMurderSplit(result.events), scenario.id).toBe(true);
     const abstentionOutcomes = findAbstentionOutcomes(result.events);
     for (const assertion of [
       'noVoteRound',
@@ -124,6 +171,28 @@ it('includes a complete-game golden where Traitors split after their re-vote', (
     config: scenario!.config,
   });
   expect(hasSplitAfterShadowRevote(result.events)).toBe(true);
+});
+
+it('includes a complete-game golden with independent first and second murder choices', () => {
+  const scenario = loadGoldenScenarios().find(
+    (candidate) => candidate.assertions?.doubleMurderSplit,
+  );
+  expect(scenario).toBeDefined();
+  const result = runCompleteGame({
+    seed: scenario!.seed,
+    strategy: scenario!.strategy,
+    config: scenario!.config,
+  });
+  expect(hasDoubleMurderSplit(result.events)).toBe(true);
+  const finishedView = viewFor(
+    { kind: 'player', seatId: result.state.seats[0]!.id },
+    result.state,
+  );
+  const firstCycle = finishedView.fairness?.murderSlots.filter(
+    (slot) => slot.cycle === 1,
+  );
+  expect(firstCycle?.map((slot) => slot.slot)).toEqual([1, 2]);
+  expect(firstCycle?.every((slot) => slot.picks.length > 0)).toBe(true);
 });
 
 it('finishes a golden game with identical public outcomes on player phones and no presenter', () => {

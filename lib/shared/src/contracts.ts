@@ -42,7 +42,10 @@ export const commandSchema = z.union([
   command('AcknowledgePrivate'),
   command('RequestRedeal'),
   command('SubmitVote', { target: id }),
-  command('SubmitShadowChoice', { choice: id }),
+  command('SubmitShadowChoice', {
+    choice: id,
+    slot: z.union([z.literal(1), z.literal(2)]).optional(),
+  }),
   command('SubmitTaskReport', { answer: z.string().trim().min(2).max(140) }),
   command('MarkDeparted', { seatId: id }),
   command('AllocatePower', { holders: z.array(id).min(1).max(40) }),
@@ -121,11 +124,45 @@ export const eventSchema = z.discriminatedUnion('type', [
     ]),
     candidates: z.array(id).min(1),
     chosen: id,
+    slot: z.union([z.literal(1), z.literal(2)]).optional(),
   }),
-  event('ShadowSubmitted', { seatId: id, choice: id }),
+  event('ShadowSubmitted', {
+    seatId: id,
+    choice: id,
+    slot: z.union([z.literal(1), z.literal(2)]).optional(),
+    round: z.union([z.literal(1), z.literal(2)]).optional(),
+  }),
   event('ShadowRoundAdvanced', {
     cycle: z.number().int().positive(),
     deadline: z.number().int().nonnegative().nullable(),
+    slot: z.union([z.literal(1), z.literal(2)]).optional(),
+  }),
+  event('ShadowSlotAdvanced', {
+    cycle: z.number().int().positive(),
+    slot: z.literal(2),
+    deadline: z.number().int().nonnegative().nullable(),
+    shadowEndAt: z.number().int().nonnegative().nullable(),
+  }),
+  event('MurderSlotResolved', {
+    cycle: z.number().int().positive(),
+    slot: z.union([z.literal(1), z.literal(2)]),
+    picks: z.array(
+      z
+        .object({
+          seatId: id,
+          choice: id,
+          round: z.union([z.literal(1), z.literal(2)]),
+        })
+        .strict(),
+    ),
+    chosen: id.nullable(),
+    outcome: z.enum([
+      'murdered',
+      'protected',
+      'no-target',
+      'cancelled',
+      'game-ended',
+    ]),
   }),
   event('TaskAssigned', {
     seatId: id,
@@ -182,6 +219,17 @@ export const privateViewSchema = z
     ),
     options: z.array(z.object({ id, name: z.string() }).strict()),
     choices: z.record(id),
+    choiceSlots: z.array(
+      z
+        .object({
+          slot: z.union([z.literal(1), z.literal(2)]),
+          round: z.union([z.literal(1), z.literal(2)]),
+          picks: z.array(
+            z.object({ seatId: id, choice: id }).strict(),
+          ),
+        })
+        .strict(),
+    ),
     chat: z.array(
       z.object({ seatId: id, text: z.string(), seq: z.number() }).strict(),
     ),
@@ -271,6 +319,7 @@ export const fullViewSchema = z
     cycle: z.number(),
     revote: z.boolean().default(false),
     shadowRound: z.number().int().min(0).max(2),
+    shadowSlot: z.number().int().min(0).max(2),
     missionsEnabled: z.boolean(),
     rehearsal: z.boolean(),
     pot: z.number().nonnegative(),
@@ -364,6 +413,36 @@ export const fullViewSchema = z
               seatId: id,
               cycle: z.number().int().positive(),
               answer: z.string(),
+            })
+            .strict(),
+        ),
+        murderSlots: z.array(
+          z
+            .object({
+              cycle: z.number().int().positive(),
+              slot: z.union([z.literal(1), z.literal(2)]),
+              picks: z.array(
+                z
+                  .object({
+                    seatId: id,
+                    seatName: z.string(),
+                    choiceSeatId: id,
+                    choiceName: z.string(),
+                    round: z.union([z.literal(1), z.literal(2)]),
+                  })
+                  .strict(),
+              ),
+              chosen: z
+                .object({ id, name: z.string() })
+                .strict()
+                .nullable(),
+              outcome: z.enum([
+                'murdered',
+                'protected',
+                'no-target',
+                'cancelled',
+                'game-ended',
+              ]),
             })
             .strict(),
         ),

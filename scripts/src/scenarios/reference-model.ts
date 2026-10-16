@@ -15,6 +15,21 @@ type ReferenceTask = {
   shared: boolean;
   status: TaskStatus;
 };
+type ShadowPick = {
+  cycle: number;
+  slot: 1 | 2;
+  round: 1 | 2;
+  seatId: string;
+  choice: string;
+  seq: number;
+};
+type MurderSlotOutcome = {
+  cycle: number;
+  slot: 1 | 2;
+  picks: { seatId: string; choice: string; round: 1 | 2 }[];
+  chosen: string | null;
+  outcome: 'murdered' | 'protected' | 'no-target' | 'cancelled' | 'game-ended';
+};
 type Finish = { winner: Role; reason: string };
 
 export type RecruitmentTrigger = {
@@ -32,6 +47,7 @@ export type ReferenceResult = {
   pot: null;
   potCheck: 'pending Milestone 7';
   recruitmentTriggers: RecruitmentTrigger[];
+  murderSlots: MurderSlotOutcome[];
 };
 
 const ordered = (values: readonly string[]) => [...values].sort();
@@ -82,6 +98,7 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
   let sleeperId: string | null = null;
   let phase: string | null = null;
   let shadowRound: 0 | 1 | 2 = 0;
+  let shadowSlot: 0 | 1 | 2 = 0;
   let cycle = 0;
   let winner: Role | null = null;
   let finished = false;
@@ -91,6 +108,8 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
   let revote = false;
   let pendingBanishment: string | null = null;
   let shadowChoices = new Map<string, { choice: string; seq: number }>();
+  const shadowPickHistory: ShadowPick[] = [];
+  const murderSlots: MurderSlotOutcome[] = [];
   let shields: string[] = [];
   let pendingMurderRemovals: string[] = [];
   const cancellationRecordedForCycle = new Set<number>();
@@ -147,6 +166,7 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
   const requireRandomChoice = (
     purpose: RandomChoice['purpose'],
     candidates: readonly string[],
+    slot?: 1 | 2,
   ): string => {
     const recorded = randomChoices.shift();
     const expectedCandidates = ordered(candidates);
@@ -154,7 +174,8 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
       !recorded ||
       recorded.purpose !== purpose ||
       !same(recorded.candidates, expectedCandidates) ||
-      !expectedCandidates.includes(recorded.chosen)
+      !expectedCandidates.includes(recorded.chosen) ||
+      (slot !== undefined && (recorded.slot ?? 1) !== slot)
     )
       throw new Error(
         `Reference: random ${purpose} candidate set or selected seat is invalid`,
@@ -197,70 +218,114 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
     });
     return missedIndividual || missedShared;
   };
-  const chooseMurderTargets = (cycleNumber: number): string[] => {
-    if (hasMissedTraitorTask(cycleNumber)) return [];
+  const chooseMurderSlot = (
+    cycleNumber: number,
+    slot: 1 | 2,
+  ): MurderSlotOutcome => {
+    const traitors = currentTraitors();
+    const priorSlots = murderSlots.filter(
+      (entry) => entry.cycle === cycleNumber,
+    );
+    const alreadySelected = priorSlots.flatMap((entry) =>
+      entry.chosen ? [entry.chosen] : [],
+    );
+    const priorMurderCount = priorSlots.filter(
+      (entry) => entry.outcome === 'murdered',
+    ).length;
+    const remainingSeats = living().length - priorMurderCount;
+    const remainingFaithful = remainingSeats - traitors.length;
+    const gameEnded =
+      remainingSeats <= 2 ||
+      (config!.endgame.parity && traitors.length >= remainingFaithful);
     const faithful = living()
       .filter((seat) => seat.role === 'faithful')
       .map((seat) => seat.id);
-    const traitors = currentTraitors().map((seat) => seat.id);
-    const traitorSubmissions = [...shadowChoices.entries()]
+    const available = faithful.filter(
+      (seatId) => !alreadySelected.includes(seatId),
+    );
+    const slotPicks = shadowPickHistory
       .filter(
-        ([seatId, pick]) =>
-          traitors.includes(seatId) && faithful.includes(pick.choice),
+        (pick) =>
+          pick.cycle === cycleNumber &&
+          pick.slot === slot &&
+          traitors.some((seat) => seat.id === pick.seatId),
       )
-      .map(([seatId, pick]) => ({
-        seatId,
-        choice: pick.choice,
-        seq: pick.seq,
-      }))
       .sort((left, right) => left.seq - right.seq);
-    const submitted = traitorSubmissions.map((pick) => pick.choice);
-    const selected: string[] = [];
-    for (let index = 0; index < config!.traitors.murders; index++) {
-      const available = faithful.filter((seatId) => !selected.includes(seatId));
-      if (!available.length) break;
-      const picks = submitted.filter((seatId) => available.includes(seatId));
-      if (config!.traitors.victimDecision === 'unanimous') {
-        const unanimousChoice =
-          traitors.length > 0 &&
-          traitorSubmissions.length === traitors.length &&
-          new Set(traitorSubmissions.map((pick) => pick.choice)).size === 1
-            ? traitorSubmissions[0]?.choice
-            : undefined;
-        if (unanimousChoice && available.includes(unanimousChoice)) {
-          selected.push(unanimousChoice);
-          continue;
-        }
-        if (config!.traitors.timeoutChoice === 'none') break;
-        if (config!.traitors.timeoutChoice === 'random') {
-          selected.push(requireRandomChoice('murder-target', available));
-          continue;
-        }
-      } else if (!picks.length && config!.traitors.timeoutChoice === 'none') {
-        break;
-      }
+    const roundTwo = slotPicks.filter((pick) => pick.round === 2);
+    const submitted = roundTwo.map((pick) => pick.choice);
+    const picks = submitted.filter((seatId) => available.includes(seatId));
+    const submittedByEveryTraitor =
+      new Set(roundTwo.map((pick) => pick.seatId)).size === traitors.length;
+    let chosen: string | null = null;
+    let outcome: MurderSlotOutcome['outcome'] | null = null;
 
-      if (config!.traitors.victimDecision === 'first' && picks.length) {
-        selected.push(picks[0]!);
-        continue;
+    if (hasMissedTraitorTask(cycleNumber)) outcome = 'cancelled';
+    else if (gameEnded) outcome = 'game-ended';
+    else if (!available.length) outcome = 'no-target';
+    else if (config!.traitors.victimDecision === 'unanimous') {
+      const unanimousChoice =
+        traitors.length > 0 &&
+        submittedByEveryTraitor &&
+        new Set(picks).size === 1 &&
+        picks.length === traitors.length
+          ? picks[0]
+          : undefined;
+      if (unanimousChoice && available.includes(unanimousChoice))
+        chosen = unanimousChoice;
+      else if (config!.traitors.timeoutChoice === 'none') outcome = 'no-target';
+      else if (config!.traitors.timeoutChoice === 'random') {
+        const counts = new Map(
+          available.map((seatId) => [
+            seatId,
+            picks.filter((pick) => pick === seatId).length,
+          ]),
+        );
+        const maximum = Math.max(...counts.values());
+        const leading = picks.length
+          ? available.filter((seatId) => counts.get(seatId) === maximum)
+          : available;
+        chosen = requireRandomChoice('murder-target', leading, slot);
       }
-      const counts = new Map(
-        available.map((seatId) => [
-          seatId,
-          picks.filter((pick) => pick === seatId).length,
-        ]),
-      );
-      const maximum = Math.max(...counts.values());
-      const leading =
-        config!.traitors.victimDecision !== 'unanimous' &&
-        !picks.length &&
-        config!.traitors.timeoutChoice === 'random'
-          ? available
-          : available.filter((seatId) => counts.get(seatId) === maximum);
-      const chosen = requireRandomChoice('murder-target', leading);
-      selected.push(chosen);
     }
-    return selected;
+    if (chosen === null && outcome === null) {
+      if (!picks.length && config!.traitors.timeoutChoice === 'none')
+        outcome = 'no-target';
+      else {
+        const counts = new Map(
+          available.map((seatId) => [
+            seatId,
+            picks.filter((pick) => pick === seatId).length,
+          ]),
+        );
+        const maximum = Math.max(...counts.values());
+        const leading =
+          config!.traitors.victimDecision !== 'unanimous' &&
+          !picks.length &&
+          config!.traitors.timeoutChoice === 'random'
+            ? available
+            : available.filter((seatId) => counts.get(seatId) === maximum);
+        const firstPick =
+          config!.traitors.victimDecision === 'first' ? picks[0] : undefined;
+        chosen =
+          config!.traitors.victimDecision === 'first' && firstPick
+            ? firstPick
+            : requireRandomChoice('murder-target', leading, slot);
+      }
+    }
+    if (chosen !== null)
+      outcome = shields.includes(chosen) ? 'protected' : 'murdered';
+    const picksForAudit = slotPicks.map(({ seatId, choice, round }) => ({
+      seatId,
+      choice,
+      round,
+    }));
+    return {
+      cycle: cycleNumber,
+      slot,
+      picks: picksForAudit,
+      chosen,
+      outcome: outcome ?? 'no-target',
+    };
   };
   const recordRecruitmentTrigger = (
     event: Extract<Event, { type: 'SeatRemoved' }>,
@@ -357,12 +422,24 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
           throw new Error(
             'Reference: shadow step did not use its fixed second choice window',
           );
+        if (phase === 'SHADOW' && event.phase === 'DAWN') {
+          const requiredSlots = Math.min(2, config.traitors.murders);
+          const resolvedSlots = murderSlots.filter(
+            (entry) => entry.cycle === cycle,
+          );
+          if (resolvedSlots.length !== requiredSlots)
+            throw new Error(
+              'Reference: dawn began before every murder slot was resolved',
+            );
+        }
         phase = event.phase;
         cycle = event.cycle;
         if (event.phase === 'SHADOW') {
           shadowRound = 1;
+          shadowSlot = 1;
           shadowChoices.clear();
         }
+        if (event.phase !== 'SHADOW') shadowSlot = 0;
         if (event.phase === 'VOTE' || event.phase === 'FINAL_BANISH') {
           currentVotes = new Map();
           if (!revote) voteCandidates = [];
@@ -526,27 +603,85 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
       case 'ShadowSubmitted': {
         const player = seats.get(event.seatId);
         const target = seats.get(event.choice);
+        const eventSlot: number = event.slot ?? shadowSlot;
+        const eventRound: number = event.round ?? shadowRound;
+        if (
+          (eventSlot !== 1 && eventSlot !== 2) ||
+          (eventRound !== 1 && eventRound !== 2)
+        )
+          throw new Error('Reference: invalid shadow slot or round');
+        const previousSlotPick =
+          eventSlot === 2
+            ? shadowPickHistory
+                .filter(
+                  (pick) =>
+                    pick.cycle === cycle &&
+                    pick.slot === 1 &&
+                    pick.seatId === event.seatId,
+                )
+                .sort((left, right) => right.seq - left.seq)[0]?.choice
+            : undefined;
         if (
           !player ||
           player.status !== 'alive' ||
           !target ||
           target.status !== 'alive' ||
           phase !== 'SHADOW' ||
-          ![1, 2].includes(shadowRound) ||
+          eventSlot !== shadowSlot ||
+          eventRound !== shadowRound ||
           player.id === target.id ||
-          (player.role === 'traitor' && target.role === 'traitor')
+          (player.role === 'traitor' && target.role === 'traitor') ||
+          previousSlotPick === event.choice
         )
           throw new Error('Reference: invalid shadow choice input');
         shadowChoices.set(event.seatId, {
           choice: event.choice,
           seq: event.seq,
         });
+        const historyIndex = shadowPickHistory.findIndex(
+          (pick) =>
+            pick.cycle === cycle &&
+            pick.slot === eventSlot &&
+            pick.round === eventRound &&
+            pick.seatId === event.seatId,
+        );
+        const pick: ShadowPick = {
+          cycle,
+          slot: eventSlot as 1 | 2,
+          round: eventRound as 1 | 2,
+          seatId: event.seatId,
+          choice: event.choice,
+          seq: event.seq,
+        };
+        if (historyIndex < 0) shadowPickHistory.push(pick);
+        else shadowPickHistory[historyIndex] = pick;
         break;
       }
       case 'ShadowRoundAdvanced':
-        if (phase !== 'SHADOW' || shadowRound !== 1 || event.cycle !== cycle)
+        if (
+          phase !== 'SHADOW' ||
+          shadowRound !== 1 ||
+          event.cycle !== cycle ||
+          (event.slot ?? shadowSlot) !== shadowSlot
+        )
           throw new Error('Reference: invalid shadow re-vote transition');
         shadowRound = 2;
+        shadowChoices.clear();
+        break;
+      case 'ShadowSlotAdvanced':
+        if (
+          phase !== 'SHADOW' ||
+          shadowRound !== 2 ||
+          shadowSlot !== 1 ||
+          event.cycle !== cycle ||
+          event.slot !== 2 ||
+          !murderSlots.some(
+            (entry) => entry.cycle === cycle && entry.slot === 1,
+          )
+        )
+          throw new Error('Reference: invalid second murder-slot transition');
+        shadowSlot = 2;
+        shadowRound = 1;
         shadowChoices.clear();
         break;
       case 'TaskAssigned': {
@@ -597,23 +732,13 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
           throw new Error('Reference: dawn resolved outside the dawn phase');
         if (config.tasks.enabled && !cancellationRecordedForCycle.has(cycle))
           throw new Error('Reference: task cancellation outcome is missing');
-        const selected = chooseMurderTargets(cycle);
-        const expectedProtected = selected.filter((id) => shields.includes(id));
-        const expectedVictims: string[] = [];
-        let remainingSeats = living().length;
-        let remainingTraitors = currentTraitors().length;
-        for (const victim of selected.filter((id) => !shields.includes(id))) {
-          expectedVictims.push(victim);
-          remainingSeats--;
-          if (seats.get(victim)?.role === 'traitor') remainingTraitors--;
-          const remainingFaithful = remainingSeats - remainingTraitors;
-          if (
-            remainingTraitors === 0 ||
-            remainingSeats <= 2 ||
-            (config.endgame.parity && remainingTraitors >= remainingFaithful)
-          )
-            break;
-        }
+        const cycleSlots = murderSlots.filter((entry) => entry.cycle === cycle);
+        const expectedProtected = cycleSlots.flatMap((entry) =>
+          entry.outcome === 'protected' && entry.chosen ? [entry.chosen] : [],
+        );
+        const expectedVictims = cycleSlots.flatMap((entry) =>
+          entry.outcome === 'murdered' && entry.chosen ? [entry.chosen] : [],
+        );
         if (
           !same(event.victims, expectedVictims) ||
           !same(event.protected, expectedProtected)
@@ -624,6 +749,36 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
         pendingMurderRemovals = [...expectedVictims];
         shields = [];
         shadowChoices.clear();
+        break;
+      }
+      case 'MurderSlotResolved': {
+        if (
+          phase !== 'SHADOW' ||
+          event.cycle !== cycle ||
+          event.slot !== shadowSlot ||
+          shadowRound !== 2
+        )
+          throw new Error(
+            'Reference: murder slot resolved outside its private window',
+          );
+        const expected = chooseMurderSlot(cycle, event.slot);
+        const picksMatch =
+          expected.picks.length === event.picks.length &&
+          expected.picks.every(
+            (pick, index) =>
+              pick.seatId === event.picks[index]?.seatId &&
+              pick.choice === event.picks[index]?.choice &&
+              pick.round === event.picks[index]?.round,
+          );
+        if (
+          !picksMatch ||
+          event.chosen !== expected.chosen ||
+          event.outcome !== expected.outcome
+        )
+          throw new Error(
+            'Reference: murder slot picks or outcome do not match the independent rules',
+          );
+        murderSlots.push(expected);
         break;
       }
       case 'SleeperWaiting':
@@ -744,5 +899,6 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
     pot: null,
     potCheck: 'pending Milestone 7',
     recruitmentTriggers,
+    murderSlots,
   };
 }
