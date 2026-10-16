@@ -1582,6 +1582,56 @@ test('the lobby code and join QR are shared on each seated player phone', async 
   }
 });
 
+test('a player taken at dawn sees their own fate in second person', async ({
+  page,
+}) => {
+  const gameId = 'personal-taken-fate';
+  const view = createPublicView(gameId);
+  view.phase = 'DAWN';
+  view.seats[0]!.status = 'murdered';
+  view.publicAnnouncement = {
+    kind: 'dawn',
+    cycle: view.cycle,
+    victims: [{ id: 'seat-morgan', name: 'Morgan' }],
+  };
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'c'.repeat(64) } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+
+  await page.goto(`/game/${gameId}`);
+
+  await expect(page.getByTestId('player-fate')).toHaveText(
+    "You were taken in the night. You're out, but you can keep watching.",
+  );
+});
+
+test('an out player sees a clear second-person watch-only message', async ({
+  page,
+}) => {
+  const gameId = 'personal-out-fate';
+  const view = createPublicView(gameId);
+  view.seats[0]!.status = 'banished';
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'c'.repeat(64) } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+
+  await page.goto(`/game/${gameId}`);
+
+  await expect(page.getByTestId('player-fate')).toHaveText(
+    "You're out. You can watch, but you can't vote or choose.",
+  );
+});
+
 test('organiser confirms before moving on when players are unfinished', async ({
   page,
 }) => {

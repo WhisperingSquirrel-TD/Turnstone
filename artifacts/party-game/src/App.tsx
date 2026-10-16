@@ -767,6 +767,15 @@ function PlayerGame() {
   const ownSeat = full?.viewerSeatId
     ? (full.seats.find((seat) => seat.id === full.viewerSeatId) ?? null)
     : null;
+  const ownTakenThisDawn = Boolean(
+    full?.phase === 'DAWN' &&
+    ownSeat?.status === 'murdered' &&
+    full.viewerSeatId &&
+    full.publicAnnouncement?.kind === 'dawn' &&
+    full.publicAnnouncement.victims.some(
+      (victim) => victim.id === full.viewerSeatId,
+    ),
+  );
   const eligibleSeats =
     full?.seats.filter((seat) => seat.status === 'alive') ?? [];
   const phaseIsPrivate = Boolean(
@@ -1790,6 +1799,17 @@ function PlayerGame() {
           >
             {watchingRehearsal && (
               <RehearsalWatchCommentary phase={full.phase} />
+            )}
+            {ownSeat && ownSeat.status !== 'alive' && (
+              <p
+                className="mb-4 text-sm text-ash"
+                data-testid="player-fate"
+                role="status"
+              >
+                {ownTakenThisDawn
+                  ? en.game.personalTakenFate
+                  : en.game.personalOutFate}
+              </p>
             )}
             <GameStepAnnouncement
               aliveCount={

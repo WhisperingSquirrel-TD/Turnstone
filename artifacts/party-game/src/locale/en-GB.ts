@@ -417,6 +417,9 @@ export const en = {
     playerOut: 'Out',
     playerOutRole: (role: 'traitor' | 'faithful') =>
       `Out, ${role === 'traitor' ? 'Traitor' : 'Faithful'}`,
+    personalTakenFate:
+      "You were taken in the night. You're out, but you can keep watching.",
+    personalOutFate: "You're out. You can watch, but you can't vote or choose.",
     latestUpdates: 'Latest updates',
     publicLogDeviceRecovered: (name: string) => `${name} moved to a new device`,
     publicLogPinReset: (name: string) => `${name}’s PIN was reset`,

@@ -778,6 +778,15 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       seatStatusByPhase.set(phase, seatStatus);
       seatStatusTimeline.push(`${phase}:${seatStatus ?? 'unknown'}`);
       if (seatStatus && seatStatus !== 'alive') sawHumanRemoved = true;
+      if (seatStatus && seatStatus !== 'alive') {
+        await expect(page.getByTestId('player-fate')).toHaveText(
+          phase === 'DAWN' && seatStatus === 'murdered'
+            ? "You were taken in the night. You're out, but you can keep watching."
+            : "You're out. You can watch, but you can't vote or choose.",
+        );
+      } else {
+        await expect(page.getByTestId('player-fate')).toHaveCount(0);
+      }
       if (
         phase === 'VERDICT' &&
         seatStatus !== 'alive' &&
