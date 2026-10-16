@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { availableParallelism } from 'node:os';
 import { afterAll, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { sql } from 'drizzle-orm';
@@ -12,6 +13,7 @@ import { replay } from '../lib/engine/src/index';
 import { eventSchema, gameConfigSchema } from '../lib/shared/src/index';
 import { createApp } from '../artifacts/api-server/src/app';
 import * as inviteStore from '../lib/db/src/seat-access-store';
+import * as pinSecurity from '../lib/security/src/seat-pin';
 import { hashSeatPin, verifySeatPin } from '../lib/security/src/seat-pin';
 import { consumeRateLimit } from '../lib/db/src/rate-limit';
 
@@ -31,6 +33,7 @@ const pinPepperConfig = {
 async function startedGame(
   lateJoining: 'never' | 'first-vote' | 'cycle' = 'first-vote',
   useEnvironmentPepper = false,
+  options: { playerCount?: number; bypassRateLimits?: boolean } = {},
 ) {
   const gameId = randomUUID();
   const now = Date.now() + 86_400_000;
@@ -40,7 +43,11 @@ async function startedGame(
       id: gameId,
       config: gameConfigSchema.parse({
         basics: { coCoordinators: 0 },
-        players: { count: 6, lateJoining, lateJoinCycle: 1 },
+        players: {
+          count: options.playerCount ?? 6,
+          lateJoining,
+          lateJoinCycle: 1,
+        },
         traitors: { number: 1, sleeper: false, recruitment: 'off' },
       }),
       seq: 1,
@@ -92,8 +99,9 @@ async function startedGame(
     },
     rateLimitSecret: `test-only-${gameId}`,
     ...(useEnvironmentPepper ? {} : { pinPepperConfig }),
-    consumeRateLimit: (bucket, limit, window) => {
+    consumeRateLimit: async (bucket, limit, window) => {
       rateLimitBuckets.add(bucket);
+      if (options.bypassRateLimits) return true;
       return consumeRateLimit(bucket, limit, window, now + 1000);
     },
     publicBaseUrl: 'https://turnstone.test',
@@ -120,6 +128,111 @@ async function startedGame(
     rateLimitBuckets,
   };
 }
+
+it('measures a reduced real-HTTP join storm with stored, verifiable PIN hashes', async () => {
+  const fixture = await startedGame('first-vote', false, {
+    playerCount: 40,
+    bypassRateLimits: true,
+  });
+  const verifySpy = vi.spyOn(pinSecurity, 'verifySeatPinWithRotation');
+  const { app, gameId } = fixture;
+  try {
+    const freshInvite = await request(app)
+      .post(`/api/games/${gameId}/late-invites`)
+      .expect(201);
+    const inviteToken = new URL(freshInvite.body.joinUrl).hash.slice(1);
+    const joinCount = 32;
+    const joins = Array.from({ length: joinCount }, (_, index) => ({
+      inviteToken,
+      name: `Capacity guest ${index + 1}`,
+      pin: String(1000 + index),
+      idempotencyKey: `capacity-join-${index + 1}`,
+    }));
+    const startedAt = performance.now();
+    const responses = await Promise.all(
+      joins.map((body) =>
+        request(app).post(`/api/games/${gameId}/join`).send(body),
+      ),
+    );
+    const durationMs = performance.now() - startedAt;
+    expect(responses.map((response) => response.status)).toEqual(
+      Array.from({ length: joinCount }, () => 202),
+    );
+    expect(verifySpy.mock.calls.length).toBe(0);
+    await request(app)
+      .post(`/api/games/${gameId}/join`)
+      .send({ ...joins[0], pin: '9999' })
+      .expect(401);
+    expect(verifySpy.mock.calls.length).toBe(1);
+
+    for (const [index, response] of responses.entries()) {
+      const joinRequest = await inviteStore.findGameJoinRequestById(
+        gameId,
+        response.body.requestId,
+      );
+      expect(joinRequest).not.toBeNull();
+      const access = await inviteStore.getSeatAccess(
+        gameId,
+        joinRequest!.seatId,
+      );
+      expect(access).not.toBeNull();
+      await expect(
+        verifySeatPin(
+          joins[index]!.pin,
+          access!.pinSalt,
+          access!.pinHash,
+          pinPepperConfig.current,
+        ),
+      ).resolves.toBe(true);
+    }
+
+    const storedHashes = await pool.query<{
+      rows: string;
+      unique_hashes: string;
+    }>(
+      `select count(*)::text as rows,
+              count(distinct pin_hash)::text as unique_hashes
+       from game_seat_access
+       where game_id = $1 and pin_pepper_version = $2`,
+      [gameId, pinPepperConfig.current.version],
+    );
+    expect(Number(storedHashes.rows[0]?.rows)).toBe(joinCount);
+    expect(Number(storedHashes.rows[0]?.unique_hashes)).toBe(joinCount);
+
+    const hashStartedAt = performance.now();
+    const directHashes = await Promise.all(
+      joins.map((_, index) =>
+        hashSeatPin(String(2000 + index), pinPepperConfig.current),
+      ),
+    );
+    const hashDurationMs = performance.now() - hashStartedAt;
+    expect(new Set(directHashes.map((hash) => hash.hash)).size).toBe(joinCount);
+
+    const joinsPerSecond = joinCount / (durationMs / 1000);
+    const hashesPerSecond = joinCount / (hashDurationMs / 1000);
+    const cores = availableParallelism();
+    const result = {
+      joinCount,
+      durationMs: Number(durationMs.toFixed(1)),
+      joinsPerSecond: Number(joinsPerSecond.toFixed(2)),
+      hostCores: cores,
+      joinsPerSecondPerCore: Number((joinsPerSecond / cores).toFixed(2)),
+      directHashDurationMs: Number(hashDurationMs.toFixed(1)),
+      hashesPerSecond: Number(hashesPerSecond.toFixed(2)),
+      hashesPerSecondPerCore: Number((hashesPerSecond / cores).toFixed(2)),
+      threadpoolSize: process.env.UV_THREADPOOL_SIZE ?? 'Node default',
+    };
+    if (process.env.CAPACITY_REPORT === '1') {
+      console.info(`[pin-join-capacity] ${JSON.stringify(result)}`);
+    }
+    expect(durationMs).toBeLessThan(30_000);
+    expect(joinsPerSecond).toBeGreaterThan(0);
+    expect(hashesPerSecond).toBeGreaterThan(0);
+  } finally {
+    verifySpy.mockRestore();
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
 
 it('admits an always-Faithful late seat by fresh link only, with approval and join limits', async () => {
   const fixture = await startedGame();

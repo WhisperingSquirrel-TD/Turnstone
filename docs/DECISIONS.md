@@ -1328,3 +1328,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Consequence:** A rotation keeps the old key available only during the rehash window; once all active rows have moved to the current version, the previous key can be removed. The owner explicitly authorized this queued security work to proceed before the repeat phone rehearsal; this does not authorize deployment, production-secret changes or paid services.
 
 **Scan note:** The full-history Gitleaks scan identified three generic-api-key false positives in synthetic test-only pepper literals already present in a pushed commit. Current fixtures use repeated-character test values; only those three historical fingerprints are narrowly ignored. The checksum-verified scanner still scans all history and fails on other findings.
+
+## D87 — PIN join-storm capacity and libuv pool (16 October 2026)
+
+**Context:** The Milestone 4 security review requires real PIN hashing in a reduced-scale join storm, per-core measurements, and an explicit production threadpool setting without silently weakening PIN security.
+
+**Choice:** Use the actual join HTTP path and salted, peppered scrypt hashes. Skip the redundant second verification only when this request successfully inserted the new seat-access row; existing rows and concurrent insert losers still verify the submitted PIN. Set the API start default to `UV_THREADPOOL_SIZE=8`, preserving an explicit environment override. Keep the current scrypt cost and pepper.
+
+**Consequence:** On the local 8-core development container, three 32-join samples had median 56.87 joins/s with pool 4 and 66.82 joins/s with pool 8; direct hash medians were 99.57/s and 157.67/s. Direct hashing exceeded the target rate in this environment, but full HTTP joins did not, so the results neither identify scrypt alone as the bottleneck nor establish production capacity. No security-cost change or paid/production capacity test is authorized. If a representative pre-launch measurement shows hashing is the bottleneck, the owner must choose between more cores, a tuned scrypt cost that retains the pepper, or hashing only on device recovery.

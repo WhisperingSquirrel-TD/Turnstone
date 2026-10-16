@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { replay, viewFor } from '../lib/engine/src/index';
 import { eventSchema, gameConfigSchema } from '../lib/shared/src/index';
@@ -30,5 +31,18 @@ describe('reduced-scale capacity contracts', () => {
       viewFor({ kind: 'player', seatId: 'seat-1' }, state),
     );
     expect(Buffer.byteLength(view, 'utf8')).toBeLessThan(2_000);
+  });
+
+  it('sets a configurable libuv threadpool default before starting the API', () => {
+    const packageJson = JSON.parse(
+      readFileSync(
+        new URL('../artifacts/api-server/package.json', import.meta.url),
+        'utf8',
+      ),
+    ) as { scripts: { start: string } };
+
+    expect(packageJson.scripts.start).toMatch(
+      /UV_THREADPOOL_SIZE=\$\{UV_THREADPOOL_SIZE:-8\}/,
+    );
   });
 });

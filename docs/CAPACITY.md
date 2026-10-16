@@ -20,6 +20,38 @@ production capacity claim and do not authorise launch or paid hosting.
   commands are not subject to this admission check. The value must be based on
   a separately measured host capacity; it is not inferred here.
 
+## Reduced-scale PIN join storm (16 October 2026)
+
+The integration check sends **32 concurrent joins** through the real late-join
+HTTP endpoint, creates and verifies each salted, peppered scrypt PIN hash, and
+checks the persisted hashes against all 32 submitted PINs. The rate-limit
+callback is bypassed only in this test so it measures admission and hashing
+throughput rather than the intentional per-client quota. It also measures 32
+direct PIN hashes separately to distinguish crypto throughput from full
+request/database overhead. The new-seat path no longer verifies its just-created
+hash a second time; if another request won the insert race, or an access row
+already exists, the submitted PIN is still verified normally.
+
+Three sequential samples on the Replit development container (Node v24.13.0,
+8 available cores; cgroup quota 8 CPUs) produced these medians:
+
+| `UV_THREADPOOL_SIZE` | Real join requests / second | Joins / second / core | Direct PIN hashes / second | Hashes / second / core |
+| -------------------: | --------------------------: | --------------------: | -------------------------: | ---------------------: |
+|                    4 |                       56.87 |                  7.11 |                      99.57 |                  12.45 |
+|                    8 |                       66.82 |                  8.35 |                     157.67 |                  19.71 |
+
+The API start command now defaults to `UV_THREADPOOL_SIZE=8`, matching the
+measured container's available cores; an explicitly configured environment
+value overrides it. At roughly 16 MB of scrypt working memory per active job,
+eight simultaneous jobs can use about 128 MB. This local sample is not a
+production benchmark. Direct hashing exceeded the 5,000-joins/minute target in
+this environment, while full HTTP joins did not; therefore it does not show
+that scrypt alone is the current bottleneck, and it does not prove the full
+target. Keep the scrypt cost unchanged. If representative pre-launch
+measurements identify hashing as the bottleneck, get the owner's decision
+before choosing more cores, a tuned scrypt cost while retaining the pepper, or
+hashing PINs only on device recovery.
+
 ## Not measured
 
 No representative host CPU or memory capacity, concurrent-game ceiling,
@@ -33,4 +65,9 @@ capacity tests and a measured `MAX_ACTIVE_GAMES` value remain launch work.
 ```sh
 pnpm exec vitest run tests/capacity.test.ts
 CAPACITY_REPORT=1 pnpm exec vitest run tests/database.integration.test.ts --reporter=verbose --silent=false
+for size in 4 8; do
+  UV_THREADPOOL_SIZE=$size CAPACITY_REPORT=1 pnpm exec vitest run \
+    tests/late-invites.integration.test.ts --no-file-parallelism \
+    --reporter=verbose --silent=false -t "reduced real-HTTP join storm"
+done
 ```

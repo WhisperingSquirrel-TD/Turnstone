@@ -941,9 +941,10 @@ export function createApp(
       )
       .digest('base64url');
     let access = await getSeatAccess(gameId, seatId);
+    let accessCreated = false;
     if (!access) {
       const hashedPin = await hashConfiguredSeatPin(data.pin);
-      await createSeatAccess({
+      accessCreated = await createSeatAccess({
         gameId,
         seatId,
         pinSalt: hashedPin.salt,
@@ -954,7 +955,8 @@ export function createApp(
     }
     if (
       !access ||
-      !(await verifyAndUpgradeSeatPin(gameId, seatId, data.pin, access))
+      (!accessCreated &&
+        !(await verifyAndUpgradeSeatPin(gameId, seatId, data.pin, access)))
     ) {
       sendError(response, 401, entryFailureMessages.joinPinMismatch);
       return;
