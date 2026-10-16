@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
+import { APP_ROUTE_PATHS, isAppShellRoute } from '@workspace/shared/app-routes';
 import { noncePlugin } from './vite.security';
 import { config } from './src/config';
 import { createWebManifest } from './src/pwa-manifest';
@@ -130,9 +131,12 @@ export default defineConfig({
         handler: (html, context) => {
           const pathname = new URL(context.path, 'http://vite.local').pathname;
           const route = appRelativePath(pathname);
-          if (route === '/faq' || route === '/compare') {
+          if (
+            route === APP_ROUTE_PATHS.faq ||
+            route === APP_ROUTE_PATHS.compare
+          ) {
             return pageDocument(
-              route === '/faq' ? 'faq' : 'compare',
+              route === APP_ROUTE_PATHS.faq ? 'faq' : 'compare',
               [`${baseHref}src/index.css`, `${baseHref}src/public-home.css`],
               [
                 `${baseHref}src/fonts/playfair-display-latin-400-normal.woff2`,
@@ -147,7 +151,7 @@ export default defineConfig({
               renderPublicAppShellHtml(basePath),
             );
           }
-          if (route !== '/') {
+          if (isAppShellRoute(route)) {
             return appShellDocument(
               html
                 .replaceAll('__PUBLIC_TITLE__', escapeHtml(config.appName))
@@ -156,6 +160,9 @@ export default defineConfig({
                 .replaceAll('__PUBLIC_JSON_LD__', ''),
               basePath,
             );
+          }
+          if (route !== APP_ROUTE_PATHS.home) {
+            throw new Error(`Unexpected HTML route: ${route}`);
           }
           return html
             .replaceAll('__PUBLIC_TITLE__', escapeHtml(getPublicTitle()))
@@ -176,14 +183,17 @@ export default defineConfig({
           const pathname = new URL(request.url ?? '/', 'http://vite.local')
             .pathname;
           const route = appRelativePath(pathname);
-          if (route === '/faq' || route === '/compare') {
+          if (
+            route === APP_ROUTE_PATHS.faq ||
+            route === APP_ROUTE_PATHS.compare
+          ) {
             const fontPreloadHrefs = [
               `${baseHref}src/fonts/playfair-display-latin-400-normal.woff2`,
               `${baseHref}src/fonts/dm-sans-latin-400-normal.woff2`,
               `${baseHref}src/fonts/dm-sans-latin-500-normal.woff2`,
             ];
             const document = pageDocument(
-              route === '/faq' ? 'faq' : 'compare',
+              route === APP_ROUTE_PATHS.faq ? 'faq' : 'compare',
               [`${baseHref}src/index.css`, `${baseHref}src/public-home.css`],
               fontPreloadHrefs,
             );
@@ -197,33 +207,40 @@ export default defineConfig({
               .catch(next);
             return;
           }
-          if (route !== '/llms.txt') {
-            if (
-              route === '/' ||
-              route === '/app-shell.html' ||
-              request.method !== 'GET' ||
-              !request.headers.accept?.includes('text/html')
-            ) {
-              next();
-              return;
-            }
-            const indexHtml = readFileSync(
-              path.resolve(import.meta.dirname, 'index.html'),
-              'utf8',
-            );
-            void server
-              .transformIndexHtml(request.url ?? route, indexHtml)
-              .then((html) => {
-                response.statusCode = 200;
-                response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end(html);
-              })
-              .catch(next);
+          if (route === '/llms.txt') {
+            response.statusCode = 200;
+            response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            response.end(renderLlmsTxt());
             return;
           }
-          response.statusCode = 200;
-          response.setHeader('Content-Type', 'text/plain; charset=utf-8');
-          response.end(renderLlmsTxt());
+          if (
+            route === APP_ROUTE_PATHS.home ||
+            route === '/app-shell.html' ||
+            request.method !== 'GET' ||
+            !request.headers.accept?.includes('text/html')
+          ) {
+            next();
+            return;
+          }
+          if (!isAppShellRoute(route)) {
+            response.statusCode = 404;
+            response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            response.end('Not Found');
+            return;
+          }
+          const indexHtml = readFileSync(
+            path.resolve(import.meta.dirname, 'index.html'),
+            'utf8',
+          );
+          void server
+            .transformIndexHtml(request.url ?? route, indexHtml)
+            .then((html) => {
+              response.statusCode = 200;
+              response.setHeader('Content-Type', 'text/html; charset=utf-8');
+              response.end(html);
+            })
+            .catch(next);
+          return;
         });
       },
       generateBundle(_options, bundle) {

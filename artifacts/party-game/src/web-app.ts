@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
+import { APP_ROUTE_PATHS, isAppShellRoute } from '@workspace/shared/app-routes';
 import { createNonce, securityHeaders } from '@workspace/security';
 import { PRE_LAUNCH_NOINDEX } from '../../../lib/security/src/deployment';
 
@@ -19,7 +20,7 @@ export function createWebApp(
     }
     next();
   });
-  app.get(['/faq', '/compare'], async (req, res) => {
+  app.get([APP_ROUTE_PATHS.faq, APP_ROUTE_PATHS.compare], async (req, res) => {
     const html = await readFile(
       path.join(publicDirectory, req.path.slice(1), 'index.html'),
       'utf8',
@@ -36,7 +37,11 @@ export function createWebApp(
     }),
   );
   app.get('/{*path}', async (req, res) => {
-    const isHomePage = req.path === '/';
+    const isHomePage = req.path === APP_ROUTE_PATHS.home;
+    if (!isHomePage && !isAppShellRoute(req.path)) {
+      res.status(404).type('text').send('Not Found');
+      return;
+    }
     let html = await readFile(
       path.join(publicDirectory, isHomePage ? 'index.html' : 'app-shell.html'),
       'utf8',

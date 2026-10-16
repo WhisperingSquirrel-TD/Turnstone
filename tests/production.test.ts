@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import request from 'supertest';
+import { APP_SHELL_ROUTE_BASES } from '../lib/shared/src/app-routes';
 import { createWebApp } from '../artifacts/party-game/src/web-app';
 
 describe('actual built production website', () => {
@@ -23,7 +24,11 @@ describe('actual built production website', () => {
     expect(home.status).toBe(200);
     expect(home.text).toContain('Start a new game');
 
-    for (const path of ['/play', '/game/rehearsal-id']) {
+    const appShellPaths = APP_SHELL_ROUTE_BASES.flatMap((route) => [
+      route,
+      `${route}/deep-link`,
+    ]);
+    for (const path of appShellPaths) {
       const response = await request(app).get(path);
       expect(response.status, path).toBe(200);
       expect(response.text).toContain(
@@ -36,6 +41,8 @@ describe('actual built production website', () => {
       expect(response.text).not.toContain('Frequently asked questions');
       expect(response.text).not.toContain('application/ld+json');
     }
+
+    expect((await request(app).get('/not-a-turnstone-route')).status).toBe(404);
   });
 
   it('serves external-only scripts with fresh CSP nonces and strict headers on both routes', async () => {

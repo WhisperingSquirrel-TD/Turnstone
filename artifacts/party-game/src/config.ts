@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { PRE_LAUNCH_NOINDEX } from '@workspace/security/deployment';
+import { APP_ROUTE_PATHS } from '@workspace/shared/app-routes';
 
 const appName = 'Turnstone';
 const builder = 'Stackstone Consulting';
@@ -33,11 +34,7 @@ export const config = {
     location: { locality: 'Abingdon', region: 'Oxfordshire' },
   },
   routes: {
-    home: '/',
-    play: '/play',
-    join: '/join',
-    faq: '/faq',
-    compare: '/compare',
-    rehearsal: '/play?entry=rehearsal',
+    ...APP_ROUTE_PATHS,
+    rehearsal: `${APP_ROUTE_PATHS.play}?entry=rehearsal`,
   },
 } as const;

@@ -2317,16 +2317,22 @@ export function AppRoutes() {
             <Route path={config.routes.compare} element={<PublicCompare />} />
             <Route path={config.routes.play} element={<Play />} />
             <Route path={config.routes.join} element={<Play mode="join" />} />
-            <Route path="/join/:gameId" element={<Play mode="join" />} />
             <Route
-              path="/join-request/:requestId"
+              path={`${config.routes.join}/:gameId`}
+              element={<Play mode="join" />}
+            />
+            <Route
+              path={`${config.routes.joinRequest}/:requestId`}
               element={<Play mode="waiting" />}
             />
             <Route
-              path="/coordinate/:id"
+              path={`${config.routes.coordinate}/:id`}
               element={<Play mode="coordinate" />}
             />
-            <Route path="/game/:id" element={<PlayerGame />} />
+            <Route
+              path={`${config.routes.game}/:id`}
+              element={<PlayerGame />}
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </CsrfProvider>
