@@ -56,9 +56,10 @@ hashing PINs only on device recovery.
 
 No representative host CPU or memory capacity, concurrent-game ceiling,
 15,000-player load, 5,000-join/minute storm, 12-hour soak, or production
-database throughput has been measured. This workspace is staying on the free
-tier; do not extrapolate the local checks to a production VM or database. Full
-capacity tests and a measured `MAX_ACTIVE_GAMES` value remain launch work.
+database throughput has been measured. Do not extrapolate the local checks to
+a production VM or database. Production capacity tests, paid resources,
+publishing and deployment require explicit owner approval; a measured
+`MAX_ACTIVE_GAMES` value remains launch work.
 
 ## Reproduction
 

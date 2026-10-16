@@ -147,7 +147,7 @@ These owner decisions supersede the corresponding D16/D17/D19 placeholders and A
 - Before: `"Built by Stackstone Consulting" in the footer, end screen and recap`
 - After: `"Built by Stackstone Consulting" on every screen, plus the footer, end-of-game screen and recap`
 
-**Consequence:** This is an owner-authorised SPEC amendment, not an undocumented deviation. All other text in sections 1–22 is unchanged. Milestone 5 starts the reusable mark and rename tests; Milestone 9 adds the independence statement and naming record. Current milestone work/gates, free-tier restrictions and unresolved WebKit acceptance are unchanged.
+**Consequence:** This is an owner-authorised SPEC amendment, not an undocumented deviation. All other text in sections 1–22 is unchanged. Milestone 5 starts the reusable mark and rename tests; Milestone 9 adds the independence statement and naming record. Current milestone work/gates, the no-publish/deployment/paid-service approval boundary and unresolved WebKit acceptance are unchanged.
 
 ### D17 — Uniform mark on every screen
 
@@ -269,7 +269,7 @@ PIN recovery revokes all previous devices on that seat. Adding a device needs bo
 
 **Choice:** Append §21 verbatim after §20, preserve sections 1–20, and extend Milestone 9. Do not interrupt/restart the current milestone or introduce marketing implementation now.
 
-**Consequence:** Current acceptance/status and the free-tier/no-deployment instruction are unchanged. The new work is a required part of Milestone 9, not a Could feature or immediate advertising campaign.
+**Consequence:** Current acceptance/status and the no-publish/deployment/paid-service approval boundary are unchanged. The new work is a required part of Milestone 9, not a Could feature or immediate advertising campaign.
 
 ### B1 — Positioning and category-only sales pages
 
@@ -313,7 +313,7 @@ PIN recovery revokes all previous devices on that seat. Adding a device needs bo
 
 ## Amendment 1 — section 20 accepted and mapped
 
-**Context:** The owner supplied §20 verbatim as a binding amendment. It overrides conflicting requirements in §4, §16 and §18, not the secrecy/accessibility rules or free-tier instruction.
+**Context:** The owner supplied §20 verbatim as a binding amendment. It overrides conflicting requirements in §4, §16 and §18, not the secrecy/accessibility rules or the no-publish/deployment/paid-service approval boundary.
 
 **Options:** Retain conflicting single-instance/larger-client assumptions; or adopt §20's static public front door, tighter budgets and scale-ready server design.
 
@@ -343,13 +343,13 @@ PIN recovery revokes all previous devices on that seat. Adding a device needs bo
 
 ### A3 — Reduced versus full capacity evidence
 
-**Context:** Free-tier builds can measure smaller workloads and extrapolate, but §20's full targets need an owner-approved production VM/database plan.
+**Context:** Local builds can measure smaller workloads and extrapolate, but §20's full targets need an owner-approved production VM/database plan.
 
 **Options:** Run full load on unapproved resources or claim extrapolations prove production capacity; or maintain separate measured reduced-scale and measured full-target evidence.
 
 **Choice:** Add bounded reduced-scale checks to verify from Milestone 4 as server capabilities exist, expanding with the relevant routes in Milestones 5–9. Milestone 10 implements every full §20 capacity target and records results in `docs/CAPACITY.md`; paid-resource execution awaits an explicit owner decision.
 
-**Consequence:** Report steady play, private fan-out, deal spike, join storm, static throughput with game-server isolation, and soak/resource growth. Record hardware, workload, durations, command/fan-out percentiles, players per CPU core and per GB, errors and cost-per-player assumptions. Distinguish measurements from extrapolation; do not invent pricing, production capacity or a passing full test. Pending full-capacity evidence blocks launch, not free-tier development.
+**Consequence:** Report steady play, private fan-out, deal spike, join storm, static throughput with game-server isolation, and soak/resource growth. Record hardware, workload, durations, command/fan-out percentiles, players per CPU core and per GB, errors and cost-per-player assumptions. Distinguish measurements from extrapolation; do not invent pricing, production capacity or a passing full test. Pending full-capacity evidence blocks launch, not local development.
 
 ### A4 — Admission control, forecasts and peak days
 
@@ -431,13 +431,13 @@ Each entry uses context, options, choice and consequence. **Pending** means no a
 
 **Consequence:** Use `pnpm run verify`, `pnpm run verify:full` and the actual pnpm-lock audit wherever the source mentions npm. Existing npm-run aliases do not require a separate npm lockfile. This mapping is approved, not an outstanding stack deviation.
 
-## D2 — Free-tier and approval limits (owner-confirmed)
+## D2 — Hosting and spending approval limits (owner-confirmed)
 
-**Context:** The owner instructed: stay on the free tier, do not publish, deploy or enable any paid service, and keep each run focused to save usage.
+**Context:** The owner is on Replit Pro. “Stay on the free tier” is a scope restriction, not a statement about the account plan: no publishing, deployment or paid services without explicit owner approval. Keep each run focused.
 
 **Options:** None without a new explicit owner instruction.
 
-**Choice:** No deployment or paid activation. Do not start Milestone 1 without plan approval and the foundation gate. Complete specification receipt is not implementation approval.
+**Choice:** No publishing, deployment or paid-service activation without explicit owner approval. Do not start Milestone 1 without plan approval and the foundation gate. Complete specification receipt is not implementation approval.
 
 **Consequence:** Reserved VM is a later owner decision, not an action now. Full-volume testing and external providers must be planned honestly; resource constraints cannot waive a Must, fake coverage, or authorise spending.
 
@@ -774,7 +774,7 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 ## D47 — Milestone 4 backend infrastructure choices (resolved; acceptance pending)
 
-**Context:** The server/realtime implementation needs durable state and deadlines, cross-instance pushes, admission control and measurable local checks while remaining within the free-tier restriction. Coordinator passkey sign-in is Milestone 8; the server must not simulate an identity before then.
+**Context:** The server/realtime implementation needs durable state and deadlines, cross-instance pushes, admission control and measurable local checks while respecting the rule that publishing, deployment and paid services require explicit owner approval. Coordinator passkey sign-in is Milestone 8; the server must not simulate an identity before then.
 
 **Options:** Keep authoritative state or deadlines in process memory; add a separately paid Redis/queue service; or use PostgreSQL transactions and claims. For realtime, use a paid Redis adapter or PostgreSQL notifications.
 
@@ -846,7 +846,7 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Choice:** Complete milestones in order with strict TDD and a green local `pnpm run verify` before each push. After every push, inspect the public GitHub Actions run for that commit, including job results and annotations; a red or cancelled run blocks the next milestone. Keep the “Status for reviewer” block at the top of `docs/PROGRESS.md` and update it at every push. Record questions in `docs/QUESTIONS.md` with a recommended answer and reasoning; use provisional, feature-scoped defaults only when safe.
 
-**Hard stops:** Stop after Milestone 5 for the owner’s real-phone rehearsal review, and for payment, publishing, deployment, DNS/Vercel work, or any change to §3 security, privacy or secrecy principles. Stay on the free tier; use only `TURNSTONE_GITHUB_TOKEN` through the established one-off credential helper.
+**Hard stops:** Stop after Milestone 5 for the owner’s real-phone rehearsal review, and for payment, publishing, deployment, DNS/Vercel work, or any change to §3 security, privacy or secrecy principles. Do not publish, deploy or activate paid services without explicit owner approval; use only `TURNSTONE_GITHUB_TOKEN` through the established one-off credential helper.
 
 **Consequence:** No milestone is considered complete from local checks alone; its public CI result must also be green before work advances.
 
