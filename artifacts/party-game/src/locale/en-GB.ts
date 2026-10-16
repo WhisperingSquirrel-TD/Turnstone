@@ -378,6 +378,7 @@ export const en = {
     banished: (name: string) => `${name} was banished.`,
     banishedRole: (role: 'traitor' | 'faithful') =>
       `Their role was ${role === 'traitor' ? 'Traitor' : 'Faithful'}.`,
+    noVotesAnnouncement: 'No votes were cast. Nobody is banished.',
     voteResults: 'Votes revealed',
     voteTally: (count: number, target: string) =>
       `${count} ${count === 1 ? 'vote' : 'votes'} for ${target}.`,

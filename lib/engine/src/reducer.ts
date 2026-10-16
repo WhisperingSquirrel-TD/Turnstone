@@ -205,6 +205,25 @@ export function evolve(previous: State | null, input: unknown): State {
       state.revote = event.revote;
       state.candidates = event.candidates;
       break;
+    case 'VoteSkipped':
+      if (previous.phase !== 'VOTE')
+        throw new Error('VoteSkipped outside a non-endgame ballot');
+      state.target = null;
+      state.revote = false;
+      state.candidates = [];
+      state.publicAnnouncement = {
+        kind: 'no_votes',
+        cycle: previous.cycle,
+      };
+      state.publicLog = [
+        ...state.publicLog,
+        {
+          seq: event.seq,
+          at: event.at,
+          action: 'no_votes',
+        },
+      ];
+      break;
     case 'ShadowSubmitted':
       state.shadow = { ...previous.shadow, [event.seatId]: event.choice };
       if (!previous.acks.includes(event.seatId))

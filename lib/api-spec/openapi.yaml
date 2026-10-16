@@ -845,6 +845,15 @@ components:
                       $ref: '#/components/schemas/Role'
             - type: object
               additionalProperties: false
+              required: [kind, cycle]
+              properties:
+                kind:
+                  const: no_votes
+                cycle:
+                  type: integer
+                  minimum: 0
+            - type: object
+              additionalProperties: false
               required: [kind, winner]
               properties:
                 kind:
@@ -980,6 +989,13 @@ components:
                 properties:
                   id: { type: string }
                   name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: no_votes }
         - type: object
           additionalProperties: false
           required: [seq, at, action, seat]

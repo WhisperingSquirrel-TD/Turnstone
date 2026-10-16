@@ -1,0 +1,31 @@
+id: no-votes-after-tie-revote
+description: A tied public vote is followed by an empty re-vote, so nobody is banished.
+seed: 20261050
+strategy: tie-then-abstain
+config:
+  players:
+    count: 15
+  traitors:
+    number: 3
+    sleeper: false
+    recruitment: off
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-random
+    revealStyle: all
+  endgame:
+    size: 4
+    parity: false
+  schedule:
+    format: quick
+    plannedCycles: 1
+expected:
+  phase: FINISHED
+  winner: faithful
+  reason: no-traitors
+  alive: 7
+  eliminated: 8
+assertions:
+  noVoteRevote: true

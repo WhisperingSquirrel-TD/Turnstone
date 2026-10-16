@@ -107,6 +107,7 @@ export const eventSchema = z.discriminatedUnion('type', [
   event('PrivateAcknowledged', { seatId: id }),
   event('VoteSubmitted', { seatId: id, target: id }),
   event('VoteRevealed', { seatId: id }),
+  event('VoteSkipped', {}),
   event('VoteClosed', {
     target: id.nullable(),
     revote: z.boolean(),
@@ -232,6 +233,13 @@ const publicLogEntrySchema = z.discriminatedUnion('action', [
     .object({
       seq: z.number().int().positive(),
       at: z.number().int().nonnegative(),
+      action: z.literal('no_votes'),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
       action: z.literal('banishment'),
       seat: z.object({ id, name: z.string() }).strict(),
     })
@@ -302,6 +310,12 @@ export const fullViewSchema = z
                 role: roleSchema.optional(),
               })
               .strict(),
+          })
+          .strict(),
+        z
+          .object({
+            kind: z.literal('no_votes'),
+            cycle: z.number().int().nonnegative(),
           })
           .strict(),
         z

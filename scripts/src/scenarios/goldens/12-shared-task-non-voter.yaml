@@ -30,6 +30,6 @@ config:
 expected:
   phase: FINISHED
   winner: traitor
-  reason: two-players
-  alive: 2
-  eliminated: 8
+  reason: parity
+  alive: 4
+  eliminated: 6

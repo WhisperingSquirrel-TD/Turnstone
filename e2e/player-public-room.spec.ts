@@ -1322,6 +1322,29 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
 
   currentView = {
     ...currentView,
+    phase: 'VERDICT',
+    publicAnnouncement: { kind: 'no_votes', cycle: 2 },
+    ballots: {},
+    publicLog: [
+      ...currentView.publicLog,
+      { seq: 13, at: Date.now(), action: 'no_votes' },
+    ],
+  };
+  await page.reload();
+  const noVotesAnnouncement = page.getByTestId('shared-announcement');
+  await expect(noVotesAnnouncement).toHaveCount(1);
+  await expect(noVotesAnnouncement).toHaveText(
+    'No votes were cast. Nobody is banished.',
+  );
+  await expect(
+    page.getByTestId('player-game').getByRole('heading').first(),
+  ).toHaveText('No votes were cast. Nobody is banished.');
+  await expect(page.getByTestId('public-log-entry-13')).toHaveText(
+    'No votes were cast. Nobody is banished.',
+  );
+
+  currentView = {
+    ...currentView,
     phase: 'FINISHED',
     winner: 'faithful',
     publicAnnouncement: { kind: 'finished', winner: 'faithful' },

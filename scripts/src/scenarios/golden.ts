@@ -19,7 +19,12 @@ export type GoldenScenario = {
     alive: number;
     eliminated: number;
   };
-  assertions?: { shadowSplitAfterRevote?: boolean };
+  assertions?: {
+    shadowSplitAfterRevote?: boolean;
+    noVoteRound?: boolean;
+    noVoteRevote?: boolean;
+    abstainedEndgameBanishment?: boolean;
+  };
 };
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -55,8 +60,15 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
     typeof input.expected.reason !== 'string' ||
     !Number.isInteger(input.expected.alive) ||
     !Number.isInteger(input.expected.eliminated) ||
-    (assertions?.shadowSplitAfterRevote !== undefined &&
-      typeof assertions.shadowSplitAfterRevote !== 'boolean')
+    [
+      'shadowSplitAfterRevote',
+      'noVoteRound',
+      'noVoteRevote',
+      'abstainedEndgameBanishment',
+    ].some(
+      (key) =>
+        assertions?.[key] !== undefined && typeof assertions[key] !== 'boolean',
+    )
   )
     throw new Error(`Golden scenario ${filename} has invalid metadata`);
   return {
@@ -72,11 +84,25 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
       alive: input.expected.alive as number,
       eliminated: input.expected.eliminated as number,
     },
-    ...(assertions?.shadowSplitAfterRevote === undefined
+    ...(assertions === undefined
       ? {}
       : {
           assertions: {
-            shadowSplitAfterRevote: assertions.shadowSplitAfterRevote,
+            ...(typeof assertions.shadowSplitAfterRevote === 'boolean'
+              ? { shadowSplitAfterRevote: assertions.shadowSplitAfterRevote }
+              : {}),
+            ...(typeof assertions.noVoteRound === 'boolean'
+              ? { noVoteRound: assertions.noVoteRound }
+              : {}),
+            ...(typeof assertions.noVoteRevote === 'boolean'
+              ? { noVoteRevote: assertions.noVoteRevote }
+              : {}),
+            ...(typeof assertions.abstainedEndgameBanishment === 'boolean'
+              ? {
+                  abstainedEndgameBanishment:
+                    assertions.abstainedEndgameBanishment,
+                }
+              : {}),
           },
         }),
   };

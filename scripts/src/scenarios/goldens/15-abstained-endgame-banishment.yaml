@@ -1,0 +1,32 @@
+id: abstained-endgame-banishment
+description: Endgame abstention retains the random choice among finalists.
+seed: 20261051
+strategy: non-voter
+config:
+  players:
+    count: 5
+  traitors:
+    number: 1
+    sleeper: false
+    recruitment: off
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-random
+    revealStyle: all
+  endgame:
+    size: 4
+    parity: false
+  schedule:
+    format: quick
+    plannedCycles: 1
+expected:
+  phase: FINISHED
+  winner: faithful
+  reason: no-traitors
+  alive: 2
+  eliminated: 3
+assertions:
+  noVoteRound: true
+  abstainedEndgameBanishment: true

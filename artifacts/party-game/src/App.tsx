@@ -1492,6 +1492,19 @@ function PlayerGame() {
                   )}
                 </section>
               )}
+            {!inPrivateMoment &&
+              full.publicAnnouncement?.kind === 'no_votes' && (
+                <section
+                  className="mb-6 border-l-2 border-gilt pl-5"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  data-testid="shared-announcement"
+                >
+                  <h1 className="display text-3xl text-candle">
+                    {en.game.noVotesAnnouncement}
+                  </h1>
+                </section>
+              )}
             {!full.rehearsal && explanationKey && (
               <details className="mb-4 text-sm text-ash">
                 <summary className="min-h-11 cursor-pointer py-2">
@@ -1529,7 +1542,8 @@ function PlayerGame() {
               <div className="flex flex-wrap items-end justify-between gap-4">
                 {!(
                   full.phase === 'VERDICT' &&
-                  full.publicAnnouncement?.kind === 'verdict'
+                  (full.publicAnnouncement?.kind === 'verdict' ||
+                    full.publicAnnouncement?.kind === 'no_votes')
                 ) && (
                   <div>
                     <h1 className="display mt-2 text-4xl leading-tight sm:text-5xl">
@@ -1578,7 +1592,8 @@ function PlayerGame() {
 
             {!inPrivateMoment &&
               full.publicAnnouncement &&
-              full.publicAnnouncement.kind !== 'verdict' && (
+              full.publicAnnouncement.kind !== 'verdict' &&
+              full.publicAnnouncement.kind !== 'no_votes' && (
                 <section
                   className="mt-6 border-l-2 border-gilt pl-5"
                   aria-live="polite"
@@ -2068,9 +2083,13 @@ function PlayerGame() {
                                 ? en.game.publicLogDawn(
                                     entry.victims.map((victim) => victim.name),
                                   )
-                                : entry.action === 'banishment'
-                                  ? en.game.publicLogBanishment(entry.seat.name)
-                                  : en.game.publicLogFinished(entry.winner)}
+                                : entry.action === 'no_votes'
+                                  ? en.game.noVotesAnnouncement
+                                  : entry.action === 'banishment'
+                                    ? en.game.publicLogBanishment(
+                                        entry.seat.name,
+                                      )
+                                    : en.game.publicLogFinished(entry.winner)}
                         </li>
                       ))}
                     {full.publicLog.length === 0 && (

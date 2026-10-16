@@ -17,6 +17,7 @@ export const BOT_STRATEGIES = [
   'aggressive-traitor',
   'never-acts',
   'non-voter',
+  'tie-then-abstain',
   'serial-disconnector',
   'coordinator-probes-for-secrets',
 ] as const;
@@ -319,6 +320,10 @@ export function runCompleteGame(
 
   const strategySkipsSeat = (seatIndex: number, state: State) =>
     options.strategy === 'never-acts' ||
+    (options.strategy === 'tie-then-abstain' &&
+      state.phase === 'VOTE' &&
+      state.cycle === 1 &&
+      (state.revote || ![2, 3].includes(seatIndex))) ||
     (options.strategy === 'serial-disconnector' &&
       (state.cycle + seatIndex) % 2 === 0);
   const pickIndex = (count: number, state: State, seatIndex: number) =>
@@ -326,6 +331,17 @@ export function runCompleteGame(
       ? botRandom.int(count)
       : (state.version + seatIndex) % count;
   const chooseVote = (state: State, seatIndex: number, seatId: string) => {
+    if (
+      options.strategy === 'tie-then-abstain' &&
+      state.phase === 'VOTE' &&
+      state.cycle === 1 &&
+      !state.revote &&
+      (seatIndex === 2 || seatIndex === 3)
+    ) {
+      const targets = state.seats.filter((seat) => seat.status === 'alive');
+      const target = targets[seatIndex - 2];
+      if (target && target.id !== seatId) return target.id;
+    }
     const eligibleCandidates = state.seats.filter(
       (seat) =>
         seat.status === 'alive' &&

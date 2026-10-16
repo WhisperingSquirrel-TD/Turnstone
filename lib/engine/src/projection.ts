@@ -140,6 +140,11 @@ export function viewFor(
         return seat ? [{ id: seat.id, name: seat.name }] : [];
       }),
     };
+  } else if (announcement?.kind === 'no_votes') {
+    publicAnnouncement = {
+      kind: 'no_votes',
+      cycle: announcement.cycle,
+    };
   } else if (announcement?.kind === 'verdict') {
     const seat = state.seats.find(
       (candidate) => candidate.id === announcement.seatId,
@@ -225,6 +230,12 @@ export function viewFor(
             id,
             name: state.seats.find((seat) => seat.id === id)?.name ?? '',
           })),
+        };
+      if (entry.action === 'no_votes')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
         };
       if (entry.action === 'banishment')
         return {

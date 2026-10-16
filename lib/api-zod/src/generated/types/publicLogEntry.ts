@@ -7,47 +7,59 @@
  */
 import type { Role } from './role';
 
-export type PublicLogEntry = {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'seat_pin_reset';
-  seatId: string;
-  name: string;
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'device_recovered';
-  seatId: string;
-  name: string;
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'dawn';
-  victims: {
-  id: string;
-  name: string;
-}[];
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'banishment';
-  seat: {
-  id: string;
-  name: string;
-};
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'finished';
-  winner: Role;
-};
+export type PublicLogEntry =
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'seat_pin_reset';
+      seatId: string;
+      name: string;
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'device_recovered';
+      seatId: string;
+      name: string;
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'dawn';
+      victims: {
+        id: string;
+        name: string;
+      }[];
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'no_votes';
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'banishment';
+      seat: {
+        id: string;
+        name: string;
+      };
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'finished';
+      winner: Role;
+    };

@@ -113,6 +113,11 @@ export type State = {
     | {
         seq: number;
         at: number;
+        action: 'no_votes';
+      }
+    | {
+        seq: number;
+        at: number;
         action: 'dawn';
         victimIds: string[];
       }
@@ -126,6 +131,7 @@ export type State = {
   publicAnnouncement:
     | { kind: 'dawn'; cycle: number; victimIds: string[] }
     | { kind: 'verdict'; cycle: number; seatId: string }
+    | { kind: 'no_votes'; cycle: number }
     | { kind: 'finished'; winner: Role }
     | null;
   coordinatorAlerts: {

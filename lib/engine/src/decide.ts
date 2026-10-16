@@ -563,6 +563,12 @@ export function decide(
         );
         const maximum = Math.max(...Object.values(scores));
         const tied = candidates.filter((id) => scores[id] === maximum);
+        const noVotes = Object.keys(state.votes).length === 0;
+        if (state.phase === 'VOTE' && noVotes) {
+          emit('VoteSkipped', {});
+          enter('VERDICT');
+          break;
+        }
         if (tied.length > 1 && !state.revote) {
           emit('VoteClosed', { target: null, revote: true, candidates: tied });
           enter(state.phase);

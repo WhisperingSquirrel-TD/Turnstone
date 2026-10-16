@@ -33,6 +33,35 @@ function hasSplitAfterShadowRevote(events: readonly Event[]): boolean {
   return false;
 }
 
+function findAbstentionOutcomes(events: readonly Event[]) {
+  let phase = '';
+  let waitingForVoteRevote = false;
+  let ballotsInCurrentRound = 0;
+  const outcomes = {
+    noVoteRound: false,
+    noVoteRevote: false,
+    abstainedEndgameBanishment: false,
+  };
+  for (const event of events) {
+    if (event.type === 'PhaseChanged') {
+      phase = event.phase;
+      if (phase === 'VOTE' || phase === 'FINAL_BANISH')
+        ballotsInCurrentRound = 0;
+    } else if (event.type === 'VoteSubmitted') {
+      if (phase === 'VOTE' || phase === 'FINAL_BANISH') ballotsInCurrentRound++;
+    } else if (event.type === 'VoteClosed') {
+      if (phase === 'VOTE') waitingForVoteRevote = event.revote;
+      if (phase === 'FINAL_BANISH' && ballotsInCurrentRound === 0)
+        outcomes.abstainedEndgameBanishment = true;
+    } else if (event.type === 'VoteSkipped' && phase === 'VOTE') {
+      outcomes.noVoteRound = true;
+      if (waitingForVoteRevote) outcomes.noVoteRevote = true;
+      waitingForVoteRevote = false;
+    }
+  }
+  return outcomes;
+}
+
 it('replays every implemented complete-game golden scenario exactly', () => {
   const scenarios = loadGoldenScenarios();
   expect(scenarios.length).toBeGreaterThanOrEqual(12);
@@ -57,8 +86,32 @@ it('replays every implemented complete-game golden scenario exactly', () => {
     ).toEqual(scenario.expected);
     if (scenario.assertions?.shadowSplitAfterRevote)
       expect(hasSplitAfterShadowRevote(result.events), scenario.id).toBe(true);
+    const abstentionOutcomes = findAbstentionOutcomes(result.events);
+    for (const assertion of [
+      'noVoteRound',
+      'noVoteRevote',
+      'abstainedEndgameBanishment',
+    ] as const) {
+      if (scenario.assertions?.[assertion])
+        expect(abstentionOutcomes[assertion], scenario.id).toBe(true);
+    }
   }
 }, 30_000);
+
+it('keeps golden coverage for abstained regular, tie-revote and endgame ballots', () => {
+  const scenarios = loadGoldenScenarios();
+  expect(scenarios.some((scenario) => scenario.assertions?.noVoteRound)).toBe(
+    true,
+  );
+  expect(scenarios.some((scenario) => scenario.assertions?.noVoteRevote)).toBe(
+    true,
+  );
+  expect(
+    scenarios.some(
+      (scenario) => scenario.assertions?.abstainedEndgameBanishment,
+    ),
+  ).toBe(true);
+});
 
 it('includes a complete-game golden where Traitors split after their re-vote', () => {
   const scenario = loadGoldenScenarios().find(

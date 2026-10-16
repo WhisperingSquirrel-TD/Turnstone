@@ -26,3 +26,5 @@ expected:
   reason: two-players
   alive: 2
   eliminated: 3
+assertions:
+  noVoteRound: true

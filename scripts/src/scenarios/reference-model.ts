@@ -488,6 +488,16 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
         currentVotes = new Map();
         break;
       }
+      case 'VoteSkipped':
+        if (phase !== 'VOTE' || currentVotes.size !== 0)
+          throw new Error(
+            'Reference: vote skipped outside an empty non-endgame ballot',
+          );
+        pendingBanishment = null;
+        revote = false;
+        voteCandidates = [];
+        currentVotes = new Map();
+        break;
       case 'SeatRemoved': {
         const seat = seats.get(event.seatId);
         if (!seat || seat.status !== 'alive')
