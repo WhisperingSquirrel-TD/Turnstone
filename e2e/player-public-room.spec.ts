@@ -925,12 +925,12 @@ for (const role of ['faithful', 'traitor'] as const) {
       await expect(shadowStatusLines).toHaveCount(2);
       await expect(shadowStatusLines.nth(0)).toHaveText(
         role === 'traitor'
-          ? 'First choice: Jamie picked: Sam'
+          ? 'First choice: Jamie · round 1: Sam'
           : 'First choice: Your answer stays private',
       );
       await expect(shadowStatusLines.nth(1)).toHaveText(
         role === 'traitor'
-          ? 'Second choice: Jamie picked: Taylor'
+          ? 'Second choice: Jamie · round 1: Taylor'
           : 'Second choice: Your answer stays private',
       );
       await expect(page.getByTestId('shadow-slot-label')).toHaveText(
