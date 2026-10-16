@@ -1,12 +1,12 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 18:00 UTC.
-- Current milestone/step: Round 5 game-flow addendum — item 33 is this push, Verify pending; items 34–35 remain.
-- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7 passed Verify #103; item 33 is pushed and pending Verify; items 34–35 are not started.
-- Last pushed commit/CI: This push — Verify pending. Last completed: `13a17f9`, Verify #103 (`38938455233`) — Success, all 19 required jobs passed, including four browser profiles, six scenario shards, rehearsal-live and report merge; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38938455233.
-- Local verification for item 33: full unit suite 345/345, typecheck, test typecheck, lint, format, scenario-worker smoke and the eight-seat real-server Pixel rehearsal passed. The rehearsal confirms the night pick remains selected across a same-slot re-choice; no presenter or refresh is used.
+- Updated: 16 October 2026, 18:08 UTC.
+- Current milestone/step: Item 33's stale browser assertion is corrected and targeted checks are green; pushing the correction before items 34–35.
+- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7 passed Verify #103; item 33 awaits a green rerun; items 34–35 are not started.
+- Last pushed commit/CI: `1dd6203`; Verify #104 (`38944123199`) — Failure after 2m45s. Four browser profiles failed the same stale E2E expectation (“round 1: Sam” vs the new “First pick: Sam”); required-checks consequently failed. Six scenario shards and report merge completed. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38944123199.
+- Local verification for item 33: full unit suite (345), typechecks, lint, format, scenario-worker smoke and eight-seat real-server Pixel rehearsal passed before push. The focused browser test reproduced the stale assertion; after correcting it, the browser test, test typecheck, lint and format pass.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued after the M5 hands-on gate.
-- Risks: The scenario-shard merge/coverage report will run on GitHub because this checkout has no shard report artifacts. The API workflow still logs generic deadline-scheduler iteration errors; cause remains unverified. Local iPhone WebKit still lacks runtime libraries; GitHub iPhone and iPad profiles passed in #93.
+- Risks: The API workflow still logs generic deadline-scheduler iteration errors; cause remains unverified. Local iPhone WebKit still lacks runtime libraries; the #104 iPhone/iPad failures were the same stale text assertion as desktop and Pixel.
 
 ## Previous verification history
 
