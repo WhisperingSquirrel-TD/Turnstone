@@ -8,6 +8,7 @@ describe('rehearsal guide step identity', () => {
       cycle: 2,
       revote: false,
       shadowRound: 0,
+      shadowSlot: 1,
       notesOpen: false,
     };
 

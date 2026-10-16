@@ -202,22 +202,56 @@ it('applies the configured timeout rule after a split unanimous shadow re-vote',
   );
   events.push(
     event(8, 'PhaseChanged', { phase: 'SHADOW', deadline: 20, cycle: 1 }),
-    event(9, 'ShadowSubmitted', { seatId: 'seat-1', choice: 'seat-2' }),
-    event(10, 'ShadowSubmitted', { seatId: 'seat-5', choice: 'seat-2' }),
+    event(9, 'ShadowSubmitted', {
+      seatId: 'seat-1',
+      choice: 'seat-2',
+      slot: 1,
+      round: 1,
+    }),
+    event(10, 'ShadowSubmitted', {
+      seatId: 'seat-5',
+      choice: 'seat-2',
+      slot: 1,
+      round: 1,
+    }),
     event(11, 'ShadowRoundAdvanced', {
       cycle: 1,
       deadline: 30,
+      slot: 1,
     }),
-    event(12, 'ShadowSubmitted', { seatId: 'seat-1', choice: 'seat-2' }),
-    event(13, 'ShadowSubmitted', { seatId: 'seat-5', choice: 'seat-3' }),
+    event(12, 'ShadowSubmitted', {
+      seatId: 'seat-1',
+      choice: 'seat-2',
+      slot: 1,
+      round: 2,
+    }),
+    event(13, 'ShadowSubmitted', {
+      seatId: 'seat-5',
+      choice: 'seat-3',
+      slot: 1,
+      round: 2,
+    }),
     event(14, 'RandomChoiceRecorded', {
       purpose: 'murder-target',
-      candidates: ['seat-2', 'seat-3', 'seat-4'],
+      candidates: ['seat-2', 'seat-3'],
       chosen: 'seat-2',
+      slot: 1,
     }),
-    event(15, 'PhaseChanged', { phase: 'DAWN', deadline: null, cycle: 1 }),
-    event(16, 'DawnResolved', { victims: ['seat-2'], protected: [] }),
-    event(17, 'SeatRemoved', {
+    event(15, 'MurderSlotResolved', {
+      cycle: 1,
+      slot: 1,
+      picks: [
+        { seatId: 'seat-1', choice: 'seat-2', round: 1 },
+        { seatId: 'seat-5', choice: 'seat-2', round: 1 },
+        { seatId: 'seat-1', choice: 'seat-2', round: 2 },
+        { seatId: 'seat-5', choice: 'seat-3', round: 2 },
+      ],
+      chosen: 'seat-2',
+      outcome: 'murdered',
+    }),
+    event(16, 'PhaseChanged', { phase: 'DAWN', deadline: null, cycle: 1 }),
+    event(17, 'DawnResolved', { victims: ['seat-2'], protected: [] }),
+    event(18, 'SeatRemoved', {
       seatId: 'seat-2',
       reason: 'murdered',
       publicRole: false,
@@ -248,16 +282,41 @@ it('rejects a DawnResolved event that murders a shielded target', () => {
   events.push(
     event(8, 'PhaseChanged', { phase: 'SHADOW', deadline: null, cycle: 1 }),
     event(9, 'ShieldsAllocated', { holders: ['seat-2'] }),
-    event(10, 'ShadowSubmitted', { seatId: 'seat-1', choice: 'seat-2' }),
-    event(11, 'ShadowRoundAdvanced', { cycle: 1, deadline: 30 }),
-    event(12, 'ShadowSubmitted', { seatId: 'seat-1', choice: 'seat-2' }),
+    event(10, 'ShadowSubmitted', {
+      seatId: 'seat-1',
+      choice: 'seat-2',
+      slot: 1,
+      round: 1,
+    }),
+    event(11, 'ShadowRoundAdvanced', {
+      cycle: 1,
+      deadline: 30,
+      slot: 1,
+    }),
+    event(12, 'ShadowSubmitted', {
+      seatId: 'seat-1',
+      choice: 'seat-2',
+      slot: 1,
+      round: 2,
+    }),
     event(13, 'RandomChoiceRecorded', {
       purpose: 'murder-target',
       candidates: ['seat-2'],
       chosen: 'seat-2',
+      slot: 1,
     }),
-    event(14, 'PhaseChanged', { phase: 'DAWN', deadline: null, cycle: 1 }),
-    event(15, 'DawnResolved', { victims: [], protected: ['seat-2'] }),
+    event(14, 'MurderSlotResolved', {
+      cycle: 1,
+      slot: 1,
+      picks: [
+        { seatId: 'seat-1', choice: 'seat-2', round: 1 },
+        { seatId: 'seat-1', choice: 'seat-2', round: 2 },
+      ],
+      chosen: 'seat-2',
+      outcome: 'protected',
+    }),
+    event(15, 'PhaseChanged', { phase: 'DAWN', deadline: null, cycle: 1 }),
+    event(16, 'DawnResolved', { victims: [], protected: ['seat-2'] }),
   );
 
   expect(referenceReplay(events).eliminated).toEqual([]);
@@ -304,16 +363,40 @@ it('rejects a murder when a missed task should cancel it', () => {
       cycle: 1,
       report: 'missed',
     }),
-    event(11, 'ShadowSubmitted', { seatId: 'seat-1', choice: 'seat-2' }),
-    event(12, 'ShadowRoundAdvanced', { cycle: 1, deadline: 30 }),
-    event(13, 'ShadowSubmitted', { seatId: 'seat-1', choice: 'seat-2' }),
-    event(14, 'TaskMurderCancelled', {
+    event(11, 'ShadowSubmitted', {
+      seatId: 'seat-1',
+      choice: 'seat-2',
+      slot: 1,
+      round: 1,
+    }),
+    event(12, 'ShadowRoundAdvanced', {
+      cycle: 1,
+      deadline: 30,
+      slot: 1,
+    }),
+    event(13, 'ShadowSubmitted', {
+      seatId: 'seat-1',
+      choice: 'seat-2',
+      slot: 1,
+      round: 2,
+    }),
+    event(14, 'MurderSlotResolved', {
+      cycle: 1,
+      slot: 1,
+      picks: [
+        { seatId: 'seat-1', choice: 'seat-2', round: 1 },
+        { seatId: 'seat-1', choice: 'seat-2', round: 2 },
+      ],
+      chosen: null,
+      outcome: 'cancelled',
+    }),
+    event(15, 'TaskMurderCancelled', {
       cycle: 1,
       cancelled: true,
       traitors: ['seat-1'],
     }),
-    event(15, 'PhaseChanged', { phase: 'DAWN', deadline: null, cycle: 1 }),
-    event(16, 'DawnResolved', { victims: [], protected: [] }),
+    event(16, 'PhaseChanged', { phase: 'DAWN', deadline: null, cycle: 1 }),
+    event(17, 'DawnResolved', { victims: [], protected: [] }),
   );
 
   expect(referenceReplay(events).eliminated).toEqual([]);
@@ -374,32 +457,71 @@ it('stops the reference dawn victim list at the first immediate win', () => {
   );
   events.push(
     event(8, 'PhaseChanged', { phase: 'SHADOW', deadline: 20, cycle: 1 }),
-    event(9, 'ShadowSubmitted', { seatId: 'seat-1', choice: 'seat-3' }),
-    event(10, 'ShadowSubmitted', { seatId: 'seat-2', choice: 'seat-3' }),
-    event(11, 'ShadowRoundAdvanced', { cycle: 1, deadline: 30 }),
-    event(12, 'ShadowSubmitted', { seatId: 'seat-1', choice: 'seat-3' }),
-    event(13, 'ShadowSubmitted', { seatId: 'seat-2', choice: 'seat-3' }),
+    event(9, 'ShadowSubmitted', {
+      seatId: 'seat-1',
+      choice: 'seat-3',
+      slot: 1,
+      round: 1,
+    }),
+    event(10, 'ShadowSubmitted', {
+      seatId: 'seat-2',
+      choice: 'seat-3',
+      slot: 1,
+      round: 1,
+    }),
+    event(11, 'ShadowRoundAdvanced', {
+      cycle: 1,
+      deadline: 30,
+      slot: 1,
+    }),
+    event(12, 'ShadowSubmitted', {
+      seatId: 'seat-1',
+      choice: 'seat-3',
+      slot: 1,
+      round: 2,
+    }),
+    event(13, 'ShadowSubmitted', {
+      seatId: 'seat-2',
+      choice: 'seat-3',
+      slot: 1,
+      round: 2,
+    }),
     event(14, 'RandomChoiceRecorded', {
       purpose: 'murder-target',
       candidates: ['seat-3'],
       chosen: 'seat-3',
+      slot: 1,
     }),
-    event(15, 'RandomChoiceRecorded', {
-      purpose: 'murder-target',
-      candidates: ['seat-4', 'seat-5'],
-      chosen: 'seat-4',
+    event(15, 'MurderSlotResolved', {
+      cycle: 1,
+      slot: 1,
+      picks: [
+        { seatId: 'seat-1', choice: 'seat-3', round: 1 },
+        { seatId: 'seat-2', choice: 'seat-3', round: 1 },
+        { seatId: 'seat-1', choice: 'seat-3', round: 2 },
+        { seatId: 'seat-2', choice: 'seat-3', round: 2 },
+      ],
+      chosen: 'seat-3',
+      outcome: 'murdered',
     }),
-    event(16, 'PhaseChanged', { phase: 'DAWN', deadline: null, cycle: 1 }),
-    event(17, 'DawnResolved', {
+    event(16, 'MurderSlotResolved', {
+      cycle: 1,
+      slot: 2,
+      picks: [],
+      chosen: null,
+      outcome: 'game-ended',
+    }),
+    event(17, 'PhaseChanged', { phase: 'DAWN', deadline: null, cycle: 1 }),
+    event(18, 'DawnResolved', {
       victims: ['seat-3'],
       protected: [],
     }),
-    event(18, 'SeatRemoved', {
+    event(19, 'SeatRemoved', {
       seatId: 'seat-3',
       reason: 'murdered',
       publicRole: false,
     }),
-    event(19, 'GameFinished', { winner: 'traitor', reason: 'parity' }),
+    event(20, 'GameFinished', { winner: 'traitor', reason: 'parity' }),
   );
 
   expect(referenceReplay(events).eliminated).toEqual(['seat-3']);

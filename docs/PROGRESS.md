@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 07:35 UTC.
-- Current milestone/step: SPEC §30 / D80 double-murder work is complete locally and ready to push. The engine/oracle, bots, public results and guided rehearsal now cover both slots. Pixel real-server rehearsal passed end-to-end with no presenter connections and no manual refresh.
-- Last pushed code commit/CI: `534d159`; Verify #80 (`38863163436`) — Success. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38863163436.
-- Local verification for this step: 60 targeted unit tests pass; scenario-sharding tests 5/5; library and test typechecks pass; ESLint and Prettier pass; Pixel real-server rehearsal E2E 1/1 passes and proves both murder slots appear in the finished fairness record.
+- Updated: 16 October 2026, 07:53 UTC.
+- Current milestone/step: SPEC §30 / D80 double-murder work is blocked on Verify #81. Public annotations identify missing `shadowSlot` in guide-step test fixtures and four reference-oracle failures at the dawn slot-count assertion; scenario shards, browser profiles and dependent checks also failed. Fix and re-run before any queued work.
+- Last pushed code commit/CI: `a406d0a`; Verify #81 (`38869224162`) — Failure. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38869224162.
+- Local verification for this step: engine/golden targeted tests, typechecks, lint, formatting and Pixel real-server rehearsal passed before push. Reproduced the four `scenario-reference.test.ts` failures locally; these are being fixed.
 - Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
 - Risk: local WebKit still closes during page creation in Replit Nix. Verify #80 confirmed iPhone and iPad WebKit passed on GitHub.
 
