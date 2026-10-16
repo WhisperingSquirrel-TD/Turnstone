@@ -901,6 +901,7 @@ for (const role of ['faithful', 'traitor'] as const) {
         phase: 'SHADOW',
         shadowRound: 1,
         shadowSlot: 2,
+        murderSlots: 2,
         progress: { done: 0, total: 3 },
       } as FullView;
       publicView.seats.push({ id: 'seat-sam', name: 'Sam', status: 'alive' });
@@ -954,7 +955,7 @@ for (const role of ['faithful', 'traitor'] as const) {
           status: 200,
           json: {
             serverNow: Date.now(),
-            version: 12,
+            version: 13,
             view: {
               ...publicView,
               private: {
@@ -1027,7 +1028,7 @@ for (const role of ['faithful', 'traitor'] as const) {
         page.getByText(
           role === 'traitor'
             ? 'Who will the Traitors take tonight?'
-            : 'Who do you suspect most right now?',
+            : 'Who do you think the Traitors will take tonight?',
           { exact: true },
         ),
       ).toBeVisible();
@@ -1046,7 +1047,7 @@ for (const role of ['faithful', 'traitor'] as const) {
       const nightPrompt = page.getByText(
         role === 'traitor'
           ? 'Who will the Traitors take tonight?'
-          : 'Who do you suspect most right now?',
+          : 'Who do you think the Traitors will take tonight?',
         { exact: true },
       );
       await expect(nightPrompt).toHaveCSS('color', candleColor);
@@ -1058,16 +1059,24 @@ for (const role of ['faithful', 'traitor'] as const) {
       await expect(nightChoices.first()).toHaveCSS('opacity', '1');
       await expect(nightChoices.first()).toHaveCSS('color', candleColor);
       const shadowStatusLines = page.getByTestId('shadow-status').locator('p');
-      await expect(shadowStatusLines).toHaveCount(2);
+      await expect(shadowStatusLines).toHaveCount(4);
       await expect(shadowStatusLines.nth(0)).toHaveText(
         role === 'traitor'
-          ? 'First choice: Jamie · First pick: Sam'
-          : 'First choice: Your answer stays private',
+          ? "You haven't picked yet"
+          : "You haven't guessed yet",
       );
       await expect(shadowStatusLines.nth(1)).toHaveText(
         role === 'traitor'
-          ? 'Second choice: Jamie · First pick: Taylor'
-          : 'Second choice: Your answer stays private',
+          ? 'Jamie picked: 1st: Sam · 2nd: Taylor'
+          : 'Guesses stay secret until the end.',
+      );
+      await expect(shadowStatusLines.nth(2)).toHaveText(
+        role === 'traitor' ? '' : 'Think about who the Traitors fear most.',
+      );
+      await expect(shadowStatusLines.nth(3)).toHaveText(
+        role === 'traitor'
+          ? 'You can change your pick until the night ends.'
+          : 'You can change your guess until the night ends.',
       );
       await expect(page.getByText(/round [12]/i)).toHaveCount(0);
       await expect(page.getByTestId('shadow-slot-label')).toHaveText(

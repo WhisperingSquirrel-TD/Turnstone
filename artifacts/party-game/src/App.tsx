@@ -1295,6 +1295,7 @@ function PlayerGame() {
           id,
           ...(notesRequest ? { data: { purpose: 'notes' as const } } : {}),
         });
+        privateVersionRef.current = response.version;
         nextPrivateView = isFullView(response.view)
           ? response.view.private
           : null;

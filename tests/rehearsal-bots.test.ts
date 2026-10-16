@@ -261,6 +261,39 @@ describe('server rehearsal bot policy', () => {
     ).toBe(true);
   });
 
+  it('falls back to a living target when the forced human target is out', async () => {
+    const { nextRehearsalBotCommand } = await loadBotPolicy();
+    const game = rehearsalGame();
+    const humanSeatId = game.state.seats.find(
+      (seat) => !game.state.config.rehearsal.botSeatIds.includes(seat.id),
+    )?.id;
+    if (!humanSeatId) throw new Error('Expected a rehearsal human seat');
+    const state = {
+      ...game.state,
+      phase: 'FINAL_BANISH' as const,
+      cycle: 2,
+      revote: false,
+      votes: {},
+      acks: game.state.config.rehearsal.botSeatIds,
+      publicLog: [{ seq: 1, at: 1, action: 'dawn' as const, victimIds: [] }],
+      seats: game.state.seats.map((seat) =>
+        seat.id === humanSeatId ? { ...seat, status: 'out' as const } : seat,
+      ),
+    } as State;
+
+    const choice = nextRehearsalBotCommand(state, 's1', {
+      testOnlyForceHumanTargetAfterFirstNight: true,
+    });
+
+    expect(choice?.type).toBe('SubmitVote');
+    if (choice?.type === 'SubmitVote') {
+      const livingTargets = state.seats
+        .filter((seat) => seat.status === 'alive' && seat.id !== 's1')
+        .map((seat) => seat.id);
+      expect(livingTargets).toContain(choice.target);
+    }
+  });
+
   it('uses a test-only first-vote pattern that lets the human force a tie', async () => {
     const { nextRehearsalBotCommand } = await loadBotPolicy();
     const botSeatIds = Array.from({ length: 7 }, (_, index) => `s${index + 1}`);

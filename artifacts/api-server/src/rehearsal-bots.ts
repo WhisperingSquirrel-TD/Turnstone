@@ -101,12 +101,16 @@ export function nextRehearsalBotCommand(
     const testOnlyTieTarget = candidates.find(
       (candidate) => candidate.id === tieTargetId,
     );
-    const target =
+    const forcedHumanTarget =
       options.testOnlyForceHumanTargetAfterFirstNight &&
       firstNightComplete &&
       humanSeatId
-        ? (candidates.find((candidate) => candidate.id === humanSeatId) ?? null)
-        : (testOnlyTieTarget ?? choose(state.id, state, seatId, candidates));
+        ? candidates.find((candidate) => candidate.id === humanSeatId)
+        : undefined;
+    const target =
+      forcedHumanTarget ??
+      testOnlyTieTarget ??
+      choose(state.id, state, seatId, candidates);
     return target ? { type: 'SubmitVote', target: target.id } : null;
   }
 
