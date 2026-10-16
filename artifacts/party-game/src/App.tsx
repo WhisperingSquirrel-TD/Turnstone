@@ -47,6 +47,7 @@ import { GameConnectionStatus } from './GameConnectionStatus';
 import { NotesScreen } from './NotesScreen';
 import { BanishmentVoteScreen } from './BanishmentVoteScreen';
 import { PrivateChoiceControls } from './PrivateChoiceControls';
+import { VerdictScreen } from './VerdictScreen';
 import { ShieldCard } from './ShieldCard';
 import { PhaseProgressStatus } from './PhaseProgressStatus';
 import { apiUrl } from './api-url';
@@ -1595,37 +1596,16 @@ function PlayerGame() {
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
-            {!inPrivateMoment &&
-              full.publicAnnouncement?.kind === 'verdict' && (
-                <section
-                  className="mb-6 border-l-2 border-gilt pl-5"
-                  aria-live="polite"
-                  aria-atomic="true"
-                  data-testid="shared-announcement"
-                >
-                  <h1 className="display text-3xl text-candle">
-                    {en.game.banished(full.publicAnnouncement.seat.name)}
-                  </h1>
-                  {full.publicAnnouncement.seat.role && (
-                    <p className="mt-2 text-lg text-ash">
-                      {en.game.banishedRole(full.publicAnnouncement.seat.role)}
-                    </p>
-                  )}
-                </section>
-              )}
-            {!inPrivateMoment &&
-              full.publicAnnouncement?.kind === 'no_votes' && (
-                <section
-                  className="mb-6 border-l-2 border-gilt pl-5"
-                  aria-live="polite"
-                  aria-atomic="true"
-                  data-testid="shared-announcement"
-                >
-                  <h1 className="display text-3xl text-candle">
-                    {en.game.noVotesAnnouncement}
-                  </h1>
-                </section>
-              )}
+            {!inPrivateMoment && (
+              <VerdictScreen
+                announcement={
+                  full.publicAnnouncement?.kind === 'verdict' ||
+                  full.publicAnnouncement?.kind === 'no_votes'
+                    ? full.publicAnnouncement
+                    : null
+                }
+              />
+            )}
             {!full.rehearsal && explanationKey && (
               <details className="mb-4 text-sm text-ash">
                 <summary className="min-h-11 cursor-pointer py-2">
