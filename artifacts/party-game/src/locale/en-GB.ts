@@ -531,6 +531,7 @@ export const en = {
     chooseOption: 'Choose an option',
     finalDecision: 'Make the final decision',
     reviewChoice: 'Review this choice',
+    yourPick: (name: string) => `Your pick: ${name}`,
     confirmChoice: 'Confirm this choice?',
     recording: 'Recording…',
     confirm: 'Confirm',

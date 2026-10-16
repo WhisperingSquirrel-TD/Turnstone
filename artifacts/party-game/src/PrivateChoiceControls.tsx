@@ -30,6 +30,8 @@ export function PrivateChoiceControls({
   onConfirm,
   onChooseAgain,
 }: PrivateChoiceControlsProps) {
+  const selectedOption = choices.find((choice) => choice.id === selected);
+
   return (
     <>
       <div className="mt-3 grid gap-2" data-testid="private-choice-list">
@@ -45,6 +47,15 @@ export function PrivateChoiceControls({
           </button>
         ))}
       </div>
+      {selectedOption && (
+        <p
+          className="mt-3 text-candle"
+          data-testid="selected-choice"
+          aria-live="polite"
+        >
+          {en.game.yourPick(selectedOption.name)}
+        </p>
+      )}
       {selected && !confirmChoice && (
         <button
           className="quiet-action mt-4 w-full"

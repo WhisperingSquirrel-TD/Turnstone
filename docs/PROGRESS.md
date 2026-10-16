@@ -1,11 +1,12 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 12:27 UTC.
-- Current milestone/step: Round 5 — A1 shield-policy and Notes privacy fixes; correcting the rehearsal helper after Verify #93.
-- Last pushed commit/CI: `3bcf506`; Verify #93 (`38899898260`) — Failure in `rehearsal-live` and dependent `required-checks`; the helper did not handle the FINAL_VOTE choices. Every other job passed, including all four browser profiles, Lighthouse and all scenario shards. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38899898260.
-- Last green code commit/CI: `e7f592f`; Verify #90 (`38892252332`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38892252332.
-- Verify #92 fixes in `3bcf506`: browser tests now expect the no-shield Vote/Notes flows; the Notes test reproduces background/idle cover and asserts no automatic re-fetch. The live rehearsal selects valid Shadow targets, checks server options and vote candidates, and explicitly handles the endgame choices.
-- Local verification: full typecheck, test typecheck, lint, format and diff checks pass. Four focused Pixel browser tests and the real-server full rehearsal pass; the rehearsal has zero presenter connections and no manual refresh. The corrected CI run is pending.
+- Updated: 16 October 2026, 12:39 UTC.
+- Current milestone/step: Round 5 — A2 choice feedback is implemented: active high-contrast headings and rows, a visible “Your pick” line, and selection changes before confirmation. Targeted local tests are green; preparing the next small push.
+- Last pushed commit/CI: `2bb5715`; Verify #94 (`38900706432`) — Success across all required jobs, including all four browser profiles, live rehearsal, Lighthouse, six scenario shards and merged report; 0 annotations across 20 checks. `promote` was skipped. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38900706432.
+- Last green code commit/CI: `2bb5715`; Verify #94 — Success, with 0 annotations across 20 checks; `promote` was skipped.
+- Verify #92 fixes in `3bcf506`: browser tests now expect the no-shield Vote/Notes flows; the Notes test reproduces background/idle cover and asserts no automatic re-fetch. The live rehearsal selects valid Shadow targets and checks server options and vote candidates.
+- Verify #93 correction in `2bb5715`: the live rehearsal now asserts both endgame choices and explicitly selects the end-game option; this fixed its local helper gap.
+- Local verification: full typecheck, test typecheck, lint, format and diff checks pass. All 16 Pixel public-room tests and the real-server full rehearsal pass; the rehearsal has zero presenter connections and no manual refresh. The pinned Gitleaks checksum, staged scan and full-history scan passed.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued and were not started.
 - Risk: `mesa` was installed through Replit system packages; Pixel Chromium runs locally, but local iPhone WebKit still lacks runtime libraries. GitHub iPhone and iPad WebKit profiles passed in #93. The local API workflow continues to log deadline-scheduler iteration errors; cause unverified. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
 

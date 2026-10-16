@@ -709,6 +709,23 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   expect(displayedChoices.map((name) => name.trim()).sort()).toEqual(
     ['Jamie', 'Practice player 2'].sort(),
   );
+  await expect(
+    page.getByText('Who do you vote to banish?', { exact: true }),
+  ).toHaveCSS('color', 'rgb(250, 250, 245)');
+  for (const choiceButton of await choiceList.getByRole('button').all()) {
+    await expect(choiceButton).toBeEnabled();
+    const visualState = await choiceButton.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        color: style.color,
+        cursor: style.cursor,
+        opacity: style.opacity,
+      };
+    });
+    expect(visualState.color).toBe('rgb(250, 250, 245)');
+    expect(visualState.opacity).toBe('1');
+    expect(visualState.cursor).not.toBe('not-allowed');
+  }
   const contentOverflow = await page
     .getByTestId('private-choice-content')
     .evaluate((element) => getComputedStyle(element).overflowY);
@@ -724,6 +741,22 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
     page.getByRole('button', { name: 'Alex', exact: true }),
   ).toHaveCount(0);
   await page.getByRole('button', { name: 'Jamie', exact: true }).click();
+  await expect(
+    page.getByText('Your pick: Jamie', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    choiceList.getByRole('button', { name: 'Jamie', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await page
+    .getByRole('button', { name: 'Practice player 2', exact: true })
+    .click();
+  await expect(
+    page.getByText('Your pick: Practice player 2', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Jamie', exact: true }).click();
+  await expect(
+    page.getByText('Your pick: Jamie', { exact: true }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Review this choice' }).click();
   await page.getByRole('button', { name: 'Confirm', exact: true }).click();
   await expect(
@@ -919,6 +952,9 @@ for (const role of ['faithful', 'traitor'] as const) {
         page.getByRole('button', { name: 'Jamie', exact: true }),
       ).toBeEnabled();
       await page.getByRole('button', { name: 'Jamie', exact: true }).click();
+      await expect(
+        page.getByText('Your pick: Jamie', { exact: true }),
+      ).toBeVisible();
       await page.getByRole('button', { name: 'Review this choice' }).click();
       await page.getByRole('button', { name: 'Confirm', exact: true }).click();
       if (role === 'traitor') {
