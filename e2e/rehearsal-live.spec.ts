@@ -646,11 +646,23 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     const seenShadowSlots = new Set<number>();
     const seenFirstNightShadowSlots = new Set<number>();
     const endedBeforeSecondSlotCycles = new Set<number>();
+    const seenExplanations = new Set<Phase>();
+    const checkedNoAutoAdvancePhases = new Set<Phase>();
+    let previousLoopPhase: Phase | null = null;
+    let previousVerdictRowCount = 0;
+    let sawVoteRevealInCurrentVerdict = false;
+    let sawVoteReveal = false;
+    let sawVerdictResult = false;
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
       const phaseStartedAt = Date.now();
       const seatStatus = await ownSeatStatus(page, activeGameId);
       if (phase === 'FINISHED') break;
+      if (phase === 'VERDICT' && previousLoopPhase !== 'VERDICT') {
+        previousVerdictRowCount = 0;
+        sawVoteRevealInCurrentVerdict = false;
+      }
+      previousLoopPhase = phase;
       const shadowCycleBefore =
         phase === 'SHADOW'
           ? (await latestServerPhase(page, activeGameId)).cycle
@@ -659,31 +671,61 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       if (!explanation) {
         throw new Error(`Rehearsal step ${phase} has no explanation copy.`);
       }
-      await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
-        explanation,
-      );
-      await expect(
-        page
-          .getByTestId('rehearsal-explainer')
-          .getByTestId('brand-footer-overlay'),
-      ).toBeVisible();
+      if (seenExplanations.has(phase)) {
+        await expect(page.getByTestId('rehearsal-explainer')).toBeHidden();
+      } else {
+        await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
+          explanation,
+        );
+        await expect(
+          page
+            .getByTestId('rehearsal-explainer')
+            .getByTestId('brand-footer-overlay'),
+        ).toBeVisible();
+        await page.getByRole('button', { name: 'Got it' }).click();
+        seenExplanations.add(phase);
+      }
       await expect(
         page.locator('header.public-shell-header .turnstone-wordmark'),
       ).toHaveCount(1);
       await expect(page.getByTestId('brand-footer-shell')).toContainText(
         'made by Stackstone Consulting',
       );
-      await page.getByRole('button', { name: 'Got it' }).click();
       if (['DEBATE', 'VERDICT', 'DAWN'].includes(phase)) {
         await expect(
           page.getByText(/players have completed this part/),
         ).toHaveCount(0);
       }
-      await page.waitForTimeout(2_500);
-      expect(
-        await currentPhase(page),
-        `Rehearsal phase ${phase} advanced without the player choosing Next step.`,
-      ).toBe(phase);
+      if (phase === 'VERDICT') {
+        const revealRows = page.getByTestId('list-vote-reveal').locator('li');
+        const revealedCount = await revealRows.count();
+        expect(revealedCount).toBeGreaterThanOrEqual(previousVerdictRowCount);
+        if (revealedCount > previousVerdictRowCount) {
+          expect(revealedCount).toBe(previousVerdictRowCount + 1);
+          sawVoteRevealInCurrentVerdict = true;
+          sawVoteReveal = true;
+        }
+        previousVerdictRowCount = revealedCount;
+      }
+      const announcement = page.getByTestId('shared-announcement');
+      if ((await announcement.count()) > 0) {
+        const announcementText = await announcement.textContent();
+        if (announcementText?.includes(' has been banished.')) {
+          await expect(announcement).toHaveText(
+            /^.+ has been banished\. They were (Traitor|Faithful)\.$/,
+          );
+          expect(sawVoteRevealInCurrentVerdict).toBe(true);
+          sawVerdictResult = true;
+        }
+      }
+      if (!checkedNoAutoAdvancePhases.has(phase)) {
+        await page.waitForTimeout(2_500);
+        expect(
+          await currentPhase(page),
+          `Rehearsal phase ${phase} advanced without the player choosing Next step.`,
+        ).toBe(phase);
+        checkedNoAutoAdvancePhases.add(phase);
+      }
       const shadowRoundBefore =
         phase === 'SHADOW'
           ? Number(await game.getAttribute('data-shadow-round'))
@@ -784,6 +826,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       expect(appDocumentLoads).toBe(0);
     }
 
+    expect(sawVoteReveal).toBe(true);
+    expect(sawVerdictResult).toBe(true);
     await expect(game).toHaveAttribute('data-phase', 'FINISHED', {
       timeout: 5_000,
     });

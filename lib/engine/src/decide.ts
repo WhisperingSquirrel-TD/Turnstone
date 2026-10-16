@@ -289,7 +289,7 @@ export function decide(
             (state!.config.roundTable.revealRole === 'not-endgame' &&
               state!.phase !== 'FINAL_BANISH'));
     emit('SeatRemoved', { seatId, reason, publicRole });
-    checkWin();
+    if (!(reason === 'banished' && state!.phase === 'VERDICT')) checkWin();
   };
   switch (cmd.type) {
     case 'JoinGame': {
@@ -620,20 +620,33 @@ export function decide(
         break;
       }
       if (state.phase === 'VERDICT') {
-        const remaining = Object.keys(state.votes)
-          .filter((id) => !state!.revealed.includes(id))
-          .sort();
-        if (
-          remaining.length &&
-          state.config.roundTable.revealStyle === 'one-by-one' &&
-          ctx.actor.kind !== 'system'
-        ) {
-          emit('VoteRevealed', { seatId: remaining[0] });
-          break;
+        const verdictAlreadyShown =
+          state.publicAnnouncement?.kind === 'verdict' &&
+          state.publicAnnouncement.cycle === state.cycle;
+        if (verdictAlreadyShown) {
+          checkWin();
+          if (finished()) break;
+        } else {
+          const remaining = Object.keys(state.votes)
+            .filter((id) => !state!.revealed.includes(id))
+            .sort();
+          if (
+            remaining.length &&
+            state.config.roundTable.revealStyle === 'one-by-one' &&
+            ctx.actor.kind !== 'system'
+          ) {
+            emit('VoteRevealed', { seatId: remaining[0] });
+            break;
+          }
+          for (const seatId of remaining) emit('VoteRevealed', { seatId });
+          if (state!.target) remove(state!.target, 'banished');
+          if (finished()) break;
+          if (
+            state.publicAnnouncement?.kind === 'verdict' &&
+            state.publicAnnouncement.cycle === state.cycle
+          )
+            break;
         }
-        for (const seatId of remaining) emit('VoteRevealed', { seatId });
-        if (state!.target) remove(state!.target, 'banished');
-        if (finished()) break;
       }
       if (state.phase === 'SHADOW') {
         const pendingTaskReports = state.taskAssignments.filter(

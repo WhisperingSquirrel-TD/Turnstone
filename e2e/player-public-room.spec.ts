@@ -1420,23 +1420,63 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
   currentView = {
     ...currentView,
     phase: 'VERDICT',
+    seats: [
+      ...currentView.seats,
+      { id: 'seat-taylor', name: 'Taylor', status: 'alive' },
+      { id: 'seat-sam', name: 'Sam', status: 'alive' },
+    ],
     publicAnnouncement: {
       kind: 'verdict',
       cycle: 1,
       seat: { id: 'seat-alex', name: 'Alex', role: 'traitor' },
     },
-    ballots: { 'seat-morgan': 'seat-alex' },
+    ballots: {
+      'seat-morgan': 'seat-alex',
+      'seat-jamie': 'seat-alex',
+      'seat-taylor': 'seat-morgan',
+      'seat-sam': 'seat-jamie',
+    },
   };
   await page.reload();
   const verdictAnnouncement = page.getByTestId('shared-announcement');
-  await expect(verdictAnnouncement).toContainText('Alex was banished.');
-  await expect(verdictAnnouncement).toContainText('Their role was Traitor.');
+  await expect(verdictAnnouncement).toHaveText(
+    'Alex has been banished. They were Traitor.',
+  );
   const verdictHeadings = await page
     .getByTestId('player-game')
     .getByRole('heading')
     .allTextContents();
-  expect(verdictHeadings[0]).toBe('Alex was banished.');
-  await expect(page.getByTestId('list-vote-reveal')).toContainText('Morgan');
+  expect(verdictHeadings[0]).toBe('Alex has been banished. They were Traitor.');
+  const voteReveal = page.getByTestId('list-vote-reveal');
+  await expect(voteReveal.locator('li')).toHaveCount(4);
+  await expect(voteReveal).toContainText('Morgan voted to banish Alex.');
+  const revealAnimations = await voteReveal
+    .locator('li')
+    .evaluateAll((rows) =>
+      rows.map((row) => getComputedStyle(row).animationName),
+    );
+  expect(revealAnimations).toEqual([
+    'vote-reveal',
+    'vote-reveal',
+    'vote-reveal',
+    'vote-reveal',
+  ]);
+  const resultMotion = await verdictAnnouncement.evaluate((announcement) => {
+    return getComputedStyle(announcement).animationName;
+  });
+  expect(resultMotion).toBe('verdict-reveal');
+  const resultFollowsReveal = await page.evaluate(() => {
+    const votes = document.querySelector('[data-testid="list-vote-reveal"]');
+    const result = document.querySelector(
+      '[data-testid="shared-announcement"]',
+    );
+    return Boolean(
+      votes &&
+      result &&
+      votes.compareDocumentPosition(result) & Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+  expect(resultFollowsReveal).toBe(true);
 
   currentView = {
     ...currentView,

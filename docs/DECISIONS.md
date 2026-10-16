@@ -1294,3 +1294,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Apply SPEC §31. Keep the shield only on role reveal and night choices; all choices are taps. Keep Faithful predictions private to their author during the game. Use one murder and eight seats in rehearsal, protect the human through their first complete day and night, and continue in watch mode after removal. Keep the day/night themes, commentary, status layout and public-step screens role-uniform.
 
 **Consequence:** Implement under TDD in small green pushes. Use a real-server rehearsal for the acceptance path, with forced cases for ties and human removal. The hands-on owner rehearsal remains the gate after Round 5; PIN pepper and join-storm capacity remain queued after that gate.
+
+## D83 — Keep the public verdict visible before night (16 October 2026)
+
+**Context:** The real-server rehearsal exposed that resolving the last ballot immediately entered the private night phase, hiding the banishment result. Removing the banished seat also removed their ballot from the reveal list.
+
+**Choice:** Keep the engine in VERDICT after resolving the final ballot until the next explicit phase advance. Retain and show all revealed ballots through the result, including the banished player's ballot, but do not project ballots outside VERDICT.
+
+**Consequence:** Every phone sees the complete vote reveal and banished-role result before the night shield appears. Rehearsal and engine regressions cover the sequence and confirm ballot privacy after VERDICT.

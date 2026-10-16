@@ -686,8 +686,8 @@ function PlayerGame() {
   const [notesDraft, setNotesDraft] = useState('');
   const [notesStatus, setNotesStatus] = useState('');
   const [rehearsalGuideStarted, setRehearsalGuideStarted] = useState(false);
-  const [rehearsalGuideDismissedStep, setRehearsalGuideDismissedStep] =
-    useState<string | null>(null);
+  const [rehearsalGuideDismissedSteps, setRehearsalGuideDismissedSteps] =
+    useState<Set<string>>(() => new Set());
   const [advanceConfirmationOpen, setAdvanceConfirmationOpen] = useState(false);
   const heldRef = useRef(false);
   const holdVersion = useRef(0);
@@ -747,7 +747,7 @@ function PlayerGame() {
     started: rehearsalGuideStarted,
     explanationAvailable: Boolean(explanationKey),
     stepKey: explanationStepKey,
-    dismissedStepKey: rehearsalGuideDismissedStep,
+    dismissedStepKeys: rehearsalGuideDismissedSteps,
   });
   const ownSeat = full?.viewerSeatId
     ? (full.seats.find((seat) => seat.id === full.viewerSeatId) ?? null)
@@ -937,6 +937,11 @@ function PlayerGame() {
     full?.rehearsal,
     rehearsalGuideVisible,
   ]);
+
+  useEffect(() => {
+    setRehearsalGuideStarted(false);
+    setRehearsalGuideDismissedSteps(new Set());
+  }, [id]);
 
   useEffect(() => {
     if (!notesOpen || phaseIsPrivate) {
@@ -1470,7 +1475,13 @@ function PlayerGame() {
       setRehearsalGuideStarted(true);
       return;
     }
-    if (explanationKey) setRehearsalGuideDismissedStep(explanationStepKey);
+    if (explanationKey) {
+      setRehearsalGuideDismissedSteps((dismissed) => {
+        const next = new Set(dismissed);
+        next.add(explanationStepKey);
+        return next;
+      });
+    }
   }
 
   async function saveNotes() {
@@ -1599,10 +1610,19 @@ function PlayerGame() {
             {!inPrivateMoment && (
               <VerdictScreen
                 announcement={
-                  full.publicAnnouncement?.kind === 'verdict' ||
+                  full.phase === 'VERDICT' &&
                   full.publicAnnouncement?.kind === 'no_votes'
                     ? full.publicAnnouncement
-                    : null
+                    : full.phase !== 'VERDICT' &&
+                        full.publicAnnouncement?.kind === 'verdict' &&
+                        full.publicAnnouncement.cycle === full.cycle
+                      ? full.publicAnnouncement
+                      : null
+                }
+                animateReveal={
+                  full.phase !== 'VERDICT' &&
+                  full.publicAnnouncement?.kind === 'verdict' &&
+                  full.publicAnnouncement.cycle === full.cycle
                 }
               />
             )}
@@ -1693,8 +1713,10 @@ function PlayerGame() {
 
             {!inPrivateMoment &&
               full.publicAnnouncement &&
-              full.publicAnnouncement.kind !== 'verdict' &&
-              full.publicAnnouncement.kind !== 'no_votes' && (
+              ((full.publicAnnouncement.kind === 'dawn' &&
+                full.phase === 'DAWN') ||
+                (full.publicAnnouncement.kind === 'finished' &&
+                  full.phase === 'FINISHED')) && (
                 <section
                   className="mt-6 border-l-2 border-gilt pl-5"
                   aria-live="polite"
@@ -1775,50 +1797,18 @@ function PlayerGame() {
               (full.phase === 'VERDICT' ||
                 full.phase === 'DAWN' ||
                 full.phase === 'FINISHED') && (
-                <section className="mt-6" aria-label={en.game.voteResults}>
-                  <ul
-                    className="divide-y divide-stone"
-                    data-testid="list-vote-reveal"
-                  >
-                    {Object.keys(full.ballots).every((key) =>
-                      key.startsWith('anonymous-vote-'),
-                    )
-                      ? [...new Set(Object.values(full.ballots))].map(
-                          (targetId) => {
-                            const target = full.seats.find(
-                              (seat) => seat.id === targetId,
-                            );
-                            const count = Object.values(full.ballots).filter(
-                              (id) => id === targetId,
-                            ).length;
-                            return target ? (
-                              <li
-                                key={targetId}
-                                className="py-3 text-ash"
-                                data-testid="anonymous-ballot-tally"
-                              >
-                                {en.game.voteTally(count, target.name)}
-                              </li>
-                            ) : null;
-                          },
-                        )
-                      : Object.entries(full.ballots).map(
-                          ([voterId, targetId]) => {
-                            const voter = full.seats.find(
-                              (seat) => seat.id === voterId,
-                            );
-                            const target = full.seats.find(
-                              (seat) => seat.id === targetId,
-                            );
-                            return voter && target ? (
-                              <li key={voterId} className="py-3 text-ash">
-                                {en.game.voteReveal(voter.name, target.name)}
-                              </li>
-                            ) : null;
-                          },
-                        )}
-                  </ul>
-                </section>
+                <VerdictScreen
+                  announcement={
+                    full.phase === 'VERDICT' &&
+                    full.publicAnnouncement?.kind === 'verdict'
+                      ? full.publicAnnouncement
+                      : null
+                  }
+                  ballots={full.ballots}
+                  seats={full.seats}
+                  showVoteReveal
+                  animateReveal={full.phase === 'VERDICT'}
+                />
               )}
 
             {inPrivateMoment && (

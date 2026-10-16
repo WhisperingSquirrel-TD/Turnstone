@@ -29,9 +29,14 @@ export function assertInvariants(state: State): void {
   }
   for (const [voter, target] of Object.entries(state.votes)) {
     if (voter === target) throw new Error('Self-vote');
-    if (
-      !state.seats.some((seat) => seat.id === voter && seat.status === 'alive')
-    )
+    const seat = state.seats.find((candidate) => candidate.id === voter);
+    const revealedBanishedVote =
+      state.phase === 'VERDICT' &&
+      state.publicAnnouncement?.kind === 'verdict' &&
+      state.publicAnnouncement.cycle === state.cycle &&
+      seat?.status === 'banished' &&
+      state.revealed.includes(voter);
+    if (!seat || (seat.status !== 'alive' && !revealedBanishedVote))
       throw new Error('Inactive voter');
   }
   for (const [chooser, target] of Object.entries(state.shadow)) {

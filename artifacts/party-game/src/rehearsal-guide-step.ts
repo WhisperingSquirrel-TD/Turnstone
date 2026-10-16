@@ -13,19 +13,14 @@ export type RehearsalGuideVisibility = {
   started: boolean;
   explanationAvailable: boolean;
   stepKey: string;
-  dismissedStepKey: string | null;
+  dismissedStepKeys: ReadonlySet<string>;
 };
 
 export function rehearsalGuideStepKey({
   phase,
-  cycle,
-  deadline,
-  revote,
-  shadowRound,
-  shadowSlot,
   notesOpen,
 }: RehearsalGuideStepIdentity): string {
-  return `${phase}:${cycle}:${deadline ?? 'manual'}:${revote ? 'revote' : 'initial'}:${shadowSlot}:${shadowRound}:${notesOpen ? 'notes' : 'phase'}`;
+  return notesOpen ? 'NOTES' : phase;
 }
 
 export function shouldShowRehearsalGuide({
@@ -33,10 +28,10 @@ export function shouldShowRehearsalGuide({
   started,
   explanationAvailable,
   stepKey,
-  dismissedStepKey,
+  dismissedStepKeys,
 }: RehearsalGuideVisibility): boolean {
   return (
     rehearsal &&
-    (!started || (explanationAvailable && dismissedStepKey !== stepKey))
+    (!started || (explanationAvailable && !dismissedStepKeys.has(stepKey)))
   );
 }

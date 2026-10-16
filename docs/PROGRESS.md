@@ -1,18 +1,19 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 12:47 UTC.
-- Current milestone/step: Round 5 — extracting the verdict announcement into its own component without changing output; the focused Pixel screen test and local checks pass. Next: add the ordered vote-reveal/result regression.
-- Last pushed commit/CI: `189f552`; Verify #95 (`38902154259`) — Success: all required checks passed, including all four browser profiles, live rehearsal, Lighthouse, six scenario shards and merged report; 0 annotations across 20 checks. `promote` was skipped. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38902154259.
-- Last green code commit/CI: `189f552`; Verify #95 — Success, with 0 annotations across 20 checks; `promote` was skipped.
+- Updated: 16 October 2026, 13:33 UTC.
+- Current milestone/step: Round 5 — the verdict now remains public until the next explicit advance, with the full ballot reveal preserved through the banishment result. Targeted tests and the real-server rehearsal pass; full engine and scenario checks are running before push.
+- Last pushed commit/CI: `72767e8`; Verify #96 (`38903135176`) — Success across all required jobs, including all four browser profiles, live rehearsal, Lighthouse, six scenario shards and merged report; 0 annotations across 20 checks. `promote` was skipped. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38903135176.
+- Last green code commit/CI: `72767e8`; Verify #96 — Success, with 0 annotations across 20 checks; `promote` was skipped.
 - Verify #92 fixes in `3bcf506`: browser tests now expect the no-shield Vote/Notes flows; the Notes test reproduces background/idle cover and asserts no automatic re-fetch. The live rehearsal selects valid Shadow targets and checks server options and vote candidates.
 - Verify #93 correction in `2bb5715`: the live rehearsal now asserts both endgame choices and explicitly selects the end-game option; this fixed its local helper gap.
-- Local verification: full typecheck, test typecheck, lint, format and diff checks pass. All 16 Pixel public-room tests and the real-server full rehearsal pass; the focused Pixel verdict screen test passes after extraction. The rehearsal has zero presenter connections and no manual refresh. The pinned Gitleaks checksum, staged scan and full-history scan passed for the previous push.
+- Local verification: targeted guide/verdict/no-votes tests, typechecks, lint, formatting, the Pixel verdict screen test and the real-server full rehearsal pass. The rehearsal has zero presenter connections and no manual refresh. The required full unit, property and scenario-report checks are pending for this engine change.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued and were not started.
 - Risk: `mesa` was installed through Replit system packages; Pixel Chromium runs locally, but local iPhone WebKit still lacks runtime libraries. GitHub iPhone and iPad WebKit profiles passed in #93. The local API workflow continues to log deadline-scheduler iteration errors; cause unverified. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
 
 ## Previous verification history
 
 - Verify #95 (`38902154259`), commit `189f552`: Success — unit, property, static-checks, integration, audit, Lighthouse, iPhone WebKit, iPad WebKit, Pixel Chromium, desktop Chromium, rehearsal-live, scenario shards 0–5, merge-scenario-reports and required-checks. Zero annotations across 20 checks; `promote` was skipped.
+- Verify #96 (`38903135176`), commit `72767e8`: Success — unit, property, static-checks, integration, audit, Lighthouse, iPhone WebKit, iPad WebKit, Pixel Chromium, desktop Chromium, rehearsal-live, scenario shards 0–5, merge-scenario-reports and required-checks. Zero annotations across 20 checks; `promote` was skipped.
 - Verify #93 (`38899898260`): failure in `rehearsal-live` because the helper did not handle `FINAL_VOTE`; `required-checks` consequently failed. All other jobs passed: unit, property, static, integration, audit, Lighthouse, four browser profiles, six scenario shards and merged scenario report.
 - Verify #92 (`38895856320`): `rehearsal-live` selected the first Shadow option and received HTTP 409. Browser profiles also had stale shield/action-bar and Notes cover assumptions. The local regression fix is in `3bcf506`.
 - Verify #91 (`38894288932`) failed in the iPhone, iPad, Pixel and desktop browser profiles, plus `required-checks`; every other job passed. Each failed check had one generic exit-code annotation. The stale tests expected shield cards on banishment votes and Notes; the policy change correctly removed them, and Notes needed a direct private-view request. Fix pending.

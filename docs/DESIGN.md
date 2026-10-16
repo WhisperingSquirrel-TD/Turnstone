@@ -314,4 +314,6 @@ ROLE REVEAL                          BANISHMENT VOTE
 
 The public-step commentary is derived from the same view used for announcements; never substitute browser-local clocks or role-specific copy into it. Night uses one shield and one continuous private moment: first pick, optional second pick, and keep/change all stay inside the same screen. Faithful predictions use the same screen shape and are visible only to their author. Taps select names; the hold seal reveals only private information.
 
+The completed one-by-one ballot reveal stays in the public VERDICT state with the banished-role line. Hold there until the organiser's “Move everyone on” or rehearsal's “Next step”; only then show the single night shield. Preserve the banished player's ballot in the completed reveal and remove all ballot data from player views as soon as the phase leaves VERDICT.
+
 The organizer action and Cairn footer share one fixed surface and sit flush together. Content scrolls as a single page above them with explicit bottom padding. The header reserves its safe-area-adjusted height before either commentary or heading begins. The visible list is compact but never internally scrolls. On each of 320, 375, 390, 430 and desktop widths, in both themes, verify that text stays below the header, content clears the fixed stack, and no horizontal overflow appears.

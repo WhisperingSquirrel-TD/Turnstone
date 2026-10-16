@@ -163,6 +163,10 @@ export function evolve(previous: State | null, input: unknown): State {
       state.taskMurderCancelledCycles = [];
       break;
     case 'PhaseChanged':
+      if (previous.phase === 'VERDICT' && event.phase !== 'VERDICT') {
+        state.votes = {};
+        state.revealed = [];
+      }
       state.phase = event.phase;
       state.phaseStarted = event.at;
       state.deadline = event.deadline;
@@ -389,7 +393,8 @@ export function evolve(previous: State | null, input: unknown): State {
           : task,
       );
       state.votes = { ...previous.votes };
-      delete state.votes[event.seatId];
+      if (!(event.reason === 'banished' && previous.phase === 'VERDICT'))
+        delete state.votes[event.seatId];
       state.shadow = { ...previous.shadow };
       delete state.shadow[event.seatId];
       break;
@@ -464,6 +469,8 @@ export function evolve(previous: State | null, input: unknown): State {
       break;
     case 'GameFinished':
       state.phase = 'FINISHED';
+      state.votes = {};
+      state.revealed = [];
       state.winner = event.winner;
       state.reason = event.reason;
       state.publicAnnouncement = {

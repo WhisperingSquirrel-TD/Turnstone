@@ -376,6 +376,10 @@ export const en = {
     dawnNoOneTaken: 'No one was taken.',
     dawnTaken: (name: string) => `${name} was taken in the night.`,
     banished: (name: string) => `${name} was banished.`,
+    banishedResult: (name: string, role?: 'traitor' | 'faithful' | null) =>
+      role
+        ? `${name} has been banished. They were ${role === 'traitor' ? 'Traitor' : 'Faithful'}.`
+        : `${name} has been banished.`,
     banishedRole: (role: 'traitor' | 'faithful') =>
       `Their role was ${role === 'traitor' ? 'Traitor' : 'Faithful'}.`,
     noVotesAnnouncement: 'No votes were cast. Nobody is banished.',

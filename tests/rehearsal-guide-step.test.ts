@@ -5,7 +5,7 @@ import {
 } from '../artifacts/party-game/src/rehearsal-guide-step';
 
 describe('rehearsal guide step identity', () => {
-  it('treats a public re-vote as a new occurrence of the vote step', () => {
+  it('uses the same guide for a re-vote within the vote step', () => {
     const initialVote = rehearsalGuideStepKey({
       phase: 'VOTE',
       cycle: 1,
@@ -25,19 +25,19 @@ describe('rehearsal guide step identity', () => {
       revote: true,
     });
 
-    expect(tiedReVote).not.toBe(initialVote);
+    expect(tiedReVote).toBe(initialVote);
     expect(
       shouldShowRehearsalGuide({
         rehearsal: true,
         started: true,
         explanationAvailable: true,
         stepKey: tiedReVote,
-        dismissedStepKey: initialVote,
+        dismissedStepKeys: new Set([initialVote]),
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it('treats the second murder slot as a new rehearsal step', () => {
+  it('uses one night guide across slots, rounds, and cycles', () => {
     const firstChoice = rehearsalGuideStepKey({
       phase: 'SHADOW',
       cycle: 1,
@@ -50,23 +50,33 @@ describe('rehearsal guide step identity', () => {
     const secondChoice = rehearsalGuideStepKey({
       phase: 'SHADOW',
       cycle: 1,
-      deadline: null,
+      deadline: 30_000,
       revote: false,
-      shadowRound: 1,
+      shadowRound: 2,
       shadowSlot: 2,
       notesOpen: false,
     });
+    const laterNight = rehearsalGuideStepKey({
+      phase: 'SHADOW',
+      cycle: 2,
+      deadline: 60_000,
+      revote: false,
+      shadowRound: 1,
+      shadowSlot: 1,
+      notesOpen: false,
+    });
 
-    expect(secondChoice).not.toBe(firstChoice);
+    expect(secondChoice).toBe(firstChoice);
+    expect(laterNight).toBe(firstChoice);
     expect(
       shouldShowRehearsalGuide({
         rehearsal: true,
         started: true,
         explanationAvailable: true,
-        stepKey: secondChoice,
-        dismissedStepKey: firstChoice,
+        stepKey: laterNight,
+        dismissedStepKeys: new Set([firstChoice]),
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -77,8 +87,8 @@ describe('rehearsal guide visibility', () => {
         rehearsal: true,
         started: true,
         explanationAvailable: true,
-        stepKey: 'DEBATE:1',
-        dismissedStepKey: 'DEBATE:1',
+        stepKey: 'DEBATE',
+        dismissedStepKeys: new Set(['DEBATE']),
       }),
     ).toBe(false);
 
@@ -87,10 +97,20 @@ describe('rehearsal guide visibility', () => {
         rehearsal: true,
         started: true,
         explanationAvailable: true,
-        stepKey: 'VOTE:1',
-        dismissedStepKey: 'DEBATE:1',
+        stepKey: 'VOTE',
+        dismissedStepKeys: new Set(['DEBATE']),
       }),
     ).toBe(true);
+
+    expect(
+      shouldShowRehearsalGuide({
+        rehearsal: true,
+        started: true,
+        explanationAvailable: true,
+        stepKey: 'DEBATE',
+        dismissedStepKeys: new Set(['DEBATE', 'VOTE']),
+      }),
+    ).toBe(false);
   });
 
   it('shows the start card before any phase guide and hides guides in real games', () => {
@@ -99,8 +119,8 @@ describe('rehearsal guide visibility', () => {
         rehearsal: true,
         started: false,
         explanationAvailable: false,
-        stepKey: 'LOBBY:0',
-        dismissedStepKey: null,
+        stepKey: 'start',
+        dismissedStepKeys: new Set(),
       }),
     ).toBe(true);
 
@@ -109,8 +129,8 @@ describe('rehearsal guide visibility', () => {
         rehearsal: false,
         started: true,
         explanationAvailable: true,
-        stepKey: 'VOTE:1',
-        dismissedStepKey: null,
+        stepKey: 'VOTE',
+        dismissedStepKeys: new Set(),
       }),
     ).toBe(false);
   });

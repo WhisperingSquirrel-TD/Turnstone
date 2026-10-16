@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { rehearsalGuideStepKey } from './rehearsal-guide-step';
 
 describe('rehearsal guide step identity', () => {
-  it('treats a same-phase re-vote as a new guide step', () => {
+  it('does not create a new guide when only the deadline changes', () => {
     const step = {
       phase: 'VOTE',
       cycle: 2,
@@ -12,7 +12,7 @@ describe('rehearsal guide step identity', () => {
       notesOpen: false,
     };
 
-    expect(rehearsalGuideStepKey({ ...step, deadline: 20_000 })).not.toBe(
+    expect(rehearsalGuideStepKey({ ...step, deadline: 20_000 })).toBe(
       rehearsalGuideStepKey({ ...step, deadline: 30_000 }),
     );
   });

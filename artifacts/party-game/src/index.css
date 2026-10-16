@@ -403,6 +403,28 @@ h2,
       background-color 0.16s ease,
       border-color 0.16s ease;
   }
+  .vote-reveal-item {
+    animation: vote-reveal 180ms ease-out both;
+  }
+  .verdict-result {
+    animation: verdict-reveal 180ms ease-out both;
+  }
+  @keyframes vote-reveal {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes verdict-reveal {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
   .enter {
     animation: arrive 0.28s ease-out both;
   }
