@@ -47,7 +47,7 @@ describe('seat PIN hashing', () => {
     const hashed = await hashSeatPin('1234', currentPepper);
     const wrongPepper = {
       version: currentPepper.version,
-      secret: 'wrong-test-pepper-0123456789abcdef',
+      secret: 'w'.repeat(32),
     };
 
     await expect(
@@ -58,7 +58,7 @@ describe('seat PIN hashing', () => {
   it('rehashes with the current pepper after a valid PIN using the previous pepper', async () => {
     const previousPepper = {
       version: currentPepper.version,
-      secret: 'previous-test-pepper-0123456789abcdef',
+      secret: 'q'.repeat(32),
     };
     const oldHash = await hashSeatPin('1234', previousPepper);
     const result = await verifySeatPinWithRotation(

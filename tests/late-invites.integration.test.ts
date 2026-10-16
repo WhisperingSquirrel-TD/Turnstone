@@ -24,7 +24,7 @@ const pinPepperConfig = {
   },
   previous: {
     version: 1,
-    secret: 'previous-test-pin-pepper-0123456789abcdef',
+    secret: 'p'.repeat(32),
   },
 };
 

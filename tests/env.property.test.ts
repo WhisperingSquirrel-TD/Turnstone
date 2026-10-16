@@ -9,6 +9,7 @@ it('accepts exactly integer TCP ports in range', () => {
         parseEnvironment({
           DATABASE_URL: 'postgresql://test:test@localhost/test',
           SESSION_SECRET: 'x'.repeat(32),
+          PIN_PEPPER: 'p'.repeat(32),
           NODE_ENV: 'test',
           PORT: String(port),
         });

@@ -1,0 +1,4 @@
+# Historical deterministic test-only PIN pepper fixtures; not deployed credentials.
+7ead679dc31f07db63ce761a1e73af54fad80767:tests/late-invites.integration.test.ts:generic-api-key:27
+7ead679dc31f07db63ce761a1e73af54fad80767:tests/seat-pin.test.ts:generic-api-key:50
+7ead679dc31f07db63ce761a1e73af54fad80767:tests/seat-pin.test.ts:generic-api-key:61
