@@ -32,6 +32,28 @@ test('home and play are accessible, reloadable and responsive', async ({
   await expect(
     page.getByRole('heading', { name: 'Name your game' }),
   ).toBeVisible();
+  const createNameScreen = page.locator('.entry-screen-create-name');
+  const gameName = page.getByTestId('input-game-name');
+  const continueCreateName = page.getByTestId('button-continue-create-name');
+  const candleColor = await page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--candle)';
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  await expect(createNameScreen).toHaveCSS('opacity', '1');
+  await expect(page.getByRole('heading', { name: 'Name your game' })).toHaveCSS(
+    'color',
+    candleColor,
+  );
+  await expect(gameName).toBeEnabled();
+  await expect(gameName).toHaveCSS('cursor', 'text');
+  await expect(gameName).toHaveCSS('color', candleColor);
+  await expect(continueCreateName).toBeEnabled();
+  await expect(continueCreateName).toHaveCSS('cursor', 'pointer');
+  await expect(continueCreateName).toHaveCSS('opacity', '1');
   const playResponse = await page.reload();
   expect(playResponse?.headers()['x-robots-tag']).toBe(
     PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,

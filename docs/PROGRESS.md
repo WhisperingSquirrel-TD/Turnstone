@@ -1,12 +1,12 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 18:08 UTC.
-- Current milestone/step: Item 33's stale browser assertion is corrected and targeted checks are green; pushing the correction before items 34–35.
-- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7 passed Verify #103; item 33 awaits a green rerun; items 34–35 are not started.
-- Last pushed commit/CI: `1dd6203`; Verify #104 (`38944123199`) — Failure after 2m45s. Four browser profiles failed the same stale E2E expectation (“round 1: Sam” vs the new “First pick: Sam”); required-checks consequently failed. Six scenario shards and report merge completed. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38944123199.
-- Local verification for item 33: full unit suite (345), typechecks, lint, format, scenario-worker smoke and eight-seat real-server Pixel rehearsal passed before push. The focused browser test reproduced the stale assertion; after correcting it, the browser test, test typecheck, lint and format pass.
+- Updated: 16 October 2026, 18:22 UTC.
+- Current milestone/step: Item 34 regression coverage added; current styling already renders the night choices and “Name your game” controls as active, so no product CSS change was needed. Awaiting Verify for the test and package update.
+- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7 passed Verify #103; item 33 accepted by Verify #105; item 34 passes locally on desktop and Pixel and awaits CI; item 35 is not started.
+- Last pushed commit/CI: `fcd2c84`; Verify #105 (`38945152830`) — Success in 3m04s; all 19 jobs passed, including four browser profiles, six scenario shards and report merge. No annotations were shown. Previous Verify #104 (`38944123199`) failed after 2m45s because four browser profiles had one stale E2E expectation (“round 1: Sam” vs the new “First pick: Sam”); required-checks consequently failed. Runs: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38945152830 and https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38944123199.
+- Local verification for item 34: three targeted tests passed on desktop and Pixel; test typecheck, lint, formatting and diff checks pass. Local iPhone WebKit could not launch: after adding available Nix packages, `ldd` still reports missing `libatomic.so.1`, `libjpeg.so.8` and `libjxl.so.0.8`; `libatomic` is not available in the Replit package index. GitHub's iPhone and iPad profiles passed in #105.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued after the M5 hands-on gate.
-- Risks: The API workflow still logs generic deadline-scheduler iteration errors; cause remains unverified. Local iPhone WebKit still lacks runtime libraries; the #104 iPhone/iPad failures were the same stale text assertion as desktop and Pixel.
+- Risks: The API workflow still logs generic deadline-scheduler iteration errors; cause remains unverified. Local iPhone WebKit remains unavailable because of the host ABI libraries listed above.
 
 ## Previous verification history
 

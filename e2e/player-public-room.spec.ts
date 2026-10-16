@@ -929,6 +929,32 @@ for (const role of ['faithful', 'traitor'] as const) {
           { exact: true },
         ),
       ).toBeVisible();
+      const candleColor = await page.evaluate(() => {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--candle)';
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      });
+      await expect(page.getByTestId('shadow-slot-label')).toHaveCSS(
+        'color',
+        candleColor,
+      );
+      const nightPrompt = page.getByText(
+        role === 'traitor'
+          ? 'Who will the Traitors take tonight?'
+          : 'Who do you suspect most right now?',
+        { exact: true },
+      );
+      await expect(nightPrompt).toHaveCSS('color', candleColor);
+      const nightChoices = page
+        .getByTestId('private-choice-list')
+        .getByRole('button');
+      await expect(nightChoices.first()).toBeEnabled();
+      await expect(nightChoices.first()).toHaveCSS('cursor', 'pointer');
+      await expect(nightChoices.first()).toHaveCSS('opacity', '1');
+      await expect(nightChoices.first()).toHaveCSS('color', candleColor);
       const shadowStatusLines = page.getByTestId('shadow-status').locator('p');
       await expect(shadowStatusLines).toHaveCount(2);
       await expect(shadowStatusLines.nth(0)).toHaveText(
