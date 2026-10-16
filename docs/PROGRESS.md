@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 15:00 UTC.
-- Current milestone/step: Round 5 game flow — item 4 (tie wording) is implemented and locally verified; preparing the push. Do not begin item 5 until this push's Verify run is green.
-- Round 5 item status: items 1, 2 and 9 were verified in Verify #96. Item 3 passed Verify #97. Item 4 is locally green but not yet CI-certified; remaining items are pending.
-- Last pushed commit/CI: `6cc07d2`; Verify #97 (`38915633832`) — Success, all 19 jobs passed, 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38915633832.
+- Updated: 16 October 2026, 15:14 UTC.
+- Current milestone/step: Round 5 game flow — item 5, separating the night-choice screen before its behavior change.
+- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98. Item 5 screen extraction is locally green with behavior unchanged; one-shield behavior is next. Remaining items are pending.
+- Last pushed commit/CI: `5afe266`; Verify #98 (`38920621425`) — Success, all 19 Verify jobs passed, including four browser profiles and six scenario shards; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38920621425.
 - Local verification for item 4: three tie-screen unit tests and 18 pipeline tests pass; app and test typechecks, lint and format pass. The real-server 8-seat rehearsal passed with a forced tie, no presenter and no manual refresh. Pinned Gitleaks 8.30.1 checksum verified and full-history scan clean. Dependency audit reports one moderate finding and no high/critical findings; SAST and HoundDog report none.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued after the M5 hands-on gate.
 - Risks: Pixel Chromium runs locally; local iPhone WebKit still lacks runtime libraries, while GitHub iPhone and iPad profiles passed in #93. The API workflow listens on port 8080 but logs deadline-scheduler iteration errors while 11 active rehearsal records exist; the cause is unverified and no records were changed.

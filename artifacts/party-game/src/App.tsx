@@ -47,6 +47,7 @@ import { GameConnectionStatus } from './GameConnectionStatus';
 import { NotesScreen } from './NotesScreen';
 import { BanishmentVoteScreen } from './BanishmentVoteScreen';
 import { PrivateChoiceControls } from './PrivateChoiceControls';
+import { NightChoiceScreen } from './NightChoiceScreen';
 import { VerdictScreen } from './VerdictScreen';
 import { ShieldCard } from './ShieldCard';
 import { PhaseProgressStatus } from './PhaseProgressStatus';
@@ -1964,57 +1965,43 @@ function PlayerGame() {
                         !privateCovered &&
                         isActionPhase &&
                         (full.phase !== 'SHADOW' || privateView) ? (
-                        <div className="enter">
-                          {full.phase === 'SHADOW' && privateView?.task && (
-                            <p className="mb-4 text-left text-candle">
-                              {privateView.task.instruction}
-                            </p>
-                          )}
-                          {full.phase === 'VOTE' ||
-                          full.phase === 'FINAL_BANISH' ? (
-                            <BanishmentVoteScreen
-                              {...choiceControlProps}
-                              revote={full.phase === 'VOTE' && full.revote}
-                              tieCandidateNames={tieCandidateNames}
-                            />
-                          ) : (
-                            <>
-                              <p
-                                className="display text-2xl"
-                                data-testid={
-                                  full.phase === 'SHADOW'
-                                    ? 'shadow-slot-label'
-                                    : undefined
-                                }
-                              >
-                                {full.phase === 'SHADOW'
-                                  ? full.shadowSlot === 1
-                                    ? en.game.firstChoice
-                                    : en.game.secondChoice
-                                  : en.game.finalDecision}
-                              </p>
-                              {full.phase === 'SHADOW' && (
-                                <p className="mt-2 text-left text-candle">
-                                  {privateView?.role === 'traitor'
-                                    ? en.game.shadowTraitorPrompt
-                                    : en.game.shadowFaithfulPrompt}
+                        full.phase === 'SHADOW' ? (
+                          <NightChoiceScreen
+                            {...choiceControlProps}
+                            taskInstruction={privateView?.task?.instruction}
+                            slotLabel={
+                              full.shadowSlot === 1
+                                ? en.game.firstChoice
+                                : en.game.secondChoice
+                            }
+                            prompt={
+                              privateView?.role === 'traitor'
+                                ? en.game.shadowTraitorPrompt
+                                : en.game.shadowFaithfulPrompt
+                            }
+                            statusLines={shadowStatusLines}
+                          />
+                        ) : (
+                          <div className="enter">
+                            {full.phase === 'VOTE' ||
+                            full.phase === 'FINAL_BANISH' ? (
+                              <BanishmentVoteScreen
+                                {...choiceControlProps}
+                                revote={full.phase === 'VOTE' && full.revote}
+                                tieCandidateNames={tieCandidateNames}
+                              />
+                            ) : (
+                              <>
+                                <p className="display text-2xl">
+                                  {en.game.finalDecision}
                                 </p>
-                              )}
-                              {full.phase === 'SHADOW' && (
-                                <div
-                                  className="mt-2 grid min-h-12 grid-rows-2 gap-1 whitespace-pre-wrap text-left text-sm text-ash"
-                                  data-testid="shadow-status"
-                                  aria-live="polite"
-                                >
-                                  {shadowStatusLines.map((line, index) => (
-                                    <p key={index}>{line}</p>
-                                  ))}
-                                </div>
-                              )}
-                              <PrivateChoiceControls {...choiceControlProps} />
-                            </>
-                          )}
-                        </div>
+                                <PrivateChoiceControls
+                                  {...choiceControlProps}
+                                />
+                              </>
+                            )}
+                          </div>
+                        )
                       ) : held || reveal.isPending || holdMessage ? (
                         <p role="status" className="text-sm text-ash">
                           {holdMessage || en.game.privateLoading}
