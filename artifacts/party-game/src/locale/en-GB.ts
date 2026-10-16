@@ -37,7 +37,7 @@ export const en = {
       },
       {
         heading: 'Play the whole group',
-        body: 'Complete missions, build the prize pot, discuss suspicions and vote at the round table.',
+        body: 'Complete missions, build the prize pot, discuss suspicions and vote together.',
       },
       {
         heading: 'Find the hidden traitors',
@@ -72,7 +72,7 @@ export const en = {
       {
         question: 'How do we play a traitor game at home with 15 people?',
         answer:
-          'The organiser starts a game, joins as a player and shares the six-character code. Each person joins in a phone or tablet browser, receives a private role, completes missions, discusses suspicions and votes at the round table.',
+          'The organiser starts a game, joins as a player and shares the six-character code. Each person joins in a phone or tablet browser and receives a private role. Players complete missions, build the prize pot, discuss suspicions and vote together.',
       },
       {
         question: 'Is there a traitor game where nobody has to host?',

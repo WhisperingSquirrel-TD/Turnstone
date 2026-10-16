@@ -15,6 +15,9 @@ test('home and play are accessible, reloadable and responsive', async ({
     'made by Stackstone Consulting',
   );
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  const homeCopy = (await page.getByRole('main').innerText()).toLowerCase();
+  expect(homeCopy).not.toContain('vote at the round table');
+  expect(homeCopy.match(/vote together/g) ?? []).toHaveLength(1);
   const firstFaqQuestion = page.locator('.public-home-faq summary').first();
   await expect(firstFaqQuestion).toHaveCSS('min-height', '52px');
   await expect
@@ -27,6 +30,15 @@ test('home and play are accessible, reloadable and responsive', async ({
         .analyze()
     ).violations,
   ).toEqual([]);
+  await page.goto('/faq');
+  await expect(
+    page.getByRole('heading', { name: 'Frequently asked questions' }),
+  ).toBeVisible();
+  await page.locator('.public-home-faq details summary').first().click();
+  const faqCopy = (await page.getByRole('main').innerText()).toLowerCase();
+  expect(faqCopy).not.toContain('vote at the round table');
+  expect(faqCopy).toContain('vote together');
+  await page.goto('/');
   await page.getByRole('link', { name: 'Start a new game' }).click();
   await expect(page).toHaveURL(/\/play\?entry=create$/);
   await expect(
