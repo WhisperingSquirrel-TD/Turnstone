@@ -1286,3 +1286,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Before pushing such changes, run the full unit suite, typecheck, lint, format check, and scenario-report/coverage step locally. Leave browser profiles, Lighthouse, and the scenario shards to GitHub Actions.
 
 **Consequence:** Use targeted local checks for unrelated changes; do not run the full `verify` pipeline locally before every push.
+
+## D82 — Round 5 rehearsal and night-screen rules (owner-approved, 16 October 2026)
+
+**Context:** The owner and reviewer supplied the next recorded rehearsal feedback and a detailed night-screen design. It adds phase-synchronised day/night presentation, public commentary, a single continuous private night moment and guided, player-paced rehearsal.
+
+**Choice:** Apply SPEC §31. Keep the shield only on role reveal and night choices; all choices are taps. Keep Faithful predictions private to their author during the game. Use one murder and eight seats in rehearsal, protect the human through their first complete day and night, and continue in watch mode after removal. Keep the day/night themes, commentary, status layout and public-step screens role-uniform.
+
+**Consequence:** Implement under TDD in small green pushes. Use a real-server rehearsal for the acceptance path, with forced cases for ties and human removal. The hands-on owner rehearsal remains the gate after Round 5; PIN pepper and join-storm capacity remain queued after that gate.

@@ -1,8 +1,8 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 11:03 UTC.
-- Current milestone/step: SPEC §30 rule changes and addendum are green. Stopping for the reviewer; PIN pepper and join-storm capacity remain queued.
-- Last pushed commit/CI: `d8ed63a`; Verify #89 (`38890819047`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38890819047.
+- Updated: 16 October 2026, 11:28 UTC.
+- Current milestone/step: Round 5 — TDD step A1, limiting the shield to role reveal and night choices. SPEC §31, D82 and the Round 5 design plan are recorded; local unit, type, lint and format checks pass. Browser CI is pending.
+- Last pushed commit/CI: `e7f592f`; Verify #90 (`38892252332`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38892252332.
 - Last code commit/CI: `56c48ff`; Verify #88 (`38890272980`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38890272980.
 - Previous run context: Verify #87 (`38888772232`) failed only in `rehearsal-live` because the test expected a slot-2 screen even when the first murder ended the game by parity; the engine correctly recorded slot 2 as `game-ended`. The revised test requires a complete two-slot first night while validating that early-end record later in the game; #88 is green.
 - Last green code run: `ff8f572`; Verify #86 (`38888255890`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38888255890.

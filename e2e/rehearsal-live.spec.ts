@@ -566,6 +566,14 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         phase === 'SHADOW'
           ? Number(await game.getAttribute('data-shadow-slot'))
           : 0;
+      if (!['DEAL', 'SHADOW'].includes(phase)) {
+        await expect(
+          page.getByRole('heading', {
+            name: 'Shield your screen',
+            exact: true,
+          }),
+        ).toHaveCount(0);
+      }
       if (phase === 'SHADOW') {
         seenShadowSlots.add(shadowSlotBefore);
         if (shadowCycleBefore === 1)
@@ -576,7 +584,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         playerRole = await revealDealRole(page);
       } else if (['SHADOW', 'FINAL_VOTE'].includes(phase)) {
         if (seatStatus === 'alive') {
-          await handleShield(page, activeGameId);
+          if (phase === 'SHADOW') await handleShield(page, activeGameId);
           if (phase === 'SHADOW')
             await expect(page.getByTestId('shadow-slot-label')).toHaveText(
               shadowSlotBefore === 1 ? 'First choice' : 'Second choice',

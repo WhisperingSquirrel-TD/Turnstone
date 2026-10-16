@@ -24,6 +24,8 @@ Actors [M]: Visitor; Coordinator (runs a game while playing, sees no secrets); C
 System administrator [M]: manage users (search, suspend, delete); manage reference lists (missions, themes, narration templates, name filter, recommended traitor table); aggregate usage; export only consented leads as CSV; audit log of admin actions. Admins never see hidden state of an unfinished game.
 
 ## 3. Non-negotiable principles [M]
+The Round 5 owner-approved night-screen and rehearsal refinements are specified in §31. They preserve the privacy and secrecy principles here: choices are private, screens remain role-uniform, and Faithful predictions are never shown to other players during the game.
+
 1. Server holds the only true state; clients send commands and render views.
 2. Every response and socket message built by one projection, viewFor(viewer, state), with an allow-list per viewer type. Never send secrets and hide them with CSS.
 3. Uniform interaction: at every private moment every living player's device shows the same layout, colours, number of options, text length band, sound, vibration and minimum time. Faithful answer a decoy question while Traitors choose a victim. A bystander or someone timing taps learns nothing. Banishment vote names are alphabetical; night-choice names stay shuffled separately per seat, with no role-dependent styling or ordering.
@@ -220,6 +222,8 @@ Delivery pipeline: the source of truth is GitHub repository WhisperingSquirrel-T
 After saving, continue with Milestone 1 under strict TDD, then stop for review. Stay on the free tier: no publishing from Replit, no paid services.
 
 ## 25 (revised). Visual direction: Stackstone talk style [M][Owner]
+Game screens may switch between the light day palette and dark night palette as specified in §31; the public home, entry and lobby remain in the dark Stackstone talk style. The optional “Always dark” preference does not alter layout or role uniformity.
+
 Turnstone is dark-themed everywhere and matches the owner's Stackstone talk slides: warm charcoal, Playfair Display headlines with the key words in gold, and DM Sans for everything else. This supersedes the earlier deep-brown palette and system-font rule.
 Tokens: Charcoal #3D3A38 main background (brand charcoal), with a single soft diagonal lift towards Stone in the far corner; Hearth #2E2B29 deeper surfaces (hold pad, sheets, private moments); Stone #55504B raised surfaces, dividers and the background lift; Gilt #C8944A key words in headlines, focus rings and main actions, for large text, icons and borders only (it does not reach 4.5:1 for small text on Charcoal); Candle #FAFAF5 headlines and primary text; Ash #D4CDC4 subtitles and secondary text. Every text and background pair must pass WCAG AA in the contrast tests.
 Fonts: Playfair Display (regular 400) for headlines and subtitles; DM Sans (400 and 500) for body, buttons and labels. Both are SIL Open Font Licence: self-host subsetted Latin WOFF2 files from our own origin, never from Google's servers, and include the licence files. Fonts have their own budget of 80 KB total, outside the section 20 JavaScript and page budgets. Serve them with immutable one-year caching; preload them on the public site and during the lobby and device check, so they are cached before any private moment; use font-display: swap with size-adjusted fallback faces so CLS stays under 0.1 and nothing shifts during a hold. The outlined logo SVGs stay font-independent.
@@ -312,3 +316,51 @@ The following owner-approved rule changes were given on 15 October 2026 and clar
 3. **One banishment per round in plans.** Until the engine supports multiple banishments per round, the planner must never estimate more than one. Remove the two-banishment compression step and correct any estimate that depended on it.
 
 Golden gameplay coverage includes a double murder with split first and second picks, a fully abstained initial regular vote, an abstained tie re-vote, and an abstained endgame banishment. Planner regression coverage includes a compressed plan with no two-banishment step. Guided rehearsal uses two murder slots; a server-backed rehearsal must complete a double-murder night end to end.
+
+## 31. Round 5 night screens and phase presentation (owner-approved, 16 October 2026)
+
+This section records the Round 5 owner rehearsal and night-screen design. It supplements §§3 and 25 and supersedes conflicting earlier game-screen presentation rules.
+
+### Private interaction and choice screens
+
+- The shield card appears only for the role reveal and the night-choice moment. Banishment votes, endgame choices, Notes and other screens are plain screens without a shield card. Hold is for revealing a secret only; every choice is made by tapping.
+- Choice headings and names remain full contrast and active while choosing. After a choice, show “You voted for <name>” or “Your pick: <name>” and let the player change it for as long as the server permits. Tied re-votes say: “It's a tie between <A> and <B>. Vote again, choosing between them.”
+- A night is one continuous private moment: one shield, then the first choice, a second choice when the engine has a second murder slot, and the “Keep it or change it?” window inline. Do not repeat the explainer or shield between slots. The engine may resolve the slots sequentially. A missed-task penalty still cancels all murders that night.
+- Every night screen has the same layout and four status lines for every role. Traitors see their own and fellow Traitors' live picks; Faithful see only their own prediction and never see anyone else's prediction during the game. Keep role variants identical in element count, sizes, colours and fixed status-area height. Night waiting screens have no public per-player readiness indicator.
+- The Traitor's question is “Who will the Traitors take tonight?” The Faithful prediction is “Who do you think the Traitors will take tonight?” Both roles get the same shuffled list of every other living player. Store each Faithful prediction with its night and never reveal it during the game or use it for an award or recap.
+- The four Traitor status lines are: own pick (“You picked: <name>” / “You haven't picked yet”); fellow Traitor live picks or waiting state; a second fellow-pick line (or the single-Traitor copy “You are choosing alone tonight.” and “Think about who suspects you most.”); and “All agreed: <name>” when every pick matches or “You can change your pick until the night ends.” otherwise. For more than two Traitors, group the two leading targets. With two murder slots, identify both picks in the same four lines (“1st: <name> · 2nd: <name>”).
+- The four Faithful status lines are “Your guess: <name>” / “You haven't guessed yet”; “Guesses stay secret until the end.”; “Think about who the Traitors fear most.”; and “You can change your guess until the night ends.”
+- The decision rule remains majority by default; unanimous-with-one-re-vote remains configurable. One living Traitor is automatically unanimous.
+
+### Rehearsal and role-aware play
+
+- Rehearsal has eight seats and one murder per night; double-murder rehearsal remains in dedicated golden coverage only. Bots act immediately, but no rehearsal step advances automatically. The player moves on with “Next step”.
+- Until the human has completed a full first day (conversation, vote and verdict) and first night (choice and dawn), bots do not vote for or choose the human. After that, bots use the normal rules and may remove the human.
+- When the human is out, keep the game moving in watch mode through every remaining step. Explain what the other players are doing, keep “Practise again” visible, and show the human's own fate in the second person. The exact fate copy is “You were taken in the night. You're out, but you can keep watching.” and “You're out. You can watch, but you can't vote or choose.”
+- Verdicts lead with the one-by-one vote reveal, followed by “<name> has been banished. They were <role>.” or the no-votes line. “End or continue” leads with “<n> players remain. Decide together: end the game now, or banish one more?” and states the configured agreement rule. Use “You were one of the Faithful”, never “a Faithful”.
+- Each explainer is titled with its step name and shown only the first time that step is reached in a game; “What's this?” remains available. The rehearsal copy is role-neutral and identical for every role. In real games, the same copy is behind “What's this?”. Rehearsal adds one role-neutral coaching tip under the commentary.
+
+### Commentary and waiting
+
+Show one state-derived commentary line at the top of every game screen, with identical public-step copy on every phone:
+
+- Conversation: “Day <n>. <alive> players remain. <last event>.” The last event is “Nobody has been banished yet.”, “<name> was banished last.” or “<name> was taken in the night.”
+- Vote: “Vote for the player you think is a Traitor. <x> of <y> have voted.”
+- Re-vote: the tie prompt above. Verdict: the result sentence above, then “<n> players remain. Night falls next.”
+- Night: “Night <n>. Everyone answers privately at the same moment, so nobody can tell who is choosing.”
+- Dawn: “Morning. <who was taken, or: Nobody was taken in the night.>”
+- Endgame: the player-count decision line above. Game complete: the result line.
+
+Never show the old generic “x of y players have completed this part” line. Show counts only where they are true: “<x> of <y> have voted” and “<x> of <y> are ready”, with readiness counted after an action. On a banishment vote, list each player's “Voted” or “Waiting” state, never their target. Night screens do not show per-player readiness. “Thanks. Waiting for everyone.” appears once, never in the action bar. Once everyone has acted, use the appropriate rehearsal, organiser or player message specified by the Round 5 brief.
+
+### Phase theme, layout and visual checks
+
+- Day phases use the Candle background, Ash panels and Charcoal text. Night uses the current dark theme. All phones switch together from the server phase. Show a restrained “Night falls” / “Morning” fade, instant with reduced motion. “Always dark” is off by default and keeps the whole game dark.
+- Apply the theme identically for every role. In the light theme, Gilt is limited to buttons with Charcoal text and large headings. Every text/background pair passes WCAG AA in both themes.
+- Game pages scroll as a whole; no nested scroll areas. The header, content, action bar and footer align to one centred column. Reserve the header height plus safe-area inset; private screens use the same top spacing as public screens. The fixed action bar and footer form one continuous bottom stack, share the page surface and width, and never cover content. Pad scrollable content above that stack.
+- The footer remains “made by Stackstone Consulting” with the Cairn mark and the Stackstone Consulting website link. The Turnstone wordmark appears once at the top left. No alternate logo or role-specific chrome is introduced.
+- Results label the murder record “First pick” and “Final pick”. Capture every game step at 320, 375, 390, 430 and desktop widths in both themes. Visual checks prove no horizontal scroll, header clipping/intersection, or action-bar/footer overlap. Accessibility, contrast and night-layout uniformity tests cover both themes.
+
+### Round 5 acceptance
+
+The real-server, eight-seat rehearsal reaches results without a presenter or manual refresh. Its tests cover no shield on banishment votes, the verdict lead line, forced ties, one shield per night, first-day-and-night human safety, watch mode after a forced removal, second-person fate copy, commentary on every step, day/night theme changes, and AA contrast. Night uniformity checks compare all four fixed-height lines and text-length bands across roles and themes. Playwright screenshots cover the required viewports and both themes; the action bar/footer and header bounds are checked visually.

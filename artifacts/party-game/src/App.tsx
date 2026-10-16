@@ -34,6 +34,7 @@ import {
   useRevealPrivateView,
   useSubmitGameCommand,
 } from '@workspace/api-client-react';
+import { requiresPrivacyShield } from './privacy-shield-policy';
 import type {
   FullView,
   GameViewResponse,
@@ -759,11 +760,7 @@ function PlayerGame() {
   );
   const inPrivateMoment = Boolean(full && (phaseIsPrivate || notesOpen));
   const shieldRequired = Boolean(
-    full &&
-    (['DEAL', 'VOTE', 'SHADOW', 'FINAL_VOTE', 'FINAL_BANISH'].includes(
-      full.phase,
-    ) ||
-      notesOpen),
+    full && requiresPrivacyShield(full.phase, notesOpen),
   );
   const isActionPhase = Boolean(
     full &&

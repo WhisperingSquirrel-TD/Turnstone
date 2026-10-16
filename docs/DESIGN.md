@@ -278,3 +278,40 @@ Tokens: section 25's Charcoal, Hearth, Stone, Gilt, Candle and Ash; Playfair Dis
 Alignment: the same public announcement, player statuses, pot, timer and recent public activity appear on every seated phone; none depend on a presenter connection. Alive players have no role colour or role label. Use thin Stone dividers, not a stack of identical cards; keep the announcement as the strongest public element. The Notes action is the only entry to the same-shaped private notes/chat surface for either role. Hide this public room content during a private moment.
 
 Anti-template check: avoid dashboard cards, coloured player avatars, and any role-specific styling. At 320px and 200% text, names, statuses and the Notes action remain readable without horizontal scrolling; respect reduced motion and do not animate ordinary status updates.
+
+## Round 5 — phase presentation and night screens
+
+Keep the Stackstone talk-slide identity from §25 and the one-column phone layout. Day and night are the only game theme states; the active server phase switches every player's screen together. The home, entry and lobby stay dark. Each game-step component retains its own content and uses the same header, commentary alignment, action/footer stack and safe-area spacing.
+
+```text
+DAY / PUBLIC STEP                    NIGHT / PRIVATE STEP
++------------------------------+     +------------------------------+
+| Turnstone             Online |     | Turnstone        Reconnecting|
+| Day 2. 7 remain. ...         |     | Night 2. Everyone answers... |
+| The conversation             |     | Who will the Traitors take?  |
+| Shared public event          |     | You picked: Alex             |
+| Players / latest updates     |     | Fellow picks / fixed lines   |
+|                              |     |                              |
+| [ Notes ]                    |     | [tap-to-select names]        |
+|                              |     |                              |
++------------------------------+     +------------------------------+
+| [Move everyone on / Next step]|     | [Move everyone on / Next step]|
+| made by Stackstone Consulting|     | made by Stackstone Consulting|
++------------------------------+     +------------------------------+
+
+ROLE REVEAL                          BANISHMENT VOTE
++------------------------------+     +------------------------------+
+| Turnstone                    |     | Turnstone              Online|
+| Your role                    |     | Vote for ... <x> of <y> ...  |
+| Shield card                  |     | Who do you vote to banish?   |
+| [hold seal to reveal]        |     | [tap name] [tap name]        |
+| [Done]                       |     | You voted for <name>         |
+|                              |     | [change while allowed]       |
++------------------------------+     | [Voted/Waiting]               |
+| action + fixed-footer stack  |     | action + fixed-footer stack   |
++------------------------------+     +------------------------------+
+```
+
+The public-step commentary is derived from the same view used for announcements; never substitute browser-local clocks or role-specific copy into it. Night uses one shield and one continuous private moment: first pick, optional second pick, and keep/change all stay inside the same screen. Faithful predictions use the same screen shape and are visible only to their author. Taps select names; the hold seal reveals only private information.
+
+The organizer action and Cairn footer share one fixed surface and sit flush together. Content scrolls as a single page above them with explicit bottom padding. The header reserves its safe-area-adjusted height before either commentary or heading begins. The visible list is compact but never internally scrolls. On each of 320, 375, 390, 430 and desktop widths, in both themes, verify that text stays below the header, content clears the fixed stack, and no horizontal overflow appears.
