@@ -1,6 +1,7 @@
 - [Nix browser verification](nix-browser-verification.md) — native-library installation and browser launch alone do not prove headless WebKit can render.
 - [Nix font rendering](nix-font-rendering.md) — verify the actual browser font before converting webfont-based SVG lettering to paths.
 - [GitHub workflow push scope](github-workflow-push-scope.md) — verify the active Replit Git connection can update workflow files before retrying a push.
+- [GitHub Actions inspection](github-actions-inspection.md) — use the configured GitHub App connection when public REST run or log access is rate-limited.
 - [Scenario RNG isolation](scenario-rng-isolation.md) — keep bot and engine random streams separate so captured full-game traces replay through the server.
 - [Deadline test clock isolation](deadline-test-clock-isolation.md) — use consistent future clocks and serialize shared-database files to avoid global scheduler interference.
 - [Vite dev optimizer reload](vite-dev-optimizer.md) — prebundle lazy-route deps; reference transitive deps through their linked workspace parent under pnpm.

@@ -1,13 +1,12 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 10:34 UTC.
-- Current milestone/step: Verify #85 failed in all four browser profiles because the new screen assertion omitted the existing round label. The UI correctly shows it; the assertion now expects the exact round-specific text, with no behavior or test relaxation.
-- Last pushed code commit/CI: `cb85fff`; Verify #85 (`38887804598`) — Failed. Static checks, unit, integration, all scenario shards/merge, rehearsal, Lighthouse and audit passed; Pixel, desktop, iPad and iPhone failed on the same expectation, and required checks failed. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38887804598.
-- Local verification for this fix: test typecheck, lint, formatting and diff checks passed. The preceding step passed 310/310 unit tests across 60 files, scenario sharding/coverage assertions (17 goldens assigned exactly once), scenario worker smoke, typecheck, lint, format, production build and diff checks. The initial-abstention golden was first confirmed red, then passed through full golden replay and the independent oracle.
-- Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
-- Risk: local WebKit still closes during page creation in Replit Nix; GitHub WebKit profiles passed in #83. The local API workflow also logs repeated deadline-scheduler iteration errors after restart; cause unverified, while GitHub integration and rehearsal jobs passed. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
-- Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
-- Risk: local WebKit still closes during page creation in Replit Nix; GitHub WebKit profiles passed in #83. The local API workflow also logs repeated deadline-scheduler iteration errors after restart; cause unverified, while GitHub integration and rehearsal jobs passed.
+- Updated: 16 October 2026, 10:39 UTC.
+- Current milestone/step: SPEC §30 rule changes and addendum complete; Verify #86 is green. Stopping for the reviewer.
+- Last pushed code commit/CI: `ff8f572`; Verify #86 (`38888255890`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38888255890.
+- Previous run context: Verify #85 (`38887804598`) failed in four browser profiles because a new screen assertion omitted the existing round label; the UI behavior was correct. The assertion now checks the exact displayed copy, and #86 is green.
+- Local verification: the screen test passed test typecheck, lint and formatting checks. The preceding step passed 310/310 unit tests across 60 files, scenario sharding/coverage assertions (17 goldens assigned exactly once), scenario worker smoke, typecheck, lint, format, production build and diff checks. The initial-abstention golden was first confirmed red, then passed through full golden replay and the independent oracle.
+- Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued and were not started.
+- Risk: local WebKit still closes during page creation in Replit Nix; GitHub WebKit profiles passed in #86. The local API workflow continues to log deadline-scheduler iteration errors; cause unverified, while GitHub integration and rehearsal jobs passed. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
 
 ## Previous verification history
 
