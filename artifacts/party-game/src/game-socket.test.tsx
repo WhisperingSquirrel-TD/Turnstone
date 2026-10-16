@@ -31,7 +31,7 @@ describe('player game socket', () => {
   it('watches the authenticated game after connect and accepts only allow-listed public views', () => {
     const socket = fakeSocket();
     const onView = vi.fn();
-    const stop = attachGameView(socket, 'game-123', onView);
+    const stop = attachGameView(socket, 'game-123', onView, vi.fn());
 
     socket.fire('connect');
     expect(socket.emit).toHaveBeenCalledWith('game:watch', {
@@ -69,11 +69,59 @@ describe('player game socket', () => {
 
   it('watches immediately if the socket is already connected', () => {
     const socket = fakeSocket(true);
-    const stop = attachGameView(socket, 'game-456', vi.fn());
+    const stop = attachGameView(socket, 'game-456', vi.fn(), vi.fn());
 
     expect(socket.emit).toHaveBeenCalledExactlyOnceWith('game:watch', {
       gameId: 'game-456',
     });
     stop();
+  });
+
+  it('stays reconnecting until a valid view resyncs and drops back on disconnect', () => {
+    const socket = fakeSocket();
+    const onView = vi.fn();
+    const onStatus = vi.fn();
+    const stop = attachGameView(socket, 'game-789', onView, onStatus);
+
+    expect(onStatus).toHaveBeenLastCalledWith('reconnecting');
+
+    socket.fire('connect');
+    expect(socket.emit).toHaveBeenCalledWith('game:watch', {
+      gameId: 'game-789',
+    });
+    expect(onStatus).toHaveBeenLastCalledWith('reconnecting');
+
+    socket.fire('game:view', {
+      version: 5,
+      view: {
+        exists: true,
+        phase: 'DEBATE',
+        lobbyOpen: false,
+        seatCount: 5,
+      },
+    });
+    expect(onView).not.toHaveBeenCalled();
+    expect(onStatus).toHaveBeenLastCalledWith('reconnecting');
+
+    socket.fire('game:view', {
+      serverNow: Date.now(),
+      version: 6,
+      view: {
+        exists: true,
+        phase: 'DEBATE',
+        lobbyOpen: false,
+        seatCount: 5,
+      },
+    });
+    expect(onView).toHaveBeenCalledOnce();
+    expect(onStatus).toHaveBeenLastCalledWith('online');
+
+    socket.fire('disconnect', 'transport close');
+    expect(onStatus).toHaveBeenLastCalledWith('reconnecting');
+    socket.fire('connect');
+    expect(onStatus).toHaveBeenLastCalledWith('reconnecting');
+
+    stop();
+    expect(socket.listenerCount()).toBe(0);
   });
 });

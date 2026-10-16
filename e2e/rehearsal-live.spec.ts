@@ -491,6 +491,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         `Socket.IO namespace was not accepted (acks=${socketConnectAcks}, rejects=${socketConnectErrors}, connections=${socketConnections}, frames=${socketFramesReceived}, errors=${socketErrors}/${socketErrorCategory}, closes=${socketCloses}, seat cookie present=${socketSeatCookieSeen}, requests=${socketRequestDetails.join(' | ') || 'none'}, HTTP=${socketHttpDetails.join(' | ') || 'none'}).`,
       );
     }
+    const connectionStatus = page.getByRole('status', {
+      name: 'Connection status',
+    });
+    await expect(connectionStatus).toHaveText('Online');
+    await page.context().setOffline(true);
+    await expect(connectionStatus).toHaveText('Reconnecting...', {
+      timeout: 5_000,
+    });
+    await page.context().setOffline(false);
+    await expect(connectionStatus).toHaveText('Online', { timeout: 15_000 });
     await expect(game).toHaveAttribute('data-version', /\d+/);
     await expect(game).toHaveAttribute('data-progress-total', '6');
     const initialProgressDone = Number(

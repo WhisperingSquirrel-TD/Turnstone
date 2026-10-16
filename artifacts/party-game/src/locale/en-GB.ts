@@ -9,7 +9,7 @@ export const en = {
       'The security check is still preparing. Try again in a moment.',
     connectionStatus: 'Connection status',
     online: 'Online',
-    offline: 'Offline',
+    reconnecting: 'Reconnecting...',
     back: 'Back',
     refresh: 'Refresh',
     brandName: 'Stackstone Consulting',

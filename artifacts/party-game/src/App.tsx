@@ -42,11 +42,16 @@ import type {
 } from '@workspace/api-client-react';
 import { config } from '@/config';
 import { BrandFooter } from './BrandFooter';
+import { GameConnectionStatus } from './GameConnectionStatus';
 import { NotesScreen } from './NotesScreen';
 import { PhaseProgressStatus } from './PhaseProgressStatus';
 import { apiUrl } from './api-url';
 import { en } from '@/locale/en-GB';
-import { attachGameView, type GameRealtimeSocket } from './game-socket';
+import {
+  attachGameView,
+  type GameConnectionState,
+  type GameRealtimeSocket,
+} from './game-socket';
 import { EntryPage } from './EntryPage';
 import { HoldRoleDemo } from './HoldRoleDemo';
 import { lobbyCodeJoinUrl } from './lobby-code-url';
@@ -191,27 +196,16 @@ function Shell({
   isPlayer = false,
   privateMode = false,
   privateRevealActive = false,
+  connectionStatus = null,
 }: {
   children: ReactNode;
   isPlayer?: boolean;
   privateMode?: boolean;
   privateRevealActive?: boolean;
+  connectionStatus?: GameConnectionState | null;
 }) {
   const navigate = useNavigate();
-  const [isOnline, setIsOnline] = useState(
-    () => typeof navigator === 'undefined' || navigator.onLine,
-  );
   const [standalone, setStandalone] = useState(false);
-  useEffect(() => {
-    const online = () => setIsOnline(true);
-    const offline = () => setIsOnline(false);
-    window.addEventListener('online', online);
-    window.addEventListener('offline', offline);
-    return () => {
-      window.removeEventListener('online', online);
-      window.removeEventListener('offline', offline);
-    };
-  }, []);
   useEffect(() => {
     const displayMode = window.matchMedia('(display-mode: standalone)');
     const isIOSStandalone = () =>
@@ -277,18 +271,8 @@ function Shell({
               </Link>
             </>
           )}
-          {isPlayer && (
-            <span
-              role="status"
-              aria-label={en.app.connectionStatus}
-              className="inline-flex items-center gap-2"
-            >
-              <span
-                aria-hidden="true"
-                className={`h-2 w-2 rounded-full ${isOnline ? 'bg-gilt' : 'bg-ash'}`}
-              />
-              {isOnline ? en.app.online : en.app.offline}
-            </span>
+          {isPlayer && connectionStatus && (
+            <GameConnectionStatus status={connectionStatus} />
           )}
           {isPlayer && standalone && (
             <>
@@ -689,6 +673,8 @@ function PlayerGame() {
   const [commandMessage, setCommandMessage] = useState('');
   const [installMessage, setInstallMessage] = useState('');
   const [wakeLockFallback, setWakeLockFallback] = useState(false);
+  const [connectionStatus, setConnectionStatus] =
+    useState<GameConnectionState>('reconnecting');
   const [fullscreenMessage, setFullscreenMessage] = useState('');
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -815,6 +801,7 @@ function PlayerGame() {
 
   useEffect(() => {
     if (!hasPlayerSeat) return;
+    setConnectionStatus('reconnecting');
     const api = new URL(config.apiOrigin ?? '/', window.location.origin);
     const prefix = api.pathname.replace(/\/+$/, '');
     const socket = io(api.origin, {
@@ -828,6 +815,7 @@ function PlayerGame() {
       (nextView) => {
         queryClient.setQueryData(getGetGameViewQueryKey(id), nextView);
       },
+      setConnectionStatus,
     );
     return () => {
       detach();
@@ -1401,7 +1389,14 @@ function PlayerGame() {
   }
 
   return (
-    <Shell isPlayer privateMode={inPrivateMoment} privateRevealActive={held}>
+    <Shell
+      isPlayer
+      privateMode={inPrivateMoment}
+      privateRevealActive={held}
+      connectionStatus={
+        gameQuery.isLoading || hasPlayerSeat ? connectionStatus : null
+      }
+    >
       <section
         className={
           inPrivateMoment
