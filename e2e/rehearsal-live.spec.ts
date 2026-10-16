@@ -600,6 +600,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(
       page.getByRole('heading', { name: 'Practise alone first' }),
     ).toBeVisible();
+    await expect(page.getByTestId('text-rehearsal-player-count')).toHaveText(
+      '8',
+    );
     const players = page.getByTestId('input-rehearsal-player-count');
     await players.focus();
     await players.press('Home');
@@ -697,9 +700,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     const seenShadowSlots = new Set<number>();
     const seenFirstNightShadowSlots = new Set<number>();
     const shadowContextByCycle = new Map<number, ShadowPrivateContext>();
-    const firstShadowChoiceByCycle = new Map<number, string>();
     const shadowShieldCountByCycle = new Map<number, number>();
-    const endedBeforeSecondSlotCycles = new Set<number>();
     const seenExplanations = new Set<Phase>();
     const checkedNoAutoAdvancePhases = new Set<Phase>();
     let previousLoopPhase: Phase | null = null;
@@ -800,6 +801,10 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         ).toHaveCount(0);
       }
       if (phase === 'SHADOW') {
+        expect(
+          shadowSlotBefore,
+          'rehearsal should resolve one murder per night',
+        ).toBe(1);
         seenShadowSlots.add(shadowSlotBefore);
         if (shadowCycleBefore === 1)
           seenFirstNightShadowSlots.add(shadowSlotBefore);
@@ -851,29 +856,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               );
             }
           }
-          const firstChoiceName =
-            phase === 'SHADOW' && shadowSlotBefore === 2
-              ? firstShadowChoiceByCycle.get(shadowCycleBefore)
-              : undefined;
-          if (
-            phase === 'SHADOW' &&
-            shadowSlotBefore === 2 &&
-            !firstChoiceName
-          ) {
-            throw new Error(
-              'The second night choice has no first-choice record.',
-            );
-          }
-          const selectedName = await submitPrivateChoice(
-            page,
-            activeGameId,
-            shadowContext,
-            undefined,
-            firstChoiceName,
-          );
-          if (phase === 'SHADOW' && shadowSlotBefore === 1) {
-            firstShadowChoiceByCycle.set(shadowCycleBefore, selectedName);
-          }
+          await submitPrivateChoice(page, activeGameId, shadowContext);
         } else {
           await expect(
             page.getByRole('dialog', { name: 'Shield your screen' }),
@@ -1023,18 +1006,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       if (phase === 'SHADOW' && shadowRoundBefore === 1) {
         await expect(game).toHaveAttribute('data-shadow-round', '2');
       }
-      if (
-        phase === 'SHADOW' &&
-        shadowSlotBefore === 1 &&
-        shadowRoundBefore === 2
-      ) {
+      if (phase === 'SHADOW' && shadowRoundBefore === 2) {
         const phaseAfterFirstSlot = await currentPhase(page);
-        if (phaseAfterFirstSlot === 'SHADOW') {
-          await expect(game).toHaveAttribute('data-shadow-slot', '2');
-        } else {
-          expect(['DAWN', 'FINISHED']).toContain(phaseAfterFirstSlot);
-          endedBeforeSecondSlotCycles.add(shadowCycleBefore);
-        }
+        expect(['DAWN', 'FINISHED']).toContain(phaseAfterFirstSlot);
       }
       expect(appDocumentLoads).toBe(0);
     }
@@ -1042,6 +1016,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     expect(sawVoteReveal).toBe(true);
     expect(sawVerdictResult).toBe(true);
     expect(sawForcedVoteTie).toBe(true);
+    expect([...seenShadowSlots].sort()).toEqual([1]);
+    expect([...seenFirstNightShadowSlots].sort()).toEqual([1]);
     await expect(game).toHaveAttribute('data-phase', 'FINISHED', {
       timeout: 5_000,
     });
@@ -1057,36 +1033,24 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     const murderSlotRecords = page.getByTestId('murder-slot-record');
     await expect
       .poll(() => murderSlotRecords.count(), { timeout: 10_000 })
-      .toBeGreaterThanOrEqual(2);
+      .toBeGreaterThanOrEqual(1);
     await expect(page.getByTestId('fairness-murder-slots')).toContainText(
       'First choice',
     );
-    await expect(page.getByTestId('fairness-murder-slots')).toContainText(
-      'Second choice',
-    );
-    expect([...seenShadowSlots].sort()).toEqual([1, 2]);
-    expect([...seenFirstNightShadowSlots].sort()).toEqual([1, 2]);
+    await expect(
+      page.getByTestId('fairness-murder-slots').getByText('Second choice'),
+    ).toHaveCount(0);
     expect(
       [...shadowShieldCountByCycle.values()].every((count) => count === 1),
     ).toBe(true);
-    for (const cycle of endedBeforeSecondSlotCycles) {
-      await expect(
-        murderSlotRecords.filter({
-          hasText: `Night ${cycle} · Second choice`,
-        }),
-      ).toContainText('The game ended before this murder.');
-    }
     const firstNightRecords = murderSlotRecords.filter({
       hasText: 'Night 1',
     });
-    await expect(firstNightRecords).toHaveCount(2);
+    await expect(firstNightRecords).toHaveCount(1);
     await expect(firstNightRecords.nth(0)).toContainText('First choice');
-    await expect(firstNightRecords.nth(1)).toContainText('Second choice');
-    await expect(firstNightRecords.nth(1)).not.toContainText(
-      'The game ended before this murder.',
-    );
 
     const playerRows = page.locator('[data-testid^="player-seat-"]');
+    await expect(playerRows).toHaveCount(8);
     const rowTexts = await playerRows.allTextContents();
     expect(rowTexts.some((text) => text.includes('Playing'))).toBe(false);
     expect(rowTexts.some((text) => /Traitor|Faithful/.test(text))).toBe(true);

@@ -1,10 +1,10 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 15:59 UTC.
-- Current milestone/step: Round 5 game flow — item 5, one continuous private moment across night-choice slots; targeted local checks pass and it is ready to push.
-- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 screen extraction passed #99. One shield per night and sequential slots on one screen pass locally; awaiting Verify before item 6.
-- Last pushed commit/CI: `b3411cd`; Verify #99 (`38922480125`) — Success, all 19 Verify jobs passed, including four browser profiles and six scenario shards; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38922480125.
-- Local verification for item 5: 11 targeted UI tests, typecheck, test typecheck, lint and format pass; `tests/http.test.ts` passed (21 tests); the real-server 8-seat rehearsal passed with one shield per night, no presenter and no manual refresh.
+- Updated: 16 October 2026, 16:11 UTC.
+- Current milestone/step: Round 5 game flow — item 6, rehearsal defaults to eight seats and resolves one murder per night; targeted checks pass, ready to push.
+- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100. Item 6 passes locally; awaiting its Verify run before item 7.
+- Last pushed commit/CI: `2585e03`; Verify #100 (`38928380087`) — Success, all 19 jobs passed, including four browser profiles and six scenario shards; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38928380087.
+- Local verification for item 6: the real-server rehearsal passed at the default eight seats with one murder slot per night and no second choice; typecheck, test typecheck, lint, format, rehearsal-request tests (2) and HTTP tests (21) pass.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued after the M5 hands-on gate.
 - Risks: Pixel Chromium runs locally; local iPhone WebKit still lacks runtime libraries, while GitHub iPhone and iPad profiles passed in #93. The API workflow still logs deadline-scheduler iteration errors; cause is unverified and no records were changed. One broader local server-coverage run failed a database deadline-claim assertion (2 claims instead of 1); targeted HTTP and rehearsal tests passed, and CI will verify.
 
