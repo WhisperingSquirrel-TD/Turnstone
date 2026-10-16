@@ -237,7 +237,16 @@ async function submitPrivateChoice(
   const phaseBeforeChoice = await currentPhase(page);
   const choices = choiceList.getByRole('button');
   let selectedName: string | undefined;
-  if (['VOTE', 'FINAL_BANISH', 'SHADOW'].includes(phaseBeforeChoice)) {
+  if (phaseBeforeChoice === 'FINAL_VOTE') {
+    const endgameChoices = (await choices.allTextContents()).map((name) =>
+      name.trim(),
+    );
+    expect(endgameChoices.length).toBe(2);
+    expect(new Set(endgameChoices)).toEqual(
+      new Set(['End the game', 'Continue playing']),
+    );
+    selectedName = 'End the game';
+  } else if (['VOTE', 'FINAL_BANISH', 'SHADOW'].includes(phaseBeforeChoice)) {
     const roster = await latestSynchronizedServerPhase(page, gameId);
     expect(roster.phase).toBe(phaseBeforeChoice);
     expect(roster.viewerSeatId).toBeTruthy();
