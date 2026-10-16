@@ -75,7 +75,7 @@ test('coordinator creates a fresh late invitation without reopening the room cod
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
     route.fulfill({
-      json: { version: view.version, view },
+      json: { serverNow: Date.now(), version: view.version, view },
     }),
   );
   await page.route(`**/api/games/${gameId}/join-requests`, (route) =>
@@ -161,7 +161,7 @@ test('organiser can start with five players while one planned seat has not joine
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
     route.fulfill({
-      json: { version: view.version, view },
+      json: { serverNow: Date.now(), version: view.version, view },
     }),
   );
   await page.route(`**/api/games/${gameId}/join-requests`, (route) =>

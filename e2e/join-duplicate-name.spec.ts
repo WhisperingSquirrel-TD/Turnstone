@@ -106,6 +106,7 @@ test('duplicate name can recover the existing seat with its PIN', async ({
     });
     await route.fulfill({
       json: {
+        serverNow: Date.now(),
         version: 4,
         view: recoveredView,
       },
@@ -113,7 +114,7 @@ test('duplicate name can recover the existing seat with its PIN', async ({
   });
   await page.route('**/api/games/recovered-game/view', (route) =>
     route.fulfill({
-      json: { version: 4, view: recoveredView },
+      json: { serverNow: Date.now(), version: 4, view: recoveredView },
     }),
   );
 

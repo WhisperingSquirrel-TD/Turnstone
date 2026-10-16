@@ -39,6 +39,7 @@ describe('player game socket', () => {
     });
 
     const publicResponse = {
+      serverNow: Date.now(),
       version: 4,
       view: {
         exists: true as const,

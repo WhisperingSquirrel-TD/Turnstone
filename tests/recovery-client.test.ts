@@ -36,6 +36,7 @@ describe('seat recovery client', () => {
 
   it('sends the game code, name and PIN with CSRF and credentials', async () => {
     const result = {
+      serverNow: Date.now(),
       version: 3,
       view: {
         exists: true as const,
@@ -79,6 +80,7 @@ describe('seat recovery client', () => {
 
   it('supports recovery from a game-scoped invitation', async () => {
     const result = {
+      serverNow: Date.now(),
       version: 4,
       view: {
         exists: true as const,
