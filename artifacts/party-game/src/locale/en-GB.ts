@@ -427,7 +427,7 @@ export const en = {
     publicLogBanishment: (name: string) => `${name} was banished.`,
     publicLogFinished: (winner: 'traitor' | 'faithful') =>
       `The ${winner === 'traitor' ? 'Traitors' : 'Faithful'} won.`,
-    rehearseAgain: 'Rehearse again',
+    rehearseAgain: 'Practise again',
     backToStart: 'Back to start',
     noPublicUpdates: 'No public updates yet.',
     notesButton: 'Notes',
@@ -452,6 +452,20 @@ export const en = {
     organiserKeepWaiting: 'Keep waiting',
     rehearsalControls: 'Rehearsal',
     nextRehearsalStep: 'Next step',
+    rehearsalWatch: {
+      DEBATE: 'The remaining players are talking it over now.',
+      VOTE: 'The remaining players are voting now.',
+      VERDICT: 'The remaining players are seeing the result now.',
+      SHADOW:
+        'The remaining players are making their private night choices now.',
+      DAWN: 'The remaining players are seeing who was taken in the night.',
+      ENDGAME:
+        'The remaining players are deciding whether to end the game now.',
+      FINAL_VOTE:
+        'The remaining players are deciding whether to end the game now.',
+      FINAL_BANISH: 'The remaining players are voting now.',
+      FINISHED: "The game is complete. Everyone's roles are revealed.",
+    },
     guideTitle: 'How this step works',
     guideGotIt: 'Got it',
     whatsThis: "What's this?",

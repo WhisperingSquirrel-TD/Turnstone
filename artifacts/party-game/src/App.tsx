@@ -28,6 +28,10 @@ import {
 } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
+  RehearsalWatchAction,
+  RehearsalWatchCommentary,
+} from './RehearsalWatchMode';
+import {
   getGetGameViewQueryKey,
   setBaseUrl,
   useGetGameView,
@@ -907,6 +911,9 @@ function PlayerGame() {
   const activeGame = Boolean(
     full && !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
   );
+  const watchingRehearsal = Boolean(
+    full?.rehearsal && ownSeat && ownSeat.status !== 'alive',
+  );
   const unfinishedCount = Math.max(
     0,
     (full?.progress.total ?? 0) - (full?.progress.done ?? 0),
@@ -1697,7 +1704,13 @@ function PlayerGame() {
         )}
         {full && (
           <div
-            className={full.canAdvancePhase && activeGame ? 'pb-24' : ''}
+            className={
+              full.canAdvancePhase && activeGame
+                ? watchingRehearsal
+                  ? 'pb-40'
+                  : 'pb-24'
+                : ''
+            }
             data-testid="player-game"
             data-phase={full.phase}
             data-version={full.version}
@@ -1706,6 +1719,9 @@ function PlayerGame() {
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
+            {watchingRehearsal && (
+              <RehearsalWatchCommentary phase={full.phase} />
+            )}
             {!inPrivateMoment && (
               <VerdictScreen
                 announcement={
@@ -1801,14 +1817,16 @@ function PlayerGame() {
                 {en.game.wakeLockFallback}
               </p>
             )}
-            {!inPrivateMoment && full.phase !== 'FINISHED' && (
-              <PhaseProgressStatus
-                phase={full.phase}
-                paused={full.paused}
-                done={full.progress.done}
-                total={full.progress.total}
-              />
-            )}
+            {!inPrivateMoment &&
+              full.phase !== 'FINISHED' &&
+              full.phase !== 'SHADOW' && (
+                <PhaseProgressStatus
+                  phase={full.phase}
+                  paused={full.paused}
+                  done={full.progress.done}
+                  total={full.progress.total}
+                />
+              )}
 
             {!inPrivateMoment &&
               full.publicAnnouncement &&
@@ -1912,7 +1930,7 @@ function PlayerGame() {
 
             {inPrivateMoment && (
               <div className="private-moment-panel">
-                {(!shieldRequired || shielded) && (
+                {full.phase !== 'SHADOW' && (!shieldRequired || shielded) && (
                   <PhaseProgressStatus
                     phase={full.phase}
                     paused={full.paused}
@@ -2383,6 +2401,11 @@ function PlayerGame() {
                   <p role="status" className="mb-2 text-sm text-ash">
                     {commandMessage}
                   </p>
+                )}
+                {watchingRehearsal && (
+                  <RehearsalWatchAction
+                    onClick={() => navigate(config.routes.rehearsal)}
+                  />
                 )}
                 <button
                   className={

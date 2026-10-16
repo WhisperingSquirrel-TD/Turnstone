@@ -44,6 +44,7 @@ function choose<T>(
 export function nextRehearsalBotCommand(
   state: State,
   seatId: string,
+  options: { testOnlyForceHumanTargetAfterFirstNight?: boolean } = {},
 ): Record<string, unknown> | null {
   if (!state.config.rehearsal.enabled) return null;
   if (!state.config.rehearsal.botSeatIds.includes(seatId)) return null;
@@ -62,12 +63,27 @@ export function nextRehearsalBotCommand(
   if (privatePhases.has(state.phase) && !state.acks.includes(seatId))
     return { type: 'AcknowledgePrivate' };
 
+  const humanSeatId = state.seats.find(
+    (candidate) => !state.config.rehearsal.botSeatIds.includes(candidate.id),
+  )?.id;
+  const firstNightComplete = state.publicLog.some(
+    (entry) => entry.action === 'dawn',
+  );
+
   if (state.phase === 'VOTE' || state.phase === 'FINAL_BANISH') {
     if (state.votes[seatId]) return null;
     const candidates = state.seats.filter(
-      (candidate) => candidate.status === 'alive' && candidate.id !== seatId,
+      (candidate) =>
+        candidate.status === 'alive' &&
+        candidate.id !== seatId &&
+        (firstNightComplete || candidate.id !== humanSeatId),
     );
-    const target = choose(state.id, state, seatId, candidates);
+    const target =
+      options.testOnlyForceHumanTargetAfterFirstNight &&
+      firstNightComplete &&
+      humanSeatId
+        ? (candidates.find((candidate) => candidate.id === humanSeatId) ?? null)
+        : choose(state.id, state, seatId, candidates);
     return target ? { type: 'SubmitVote', target: target.id } : null;
   }
 
@@ -89,6 +105,7 @@ export function nextRehearsalBotCommand(
         candidate.status === 'alive' &&
         candidate.id !== seatId &&
         candidate.id !== firstChoice &&
+        (firstNightComplete || candidate.id !== humanSeatId) &&
         (seat.role !== 'traitor' ||
           (candidate.role !== 'traitor' &&
             !state.protected.includes(candidate.id))),
@@ -105,7 +122,12 @@ export function nextRehearsalBotCommand(
 
   if (state.phase === 'FINAL_VOTE') {
     if (state.endVotes[seatId]) return null;
-    return { type: 'SubmitEndgameVote', choice: 'end' };
+    return {
+      type: 'SubmitEndgameVote',
+      choice: options.testOnlyForceHumanTargetAfterFirstNight
+        ? 'continue'
+        : 'end',
+    };
   }
 
   return null;
@@ -114,6 +136,7 @@ export function nextRehearsalBotCommand(
 export function createRehearsalBotRunner(
   options: {
     publishGame?: (gameId: string) => Promise<void>;
+    testOnlyForceHumanTargetAfterFirstNight?: boolean;
   } = {},
 ) {
   async function processGame(gameId: string): Promise<void> {
@@ -125,7 +148,10 @@ export function createRehearsalBotRunner(
       const next = state.config.rehearsal.botSeatIds
         .map((seatId) => ({
           seatId,
-          command: nextRehearsalBotCommand(state!, seatId),
+          command: nextRehearsalBotCommand(state!, seatId, {
+            testOnlyForceHumanTargetAfterFirstNight:
+              options.testOnlyForceHumanTargetAfterFirstNight,
+          }),
         }))
         .find((candidate) => candidate.command !== null);
       if (!next?.command) break;

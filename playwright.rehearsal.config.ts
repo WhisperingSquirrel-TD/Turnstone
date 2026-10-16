@@ -27,13 +27,14 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'pnpm --filter @workspace/api-server run dev',
+      command:
+        'pnpm --filter @workspace/api-server run build && cd artifacts/api-server && node --enable-source-maps ./dist/index.mjs --test-only-force-human-removal',
       url: `http://127.0.0.1:${apiPort}/healthz`,
       timeout: 120_000,
       reuseExistingServer: false,
       env: {
         PORT: String(apiPort),
-        NODE_ENV: 'development',
+        NODE_ENV: 'test',
         DATABASE_URL: databaseUrl,
         SESSION_SECRET: sessionSecret,
         APP_BASE_URL: `http://127.0.0.1:${webPort}`,

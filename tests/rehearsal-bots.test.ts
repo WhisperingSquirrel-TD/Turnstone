@@ -17,6 +17,48 @@ function rehearsalGame(): ReturnType<typeof fixture> {
   return game;
 }
 
+function stateWithOnlyHumanTarget(phase: 'VOTE' | 'SHADOW', cycle: number) {
+  const game = rehearsalGame();
+  const botSeatId = 's1';
+  const human = game.state.seats.find(
+    (seat) => !game.state.config.rehearsal.botSeatIds.includes(seat.id),
+  );
+  const bot = game.state.seats.find((seat) => seat.id === botSeatId);
+  if (!human || !bot) throw new Error('Expected rehearsal bot and human seats');
+  const state = {
+    ...game.state,
+    phase,
+    cycle,
+    seats: [
+      { ...bot, role: 'faithful' as const, status: 'alive' as const },
+      { ...human, role: 'faithful' as const, status: 'alive' as const },
+    ],
+    acks: [botSeatId],
+    votes: {},
+    shadow: {},
+    protected: [],
+    shadowSlot: 1,
+    shadowRound: 1,
+    murderResolutions:
+      cycle > 1
+        ? [
+            {
+              cycle: 1,
+              slot: 1,
+              picks: [],
+              chosen: null,
+              outcome: 'no-target' as const,
+            },
+          ]
+        : [],
+    publicLog:
+      cycle > 1
+        ? [{ seq: 1, at: 1, action: 'dawn' as const, victimIds: [] }]
+        : [],
+  } as State;
+  return { state, botSeatId, humanSeatId: human.id };
+}
+
 describe('server rehearsal bot policy', () => {
   it('loads deterministic bot policy without a database URL', async () => {
     vi.stubEnv('DATABASE_URL', '');
@@ -148,4 +190,34 @@ describe('server rehearsal bot policy', () => {
     expect(second.slot).toBe(2);
     expect(second.choice).not.toBe(first.choice);
   });
+
+  it.each(['VOTE', 'SHADOW'] as const)(
+    'does not target the human in the first cycle during %s',
+    async (phase) => {
+      const { nextRehearsalBotCommand } = await loadBotPolicy();
+      const { state, botSeatId, humanSeatId } = stateWithOnlyHumanTarget(
+        phase,
+        1,
+      );
+
+      const choice = nextRehearsalBotCommand(state, botSeatId);
+
+      expect(choice?.target ?? choice?.choice).not.toBe(humanSeatId);
+    },
+  );
+
+  it.each(['VOTE', 'SHADOW'] as const)(
+    'allows a bot to target the human after the first full cycle during %s',
+    async (phase) => {
+      const { nextRehearsalBotCommand } = await loadBotPolicy();
+      const { state, botSeatId, humanSeatId } = stateWithOnlyHumanTarget(
+        phase,
+        2,
+      );
+
+      const choice = nextRehearsalBotCommand(state, botSeatId);
+
+      expect(choice?.target ?? choice?.choice).toBe(humanSeatId);
+    },
+  );
 });

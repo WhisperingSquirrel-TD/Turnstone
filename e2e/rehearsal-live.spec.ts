@@ -42,6 +42,18 @@ const rehearsalExplanationByPhase: Partial<Record<Phase, string>> = {
     'The Faithful win by banishing every Traitor. The Traitors win if any of them make it to the end. Every role is now revealed.',
 };
 
+const rehearsalWatchMessageByPhase: Partial<Record<Phase, string>> = {
+  DEBATE: 'The remaining players are talking it over now.',
+  VOTE: 'The remaining players are voting now.',
+  VERDICT: 'The remaining players are seeing the result now.',
+  SHADOW: 'The remaining players are making their private night choices now.',
+  DAWN: 'The remaining players are seeing who was taken in the night.',
+  ENDGAME: 'The remaining players are deciding whether to end the game now.',
+  FINAL_VOTE: 'The remaining players are deciding whether to end the game now.',
+  FINAL_BANISH: 'The remaining players are voting now.',
+  FINISHED: "The game is complete. Everyone's roles are revealed.",
+};
+
 async function currentPhase(page: Page): Promise<Phase> {
   const phase = await page
     .getByTestId('player-game')
@@ -249,7 +261,8 @@ async function submitPrivateChoice(
     expect(new Set(endgameChoices)).toEqual(
       new Set(['End the game', 'Continue playing']),
     );
-    selectedName = 'End the game';
+    selectedName = preferredVoteName ?? 'End the game';
+    expect(endgameChoices).toContain(selectedName);
   } else if (['VOTE', 'FINAL_BANISH', 'SHADOW'].includes(phaseBeforeChoice)) {
     const roster = await latestSynchronizedServerPhase(page, gameId);
     expect(roster.phase).toBe(phaseBeforeChoice);
@@ -405,15 +418,6 @@ async function advanceIfStillOn(
         : 0;
   const remainingMinimum = privateMinimum - (Date.now() - phaseStartedAt);
   if (remainingMinimum > 0) await page.waitForTimeout(remainingMinimum);
-  if (phase === 'DEAL') {
-    await page.waitForTimeout(1_200);
-    const phaseAfterWaiting = await currentPhase(page);
-    if (phaseAfterWaiting !== phase) {
-      throw new Error(
-        `Rehearsal advanced from ${phase} to ${phaseAfterWaiting} without the player choosing Next step.`,
-      );
-    }
-  }
   if (
     phase === 'SHADOW' &&
     Number(
@@ -478,7 +482,7 @@ async function rejectStuckZero(page: Page, phase: Phase): Promise<void> {
 test('plays a full rehearsal from the player screen with no presenter or refresh @rehearsal-live', async ({
   page,
 }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(150_000);
   const { db } = await import('@workspace/db');
   let gameId: string | undefined;
   let playerRole: 'Traitor' | 'Faithful' | undefined;
@@ -710,11 +714,40 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     let sawVerdictResult = false;
     let sawForcedVoteTie = false;
     let submittedVoteToForceTie = false;
+    let firstCycleVoteSafe = false;
+    let firstCycleNightSafe = false;
+    let sawHumanRemoved = false;
+    let forcedHumanRemovalAfterSafety = false;
+    const watchModePhases = new Set<Phase>();
+    const visitedPhases = new Set<Phase>();
+    const seatStatusByPhase = new Map<Phase, string | null>();
+    const seatStatusTimeline: string[] = [];
     let expectedTieCandidateIds: string[] = [];
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
+      visitedPhases.add(phase);
       const phaseStartedAt = Date.now();
       const seatStatus = await ownSeatStatus(page, activeGameId);
+      seatStatusByPhase.set(phase, seatStatus);
+      seatStatusTimeline.push(`${phase}:${seatStatus ?? 'unknown'}`);
+      if (seatStatus && seatStatus !== 'alive') sawHumanRemoved = true;
+      if (
+        phase === 'VERDICT' &&
+        seatStatus !== 'alive' &&
+        !firstCycleNightSafe
+      ) {
+        const { readGameEvents } = await import('@workspace/db/game-store');
+        const events = await readGameEvents(activeGameId);
+        const recentVotes = events
+          .filter(
+            (event) =>
+              event.type === 'VoteSubmitted' || event.type === 'VoteClosed',
+          )
+          .slice(-24);
+        throw new Error(
+          `The human was removed before completing the first night: ${JSON.stringify(recentVotes)}`,
+        );
+      }
       if (phase === 'FINISHED') break;
       if (phase === 'VERDICT' && previousLoopPhase !== 'VERDICT') {
         previousVerdictRowCount = 0;
@@ -742,6 +775,18 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         ).toBeVisible();
         await page.getByRole('button', { name: 'Got it' }).click();
         seenExplanations.add(phase);
+      }
+      if (seatStatus && seatStatus !== 'alive') {
+        const watchMessage = rehearsalWatchMessageByPhase[phase];
+        if (!watchMessage)
+          throw new Error(`Watch mode has no copy for phase ${phase}.`);
+        await expect(page.getByTestId('rehearsal-watch-commentary')).toHaveText(
+          watchMessage,
+        );
+        await expect(
+          page.getByRole('button', { name: 'Practise again', exact: true }),
+        ).toBeVisible();
+        watchModePhases.add(phase);
       }
       await expect(
         page.locator('header.public-shell-header .turnstone-wordmark'),
@@ -777,7 +822,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         }
       }
       if (!checkedNoAutoAdvancePhases.has(phase)) {
-        await page.waitForTimeout(2_500);
+        await page.waitForTimeout(2_000);
         expect(
           await currentPhase(page),
           `Rehearsal phase ${phase} advanced without the player choosing Next step.`,
@@ -806,8 +851,33 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           'rehearsal should resolve one murder per night',
         ).toBe(1);
         seenShadowSlots.add(shadowSlotBefore);
-        if (shadowCycleBefore === 1)
+        if (shadowCycleBefore === 1) {
           seenFirstNightShadowSlots.add(shadowSlotBefore);
+          const { readGameEvents } = await import('@workspace/db/game-store');
+          const events = await readGameEvents(activeGameId);
+          const nightStart = events.findIndex(
+            (event) =>
+              event.type === 'PhaseChanged' &&
+              event.phase === 'SHADOW' &&
+              event.cycle === 1,
+          );
+          const viewerSeatId = (await latestServerPhase(page, activeGameId))
+            .viewerSeatId;
+          const firstNightPicks = events
+            .slice(nightStart + 1)
+            .filter((event) => event.type === 'ShadowSubmitted');
+          expect(nightStart).toBeGreaterThanOrEqual(0);
+          expect(viewerSeatId).toBeTruthy();
+          expect(firstNightPicks.length).toBeGreaterThan(0);
+          expect(
+            firstNightPicks.every(
+              (event) =>
+                event.type !== 'ShadowSubmitted' ||
+                event.choice !== viewerSeatId,
+            ),
+          ).toBe(true);
+          firstCycleNightSafe = true;
+        }
       }
       let shadowContext: ShadowPrivateContext | null = null;
       if (phase === 'DEAL') {
@@ -856,7 +926,12 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               );
             }
           }
-          await submitPrivateChoice(page, activeGameId, shadowContext);
+          await submitPrivateChoice(
+            page,
+            activeGameId,
+            shadowContext,
+            phase === 'FINAL_VOTE' ? 'Continue playing' : undefined,
+          );
         } else {
           await expect(
             page.getByRole('dialog', { name: 'Shield your screen' }),
@@ -865,6 +940,45 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         }
       } else if (['VOTE', 'FINAL_BANISH'].includes(phase)) {
         if (seatStatus === 'alive') {
+          const currentVoteView = await latestSynchronizedServerPhase(
+            page,
+            activeGameId,
+          );
+          if (
+            firstCycleNightSafe &&
+            (phase === 'FINAL_BANISH' ||
+              (phase === 'VOTE' && currentVoteView.cycle > 1))
+          ) {
+            await expect
+              .poll(
+                async () =>
+                  (await latestServerPhase(page, activeGameId)).progress.done,
+                { timeout: 10_000 },
+              )
+              .toBe(currentVoteView.progress.total - 1);
+            const finalBanishView = await latestSynchronizedServerPhase(
+              page,
+              activeGameId,
+            );
+            const { readGameEvents } = await import('@workspace/db/game-store');
+            const events = await readGameEvents(activeGameId);
+            const lastVoteClosedIndex = events.reduce(
+              (lastIndex, event, index) =>
+                event.type === 'VoteClosed' ? index : lastIndex,
+              -1,
+            );
+            const botVotes = events
+              .slice(lastVoteClosedIndex + 1)
+              .filter((event) => event.type === 'VoteSubmitted')
+              .filter((event) => event.seatId !== finalBanishView.viewerSeatId);
+            expect(botVotes).toHaveLength(finalBanishView.progress.total - 1);
+            expect(
+              botVotes.every(
+                (event) => event.target === finalBanishView.viewerSeatId,
+              ),
+            ).toBe(true);
+            forcedHumanRemovalAfterSafety = true;
+          }
           if (phase === 'VOTE' && !submittedVoteToForceTie) {
             const { readGameEvents } = await import('@workspace/db/game-store');
             await expect
@@ -889,6 +1003,13 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               .slice(lastVoteClosedIndex + 1)
               .filter((event) => event.type === 'VoteSubmitted')
               .filter((event) => event.seatId !== voteView.viewerSeatId);
+            if (voteView.cycle === 1) {
+              expect(
+                botVotes.every((vote) => vote.target !== voteView.viewerSeatId),
+                'bots must leave the human safe through the first full day',
+              ).toBe(true);
+              firstCycleVoteSafe = true;
+            }
             const voteCounts = new Map<string, number>();
             for (const vote of botVotes) {
               voteCounts.set(
@@ -979,12 +1100,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         await expect(
           page.getByText(`${done} of ${total} have voted`, { exact: true }),
         ).toBeVisible();
-      } else if (['DEAL', 'SHADOW', 'FINAL_VOTE'].includes(phase)) {
+      } else if (['DEAL', 'FINAL_VOTE'].includes(phase)) {
         const done = await game.getAttribute('data-progress-done');
         const total = await game.getAttribute('data-progress-total');
         await expect(
           page.getByText(`${done} of ${total} are ready`, { exact: true }),
         ).toBeVisible();
+      } else if (phase === 'SHADOW') {
+        await expect(
+          page.getByText(/\d+ of \d+ are ready/, { exact: true }),
+        ).toHaveCount(0);
       }
 
       await expect(
@@ -1016,6 +1141,28 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     expect(sawVoteReveal).toBe(true);
     expect(sawVerdictResult).toBe(true);
     expect(sawForcedVoteTie).toBe(true);
+    expect(firstCycleVoteSafe).toBe(true);
+    expect(firstCycleNightSafe).toBe(true);
+    const { readGameEvents } = await import('@workspace/db/game-store');
+    const finalTrace = (await readGameEvents(activeGameId))
+      .filter((event) =>
+        [
+          'PhaseChanged',
+          'VoteClosed',
+          'SeatRemoved',
+          'ShadowSubmitted',
+          'MurderSlotResolved',
+          'DawnResolved',
+          'GameFinished',
+        ].includes(event.type),
+      )
+      .slice(-50);
+    expect(
+      forcedHumanRemovalAfterSafety,
+      `phases/status: ${seatStatusTimeline.join(', ')}; trace: ${JSON.stringify(finalTrace)}`,
+    ).toBe(true);
+    expect(sawHumanRemoved).toBe(true);
+    expect(watchModePhases.has('VERDICT')).toBe(true);
     expect([...seenShadowSlots].sort()).toEqual([1]);
     expect([...seenFirstNightShadowSlots].sort()).toEqual([1]);
     await expect(game).toHaveAttribute('data-phase', 'FINISHED', {
@@ -1026,6 +1173,12 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     );
     await page.getByRole('button', { name: 'Got it' }).click();
     await expect(page.getByTestId('shared-announcement')).toContainText(/win/);
+    await expect(page.getByTestId('rehearsal-watch-commentary')).toHaveText(
+      rehearsalWatchMessageByPhase.FINISHED!,
+    );
+    expect(await ownSeatStatus(page, activeGameId)).not.toBe('alive');
+    watchModePhases.add('FINISHED');
+    expect(watchModePhases.has('FINISHED')).toBe(true);
     await expect(
       page.getByText(/players have completed this part/),
     ).toHaveCount(0);
@@ -1089,7 +1242,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     expect(updates).toMatch(/was banished/);
     expect(updates).toMatch(/The Traitors won|The Faithful won/);
     await expect(
-      page.getByRole('button', { name: 'Rehearse again' }),
+      page.getByRole('button', { name: 'Practise again' }),
     ).toBeVisible({ timeout: 5_000 });
     await expect(
       page.getByRole('button', { name: 'Back to start', exact: true }),
@@ -1112,7 +1265,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(page.getByTestId('player-outcome')).toBeVisible();
     expect(appDocumentLoads).toBe(0);
     await page
-      .getByRole('button', { name: 'Rehearse again' })
+      .getByRole('button', { name: 'Practise again' })
       .click({ timeout: 5_000 });
     await expect(page.getByTestId('button-start-rehearsal')).toBeVisible({
       timeout: 5_000,

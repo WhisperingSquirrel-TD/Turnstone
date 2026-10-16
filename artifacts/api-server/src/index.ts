@@ -29,6 +29,9 @@ let publishGame: (gameId: string) => Promise<void> = async () => {};
 const { createRehearsalBotRunner } = await import('./rehearsal-bots');
 const rehearsalBots = createRehearsalBotRunner({
   publishGame: (gameId) => publishGame(gameId),
+  testOnlyForceHumanTargetAfterFirstNight:
+    environment.NODE_ENV === 'test' &&
+    process.argv.includes('--test-only-force-human-removal'),
 });
 const serverOptions = createServerAppOptions({
   environment,
