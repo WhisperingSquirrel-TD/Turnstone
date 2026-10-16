@@ -102,10 +102,11 @@ function joinFailureMessage(error: unknown): EntryFailureMessage {
     if (error.status === 404) return entryFailureMessages.gameCodeUnavailable;
     if (error.status === 409) return entryFailureMessages.joinRequestNotSaved;
     if (error.status === 429) return entryFailureMessages.joinRateLimited;
+    if (error.status === 401) return entryFailureMessages.joinPinMismatch;
     if (error.status === 400 || error.status === 403) {
       return entryFailureMessages.securityCheck;
     }
-    if (error.status === 503) return entryFailureMessages.serviceUnavailable;
+    if (error.status >= 500) return entryFailureMessages.serviceUnavailable;
   }
   if (error instanceof Error && error.message === 'security-not-ready') {
     return entryFailureMessages.securityCheck;

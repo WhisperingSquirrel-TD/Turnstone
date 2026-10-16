@@ -8,6 +8,10 @@ const RECOVERY_FAILED =
   'We could not recover that seat. Check the game code or invitation, name and PIN, then try again. If you no longer know the PIN, ask your organiser to reset it.';
 const JOIN_NETWORK =
   'We could not send your join request. Check your connection and try again.';
+const SERVICE_UNAVAILABLE =
+  'The game service is temporarily unavailable. Try again shortly.';
+const PIN_MISMATCH =
+  'The PIN did not match your earlier join attempt. Check the PIN and try again, or return to the name step for PIN recovery.';
 const RECOVERY_NETWORK =
   'We could not reach the game to recover your seat. Check your connection and try again.';
 
@@ -104,6 +108,72 @@ test('a network failure during join gives a clear next step', async ({
   await page.getByRole('button', { name: 'Join', exact: true }).click();
 
   await expect(page.getByRole('alert')).toHaveText(JOIN_NETWORK);
+});
+
+test('an unrecognised join refusal gives a specific reason and next step', async ({
+  page,
+}, testInfo) => {
+  skipNonPhoneProfiles(testInfo.project.name);
+  await page.route('**/api/join/name-check', (route) =>
+    route.fulfill({ json: { status: 'available' } }),
+  );
+  await page.route('**/api/join', (route) =>
+    route.fulfill({
+      status: 500,
+      json: { error: 'Join could not be completed' },
+    }),
+  );
+
+  await enterName(page);
+  await page.getByLabel('4-digit PIN', { exact: true }).fill('1234');
+  await page.getByRole('button', { name: 'Join', exact: true }).click();
+
+  await expect(page.getByRole('alert')).toHaveText(SERVICE_UNAVAILABLE);
+});
+
+test('an unrecognised PIN refusal explains the next step', async ({
+  page,
+}, testInfo) => {
+  skipNonPhoneProfiles(testInfo.project.name);
+  await page.route('**/api/join/name-check', (route) =>
+    route.fulfill({ json: { status: 'available' } }),
+  );
+  await page.route('**/api/join', (route) =>
+    route.fulfill({
+      status: 401,
+      json: { error: 'Join could not be completed' },
+    }),
+  );
+
+  await enterName(page);
+  await page.getByLabel('4-digit PIN', { exact: true }).fill('1234');
+  await page.getByRole('button', { name: 'Join', exact: true }).click();
+
+  await expect(page.getByRole('alert')).toHaveText(PIN_MISMATCH);
+});
+
+test('a generic recovery refusal still gives a specific next step', async ({
+  page,
+}, testInfo) => {
+  skipNonPhoneProfiles(testInfo.project.name);
+  await page.route('**/api/join/name-check', (route) =>
+    route.fulfill({ json: { status: 'duplicate' } }),
+  );
+  await page.route('**/api/recover', (route) =>
+    route.fulfill({
+      status: 500,
+      json: { error: 'Recovery could not be completed' },
+    }),
+  );
+
+  await enterName(page);
+  await page
+    .getByRole('button', { name: "Yes, that's me", exact: true })
+    .click();
+  await page.getByLabel('4-digit PIN', { exact: true }).fill('1234');
+  await page.getByRole('button', { name: 'Join', exact: true }).click();
+
+  await expect(page.getByRole('alert')).toHaveText(RECOVERY_FAILED);
 });
 
 test('a network failure during recovery gives a clear next step', async ({

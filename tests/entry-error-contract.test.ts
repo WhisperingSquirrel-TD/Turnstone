@@ -8,4 +8,15 @@ describe('entry API error responses', () => {
       expect(() => apiErrorResponseSchema.parse({ error })).not.toThrow();
     }
   });
+
+  it('gives every entry failure a specific reason and a next step', () => {
+    for (const error of Object.values(entryFailureMessages)) {
+      expect(error).not.toMatch(
+        /^(?:join|recovery) could not be completed\.?$/i,
+      );
+      expect(error).toMatch(
+        /\b(check|try|wait|ask|reload|choose|start again|return)\b/i,
+      );
+    }
+  });
 });
