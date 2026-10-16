@@ -1,10 +1,10 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 17:01 UTC.
-- Current milestone/step: Round 5 game flow — item 7 implemented and locally verified; GitHub Verify pending.
-- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7 awaits its GitHub run.
-- Last pushed commit/CI: `97f3bad`; Verify #101 (`38930088335`) — Success, all 19 jobs passed, including four browser profiles, six scenario shards, the live rehearsal and report merge; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38930088335.
-- Local verification for item 7: bot/watch unit tests (19), typecheck, test typecheck, lint and format passed. The real-server Pixel rehearsal passed at eight seats with no presenter or refresh: the human stayed safe through the first full day and night, was removed by bots afterward, and watched through results with “Practise again”. Its 150-second test budget reflects required private-step minimums; no game timer was changed.
+- Updated: 16 October 2026, 17:16 UTC.
+- Current milestone/step: Round 5 game flow — item 7 follow-up is locally green; the re-vote bot eligibility fix is ready to push.
+- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7's initial push passed Verify #102; the follow-up fix awaits its GitHub run.
+- Last pushed commit/CI: `77832df`; Verify #102 (`38936588080`) — Success, all 19 required jobs passed, including four browser profiles, six scenario shards, rehearsal-live and report merge; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38936588080.
+- Local verification for item 7: 20 bot/watch unit tests, typecheck, test typecheck, lint and format passed. The expanded real-server Pixel rehearsal passed at eight seats with no presenter or refresh: all first-cycle votes and night choices exclude the human, bots can target them after the first Dawn, and watch mode continues through results with “Practise again”.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued after the M5 hands-on gate.
 - Risks: Pixel Chromium runs locally; local iPhone WebKit still lacks runtime libraries, while GitHub iPhone and iPad profiles passed in #93. The API workflow still logs deadline-scheduler iteration errors; cause is unverified and no records were changed. One broader local server-coverage run failed a database deadline-claim assertion (2 claims instead of 1); targeted HTTP and rehearsal tests passed, and CI will verify.
 

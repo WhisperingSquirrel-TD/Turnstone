@@ -72,10 +72,13 @@ export function nextRehearsalBotCommand(
 
   if (state.phase === 'VOTE' || state.phase === 'FINAL_BANISH') {
     if (state.votes[seatId]) return null;
+    const revoteCandidates =
+      state.phase === 'VOTE' && state.revote ? new Set(state.candidates) : null;
     const candidates = state.seats.filter(
       (candidate) =>
         candidate.status === 'alive' &&
         candidate.id !== seatId &&
+        (!revoteCandidates || revoteCandidates.has(candidate.id)) &&
         (firstNightComplete || candidate.id !== humanSeatId),
     );
     const target =

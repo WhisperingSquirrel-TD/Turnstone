@@ -714,7 +714,11 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     let sawVerdictResult = false;
     let sawForcedVoteTie = false;
     let submittedVoteToForceTie = false;
-    let firstCycleVoteSafe = false;
+    let firstCycleInitialVoteSafe = false;
+    let firstCycleRevoteSafe = false;
+    let inspectFirstCycleRevoteAfterAdvance = false;
+    let firstCycleRevoteExpectedBotVotes = 0;
+    let firstCycleRevoteViewerSeatId = '';
     let firstCycleNightSafe = false;
     let sawHumanRemoved = false;
     let forcedHumanRemovalAfterSafety = false;
@@ -1008,7 +1012,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
                 botVotes.every((vote) => vote.target !== voteView.viewerSeatId),
                 'bots must leave the human safe through the first full day',
               ).toBe(true);
-              firstCycleVoteSafe = true;
+              firstCycleInitialVoteSafe = true;
             }
             const voteCounts = new Map<string, number>();
             for (const vote of botVotes) {
@@ -1056,6 +1060,14 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               activeGameId,
             );
             expect(tieView.revote).toBe(true);
+            if (tieView.cycle === 1) {
+              if (!tieView.viewerSeatId) {
+                throw new Error('The re-vote view omitted the viewer seat.');
+              }
+              inspectFirstCycleRevoteAfterAdvance = true;
+              firstCycleRevoteExpectedBotVotes = tieView.progress.total - 1;
+              firstCycleRevoteViewerSeatId = tieView.viewerSeatId;
+            }
             const tiedCandidateIds = tieView.voteCandidates;
             if (!tiedCandidateIds) {
               throw new Error(
@@ -1128,6 +1140,30 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           { cause: error },
         );
       }
+      if (inspectFirstCycleRevoteAfterAdvance) {
+        const { readGameEvents } = await import('@workspace/db/game-store');
+        const events = await readGameEvents(activeGameId);
+        const voteClosedIndices = events.flatMap((event, index) =>
+          event.type === 'VoteClosed' ? [index] : [],
+        );
+        const firstClose = voteClosedIndices.at(-2);
+        const secondClose = voteClosedIndices.at(-1);
+        expect(firstClose).toBeDefined();
+        expect(secondClose).toBeDefined();
+        const botRevotes = events
+          .slice(firstClose! + 1, secondClose)
+          .filter((event) => event.type === 'VoteSubmitted')
+          .filter((event) => event.seatId !== firstCycleRevoteViewerSeatId);
+        expect(botRevotes).toHaveLength(firstCycleRevoteExpectedBotVotes);
+        expect(
+          botRevotes.every(
+            (event) => event.target !== firstCycleRevoteViewerSeatId,
+          ),
+          'bots must leave the human safe during the first-cycle re-vote',
+        ).toBe(true);
+        firstCycleRevoteSafe = true;
+        inspectFirstCycleRevoteAfterAdvance = false;
+      }
       if (phase === 'SHADOW' && shadowRoundBefore === 1) {
         await expect(game).toHaveAttribute('data-shadow-round', '2');
       }
@@ -1141,7 +1177,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     expect(sawVoteReveal).toBe(true);
     expect(sawVerdictResult).toBe(true);
     expect(sawForcedVoteTie).toBe(true);
-    expect(firstCycleVoteSafe).toBe(true);
+    expect(firstCycleInitialVoteSafe && firstCycleRevoteSafe).toBe(true);
     expect(firstCycleNightSafe).toBe(true);
     const { readGameEvents } = await import('@workspace/db/game-store');
     const finalTrace = (await readGameEvents(activeGameId))

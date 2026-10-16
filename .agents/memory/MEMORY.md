@@ -11,3 +11,4 @@
 - [Game chrome placement](game-chrome-placement.md) — lock game pages to the viewport, align the header, and match the full-width footer across public and game screens.
 - [Attachment commit scope](attachment-commit-scope.md) — keep user-supplied attachments out of commits by default.
 - [Rehearsal vote advancement](rehearsal-vote-advancement.md) — close rehearsal ballots with the explicit Next step before asserting their result or re-vote.
+- [Rehearsal first-night safety](rehearsal-first-night-safety.md) — protect the human until the first completed Dawn, not a cycle counter or murder-resolution row.

@@ -206,6 +206,34 @@ describe('server rehearsal bot policy', () => {
     },
   );
 
+  it('keeps first-cycle re-vote bot choices inside the tied candidates', async () => {
+    const { nextRehearsalBotCommand } = await loadBotPolicy();
+    const game = rehearsalGame();
+    const tiedCandidateIds = ['s2', 's3'];
+    const state = {
+      ...game.state,
+      phase: 'VOTE' as const,
+      cycle: 1,
+      revote: true,
+      candidates: tiedCandidateIds,
+      votes: {},
+      acks: game.state.config.rehearsal.botSeatIds,
+    };
+
+    const choicesAcrossVersions = Array.from(
+      { length: 64 },
+      (_, version) =>
+        nextRehearsalBotCommand({ ...state, version }, 's1')?.target,
+    );
+
+    expect(
+      choicesAcrossVersions.every(
+        (choice) =>
+          typeof choice === 'string' && tiedCandidateIds.includes(choice),
+      ),
+    ).toBe(true);
+  });
+
   it.each(['VOTE', 'SHADOW'] as const)(
     'allows a bot to target the human after the first full cycle during %s',
     async (phase) => {
