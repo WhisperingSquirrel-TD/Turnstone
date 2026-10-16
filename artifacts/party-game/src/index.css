@@ -335,6 +335,9 @@ h2,
   overflow: visible;
   text-align: left;
 }
+.private-action-content--long-vote-progress {
+  padding-bottom: calc(var(--game-footer-dock-height) + 1rem);
+}
 .seal-inner {
   width: 76%;
   aspect-ratio: 1;

@@ -80,6 +80,10 @@ export const startRehearsalResponseViewTwoProgressDoneMin = 0;
 
 export const startRehearsalResponseViewTwoProgressTotalMin = 0;
 
+export const startRehearsalResponseViewTwoVotedSeatIdsItemMax = 128;
+
+export const startRehearsalResponseViewTwoVotedSeatIdsMax = 40;
+
 export const startRehearsalResponseViewTwoVoteCandidatesItemMax = 128;
 
 export const startRehearsalResponseViewTwoPublicAnnouncementOneCycleMin = 0;
@@ -162,6 +166,7 @@ export const StartRehearsalResponse = zod.object({
   "done": zod.number().int().min(startRehearsalResponseViewTwoProgressDoneMin),
   "total": zod.number().int().min(startRehearsalResponseViewTwoProgressTotalMin)
 }),
+  "votedSeatIds": zod.array(zod.string().min(1).max(startRehearsalResponseViewTwoVotedSeatIdsItemMax)).max(startRehearsalResponseViewTwoVotedSeatIdsMax),
   "voteCandidates": zod.array(zod.string().min(1).max(startRehearsalResponseViewTwoVoteCandidatesItemMax)),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
@@ -303,6 +308,8 @@ export const StartRehearsalResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Create a game and issue the coordinator capability cookie
  */
@@ -347,6 +354,10 @@ export const createGameResponseViewTwoSeatsItemIdMax = 128;
 export const createGameResponseViewTwoProgressDoneMin = 0;
 
 export const createGameResponseViewTwoProgressTotalMin = 0;
+
+export const createGameResponseViewTwoVotedSeatIdsItemMax = 128;
+
+export const createGameResponseViewTwoVotedSeatIdsMax = 40;
 
 export const createGameResponseViewTwoVoteCandidatesItemMax = 128;
 
@@ -430,6 +441,7 @@ export const CreateGameResponse = zod.object({
   "done": zod.number().int().min(createGameResponseViewTwoProgressDoneMin),
   "total": zod.number().int().min(createGameResponseViewTwoProgressTotalMin)
 }),
+  "votedSeatIds": zod.array(zod.string().min(1).max(createGameResponseViewTwoVotedSeatIdsItemMax)).max(createGameResponseViewTwoVotedSeatIdsMax),
   "voteCandidates": zod.array(zod.string().min(1).max(createGameResponseViewTwoVoteCandidatesItemMax)),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
@@ -571,6 +583,8 @@ export const CreateGameResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Create a short code and private join link
  */
@@ -764,6 +778,10 @@ export const getJoinRequestStatusResponseThreeGameViewTwoProgressDoneMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoProgressTotalMin = 0;
 
+export const getJoinRequestStatusResponseThreeGameViewTwoVotedSeatIdsItemMax = 128;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoVotedSeatIdsMax = 40;
+
 export const getJoinRequestStatusResponseThreeGameViewTwoVoteCandidatesItemMax = 128;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoPublicAnnouncementOneCycleMin = 0;
@@ -852,6 +870,7 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
   "done": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoProgressDoneMin),
   "total": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoProgressTotalMin)
 }),
+  "votedSeatIds": zod.array(zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoVotedSeatIdsItemMax)).max(getJoinRequestStatusResponseThreeGameViewTwoVotedSeatIdsMax),
   "voteCandidates": zod.array(zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoVoteCandidatesItemMax)),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
@@ -1068,6 +1087,10 @@ export const getGameViewResponseViewTwoProgressDoneMin = 0;
 
 export const getGameViewResponseViewTwoProgressTotalMin = 0;
 
+export const getGameViewResponseViewTwoVotedSeatIdsItemMax = 128;
+
+export const getGameViewResponseViewTwoVotedSeatIdsMax = 40;
+
 export const getGameViewResponseViewTwoVoteCandidatesItemMax = 128;
 
 export const getGameViewResponseViewTwoPublicAnnouncementOneCycleMin = 0;
@@ -1150,6 +1173,7 @@ export const GetGameViewResponse = zod.object({
   "done": zod.number().int().min(getGameViewResponseViewTwoProgressDoneMin),
   "total": zod.number().int().min(getGameViewResponseViewTwoProgressTotalMin)
 }),
+  "votedSeatIds": zod.array(zod.string().min(1).max(getGameViewResponseViewTwoVotedSeatIdsItemMax)).max(getGameViewResponseViewTwoVotedSeatIdsMax),
   "voteCandidates": zod.array(zod.string().min(1).max(getGameViewResponseViewTwoVoteCandidatesItemMax)),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
@@ -1291,6 +1315,8 @@ export const GetGameViewResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Request the current player's private projection while holding
  */
@@ -1339,6 +1365,10 @@ export const revealPrivateViewResponseViewTwoSeatsItemIdMax = 128;
 export const revealPrivateViewResponseViewTwoProgressDoneMin = 0;
 
 export const revealPrivateViewResponseViewTwoProgressTotalMin = 0;
+
+export const revealPrivateViewResponseViewTwoVotedSeatIdsItemMax = 128;
+
+export const revealPrivateViewResponseViewTwoVotedSeatIdsMax = 40;
 
 export const revealPrivateViewResponseViewTwoVoteCandidatesItemMax = 128;
 
@@ -1422,6 +1452,7 @@ export const RevealPrivateViewResponse = zod.object({
   "done": zod.number().int().min(revealPrivateViewResponseViewTwoProgressDoneMin),
   "total": zod.number().int().min(revealPrivateViewResponseViewTwoProgressTotalMin)
 }),
+  "votedSeatIds": zod.array(zod.string().min(1).max(revealPrivateViewResponseViewTwoVotedSeatIdsItemMax)).max(revealPrivateViewResponseViewTwoVotedSeatIdsMax),
   "voteCandidates": zod.array(zod.string().min(1).max(revealPrivateViewResponseViewTwoVoteCandidatesItemMax)),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),
@@ -1563,6 +1594,8 @@ export const RevealPrivateViewResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Submit an idempotent game command
  */
@@ -1615,6 +1648,10 @@ export const submitGameCommandResponseViewTwoSeatsItemIdMax = 128;
 export const submitGameCommandResponseViewTwoProgressDoneMin = 0;
 
 export const submitGameCommandResponseViewTwoProgressTotalMin = 0;
+
+export const submitGameCommandResponseViewTwoVotedSeatIdsItemMax = 128;
+
+export const submitGameCommandResponseViewTwoVotedSeatIdsMax = 40;
 
 export const submitGameCommandResponseViewTwoVoteCandidatesItemMax = 128;
 
@@ -1698,6 +1735,7 @@ export const SubmitGameCommandResponse = zod.object({
   "done": zod.number().int().min(submitGameCommandResponseViewTwoProgressDoneMin),
   "total": zod.number().int().min(submitGameCommandResponseViewTwoProgressTotalMin)
 }),
+  "votedSeatIds": zod.array(zod.string().min(1).max(submitGameCommandResponseViewTwoVotedSeatIdsItemMax)).max(submitGameCommandResponseViewTwoVotedSeatIdsMax),
   "voteCandidates": zod.array(zod.string().min(1).max(submitGameCommandResponseViewTwoVoteCandidatesItemMax)),
   "ballots": zod.record(zod.string(), zod.string()),
   "winner": zod.union([zod.enum(['traitor', 'faithful']),zod.null()]),

@@ -44,6 +44,7 @@ export const VIEW_ALLOW_LIST = [
   'seats',
   'commitment',
   'progress',
+  'votedSeatIds',
   'voteCandidates',
   'ballots',
   'winner',
@@ -221,6 +222,12 @@ export function viewFor(
           : alive(state).filter((seat) => state.acks.includes(seat.id)).length,
       total: alive(state).length,
     },
+    votedSeatIds:
+      state.phase === 'VOTE' || state.phase === 'FINAL_BANISH'
+        ? alive(state)
+            .filter((seat) => state.votes[seat.id] !== undefined)
+            .map((seat) => seat.id)
+        : [],
     voteCandidates: state.candidates,
     ballots,
     winner: state.winner,

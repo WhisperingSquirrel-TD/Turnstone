@@ -715,6 +715,7 @@ components:
         - seats
         - commitment
         - progress
+        - votedSeatIds
         - voteCandidates
         - ballots
         - winner
@@ -797,6 +798,13 @@ components:
             total:
               type: integer
               minimum: 0
+        votedSeatIds:
+          type: array
+          maxItems: 40
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
         voteCandidates:
           type: array
           items:

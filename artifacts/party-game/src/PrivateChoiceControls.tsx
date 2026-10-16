@@ -5,6 +5,12 @@ export type PrivateChoiceOption = {
   name: string;
 };
 
+export type VoteProgressRow = {
+  id: string;
+  name: string;
+  hasVoted: boolean;
+};
+
 export type PrivateChoiceControlsProps = {
   choices: PrivateChoiceOption[];
   selected: string;
@@ -16,6 +22,8 @@ export type PrivateChoiceControlsProps = {
   onReview: () => void;
   onConfirm: () => void;
   onChooseAgain: () => void;
+  voteProgressRows?: VoteProgressRow[];
+  viewerSeatId?: string;
 };
 
 export function PrivateChoiceControls({
@@ -29,23 +37,98 @@ export function PrivateChoiceControls({
   onReview,
   onConfirm,
   onChooseAgain,
+  voteProgressRows,
+  viewerSeatId,
 }: PrivateChoiceControlsProps) {
   const selectedOption = choices.find((choice) => choice.id === selected);
+  const choiceById = new Map(choices.map((choice) => [choice.id, choice]));
+  const orderedVoteProgressRows = voteProgressRows
+    ? [...voteProgressRows].sort((left, right) =>
+        left.name.localeCompare(right.name, 'en-GB', { sensitivity: 'base' }),
+      )
+    : null;
 
   return (
     <>
-      <div className="mt-3 grid gap-2" data-testid="private-choice-list">
-        {choices.map((choice) => (
-          <button
-            key={choice.id}
-            type="button"
-            className="choice-action"
-            aria-pressed={selected === choice.id}
-            onClick={() => onSelect(choice.id)}
-          >
-            {choice.name}
-          </button>
-        ))}
+      <div
+        className={`mt-3 grid ${orderedVoteProgressRows ? 'gap-1' : 'gap-2'}`}
+        data-testid="private-choice-list"
+      >
+        {orderedVoteProgressRows
+          ? orderedVoteProgressRows.map((row) => {
+              const choice = choiceById.get(row.id);
+              const status = row.hasVoted
+                ? en.game.voteVoted
+                : en.game.voteWaiting;
+              const statusId = `vote-status-${row.id}`;
+
+              if (!choice) {
+                if (row.id === viewerSeatId) {
+                  return (
+                    <p
+                      key={row.id}
+                      className="flex items-center gap-2 text-sm text-ash"
+                      data-testid="vote-self-status"
+                    >
+                      <span>{row.name}</span>
+                      <span aria-hidden="true">·</span>
+                      <span data-testid={statusId}>{status}</span>
+                    </p>
+                  );
+                }
+                return (
+                  <div
+                    key={row.id}
+                    className="vote-status-row flex min-h-10 items-center justify-between gap-3 border border-stone px-3 py-2 text-candle"
+                    data-testid={
+                      row.id === viewerSeatId
+                        ? 'vote-self-status'
+                        : `vote-progress-row-${row.id}`
+                    }
+                  >
+                    <span>{row.name}</span>
+                    <span
+                      className="ml-auto shrink-0 text-sm text-ash"
+                      data-testid={statusId}
+                    >
+                      {status}
+                    </span>
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={choice.id}
+                  type="button"
+                  className="choice-action justify-between gap-3"
+                  aria-label={choice.name}
+                  aria-describedby={statusId}
+                  aria-pressed={selected === choice.id}
+                  onClick={() => onSelect(choice.id)}
+                >
+                  <span>{choice.name}</span>
+                  <span
+                    id={statusId}
+                    className="ml-auto shrink-0 text-sm text-ash"
+                    data-testid={statusId}
+                  >
+                    {status}
+                  </span>
+                </button>
+              );
+            })
+          : choices.map((choice) => (
+              <button
+                key={choice.id}
+                type="button"
+                className="choice-action"
+                aria-pressed={selected === choice.id}
+                onClick={() => onSelect(choice.id)}
+              >
+                {choice.name}
+              </button>
+            ))}
       </div>
       {selectedOption && (
         <p

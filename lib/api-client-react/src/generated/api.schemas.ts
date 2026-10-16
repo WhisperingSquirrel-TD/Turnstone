@@ -560,6 +560,12 @@ export interface FullView {
   commitment: string | null;
   progress: FullViewProgress;
   /**
+     * @maxItems 40
+     * @items.minLength 1
+     * @items.maxLength 128
+     */
+  votedSeatIds: string[];
+  /**
      * @items.minLength 1
      * @items.maxLength 128
      */

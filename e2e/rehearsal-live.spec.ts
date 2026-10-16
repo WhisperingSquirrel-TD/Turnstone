@@ -72,6 +72,8 @@ async function latestServerPhase(
   progress: { done: number; total: number };
   viewerSeatId?: string;
   voteCandidates?: string[];
+  votedSeatIds: string[];
+  ballots: Record<string, string>;
   revote: boolean;
   seats: { id: string; name: string; status: string }[];
 }> {
@@ -92,6 +94,8 @@ async function latestServerPhase(
           progress: { done: number; total: number };
           viewerSeatId?: string;
           voteCandidates?: string[];
+          votedSeatIds: string[];
+          ballots: Record<string, string>;
           revote: boolean;
           seats: { id: string; name: string; status: string }[];
         };
@@ -304,8 +308,13 @@ async function submitPrivateChoice(
             (option) => option.name !== excludedShadowChoiceName,
           )
         : undefined;
-    const displayedNames = (await choices.allTextContents()).map((name) =>
-      name.trim(),
+    const displayedNames = await choices.evaluateAll((buttons) =>
+      buttons.map(
+        (button) =>
+          button.querySelector('span')?.textContent?.trim() ??
+          button.textContent?.trim() ??
+          '',
+      ),
     );
     const displayedNameSet = new Set(displayedNames);
     expect(displayedNames.length).toBeGreaterThan(0);
@@ -340,6 +349,11 @@ async function submitPrivateChoice(
         ? preferredVoteName
         : displayedNames[0];
     if (phaseBeforeChoice === 'SHADOW') {
+      await expect(page.getByTestId('vote-progress-list')).toHaveCount(0);
+      await expect(page.locator('[data-testid^="vote-status-"]')).toHaveCount(
+        0,
+      );
+      await expect(page.getByTestId('phase-progress-status')).toHaveCount(0);
       if (!shadowContext) {
         throw new Error(
           'The shield step did not provide private night context.',
@@ -425,7 +439,20 @@ async function submitPrivateChoice(
           `${phaseBeforeChoice} rejected the selected eligible choice (HTTP ${commandStatuses.join(', ') || 'none'}); the test does not retry another name.`,
         );
       }
-      if (await waiting.isVisible().catch(() => false)) return selectedName;
+      if (await waiting.isVisible().catch(() => false)) {
+        if (phaseBeforeChoice === 'SHADOW') {
+          await expect(waiting).toHaveText('Thanks. Waiting for everyone.');
+          await expect(
+            page
+              .getByTestId('rehearsal-action-bar')
+              .getByText('Thanks. Waiting for everyone.'),
+          ).toHaveCount(0);
+          await expect(page.getByTestId('phase-progress-status')).toHaveCount(
+            0,
+          );
+        }
+        return selectedName;
+      }
       if ((await currentPhase(page)) !== phaseBeforeChoice) return selectedName;
       await page.waitForTimeout(100);
     }
@@ -682,8 +709,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await page.getByTestId('button-start-rehearsal').click();
     const rehearsalStartResponse = await rehearsalStartResponsePromise;
     if (!rehearsalStartResponse.ok()) {
+      const errorBody = await rehearsalStartResponse.text();
       throw new Error(
-        `Rehearsal start failed with HTTP ${rehearsalStartResponse.status()}.`,
+        `Rehearsal start failed with HTTP ${rehearsalStartResponse.status()}: ${errorBody}`,
       );
     }
     await page.waitForURL(/\/game\/[^/]+$/, { timeout: 15_000 });
@@ -1049,6 +1077,18 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               activeGameId,
             );
             expect(voteView.revote).toBe(false);
+            const activeVoters = voteView.seats.filter(
+              (seat) => seat.status === 'alive',
+            );
+            expect(voteView.votedSeatIds).toHaveLength(7);
+            expect(voteView.ballots).toEqual({});
+            for (const seat of activeVoters) {
+              await expect(
+                page.getByTestId(`vote-status-${seat.id}`),
+              ).toHaveText(
+                voteView.votedSeatIds.includes(seat.id) ? 'Voted' : 'Waiting',
+              );
+            }
             const events = await readGameEvents(activeGameId);
             const lastVoteClosedIndex = events.reduce(
               (lastIndex, event, index) =>
@@ -1159,11 +1199,10 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       }
 
       if (['VOTE', 'FINAL_BANISH'].includes(phase)) {
-        const done = await game.getAttribute('data-progress-done');
-        const total = await game.getAttribute('data-progress-total');
-        await expect(
-          page.getByText(`${done} of ${total} have voted`, { exact: true }),
-        ).toBeVisible();
+        await expect(page.getByTestId('phase-progress-status')).toHaveCount(0);
+        await expect(page.getByTestId('waiting-for-everyone')).toHaveText(
+          'Everyone has voted. Tap Next step to see the result.',
+        );
       } else if (['DEAL', 'FINAL_VOTE'].includes(phase)) {
         const done = await game.getAttribute('data-progress-done');
         const total = await game.getAttribute('data-progress-total');

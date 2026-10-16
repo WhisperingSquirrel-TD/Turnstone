@@ -564,6 +564,14 @@ export const en = {
     murderSlotPick: (picker: string, target: string, round: number) =>
       `${picker} · ${round === 1 ? 'First pick' : 'Final pick'}: ${target}`,
     waitingForEveryone: 'Thanks. Waiting for everyone.',
+    everyoneVotedRehearsal:
+      'Everyone has voted. Tap Next step to see the result.',
+    everyoneVotedOrganiser:
+      "Everyone has voted. Tap Move everyone on when you're ready.",
+    everyoneVotedPlayer: 'Everyone has voted. The result is coming.',
+    voteVoted: 'Voted',
+    voteWaiting: 'Waiting',
+    voteProgressLabel: 'Vote progress',
     movingOn: 'Moving on...',
     chooseOption: 'Choose an option',
     finalDecision: 'Make the final decision',

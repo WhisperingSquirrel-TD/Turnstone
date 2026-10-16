@@ -29,6 +29,7 @@ const recoveredView: FullView = {
   ],
   commitment: null,
   progress: { done: 0, total: 1 },
+  votedSeatIds: [],
   ballots: {},
   voteCandidates: [],
   winner: null,

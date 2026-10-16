@@ -30,6 +30,7 @@ function createPublicView(gameId: string): FullView {
     ],
     commitment: null,
     progress: { done: 0, total: 2 },
+    votedSeatIds: [],
     voteCandidates: [],
     ballots: {},
     winner: null,
@@ -522,10 +523,28 @@ test('rehearsal player can move on from public and voting screens', async ({
   await page.route(`**/api/games/${gameId}/commands`, async (route) => {
     const body = route.request().postDataJSON() as Record<string, unknown>;
     submitted.push(body);
+    const livingSeatIds = publicView.seats
+      .filter((seat) => seat.status === 'alive')
+      .map((seat) => seat.id);
     publicView = {
       ...publicView,
       phase: body.type === 'AdvancePhase' ? 'VOTE' : publicView.phase,
       version: publicView.version + 1,
+      progress:
+        body.type === 'AdvancePhase'
+          ? { done: 1, total: livingSeatIds.length }
+          : body.type === 'SubmitVote'
+            ? {
+                done: livingSeatIds.length,
+                total: livingSeatIds.length,
+              }
+            : publicView.progress,
+      votedSeatIds:
+        body.type === 'AdvancePhase'
+          ? ['seat-jamie']
+          : body.type === 'SubmitVote'
+            ? livingSeatIds
+            : publicView.votedSeatIds,
       deadline:
         body.type === 'AdvancePhase'
           ? Date.now() + 60_000
@@ -598,6 +617,15 @@ test('rehearsal player can move on from public and voting screens', async ({
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   await expect(choiceList).toBeVisible();
   await expect(choiceList.getByRole('button')).toHaveCount(5);
+  await expect(page.getByTestId('phase-progress-status')).toHaveCount(0);
+  await expect(page.getByTestId('vote-self-status')).toContainText('Morgan');
+  await expect(page.getByTestId('vote-status-seat-morgan')).toHaveText(
+    'Waiting',
+  );
+  await expect(page.getByTestId('vote-status-seat-jamie')).toHaveText('Voted');
+  await expect(page.getByTestId('vote-status-seat-practice-1')).toHaveText(
+    'Waiting',
+  );
   const voteLayout = await page.locator('main#main').evaluate((main) => ({
     contentHeight: main.scrollHeight,
     viewportHeight: main.clientHeight,
@@ -611,7 +639,17 @@ test('rehearsal player can move on from public and voting screens', async ({
   await page.getByRole('button', { name: 'Confirm', exact: true }).click();
   expect(privateViewRequests).toBe(0);
   await expect(choiceList).toHaveCount(0);
-  await expect(page.getByTestId('waiting-for-everyone')).toBeVisible();
+  await expect(page.getByTestId('waiting-for-everyone')).toHaveText(
+    'Everyone has voted. Tap Next step to see the result.',
+  );
+  await expect(
+    page.getByText('Thanks. Waiting for everyone.', { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .getByTestId('rehearsal-action-bar')
+      .getByText('Everyone has voted. Tap Next step to see the result.'),
+  ).toHaveCount(0);
   expect(submitted[0]).toMatchObject({
     type: 'AdvancePhase',
     expectedVersion: 12,
@@ -623,6 +661,60 @@ test('rehearsal player can move on from public and voting screens', async ({
         target: 'seat-jamie',
       }),
     ]),
+  );
+});
+
+test('out players see vote status without targets or an aggregate counter', async ({
+  page,
+}) => {
+  const gameId = 'out-vote-progress';
+  let publicView = {
+    ...createPublicView(gameId),
+    phase: 'VOTE',
+    viewerSeatId: 'seat-alex',
+    progress: { done: 1, total: 2 },
+    votedSeatIds: ['seat-jamie'],
+  } as FullView;
+
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'c'.repeat(43) } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: {
+        serverNow: Date.now(),
+        version: publicView.version,
+        view: publicView,
+      },
+    }),
+  );
+
+  await page.goto(`/game/${gameId}`);
+  const voteProgress = page.getByTestId('vote-progress-list');
+  await expect(voteProgress).toBeVisible();
+  await expect(voteProgress.getByTestId('vote-status-seat-jamie')).toHaveText(
+    'Voted',
+  );
+  await expect(voteProgress.getByTestId('vote-status-seat-morgan')).toHaveText(
+    'Waiting',
+  );
+  await expect(page.getByTestId('private-choice-list')).toHaveCount(0);
+  await expect(page.getByTestId('phase-progress-status')).toHaveCount(0);
+  expect(publicView.ballots).toEqual({});
+  await expect(
+    page.getByText('Everyone has voted. The result is coming.', {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+
+  publicView = {
+    ...publicView,
+    progress: { done: 2, total: 2 },
+    votedSeatIds: ['seat-jamie', 'seat-morgan'],
+  };
+  await page.reload();
+  await expect(page.getByTestId('vote-completion-message')).toHaveText(
+    'Everyone has voted. The result is coming.',
   );
 });
 
@@ -707,8 +799,15 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   ).toBeVisible();
   const displayedChoices = await choiceList
     .getByRole('button')
-    .allTextContents();
-  expect(displayedChoices.map((name) => name.trim()).sort()).toEqual(
+    .evaluateAll((buttons) =>
+      buttons.map(
+        (button) =>
+          button.querySelector('span')?.textContent?.trim() ??
+          button.textContent?.trim() ??
+          '',
+      ),
+    );
+  expect(displayedChoices.sort()).toEqual(
     ['Jamie', 'Practice player 2'].sort(),
   );
   await expect(
@@ -785,6 +884,9 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   await expect(
     page.getByText('Thanks. Waiting for everyone.', { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByText('Thanks. Waiting for everyone.', { exact: true }),
+  ).toHaveCount(1);
 });
 
 for (const role of ['faithful', 'traitor'] as const) {
@@ -1124,7 +1226,14 @@ test('banishment votes are alphabetical while night choices stay shuffled per se
     return targetPage
       .getByTestId('private-choice-list')
       .getByRole('button')
-      .allTextContents();
+      .evaluateAll((buttons) =>
+        buttons.map(
+          (button) =>
+            button.querySelector('span')?.textContent?.trim() ??
+            button.textContent?.trim() ??
+            '',
+        ),
+      );
   };
 
   const isCanonicalRotation = (order: string[]) =>

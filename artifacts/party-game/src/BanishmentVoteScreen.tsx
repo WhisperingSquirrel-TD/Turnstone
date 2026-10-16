@@ -32,7 +32,12 @@ export function BanishmentVoteScreen({
         </p>
       )}
       <p className="display text-2xl">{en.game.votePrompt}</p>
-      <PrivateChoiceControls {...props} choices={alphabeticalChoices} />
+      <PrivateChoiceControls
+        {...props}
+        choices={alphabeticalChoices}
+        voteProgressRows={props.voteProgressRows}
+        viewerSeatId={props.viewerSeatId}
+      />
     </div>
   );
 }

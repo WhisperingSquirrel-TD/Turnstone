@@ -11,6 +11,28 @@ function advanceAfterDeadline(game: ReturnType<typeof fixture>) {
 }
 
 describe('banishment verdict reveal', () => {
+  it('projects who has voted without exposing any targets during the vote', () => {
+    const game = fixture(5, { missions: { enabled: false } });
+    command(game, { type: 'StartGame' });
+    advance(game, 'VOTE');
+
+    const [voter, target] = game.state.seats;
+    if (!voter || !target) throw new Error('Expected two game seats');
+    command(game, { type: 'SubmitVote', target: target.id }, true, {
+      kind: 'player',
+      seatId: voter.id,
+    });
+
+    const view = viewFor({ kind: 'player', seatId: voter.id }, game.state);
+    const payload = JSON.parse(JSON.stringify(view)) as Record<string, unknown>;
+
+    expect(payload.votedSeatIds).toEqual([voter.id]);
+    expect(view.ballots).toEqual({});
+    expect(viewFor({ kind: 'visitor' }, game.state)).not.toHaveProperty(
+      'votedSeatIds',
+    );
+  });
+
   it('keeps the result visible until the next phase advance', () => {
     const game = fixture(5, {
       missions: { enabled: false },

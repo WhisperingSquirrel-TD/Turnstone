@@ -61,6 +61,8 @@ import {
 import { VerdictScreen } from './VerdictScreen';
 import { ShieldCard } from './ShieldCard';
 import { PhaseProgressStatus } from './PhaseProgressStatus';
+import { VoteProgressSummary } from './VoteProgressSummary';
+import { voteCompletionMessage } from './vote-progress';
 import { apiUrl } from './api-url';
 import { en } from '@/locale/en-GB';
 import {
@@ -825,6 +827,29 @@ function PlayerGame() {
           return seat ? [seat.name] : [];
         })
       : [];
+  const isBanishmentPhase = Boolean(
+    full && (full.phase === 'VOTE' || full.phase === 'FINAL_BANISH'),
+  );
+  const voteProgressRows =
+    full?.seats
+      .filter((seat) => seat.status === 'alive')
+      .map((seat) => ({
+        id: seat.id,
+        name: seat.name,
+        hasVoted: full.votedSeatIds.includes(seat.id),
+      })) ?? [];
+  const longBanishmentRoster = isBanishmentPhase && voteProgressRows.length > 8;
+  const completedVoteMessage = full ? voteCompletionMessage(full) : null;
+  const ownBanishmentVoteRecorded = Boolean(
+    full?.viewerSeatId &&
+    isBanishmentPhase &&
+    full.votedSeatIds.includes(full.viewerSeatId),
+  );
+  const showPrivateWaitingMessage = Boolean(
+    full &&
+    full.phase !== 'SHADOW' &&
+    (actionDone || ownBanishmentVoteRecorded),
+  );
   const shadowStatusLines =
     full && privateView
       ? ([1, 2] as const).map((slot) => {
@@ -1549,7 +1574,6 @@ function PlayerGame() {
       } else {
         clearPrivate();
         setActionDone(true);
-        setCommandMessage(en.game.waitingForEveryone);
         setSelected('');
         setConfirmChoice(false);
         setPrivateView(null);
@@ -1917,7 +1941,8 @@ function PlayerGame() {
             )}
             {!inPrivateMoment &&
               full.phase !== 'FINISHED' &&
-              full.phase !== 'SHADOW' && (
+              full.phase !== 'SHADOW' &&
+              !isBanishmentPhase && (
                 <PhaseProgressStatus
                   phase={full.phase}
                   paused={full.paused}
@@ -1925,6 +1950,22 @@ function PlayerGame() {
                   total={full.progress.total}
                 />
               )}
+            {!inPrivateMoment && isBanishmentPhase && (
+              <section>
+                <VoteProgressSummary rows={voteProgressRows} />
+                {completedVoteMessage && (
+                  <p
+                    role="status"
+                    className="mt-4 text-sm text-ash"
+                    data-testid="vote-completion-message"
+                  >
+                    <span data-testid="waiting-for-everyone">
+                      {completedVoteMessage}
+                    </span>
+                  </p>
+                )}
+              </section>
+            )}
 
             {!inPrivateMoment &&
               full.publicAnnouncement &&
@@ -2028,15 +2069,17 @@ function PlayerGame() {
 
             {inPrivateMoment && (
               <div className="private-moment-panel">
-                {full.phase !== 'SHADOW' && (!shieldRequired || shielded) && (
-                  <PhaseProgressStatus
-                    phase={full.phase}
-                    paused={full.paused}
-                    done={full.progress.done}
-                    total={full.progress.total}
-                    compact
-                  />
-                )}
+                {full.phase !== 'SHADOW' &&
+                  !isBanishmentPhase &&
+                  (!shieldRequired || shielded) && (
+                    <PhaseProgressStatus
+                      phase={full.phase}
+                      paused={full.paused}
+                      done={full.progress.done}
+                      total={full.progress.total}
+                      compact
+                    />
+                  )}
                 {shieldRequired && !shielded ? null : privateCovered ? (
                   <>
                     <button
@@ -2132,7 +2175,6 @@ function PlayerGame() {
                         onClick={() => {
                           setRoleSeen(false);
                           setActionDone(true);
-                          setCommandMessage(en.game.waitingForEveryone);
                         }}
                       >
                         {en.game.notesDone}
@@ -2142,17 +2184,17 @@ function PlayerGame() {
                 ) : (
                   <>
                     <div
-                      className="private-action-content"
+                      className={`private-action-content${longBanishmentRoster ? ' private-action-content--long-vote-progress' : ''}`}
                       aria-live="polite"
                       data-testid="private-choice-content"
                     >
-                      {actionDone && full.phase !== 'SHADOW' ? (
+                      {showPrivateWaitingMessage ? (
                         <p
                           role="status"
                           className="text-center text-ash"
                           data-testid="waiting-for-everyone"
                         >
-                          {en.game.waitingForEveryone}
+                          {completedVoteMessage ?? en.game.waitingForEveryone}
                         </p>
                       ) : notesOpen && !phaseIsPrivate ? (
                         shielded && privateView ? (
@@ -2209,6 +2251,8 @@ function PlayerGame() {
                                 {...choiceControlProps}
                                 revote={full.revote}
                                 tieCandidateNames={tieCandidateNames}
+                                voteProgressRows={voteProgressRows}
+                                viewerSeatId={full.viewerSeatId}
                               />
                             ) : (
                               <>
