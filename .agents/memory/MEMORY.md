@@ -12,3 +12,4 @@
 - [Attachment commit scope](attachment-commit-scope.md) — keep user-supplied attachments out of commits by default.
 - [Rehearsal vote advancement](rehearsal-vote-advancement.md) — close rehearsal ballots with the explicit Next step before asserting their result or re-vote.
 - [Rehearsal first-night safety](rehearsal-first-night-safety.md) — protect the human until the first completed Dawn, not a cycle counter or murder-resolution row.
+- [Public copy test surfaces](public-copy-test-surfaces.md) — test marketing or FAQ text in the rendered preview and detail interaction, not by assuming they share content.

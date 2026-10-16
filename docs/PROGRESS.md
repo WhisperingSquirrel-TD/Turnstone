@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 18:49 UTC.
-- Current milestone/step: Round 5 item 35 is locally verified and ready to commit and push.
-- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7 passed Verify #103; item 33 accepted by Verify #105; item 34 accepted by Verify #107; item 35 locally green, Verify #108 pending.
-- Last pushed commit/CI: `aa5d5b9`; Verify #107 (`38948886098`) — Success. All 19 jobs passed: static-checks, unit, property, integration, rehearsal-live, all four browser profiles, Lighthouse, audit, scenario shards 0–5, merge-scenario-reports and required-checks. `promote` was skipped; zero annotations. Verify #106 (`38947053863`) failed in `rehearsal-live`, iPhone and iPad WebKit, and required-checks; the cause and correction are recorded below. Run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38948886098.
+- Updated: 16 October 2026, 18:54 UTC.
+- Current milestone/step: Round 5 is green through item 35. Verify #108 passed; the owner can repeat the hands-on phone rehearsal. Stop here for that review.
+- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7 passed Verify #103; item 33 accepted by Verify #105; item 34 accepted by Verify #107; item 35 accepted by Verify #108.
+- Last pushed commit/CI: `d9f8fc5`; Verify #108 (`38950413086`) — Success. All 19 jobs passed: static-checks, unit, property, integration, audit, Lighthouse, rehearsal-live, all four browser profiles, scenario shards 0–5, merge-scenario-reports and required-checks. `promote` was skipped; zero annotations. Run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38950413086.
 - Local verification for the item 34 correction: 11/11 rehearsal-bot tests, API and test typechecks, lint, formatting and diff checks pass; desktop smoke tests 6/6, Pixel smoke tests 5 passed/1 skipped, and the real-server Pixel rehearsal passed with no presenter and no refresh. Local iPhone/iPad WebKit could not launch because the host lacks `libatomic.so.1`, `libjpeg.so.8` and `libjxl.so.0.8`; both GitHub WebKit profiles passed in #107.
 - Local verification for item 35: the copy regression failed before the wording change, then passed on desktop and Pixel; typecheck, test typecheck, lint, formatting and diff checks pass. The home page and FAQ now use “vote together”; no “vote at the round table” remains in app copy.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued after the M5 hands-on gate.
@@ -11,6 +11,7 @@
 
 ## Previous verification history
 
+- Verify #108 (`38950413086`), commit `d9f8fc5`: Success — all 19 jobs passed, including four browser profiles, rehearsal-live, six scenario shards, merged report and required-checks. Zero annotations; `promote` was skipped.
 - Verify #107 (`38948886098`), commit `aa5d5b9`: Success — all 19 jobs passed, including four browser profiles, rehearsal-live, six scenario shards, merged report and required-checks. Zero annotations; `promote` was skipped.
 - Verify #106 (`38947053863`), commit `6dc0d7a`: Failure — `rehearsal-live` assumed a fixed rehearsal seed would create a first-vote tie, but the fresh session secret changed derived bot seat IDs; iPhone and iPad WebKit failed because an enabled text input reports computed cursor `auto`, while the test required `text`. Every other job passed; `required-checks` failed as a consequence.
 - Verify #95 (`38902154259`), commit `189f552`: Success — unit, property, static-checks, integration, audit, Lighthouse, iPhone WebKit, iPad WebKit, Pixel Chromium, desktop Chromium, rehearsal-live, scenario shards 0–5, merge-scenario-reports and required-checks. Zero annotations across 20 checks; `promote` was skipped.
