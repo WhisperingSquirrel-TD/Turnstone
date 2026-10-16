@@ -471,7 +471,12 @@ async function advanceIfStillOn(
   phase: Phase,
   phaseStartedAt: number,
 ): Promise<void> {
-  if ((await currentPhase(page)) !== phase) return;
+  const phaseAtEntry = await currentPhase(page);
+  if (phaseAtEntry !== phase) {
+    throw new Error(
+      `The rehearsal advanced from ${phase} to ${phaseAtEntry} before the player tapped Next step.`,
+    );
+  }
   const shadowRoundAtStart =
     phase === 'SHADOW'
       ? Number(
@@ -496,10 +501,40 @@ async function advanceIfStillOn(
   )
     return;
 
+  const phaseBeforeAdvance = await currentPhase(page);
+  if (phaseBeforeAdvance !== phase) {
+    throw new Error(
+      `The rehearsal advanced from ${phase} to ${phaseBeforeAdvance} before the player tapped Next step.`,
+    );
+  }
   const versionAtStart = Number(
     await page.getByTestId('player-game').getAttribute('data-version'),
   );
+  const advanceResponsePromise = page.waitForResponse(
+    (response) => {
+      const request = response.request();
+      if (
+        request.method() !== 'POST' ||
+        !new URL(response.url()).pathname.endsWith('/commands')
+      ) {
+        return false;
+      }
+      try {
+        return (
+          (request.postDataJSON() as { type?: unknown }).type === 'AdvancePhase'
+        );
+      } catch {
+        return false;
+      }
+    },
+    { timeout: 15_000 },
+  );
   await page.getByRole('button', { name: 'Next step', exact: true }).click();
+  const advanceResponse = await advanceResponsePromise;
+  expect(
+    advanceResponse.ok(),
+    `AdvancePhase returned HTTP ${advanceResponse.status()} for ${phase}.`,
+  ).toBe(true);
   try {
     await expect
       .poll(
@@ -1200,6 +1235,18 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
 
       if (['VOTE', 'FINAL_BANISH'].includes(phase)) {
         await expect(page.getByTestId('phase-progress-status')).toHaveCount(0);
+        const completedVoteView = await latestSynchronizedServerPhase(
+          page,
+          activeGameId,
+        );
+        expect(completedVoteView.phase).toBe(phase);
+        expect(completedVoteView.progress.total).toBeGreaterThan(0);
+        expect(completedVoteView.progress.done).toBe(
+          completedVoteView.progress.total,
+        );
+        expect(completedVoteView.votedSeatIds).toHaveLength(
+          completedVoteView.progress.total,
+        );
         await expect(page.getByTestId('waiting-for-everyone')).toHaveText(
           'Everyone has voted. Tap Next step to see the result.',
         );
