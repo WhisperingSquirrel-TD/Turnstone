@@ -1,8 +1,9 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 10:53 UTC.
-- Current milestone/step: §30 rule changes and addendum await a green run. Verify #87 exposed an E2E assumption that every first-slot resolution must open slot 2; the engine correctly records a `game-ended` second slot when parity ends the game. The test now requires both actual choice screens on Night 1 and checks the recorded early-end outcome on later nights.
-- Last pushed commit/CI: `feec815`; Verify #87 (`38888772232`) — Failed only in `rehearsal-live` (one annotation) and dependent `required-checks`; all other jobs passed. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38888772232.
+- Updated: 16 October 2026, 10:58 UTC.
+- Current milestone/step: SPEC §30 rule changes and addendum are green. Stopping for the reviewer; PIN pepper and join-storm capacity remain queued.
+- Last code commit/CI: `56c48ff`; Verify #88 (`38890272980`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38890272980.
+- Previous run context: Verify #87 (`38888772232`) failed only in `rehearsal-live` because the test expected a slot-2 screen even when the first murder ended the game by parity; the engine correctly recorded slot 2 as `game-ended`. The revised test requires a complete two-slot first night while validating that early-end record later in the game; #88 is green.
 - Last green code run: `ff8f572`; Verify #86 (`38888255890`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38888255890.
 - Local verification: the revised live rehearsal passed on Pixel; test typecheck, lint, format and diff checks passed. The preceding rule step passed 310/310 unit tests across 60 files, scenario sharding/coverage assertions (17 goldens assigned exactly once), scenario worker smoke, typecheck, lint, format and production build. The initial-abstention golden was confirmed red before implementation, then passed through full golden replay and the independent oracle.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued and were not started.
