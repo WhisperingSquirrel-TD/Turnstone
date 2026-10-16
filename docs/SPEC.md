@@ -364,3 +364,16 @@ Never show the old generic “x of y players have completed this part” line. S
 ### Round 5 acceptance
 
 The real-server, eight-seat rehearsal reaches results without a presenter or manual refresh. Its tests cover no shield on banishment votes, the verdict lead line, forced ties, one shield per night, first-day-and-night human safety, watch mode after a forced removal, second-person fate copy, commentary on every step, day/night theme changes, and AA contrast. Night uniformity checks compare all four fixed-height lines and text-length bands across roles and themes. Playwright screenshots cover the required viewports and both themes; the action bar/footer and header bounds are checked visually.
+
+## 32. No unexplained repeated choices [Owner, 16 October 2026]
+
+Before a game asks people to choose again or asks more than one question, every phone shows the same role-neutral explanation before the choices open. The explanation is derived from shared game state, not the viewer's role.
+
+- A double-murder night says: “Tonight the Traitors take two players, so everyone answers two questions.” Keep both questions and any keep-or-change window in the same private moment.
+- When “Must all agree” has no agreement after its first window, say: “No decision yet. One more round of choosing tonight.” Never identify who disagreed. Keep the existing single re-vote and fallback behavior.
+- The endgame decision explains its stakes before the choices: “<n> players remain. If everyone chooses End the game, it ends now: the Faithful win if no Traitor is left, otherwise the Traitors win. If anyone chooses Continue, you vote to banish one more.” For the majority end rule, the copy must state the majority threshold and the existing continue outcome.
+- After Continue, say: “Not everyone chose to end the game, so one more player will be banished. Vote now.”
+- Any tie in an endgame banishment uses the tie explanation from §31 before the re-vote choices; this supersedes the earlier exclusion of endgame ties in D84.
+- Never display “round 1” or “round 2” on a game screen. In the night-choice record, label these picks “First pick” and “Final pick”.
+
+Tests prove each explanation appears before its choice, is identical across roles, and does not expose who disagreed. They also verify the configured end rule and the absence of round-number copy throughout rehearsal.

@@ -549,8 +549,17 @@ export const en = {
       if (outcome === 'game-ended') return 'The game ended before this murder.';
       return 'No target was chosen.';
     },
+    doubleMurderReason:
+      'Tonight the Traitors take two players, so everyone answers two questions.',
+    unanimousNoDecision: 'No decision yet. One more round of choosing tonight.',
+    finalDecisionUnanimous: (count: number) =>
+      `${count} players remain. If everyone chooses End the game, it ends now: the Faithful win if no Traitor is left, otherwise the Traitors win. If anyone chooses Continue, you vote to banish one more.`,
+    finalDecisionMajority: (count: number) =>
+      `${count} players remain. If a majority chooses End the game, it ends now: the Faithful win if no Traitor is left, otherwise the Traitors win. Otherwise, you vote to banish one more.`,
+    finalContinue:
+      'Not everyone chose to end the game, so one more player will be banished. Vote now.',
     murderSlotPick: (picker: string, target: string, round: number) =>
-      `${picker} · round ${round}: ${target}`,
+      `${picker} · ${round === 1 ? 'First pick' : 'Final pick'}: ${target}`,
     waitingForEveryone: 'Thanks. Waiting for everyone.',
     movingOn: 'Moving on...',
     chooseOption: 'Choose an option',

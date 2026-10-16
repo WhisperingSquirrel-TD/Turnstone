@@ -251,8 +251,31 @@ async function submitPrivateChoice(
   const choiceList = page.getByTestId('private-choice-list');
   await expect(choiceList).toBeVisible({ timeout: 5_000 });
   const phaseBeforeChoice = await currentPhase(page);
+  const screenText = await page.locator('body').innerText();
+  expect(screenText).not.toMatch(/round [12]/i);
+  if (
+    phaseBeforeChoice === 'SHADOW' &&
+    Number(
+      await page.getByTestId('player-game').getAttribute('data-shadow-round'),
+    ) === 2
+  ) {
+    await expect(page.getByTestId('game-context-line')).toHaveText(
+      'No decision yet. One more round of choosing tonight.',
+    );
+    await expect(page.getByTestId('selected-choice')).toBeVisible();
+  }
+  if (phaseBeforeChoice === 'FINAL_VOTE') {
+    await expect(page.getByTestId('game-context-line')).toContainText(
+      'players remain. If everyone chooses End the game',
+    );
+  } else if (phaseBeforeChoice === 'FINAL_BANISH') {
+    await expect(page.getByTestId('game-context-line')).toHaveText(
+      'Not everyone chose to end the game, so one more player will be banished. Vote now.',
+    );
+  }
   const choices = choiceList.getByRole('button');
   let selectedName: string | undefined;
+  let nightAlternativeName: string | undefined;
   if (phaseBeforeChoice === 'FINAL_VOTE') {
     const endgameChoices = (await choices.allTextContents()).map((name) =>
       name.trim(),
@@ -335,6 +358,9 @@ async function submitPrivateChoice(
       if (!selectedName) {
         throw new Error('The private night list has no eligible target.');
       }
+      nightAlternativeName = displayedNames.find(
+        (name) => name !== selectedName && !fellowTraitors.has(name),
+      );
     }
   }
   if (!selectedName) throw new Error('The choice list is empty.');
@@ -369,6 +395,23 @@ async function submitPrivateChoice(
       .evaluate((button: HTMLButtonElement) => button.click());
 
     const waiting = page.getByTestId('waiting-for-everyone');
+    if (phaseBeforeChoice === 'SHADOW') {
+      await expect(page.getByTestId('selected-choice')).toHaveText(
+        `Your pick: ${selectedName}`,
+      );
+      await expect(selectedChoice).toBeEnabled();
+      if (!nightAlternativeName) {
+        throw new Error(
+          'The private night list has no alternate eligible pick.',
+        );
+      }
+      await expect(
+        choiceList.getByRole('button', {
+          name: nightAlternativeName,
+          exact: true,
+        }),
+      ).toBeEnabled();
+    }
     const rejected = page.getByText('Please choose someone else.', {
       exact: true,
     });

@@ -1310,3 +1310,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** On a regular vote re-vote, show “It's a tie between <A> and <B>. Vote again, choosing between them.” Use the candidates recorded by the server, in alphabetical order; format larger ties as a natural comma-separated list. Do not show this copy on an initial vote or an endgame vote.
 
 **Consequence:** Players see the exact eligible tied group before choosing again. A forced-tie rehearsal test verifies the server state, candidate list and displayed copy together.
+
+## D85 — Explain every repeated or multi-question choice (16 October 2026)
+
+**Context:** The Round 5 recording showed that players need a shared explanation before a night with two questions, an extra unanimous-choice window, or the endgame banishment that follows Continue. It also requires the same tie explanation for endgame banishments.
+
+**Choice:** Apply SPEC §32. Render the reason from public game state without passing the player's role into the component. Use the exact approved double-murder, no-agreement, endgame-stakes and Continue messages. Endgame ties use the same tie prompt and existing one-re-vote fallback as other banishment ties. Keep the public end rule and number of murder slots in the projected full view; do not expose other configuration or private picks. Replace visible night-pick “round 1/2” labels with “First pick” and “Final pick”.
+
+**Consequence:** Every player receives the explanation before the next choices open, while the secret choices remain private. Tests cover the role-neutral copy, configured end rule, shared tie prompt, final-banish context and absence of round-number labels.

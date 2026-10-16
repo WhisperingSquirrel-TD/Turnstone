@@ -190,6 +190,14 @@ export interface VisitorView {
   seatCount: number;
 }
 
+export type FullViewEndRule = typeof FullViewEndRule[keyof typeof FullViewEndRule];
+
+
+export const FullViewEndRule = {
+  unanimous: 'unanimous',
+  majority: 'majority',
+} as const;
+
 export type SeatViewStatus = typeof SeatViewStatus[keyof typeof SeatViewStatus];
 
 
@@ -536,6 +544,12 @@ export interface FullView {
      * @maximum 2
      */
   shadowSlot: number;
+  /**
+     * @minimum 0
+     * @maximum 2
+     */
+  murderSlots: number;
+  endRule: FullViewEndRule;
   missionsEnabled: boolean;
   rehearsal: boolean;
   /** @minimum 0 */

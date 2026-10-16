@@ -14,6 +14,8 @@ const recoveredView: FullView = {
   revote: false,
   shadowRound: 0,
   shadowSlot: 0,
+  murderSlots: 1,
+  endRule: 'unanimous',
   missionsEnabled: false,
   rehearsal: false,
   pot: 0,

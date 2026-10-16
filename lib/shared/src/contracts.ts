@@ -318,6 +318,8 @@ export const fullViewSchema = z
     revote: z.boolean().default(false),
     shadowRound: z.number().int().min(0).max(2),
     shadowSlot: z.number().int().min(0).max(2),
+    murderSlots: z.number().int().min(0).max(2),
+    endRule: z.enum(['unanimous', 'majority']),
     missionsEnabled: z.boolean(),
     rehearsal: z.boolean(),
     pot: z.number().nonnegative(),

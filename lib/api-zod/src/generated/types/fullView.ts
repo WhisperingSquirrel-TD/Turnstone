@@ -8,6 +8,7 @@
 import type { CoordinatorAlert } from './coordinatorAlert';
 import type { FairnessView } from './fairnessView';
 import type { FullViewBallots } from './fullViewBallots';
+import type { FullViewEndRule } from './fullViewEndRule';
 import type { FullViewProgress } from './fullViewProgress';
 import type { FullViewPublicAnnouncement } from './fullViewPublicAnnouncement';
 import type { Phase } from './phase';
@@ -54,6 +55,12 @@ export interface FullView {
      * @maximum 2
      */
   shadowSlot: number;
+  /**
+     * @minimum 0
+     * @maximum 2
+     */
+  murderSlots: number;
+  endRule: FullViewEndRule;
   missionsEnabled: boolean;
   rehearsal: boolean;
   /** @minimum 0 */

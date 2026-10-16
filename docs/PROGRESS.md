@@ -1,12 +1,12 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 17:16 UTC.
-- Current milestone/step: Round 5 game flow — item 7 follow-up is locally green; the re-vote bot eligibility fix is ready to push.
-- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7's initial push passed Verify #102; the follow-up fix awaits its GitHub run.
-- Last pushed commit/CI: `77832df`; Verify #102 (`38936588080`) — Success, all 19 required jobs passed, including four browser profiles, six scenario shards, rehearsal-live and report merge; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38936588080.
-- Local verification for item 7: 20 bot/watch unit tests, typecheck, test typecheck, lint and format passed. The expanded real-server Pixel rehearsal passed at eight seats with no presenter or refresh: all first-cycle votes and night choices exclude the human, bots can target them after the first Dawn, and watch mode continues through results with “Practise again”.
+- Updated: 16 October 2026, 18:00 UTC.
+- Current milestone/step: Round 5 game-flow addendum — item 33 is this push, Verify pending; items 34–35 remain.
+- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 passed Verify #100; item 6 passed Verify #101; item 7 passed Verify #103; item 33 is pushed and pending Verify; items 34–35 are not started.
+- Last pushed commit/CI: This push — Verify pending. Last completed: `13a17f9`, Verify #103 (`38938455233`) — Success, all 19 required jobs passed, including four browser profiles, six scenario shards, rehearsal-live and report merge; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38938455233.
+- Local verification for item 33: full unit suite 345/345, typecheck, test typecheck, lint, format, scenario-worker smoke and the eight-seat real-server Pixel rehearsal passed. The rehearsal confirms the night pick remains selected across a same-slot re-choice; no presenter or refresh is used.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued after the M5 hands-on gate.
-- Risks: Pixel Chromium runs locally; local iPhone WebKit still lacks runtime libraries, while GitHub iPhone and iPad profiles passed in #93. The API workflow still logs deadline-scheduler iteration errors; cause is unverified and no records were changed. One broader local server-coverage run failed a database deadline-claim assertion (2 claims instead of 1); targeted HTTP and rehearsal tests passed, and CI will verify.
+- Risks: The scenario-shard merge/coverage report will run on GitHub because this checkout has no shard report artifacts. The API workflow still logs generic deadline-scheduler iteration errors; cause remains unverified. Local iPhone WebKit still lacks runtime libraries; GitHub iPhone and iPad profiles passed in #93.
 
 ## Previous verification history
 

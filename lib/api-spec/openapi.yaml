@@ -706,6 +706,8 @@ components:
         - revote
         - shadowRound
         - shadowSlot
+        - murderSlots
+        - endRule
         - missionsEnabled
         - rehearsal
         - pot
@@ -762,6 +764,13 @@ components:
           type: integer
           minimum: 0
           maximum: 2
+        murderSlots:
+          type: integer
+          minimum: 0
+          maximum: 2
+        endRule:
+          type: string
+          enum: [unanimous, majority]
         missionsEnabled:
           type: boolean
         rehearsal:

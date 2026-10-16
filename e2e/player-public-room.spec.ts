@@ -17,6 +17,8 @@ function createPublicView(gameId: string): FullView {
     revote: false,
     shadowRound: 0,
     shadowSlot: 0,
+    murderSlots: 1,
+    endRule: 'unanimous',
     missionsEnabled: true,
     rehearsal: false,
     pot: 18,

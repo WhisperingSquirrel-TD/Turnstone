@@ -14,6 +14,8 @@ import * as zod from 'zod';
 export const ReadinessCheckResponse = zod.object({
   "status": zod.enum(['ready', 'unavailable'])
 })
+
+
 /**
  * Returns server health status
  * @summary Health check
@@ -66,6 +68,9 @@ export const startRehearsalResponseViewTwoShadowRoundMax = 2;
 
 export const startRehearsalResponseViewTwoShadowSlotMin = 0;
 export const startRehearsalResponseViewTwoShadowSlotMax = 2;
+
+export const startRehearsalResponseViewTwoMurderSlotsMin = 0;
+export const startRehearsalResponseViewTwoMurderSlotsMax = 2;
 
 export const startRehearsalResponseViewTwoPotMin = 0;
 
@@ -140,6 +145,8 @@ export const StartRehearsalResponse = zod.object({
   "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(startRehearsalResponseViewTwoShadowRoundMin).max(startRehearsalResponseViewTwoShadowRoundMax),
   "shadowSlot": zod.number().int().min(startRehearsalResponseViewTwoShadowSlotMin).max(startRehearsalResponseViewTwoShadowSlotMax),
+  "murderSlots": zod.number().int().min(startRehearsalResponseViewTwoMurderSlotsMin).max(startRehearsalResponseViewTwoMurderSlotsMax),
+  "endRule": zod.enum(['unanimous', 'majority']),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
   "pot": zod.number().min(startRehearsalResponseViewTwoPotMin),
@@ -330,6 +337,9 @@ export const createGameResponseViewTwoShadowRoundMax = 2;
 export const createGameResponseViewTwoShadowSlotMin = 0;
 export const createGameResponseViewTwoShadowSlotMax = 2;
 
+export const createGameResponseViewTwoMurderSlotsMin = 0;
+export const createGameResponseViewTwoMurderSlotsMax = 2;
+
 export const createGameResponseViewTwoPotMin = 0;
 
 export const createGameResponseViewTwoSeatsItemIdMax = 128;
@@ -403,6 +413,8 @@ export const CreateGameResponse = zod.object({
   "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(createGameResponseViewTwoShadowRoundMin).max(createGameResponseViewTwoShadowRoundMax),
   "shadowSlot": zod.number().int().min(createGameResponseViewTwoShadowSlotMin).max(createGameResponseViewTwoShadowSlotMax),
+  "murderSlots": zod.number().int().min(createGameResponseViewTwoMurderSlotsMin).max(createGameResponseViewTwoMurderSlotsMax),
+  "endRule": zod.enum(['unanimous', 'majority']),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
   "pot": zod.number().min(createGameResponseViewTwoPotMin),
@@ -741,6 +753,9 @@ export const getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMax = 2;
 export const getJoinRequestStatusResponseThreeGameViewTwoShadowSlotMin = 0;
 export const getJoinRequestStatusResponseThreeGameViewTwoShadowSlotMax = 2;
 
+export const getJoinRequestStatusResponseThreeGameViewTwoMurderSlotsMin = 0;
+export const getJoinRequestStatusResponseThreeGameViewTwoMurderSlotsMax = 2;
+
 export const getJoinRequestStatusResponseThreeGameViewTwoPotMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoSeatsItemIdMax = 128;
@@ -820,6 +835,8 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
   "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMin).max(getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMax),
   "shadowSlot": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoShadowSlotMin).max(getJoinRequestStatusResponseThreeGameViewTwoShadowSlotMax),
+  "murderSlots": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoMurderSlotsMin).max(getJoinRequestStatusResponseThreeGameViewTwoMurderSlotsMax),
+  "endRule": zod.enum(['unanimous', 'majority']),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
   "pot": zod.number().min(getJoinRequestStatusResponseThreeGameViewTwoPotMin),
@@ -1040,6 +1057,9 @@ export const getGameViewResponseViewTwoShadowRoundMax = 2;
 export const getGameViewResponseViewTwoShadowSlotMin = 0;
 export const getGameViewResponseViewTwoShadowSlotMax = 2;
 
+export const getGameViewResponseViewTwoMurderSlotsMin = 0;
+export const getGameViewResponseViewTwoMurderSlotsMax = 2;
+
 export const getGameViewResponseViewTwoPotMin = 0;
 
 export const getGameViewResponseViewTwoSeatsItemIdMax = 128;
@@ -1113,6 +1133,8 @@ export const GetGameViewResponse = zod.object({
   "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(getGameViewResponseViewTwoShadowRoundMin).max(getGameViewResponseViewTwoShadowRoundMax),
   "shadowSlot": zod.number().int().min(getGameViewResponseViewTwoShadowSlotMin).max(getGameViewResponseViewTwoShadowSlotMax),
+  "murderSlots": zod.number().int().min(getGameViewResponseViewTwoMurderSlotsMin).max(getGameViewResponseViewTwoMurderSlotsMax),
+  "endRule": zod.enum(['unanimous', 'majority']),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
   "pot": zod.number().min(getGameViewResponseViewTwoPotMin),
@@ -1307,6 +1329,9 @@ export const revealPrivateViewResponseViewTwoShadowRoundMax = 2;
 export const revealPrivateViewResponseViewTwoShadowSlotMin = 0;
 export const revealPrivateViewResponseViewTwoShadowSlotMax = 2;
 
+export const revealPrivateViewResponseViewTwoMurderSlotsMin = 0;
+export const revealPrivateViewResponseViewTwoMurderSlotsMax = 2;
+
 export const revealPrivateViewResponseViewTwoPotMin = 0;
 
 export const revealPrivateViewResponseViewTwoSeatsItemIdMax = 128;
@@ -1380,6 +1405,8 @@ export const RevealPrivateViewResponse = zod.object({
   "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(revealPrivateViewResponseViewTwoShadowRoundMin).max(revealPrivateViewResponseViewTwoShadowRoundMax),
   "shadowSlot": zod.number().int().min(revealPrivateViewResponseViewTwoShadowSlotMin).max(revealPrivateViewResponseViewTwoShadowSlotMax),
+  "murderSlots": zod.number().int().min(revealPrivateViewResponseViewTwoMurderSlotsMin).max(revealPrivateViewResponseViewTwoMurderSlotsMax),
+  "endRule": zod.enum(['unanimous', 'majority']),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
   "pot": zod.number().min(revealPrivateViewResponseViewTwoPotMin),
@@ -1536,8 +1563,6 @@ export const RevealPrivateViewResponse = zod.object({
 }),zod.null()])
 })])
 })
-
-
 /**
  * @summary Submit an idempotent game command
  */
@@ -1579,6 +1604,9 @@ export const submitGameCommandResponseViewTwoShadowRoundMax = 2;
 
 export const submitGameCommandResponseViewTwoShadowSlotMin = 0;
 export const submitGameCommandResponseViewTwoShadowSlotMax = 2;
+
+export const submitGameCommandResponseViewTwoMurderSlotsMin = 0;
+export const submitGameCommandResponseViewTwoMurderSlotsMax = 2;
 
 export const submitGameCommandResponseViewTwoPotMin = 0;
 
@@ -1653,6 +1681,8 @@ export const SubmitGameCommandResponse = zod.object({
   "revote": zod.boolean(),
   "shadowRound": zod.number().int().min(submitGameCommandResponseViewTwoShadowRoundMin).max(submitGameCommandResponseViewTwoShadowRoundMax),
   "shadowSlot": zod.number().int().min(submitGameCommandResponseViewTwoShadowSlotMin).max(submitGameCommandResponseViewTwoShadowSlotMax),
+  "murderSlots": zod.number().int().min(submitGameCommandResponseViewTwoMurderSlotsMin).max(submitGameCommandResponseViewTwoMurderSlotsMax),
+  "endRule": zod.enum(['unanimous', 'majority']),
   "missionsEnabled": zod.boolean(),
   "rehearsal": zod.boolean(),
   "pot": zod.number().min(submitGameCommandResponseViewTwoPotMin),
@@ -1809,4 +1839,5 @@ export const SubmitGameCommandResponse = zod.object({
 }),zod.null()])
 })])
 })
-// End of generated schemas.
+
+

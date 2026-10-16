@@ -52,6 +52,12 @@ import { NotesScreen } from './NotesScreen';
 import { BanishmentVoteScreen } from './BanishmentVoteScreen';
 import { PrivateChoiceControls } from './PrivateChoiceControls';
 import { NightChoiceScreen } from './NightChoiceScreen';
+import { GameStepAnnouncement } from './GameStepAnnouncement';
+import {
+  privateStepKeyFor,
+  shouldPreserveShadowChoice,
+  type ShadowChoiceWindow,
+} from './private-step-key';
 import { VerdictScreen } from './VerdictScreen';
 import { ShieldCard } from './ShieldCard';
 import { PhaseProgressStatus } from './PhaseProgressStatus';
@@ -681,6 +687,7 @@ function PlayerGame() {
   const [privateCovered, setPrivateCovered] = useState(false);
   const [holdMessage, setHoldMessage] = useState('');
   const [selected, setSelected] = useState('');
+  const previousShadowChoiceWindow = useRef<ShadowChoiceWindow | null>(null);
   const [confirmChoice, setConfirmChoice] = useState(false);
   const [actionDone, setActionDone] = useState(false);
   const [commandMessage, setCommandMessage] = useState('');
@@ -800,10 +807,10 @@ function PlayerGame() {
               ]
             : [],
     full?.seats ?? [],
-    `${id}:${full?.viewerSeatId ?? ''}:${full?.phase ?? ''}:${full?.cycle ?? 0}:${full?.shadowSlot ?? 0}:${full?.shadowRound ?? 0}`,
+    `${id}:${full?.viewerSeatId ?? ''}:${full?.phase ?? ''}:${full?.cycle ?? 0}:${full?.shadowSlot ?? 0}`,
   );
   const tieCandidateNames =
-    full?.phase === 'VOTE' && full.revote
+    full?.revote && (full.phase === 'VOTE' || full.phase === 'FINAL_BANISH')
       ? full.voteCandidates.flatMap((seatId) => {
           const seat = full.seats.find((candidate) => candidate.id === seatId);
           return seat ? [seat.name] : [];
@@ -876,15 +883,23 @@ function PlayerGame() {
   }, [id, hasPlayerSeat, queryClient]);
 
   const clearPrivate = useCallback(
-    (preserveSyntheticClick = false) => {
-      if (!preserveSyntheticClick) ignoreSyntheticClick.current = false;
+    (
+      options: {
+        preservePrivateView?: boolean;
+        preserveSelection?: boolean;
+        preserveSyntheticClick?: boolean;
+      } = {},
+    ) => {
+      if (!options.preserveSyntheticClick) ignoreSyntheticClick.current = false;
       heldRef.current = false;
       holdVersion.current += 1;
       setHeld(false);
-      setPrivateView(null);
-      privateResult.current = null;
-      privateVersionRef.current = 0;
-      setSelected('');
+      if (!options.preservePrivateView) {
+        setPrivateView(null);
+        privateResult.current = null;
+        privateVersionRef.current = 0;
+      }
+      if (!options.preserveSelection) setSelected('');
       setConfirmChoice(false);
       setActionDone(false);
       setCommandMessage('');
@@ -906,7 +921,14 @@ function PlayerGame() {
       : null;
   currentShadowPrivateViewKeyRef.current = shadowPrivateViewKey;
   const privateStepKey = full
-    ? `${full.phase}:${full.cycle}:${full.phase === 'SHADOW' ? 'continuous-night' : (full.deadline ?? 'manual')}:${full.shadowSlot}:${full.shadowRound}:${notesOpen ? 'notes' : 'phase'}`
+    ? privateStepKeyFor({
+        phase: full.phase,
+        cycle: full.cycle,
+        deadline: full.deadline,
+        shadowSlot: full.shadowSlot,
+        shadowRound: full.shadowRound,
+        notesOpen,
+      })
     : 'none';
   const activeGame = Boolean(
     full && !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
@@ -936,7 +958,26 @@ function PlayerGame() {
       setShieldCountdown(3);
       return;
     }
-    clearPrivate();
+    const nextShadowChoiceWindow =
+      full?.phase === 'SHADOW'
+        ? {
+            gameId: id,
+            cycle: full.cycle,
+            slot: full.shadowSlot,
+            round: full.shadowRound,
+          }
+        : null;
+    const preserveShadowSelection = shouldPreserveShadowChoice(
+      previousShadowChoiceWindow.current,
+      nextShadowChoiceWindow,
+    );
+    clearPrivate(
+      preserveShadowSelection
+        ? { preservePrivateView: true, preserveSelection: true }
+        : undefined,
+    );
+    if (nextShadowChoiceWindow)
+      previousShadowChoiceWindow.current = nextShadowChoiceWindow;
     const keepNightShield =
       full?.phase === 'SHADOW' && shieldedShadowCycle.current === full.cycle;
     setShielded(!shieldRequired || keepNightShield);
@@ -1492,12 +1533,18 @@ function PlayerGame() {
         },
       });
       command.reset();
-      clearPrivate();
-      setActionDone(true);
-      setCommandMessage(en.game.waitingForEveryone);
-      setSelected('');
-      setConfirmChoice(false);
-      setPrivateView(null);
+      if (view.phase === 'SHADOW') {
+        setActionDone(true);
+        setCommandMessage('');
+        setConfirmChoice(false);
+      } else {
+        clearPrivate();
+        setActionDone(true);
+        setCommandMessage(en.game.waitingForEveryone);
+        setSelected('');
+        setConfirmChoice(false);
+        setPrivateView(null);
+      }
       await gameQuery.refetch();
     } catch {
       command.reset();
@@ -1544,6 +1591,15 @@ function PlayerGame() {
         setCommandMessage(en.game.moveOnFailed);
         return;
       }
+      const previousShadowWindow =
+        latestView.phase === 'SHADOW'
+          ? {
+              gameId: id,
+              cycle: latestView.cycle,
+              slot: latestView.shadowSlot,
+              round: latestView.shadowRound,
+            }
+          : null;
       await command.mutateAsync({
         id,
         data: {
@@ -1555,10 +1611,23 @@ function PlayerGame() {
       command.reset();
       setAdvanceConfirmationOpen(false);
       setActionDone(false);
-      setPrivateView(null);
-      setSelected('');
       setConfirmChoice(false);
-      await gameQuery.refetch();
+      const advancedResult = await gameQuery.refetch();
+      const advancedView = advancedResult.data?.view;
+      const preserveShadowSelection =
+        previousShadowWindow &&
+        advancedView &&
+        isFullView(advancedView) &&
+        shouldPreserveShadowChoice(previousShadowWindow, {
+          gameId: id,
+          cycle: advancedView.cycle,
+          slot: advancedView.shadowSlot,
+          round: advancedView.shadowRound,
+        });
+      if (!preserveShadowSelection) {
+        setPrivateView(null);
+        setSelected('');
+      }
     } catch {
       command.reset();
       const refreshed = await gameQuery.refetch();
@@ -1722,6 +1791,15 @@ function PlayerGame() {
             {watchingRehearsal && (
               <RehearsalWatchCommentary phase={full.phase} />
             )}
+            <GameStepAnnouncement
+              aliveCount={
+                full.seats.filter((seat) => seat.status === 'alive').length
+              }
+              endRule={full.endRule}
+              murderSlots={full.murderSlots}
+              phase={full.phase}
+              shadowRound={full.shadowRound}
+            />
             {!inPrivateMoment && (
               <VerdictScreen
                 announcement={
@@ -2006,13 +2084,15 @@ function PlayerGame() {
                         if (heldRef.current) clearPrivate();
                         else beginHold();
                       }}
-                      onPointerUp={() => clearPrivate(true)}
+                      onPointerUp={() =>
+                        clearPrivate({ preserveSyntheticClick: true })
+                      }
                       onPointerCancel={cancelPrivate}
                       onPointerLeave={cancelPrivate}
                       onKeyDown={padKeyDown}
                       onKeyUp={(event) => {
                         if (event.key === ' ' || event.key === 'Enter')
-                          clearPrivate(true);
+                          clearPrivate({ preserveSyntheticClick: true });
                       }}
                       onBlur={cancelPrivate}
                     >
@@ -2046,7 +2126,7 @@ function PlayerGame() {
                       aria-live="polite"
                       data-testid="private-choice-content"
                     >
-                      {actionDone ? (
+                      {actionDone && full.phase !== 'SHADOW' ? (
                         <p
                           role="status"
                           className="text-center text-ash"
@@ -2075,28 +2155,39 @@ function PlayerGame() {
                         isActionPhase &&
                         (full.phase !== 'SHADOW' || privateView) ? (
                         full.phase === 'SHADOW' ? (
-                          <NightChoiceScreen
-                            {...choiceControlProps}
-                            taskInstruction={privateView?.task?.instruction}
-                            slotLabel={
-                              full.shadowSlot === 1
-                                ? en.game.firstChoice
-                                : en.game.secondChoice
-                            }
-                            prompt={
-                              privateView?.role === 'traitor'
-                                ? en.game.shadowTraitorPrompt
-                                : en.game.shadowFaithfulPrompt
-                            }
-                            statusLines={shadowStatusLines}
-                          />
+                          <>
+                            <NightChoiceScreen
+                              {...choiceControlProps}
+                              taskInstruction={privateView?.task?.instruction}
+                              slotLabel={
+                                full.shadowSlot === 1
+                                  ? en.game.firstChoice
+                                  : en.game.secondChoice
+                              }
+                              prompt={
+                                privateView?.role === 'traitor'
+                                  ? en.game.shadowTraitorPrompt
+                                  : en.game.shadowFaithfulPrompt
+                              }
+                              statusLines={shadowStatusLines}
+                            />
+                            {actionDone && (
+                              <p
+                                role="status"
+                                className="mt-3 text-center text-sm text-ash"
+                                data-testid="waiting-for-everyone"
+                              >
+                                {en.game.waitingForEveryone}
+                              </p>
+                            )}
+                          </>
                         ) : (
                           <div className="enter">
                             {full.phase === 'VOTE' ||
                             full.phase === 'FINAL_BANISH' ? (
                               <BanishmentVoteScreen
                                 {...choiceControlProps}
-                                revote={full.phase === 'VOTE' && full.revote}
+                                revote={full.revote}
                                 tieCandidateNames={tieCandidateNames}
                               />
                             ) : (
@@ -2143,13 +2234,15 @@ function PlayerGame() {
                             if (heldRef.current) clearPrivate();
                             else beginHold();
                           }}
-                          onPointerUp={() => clearPrivate(true)}
+                          onPointerUp={() =>
+                            clearPrivate({ preserveSyntheticClick: true })
+                          }
                           onPointerCancel={cancelPrivate}
                           onPointerLeave={cancelPrivate}
                           onKeyDown={padKeyDown}
                           onKeyUp={(event) => {
                             if (event.key === ' ' || event.key === 'Enter')
-                              clearPrivate(true);
+                              clearPrivate({ preserveSyntheticClick: true });
                           }}
                           onBlur={cancelPrivate}
                         >
