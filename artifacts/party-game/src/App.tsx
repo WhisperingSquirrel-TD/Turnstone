@@ -693,6 +693,7 @@ function PlayerGame() {
   const privateResult = useRef<PrivateView | null>(null);
   const privateVersionRef = useRef(0);
   const notesRequestPending = useRef(false);
+  const notesRequestStartedForOpen = useRef(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const limitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -937,14 +938,14 @@ function PlayerGame() {
   ]);
 
   useEffect(() => {
-    if (
-      !notesOpen ||
-      phaseIsPrivate ||
-      privateView ||
-      notesRequestPending.current
-    )
+    if (!notesOpen || phaseIsPrivate) {
+      notesRequestStartedForOpen.current = false;
+      return;
+    }
+    if (notesRequestPending.current || notesRequestStartedForOpen.current)
       return;
 
+    notesRequestStartedForOpen.current = true;
     notesRequestPending.current = true;
     setNotesStatus('');
     void reveal
@@ -960,19 +961,16 @@ function PlayerGame() {
         setPrivateView(nextPrivateView);
         setPrivateCovered(false);
       })
-      .catch(() => setNotesStatus(en.game.privateUnavailable))
+      .catch(() => {
+        setNotesStatus(en.game.privateUnavailable);
+        setHoldMessage(en.game.privateUnavailable);
+        setPrivateCovered(true);
+      })
       .finally(() => {
         notesRequestPending.current = false;
         reveal.reset();
       });
-  }, [
-    notesOpen,
-    phaseIsPrivate,
-    privateView,
-    id,
-    reveal.mutateAsync,
-    reveal.reset,
-  ]);
+  }, [notesOpen, phaseIsPrivate, id, reveal.mutateAsync, reveal.reset]);
 
   useEffect(() => {
     const dialog = shieldDialog.current;

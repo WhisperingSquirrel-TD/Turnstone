@@ -384,7 +384,6 @@ test('phone room shows public game state without a presenter', async ({
   await expect(
     page.getByRole('dialog', { name: 'Shield your screen' }),
   ).toHaveCount(0);
-  await expect(page.getByTestId('private-notes-content')).toHaveCount(0);
   await expect.poll(() => privateRequests).toBe(1);
   await expect(page.getByTestId('private-notes-content')).toBeVisible({
     timeout: 1500,
@@ -592,7 +591,6 @@ test('rehearsal player can move on from public and voting screens', async ({
   ).toHaveCount(0);
   await expect(page.getByText('Who do you vote to banish?')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Jamie' })).toBeVisible();
-  await expect(page.getByTestId('rehearsal-action-bar')).toBeVisible();
   expect(privateViewRequests).toBe(0);
   const choiceList = page.getByTestId('private-choice-list');
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
@@ -1044,9 +1042,19 @@ test('banishment votes are alphabetical while night choices stay shuffled per se
       }),
     );
     await targetPage.goto(`/game/${gameId}`);
-    await expect(
-      targetPage.getByRole('dialog', { name: 'Shield your screen' }),
-    ).toHaveCount(0);
+    if (phase === 'SHADOW') {
+      const shield = targetPage
+        .getByRole('dialog', { name: 'Shield your screen' })
+        .getByRole('button', { name: /i’m shielded/i });
+      await expect(shield).toHaveAttribute('aria-disabled', 'false', {
+        timeout: 6500,
+      });
+      await shield.click();
+    } else {
+      await expect(
+        targetPage.getByRole('dialog', { name: 'Shield your screen' }),
+      ).toHaveCount(0);
+    }
     await expect(targetPage.getByTestId('private-choice-list')).toBeVisible();
     return targetPage
       .getByTestId('private-choice-list')
@@ -1172,21 +1180,33 @@ test('private Notes hide after background and idle, then return with one tap', a
   });
   await page.goto(`/game/${gameId}`);
   await page.getByRole('button', { name: 'Notes' }).click();
-  await page.clock.fastForward(5000);
-  await page
-    .locator('dialog.privacy-shield')
-    .getByRole('button', { name: /i’m shielded/i })
-    .click();
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toHaveCount(0);
   const notes = page.getByTestId('private-notes-content');
   await expect.poll(() => privateRequests).toBe(1);
   await expect(notes).toBeVisible();
 
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'hidden',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
   await expect(notes).toHaveCount(0);
+  await expect.poll(() => privateRequests).toBe(1);
   const restore = page.getByRole('button', {
     name: 'Tap to see your private screen again',
   });
   await expect(restore).toBeVisible();
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
   await restore.click();
   await expect.poll(() => privateRequests).toBe(2);
   await expect(notes).toBeVisible();

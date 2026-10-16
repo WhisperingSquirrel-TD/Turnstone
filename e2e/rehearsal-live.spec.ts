@@ -59,6 +59,7 @@ async function latestServerPhase(
   version: number;
   progress: { done: number; total: number };
   viewerSeatId?: string;
+  voteCandidates?: string[];
   seats: { id: string; name: string; status: string }[];
 }> {
   return page.evaluate(
@@ -77,6 +78,7 @@ async function latestServerPhase(
           version: number;
           progress: { done: number; total: number };
           viewerSeatId?: string;
+          voteCandidates?: string[];
           seats: { id: string; name: string; status: string }[];
         };
       };
@@ -86,9 +88,46 @@ async function latestServerPhase(
   );
 }
 
-async function handleShield(page: Page, gameId: string): Promise<void> {
+async function latestSynchronizedServerPhase(
+  page: Page,
+  gameId: string,
+): Promise<Awaited<ReturnType<typeof latestServerPhase>>> {
+  const game = page.getByTestId('player-game');
+  const deadline = Date.now() + 5_000;
+  let latest = await latestServerPhase(page, gameId);
+  while (Date.now() < deadline) {
+    const clientVersion = Number(await game.getAttribute('data-version'));
+    if (clientVersion === latest.version) return latest;
+    await page.waitForTimeout(100);
+    latest = await latestServerPhase(page, gameId);
+  }
+  throw new Error('The game view did not resync before the choice screen.');
+}
+
+type ShadowPrivateContext = {
+  teamNames: string[];
+  options: { id: string; name: string }[];
+};
+
+async function handleShield(
+  page: Page,
+  gameId: string,
+): Promise<ShadowPrivateContext | null> {
   const shield = page.getByRole('dialog', { name: 'Shield your screen' });
-  if (!(await shield.isVisible().catch(() => false))) return;
+  if (!(await shield.isVisible().catch(() => false))) return null;
+  const phase = await currentPhase(page);
+  const privateViewPromise =
+    phase === 'SHADOW'
+      ? page
+          .waitForResponse(
+            (response) =>
+              response.request().method() === 'POST' &&
+              new URL(response.url()).pathname ===
+                `/api/games/${gameId}/private-view`,
+            { timeout: 5_000 },
+          )
+          .catch(() => null)
+      : null;
   await expect(shield.getByTestId('brand-footer-overlay')).toBeVisible();
   await expect(page.getByTestId('rehearsal-action-bar')).toHaveCount(0);
   const button = shield.getByRole('button', { name: 'I’m shielded' });
@@ -114,6 +153,31 @@ async function handleShield(page: Page, gameId: string): Promise<void> {
       `Private acknowledgement did not close the shield (HTTP ${response?.status() ?? 'none'}, server ${latest.phase} v${latest.version}, progress ${latest.progress.done}/${latest.progress.total}).`,
     );
   }
+  if (!privateViewPromise) return null;
+  const privateResponse = await privateViewPromise;
+  if (!privateResponse?.ok()) {
+    throw new Error('The private night view did not load after shielding.');
+  }
+  const payload = (await privateResponse.json()) as {
+    view?: {
+      viewerSeatId?: string;
+      private?: {
+        team?: { name: string; role: string }[];
+        options?: { id: string; name: string }[];
+      };
+    };
+  };
+  const viewerSeatId = payload.view?.viewerSeatId;
+  const privateView = payload.view?.private;
+  if (!viewerSeatId || !privateView) {
+    throw new Error('The private night view omitted the seat choice context.');
+  }
+  return {
+    teamNames: (privateView.team ?? [])
+      .filter((member) => member.role === 'traitor')
+      .map((member) => member.name),
+    options: privateView.options ?? [],
+  };
 }
 
 async function ownSeatStatus(
@@ -162,15 +226,19 @@ async function revealDealRole(page: Page): Promise<'Traitor' | 'Faithful'> {
   return role;
 }
 
-async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
-  await handleShield(page, gameId);
+async function submitPrivateChoice(
+  page: Page,
+  gameId: string,
+  shadowContext: ShadowPrivateContext | null,
+): Promise<void> {
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   const choiceList = page.getByTestId('private-choice-list');
   await expect(choiceList).toBeVisible({ timeout: 5_000 });
   const phaseBeforeChoice = await currentPhase(page);
   const choices = choiceList.getByRole('button');
+  let selectedName: string | undefined;
   if (['VOTE', 'FINAL_BANISH', 'SHADOW'].includes(phaseBeforeChoice)) {
-    const roster = await latestServerPhase(page, gameId);
+    const roster = await latestSynchronizedServerPhase(page, gameId);
     expect(roster.phase).toBe(phaseBeforeChoice);
     expect(roster.viewerSeatId).toBeTruthy();
     const eligibleNames = roster.seats
@@ -178,11 +246,34 @@ async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
         (seat) => seat.status === 'alive' && seat.id !== roster.viewerSeatId,
       )
       .map((seat) => seat.name);
-    const displayedNames = await choices.allTextContents();
+    if (phaseBeforeChoice === 'SHADOW' && !shadowContext) {
+      throw new Error('The shield step did not provide private night context.');
+    }
+    const shadowOptions =
+      phaseBeforeChoice === 'SHADOW' ? shadowContext?.options : undefined;
+    const displayedNames = (await choices.allTextContents()).map((name) =>
+      name.trim(),
+    );
+    const displayedNameSet = new Set(displayedNames);
     expect(displayedNames.length).toBeGreaterThan(0);
-    expect(new Set(displayedNames).size).toBe(displayedNames.length);
+    expect(displayedNameSet.size).toBe(displayedNames.length);
+    const voteCandidates = new Set(roster.voteCandidates ?? []);
+    const expectedNames = shadowOptions
+      ? shadowOptions.map((option) => option.name)
+      : roster.seats
+          .filter(
+            (seat) =>
+              seat.status === 'alive' &&
+              seat.id !== roster.viewerSeatId &&
+              (voteCandidates.size === 0 || voteCandidates.has(seat.id)),
+          )
+          .map((seat) => seat.name);
+    expect(
+      displayedNameSet,
+      `${phaseBeforeChoice} v${roster.version} candidates=${roster.voteCandidates?.length ?? 0}`,
+    ).toEqual(new Set(expectedNames));
     for (const name of displayedNames) {
-      expect(eligibleNames).toContain(name.trim());
+      expect(eligibleNames).toContain(name);
     }
     for (const seat of roster.seats.filter(
       (seat) => seat.id === roster.viewerSeatId || seat.status !== 'alive',
@@ -191,7 +282,33 @@ async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
         choiceList.getByRole('button', { name: seat.name, exact: true }),
       ).toHaveCount(0);
     }
+    selectedName = displayedNames[0];
+    if (phaseBeforeChoice === 'SHADOW') {
+      if (!shadowContext) {
+        throw new Error(
+          'The shield step did not provide private night context.',
+        );
+      }
+      const viewerName = roster.seats.find(
+        (seat) => seat.id === roster.viewerSeatId,
+      )?.name;
+      const fellowTraitors = new Set(
+        shadowContext.teamNames.filter((name) => name !== viewerName),
+      );
+      for (const teammate of fellowTraitors) {
+        expect(displayedNameSet.has(teammate)).toBe(true);
+      }
+      selectedName = displayedNames.find((name) => !fellowTraitors.has(name));
+      if (!selectedName) {
+        throw new Error('The private night list has no eligible target.');
+      }
+    }
   }
+  if (!selectedName) throw new Error('The choice list is empty.');
+  const selectedChoice = choiceList.getByRole('button', {
+    name: selectedName,
+    exact: true,
+  });
   const commandStatuses: number[] = [];
   const recordCommandStatus = (response: {
     url(): string;
@@ -208,9 +325,9 @@ async function submitPrivateChoice(page: Page, gameId: string): Promise<void> {
   page.on('response', recordCommandStatus);
 
   try {
-    await choices
-      .first()
-      .evaluate((choice: HTMLButtonElement) => choice.click());
+    await selectedChoice.evaluate((choice: HTMLButtonElement) =>
+      choice.click(),
+    );
     await page
       .getByRole('button', { name: 'Review this choice' })
       .evaluate((button: HTMLButtonElement) => button.click());
@@ -579,17 +696,19 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         if (shadowCycleBefore === 1)
           seenFirstNightShadowSlots.add(shadowSlotBefore);
       }
+      let shadowContext: ShadowPrivateContext | null = null;
       if (phase === 'DEAL') {
         await handleShield(page, activeGameId);
         playerRole = await revealDealRole(page);
       } else if (['SHADOW', 'FINAL_VOTE'].includes(phase)) {
         if (seatStatus === 'alive') {
-          if (phase === 'SHADOW') await handleShield(page, activeGameId);
+          if (phase === 'SHADOW')
+            shadowContext = await handleShield(page, activeGameId);
           if (phase === 'SHADOW')
             await expect(page.getByTestId('shadow-slot-label')).toHaveText(
               shadowSlotBefore === 1 ? 'First choice' : 'Second choice',
             );
-          await submitPrivateChoice(page, activeGameId);
+          await submitPrivateChoice(page, activeGameId, shadowContext);
         } else {
           await expect(
             page.getByRole('dialog', { name: 'Shield your screen' }),
@@ -598,7 +717,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         }
       } else if (['VOTE', 'FINAL_BANISH'].includes(phase)) {
         if (seatStatus === 'alive') {
-          await submitPrivateChoice(page, activeGameId);
+          await submitPrivateChoice(page, activeGameId, null);
         } else {
           await expect(
             page.getByRole('dialog', { name: 'Shield your screen' }),
