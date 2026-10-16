@@ -557,7 +557,41 @@ export function runCompleteGame(
     );
   if (JSON.stringify(replay(game.events)) !== JSON.stringify(finalState))
     throw new Error('Full event replay differs from the final state');
-  const reference = referenceReplay(game.events);
+  let reference: ReturnType<typeof referenceReplay>;
+  try {
+    reference = referenceReplay(game.events);
+  } catch (error) {
+    const decisionTrace: Record<string, unknown>[] = [];
+    for (const event of game.events) {
+      if (event.type === 'RandomChoiceRecorded')
+        decisionTrace.push({
+          seq: event.seq,
+          type: event.type,
+          purpose: event.purpose,
+          slot: event.slot ?? null,
+          candidateCount: event.candidates.length,
+          chosen: event.chosen,
+        });
+      if (event.type === 'MurderSlotResolved')
+        decisionTrace.push({
+          seq: event.seq,
+          type: event.type,
+          cycle: event.cycle,
+          slot: event.slot,
+          picks: event.picks.map(
+            ({ seatId, choice, round }) => `${seatId}->${choice}/r${round}`,
+          ),
+          chosen: event.chosen,
+          outcome: event.outcome,
+        });
+    }
+    const reason =
+      error instanceof Error ? error.message : 'Unknown reference failure';
+    throw new Error(
+      `${reason}\nScenario random/murder trace: ${JSON.stringify(decisionTrace)}`,
+      { cause: error },
+    );
+  }
   const referenceSeats = reference.seats.map(({ id, role, status }) => ({
     id,
     role,

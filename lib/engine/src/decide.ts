@@ -778,7 +778,9 @@ export function decide(
           else if (!available.length) outcome = 'no-target';
           else if (state.config.traitors.victimDecision === 'unanimous') {
             const unanimousChoice =
-              submittedByEveryTraitor && new Set(currentPicks).size === 1
+              submittedByEveryTraitor &&
+              currentPicks.length === livingTraitors.length &&
+              new Set(currentPicks).size === 1
                 ? currentPicks[0]
                 : undefined;
             if (unanimousChoice && available.includes(unanimousChoice))
@@ -857,20 +859,39 @@ export function decide(
           });
 
           if (slot < slotCount) {
-            const shadowDuration = state.config.rehearsal.enabled
-              ? null
-              : duration('SHADOW');
-            emit('ShadowSlotAdvanced', {
-              cycle: state.cycle,
-              slot: 2,
-              deadline:
-                shadowDuration === null
-                  ? null
-                  : ctx.now + Math.ceil(shadowDuration / 2),
-              shadowEndAt:
-                shadowDuration === null ? null : ctx.now + shadowDuration,
-            });
-            break;
+            const seatsAfterSlot =
+              remainingSeats - (outcome === 'murdered' ? 1 : 0);
+            const faithfulAfterSlot = seatsAfterSlot - livingTraitors.length;
+            const gameEndsAfterSlot =
+              outcome === 'game-ended' ||
+              (outcome === 'murdered' &&
+                (seatsAfterSlot <= 2 ||
+                  (state.config.endgame.parity &&
+                    livingTraitors.length >= faithfulAfterSlot)));
+            if (gameEndsAfterSlot) {
+              emit('MurderSlotResolved', {
+                cycle: state.cycle,
+                slot: 2,
+                picks: [],
+                chosen: null,
+                outcome: 'game-ended',
+              });
+            } else {
+              const shadowDuration = state.config.rehearsal.enabled
+                ? null
+                : duration('SHADOW');
+              emit('ShadowSlotAdvanced', {
+                cycle: state.cycle,
+                slot: 2,
+                deadline:
+                  shadowDuration === null
+                    ? null
+                    : ctx.now + Math.ceil(shadowDuration / 2),
+                shadowEndAt:
+                  shadowDuration === null ? null : ctx.now + shadowDuration,
+              });
+              break;
+            }
           }
         }
         if (state.config.tasks.enabled)

@@ -639,7 +639,6 @@ describe('Milestone 1 deterministic engine', () => {
     command(game, { type: 'AdvancePhase' });
     game.context.now = game.state.deadline! + 1;
     command(game, { type: 'AdvancePhase' });
-
     expect(
       game.events.find((event) => event.type === 'DawnResolved'),
     ).toMatchObject({ victims: [target.id] });
@@ -650,6 +649,66 @@ describe('Milestone 1 deterministic engine', () => {
           event.purpose === 'murder-target',
       ),
     ).toHaveLength(1);
+  });
+  it('skips the second murder slot when the first murder ends the game', () => {
+    const game = fixture(5, {
+      missions: { enabled: false, shields: 'off' },
+      traitors: {
+        number: 2,
+        sleeper: false,
+        recruitment: 'off',
+        murders: 2,
+        victimDecision: 'first',
+        timeoutChoice: 'none',
+      },
+      endgame: { size: 3, parity: true },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'SHADOW');
+
+    const traitors = game.state.seats.filter(
+      (seat) => seat.status === 'alive' && seat.role === 'traitor',
+    );
+    const target = game.state.seats.find(
+      (seat) => seat.status === 'alive' && seat.role === 'faithful',
+    )!;
+    const submitFirstSlot = () => {
+      for (const traitor of traitors)
+        command(
+          game,
+          {
+            type: 'SubmitShadowChoice',
+            slot: 1,
+            choice: target.id,
+          },
+          true,
+          { kind: 'player', seatId: traitor.id },
+        );
+    };
+    const finishPrivateWindow = () => {
+      game.context.now = game.state.deadline! + 1;
+      command(game, { type: 'AdvancePhase' });
+    };
+
+    submitFirstSlot();
+    finishPrivateWindow();
+    submitFirstSlot();
+    finishPrivateWindow();
+
+    const resolutions = game.events.filter(
+      (event) => event.type === 'MurderSlotResolved',
+    );
+    expect(resolutions).toMatchObject([
+      { slot: 1, chosen: target.id, outcome: 'murdered' },
+      { slot: 2, picks: [], chosen: null, outcome: 'game-ended' },
+    ]);
+    expect(
+      game.events.filter((event) => event.type === 'ShadowSlotAdvanced'),
+    ).toHaveLength(0);
+    expect(
+      game.events.find((event) => event.type === 'DawnResolved'),
+    ).toMatchObject({ victims: [target.id] });
+    expect(game.state.phase).toBe('FINISHED');
   });
   it('resolves a double-murder night from separate first- and second-slot picks', () => {
     const game = fixture(8, {
@@ -797,6 +856,79 @@ describe('Milestone 1 deterministic engine', () => {
       candidates: [faithful[1]!.id, faithful[2]!.id],
     });
   });
+  it('does not treat one still-eligible second-slot pick as unanimous after a protected first target', () => {
+    const game = fixture(8, {
+      missions: {
+        enabled: true,
+        shields: 'public',
+        allocation: 'coordinator',
+      },
+      traitors: {
+        number: 2,
+        sleeper: false,
+        recruitment: 'off',
+        murders: 2,
+        victimDecision: 'unanimous',
+        timeoutChoice: 'random',
+      },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'SHADOW');
+
+    const traitors = game.state.seats.filter(
+      (seat) => seat.status === 'alive' && seat.role === 'traitor',
+    );
+    const faithful = game.state.seats.filter(
+      (seat) => seat.status === 'alive' && seat.role === 'faithful',
+    );
+    const submit = (
+      traitor: (typeof traitors)[number],
+      slot: 1 | 2,
+      choice: string,
+    ) =>
+      command(game, { type: 'SubmitShadowChoice', slot, choice }, true, {
+        kind: 'player',
+        seatId: traitor.id,
+      });
+    const advanceShadowWindow = () => {
+      game.context.now = game.state.deadline! + 1;
+      command(game, { type: 'AdvancePhase' });
+    };
+
+    submit(traitors[0]!, 1, faithful[0]!.id);
+    submit(traitors[1]!, 1, faithful[1]!.id);
+    advanceShadowWindow();
+
+    submit(traitors[0]!, 1, faithful[0]!.id);
+    command(game, { type: 'AllocatePower', holders: [faithful[0]!.id] });
+    advanceShadowWindow();
+
+    expect(game.events).toContainEqual(
+      expect.objectContaining({
+        type: 'MurderSlotResolved',
+        slot: 1,
+        chosen: faithful[0]!.id,
+        outcome: 'protected',
+      }),
+    );
+
+    submit(traitors[0]!, 2, faithful[2]!.id);
+    submit(traitors[1]!, 2, faithful[0]!.id);
+    advanceShadowWindow();
+    submit(traitors[0]!, 2, faithful[2]!.id);
+    submit(traitors[1]!, 2, faithful[0]!.id);
+    advanceShadowWindow();
+
+    expect(game.events).toContainEqual(
+      expect.objectContaining({
+        type: 'RandomChoiceRecorded',
+        purpose: 'murder-target',
+        slot: 2,
+        candidates: [faithful[2]!.id],
+        chosen: faithful[2]!.id,
+      }),
+    );
+  });
   it('reports only murders completed before a win condition ends the dawn', () => {
     const game = fixture(6, {
       missions: { enabled: false, shields: 'off' },
@@ -845,11 +977,16 @@ describe('Milestone 1 deterministic engine', () => {
       });
     game.context.now = game.state.deadline! + 1;
     command(game, { type: 'AdvancePhase' });
-    expect(game.state).toHaveProperty('shadowSlot', 2);
-    game.context.now = game.state.deadline! + 1;
-    command(game, { type: 'AdvancePhase' });
-    game.context.now = game.state.deadline! + 1;
-    command(game, { type: 'AdvancePhase' });
+    expect(game.state.phase).toBe('FINISHED');
+    expect(
+      game.events.filter((event) => event.type === 'ShadowSlotAdvanced'),
+    ).toHaveLength(0);
+    expect(
+      game.events.filter((event) => event.type === 'MurderSlotResolved'),
+    ).toMatchObject([
+      { slot: 1, outcome: 'murdered' },
+      { slot: 2, picks: [], chosen: null, outcome: 'game-ended' },
+    ]);
 
     const dawn = game.events.find((event) => event.type === 'DawnResolved');
     const murdered = game.events.flatMap((event) =>

@@ -224,9 +224,7 @@ export const privateViewSchema = z
         .object({
           slot: z.union([z.literal(1), z.literal(2)]),
           round: z.union([z.literal(1), z.literal(2)]),
-          picks: z.array(
-            z.object({ seatId: id, choice: id }).strict(),
-          ),
+          picks: z.array(z.object({ seatId: id, choice: id }).strict()),
         })
         .strict(),
     ),
@@ -432,10 +430,7 @@ export const fullViewSchema = z
                   })
                   .strict(),
               ),
-              chosen: z
-                .object({ id, name: z.string() })
-                .strict()
-                .nullable(),
+              chosen: z.object({ id, name: z.string() }).strict().nullable(),
               outcome: z.enum([
                 'murdered',
                 'protected',

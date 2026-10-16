@@ -204,12 +204,15 @@ async function revealNotes(
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: 12, view: publicView },
+    }),
   );
   await page.route(`**/api/games/${gameId}/commands`, (route) =>
     route.fulfill({
       status: 200,
-      json: { version: 13, view: publicView },
+      json: { serverNow: Date.now(), version: 13, view: publicView },
     }),
   );
   await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
@@ -218,6 +221,7 @@ async function revealNotes(
     await route.fulfill({
       status: 200,
       json: {
+        serverNow: Date.now(),
         version: 12,
         view: {
           ...publicView,
@@ -226,6 +230,7 @@ async function revealNotes(
             team: [],
             options: [],
             choices: {},
+            choiceSlots: [],
             chat:
               role === 'traitor'
                 ? [{ seatId: 'seat-morgan', text: 'Stay together', seq: 1 }]
@@ -312,12 +317,15 @@ test('phone room shows public game state without a presenter', async ({
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: 12, view: publicView },
+    }),
   );
   await page.route(`**/api/games/${gameId}/commands`, (route) =>
     route.fulfill({
       status: 200,
-      json: { version: 13, view: publicView },
+      json: { serverNow: Date.now(), version: 13, view: publicView },
     }),
   );
   await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
@@ -326,6 +334,7 @@ test('phone room shows public game state without a presenter', async ({
     await route.fulfill({
       status: 200,
       json: {
+        serverNow: Date.now(),
         version: 12,
         view: {
           ...publicView,
@@ -334,6 +343,7 @@ test('phone room shows public game state without a presenter', async ({
             team: [],
             options: [],
             choices: {},
+            choiceSlots: [],
             chat: [],
             task: null,
             minimumDurationMs: 0,
@@ -512,7 +522,11 @@ test('rehearsal player can move on from public and voting screens', async ({
   await page.route(`**/api/games/${gameId}/view`, (route) =>
     route.fulfill({
       status: 200,
-      json: { version: publicView.version, view: publicView },
+      json: {
+        serverNow: Date.now(),
+        version: publicView.version,
+        view: publicView,
+      },
     }),
   );
   await page.route(`**/api/games/${gameId}/commands`, async (route) => {
@@ -529,13 +543,18 @@ test('rehearsal player can move on from public and voting screens', async ({
     };
     await route.fulfill({
       status: 200,
-      json: { version: publicView.version, view: publicView },
+      json: {
+        serverNow: Date.now(),
+        version: publicView.version,
+        view: publicView,
+      },
     });
   });
   await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
     await route.fulfill({
       status: 200,
       json: {
+        serverNow: Date.now(),
         version: publicView.version,
         view: {
           ...publicView,
@@ -544,6 +563,7 @@ test('rehearsal player can move on from public and voting screens', async ({
             team: [],
             options: [],
             choices: {},
+            choiceSlots: [],
             chat: [],
             task: null,
             minimumDurationMs: 0,
@@ -657,7 +677,10 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: 12, view: publicView },
+    }),
   );
   await page.route(`**/api/games/${gameId}/commands`, async (route) => {
     const submitted = route.request().postDataJSON() as { type?: string };
@@ -672,7 +695,7 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
     }
     await route.fulfill({
       status: 200,
-      json: { version: 13, view: publicView },
+      json: { serverNow: Date.now(), version: 13, view: publicView },
     });
   });
   await page.route(`**/api/games/${gameId}/private-view`, (route) =>
@@ -766,6 +789,8 @@ for (const role of ['faithful', 'traitor'] as const) {
       const publicView = {
         ...createPublicView(gameId),
         phase: 'SHADOW',
+        shadowRound: 1,
+        shadowSlot: 1,
         progress: { done: 0, total: 3 },
       } as FullView;
       publicView.seats.push({ id: 'seat-sam', name: 'Sam', status: 'alive' });
@@ -782,7 +807,10 @@ for (const role of ['faithful', 'traitor'] as const) {
         }),
       );
       await page.route(`**/api/games/${gameId}/view`, (route) =>
-        route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
+        route.fulfill({
+          status: 200,
+          json: { serverNow: Date.now(), version: 12, view: publicView },
+        }),
       );
       await page.route(`**/api/games/${gameId}/commands`, async (route) => {
         const command = route.request().postDataJSON();
@@ -801,7 +829,7 @@ for (const role of ['faithful', 'traitor'] as const) {
         }
         await route.fulfill({
           status: 200,
-          json: { version: 13, view: publicView },
+          json: { serverNow: Date.now(), version: 13, view: publicView },
         });
       });
       await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
@@ -810,6 +838,7 @@ for (const role of ['faithful', 'traitor'] as const) {
         await route.fulfill({
           status: 200,
           json: {
+            serverNow: Date.now(),
             version: 12,
             view: {
               ...publicView,
@@ -827,6 +856,21 @@ for (const role of ['faithful', 'traitor'] as const) {
                   { id: 'seat-sam', name: 'Sam' },
                 ],
                 choices: {},
+                choiceSlots:
+                  role === 'traitor'
+                    ? [
+                        {
+                          slot: 1,
+                          round: 1,
+                          picks: [{ seatId: 'seat-jamie', choice: 'seat-sam' }],
+                        },
+                        {
+                          slot: 2,
+                          round: 1,
+                          picks: [{ seatId: 'seat-jamie', choice: 'seat-sam' }],
+                        },
+                      ]
+                    : [],
                 chat: [],
                 task: null,
                 minimumDurationMs: 5000,
@@ -965,18 +1009,22 @@ test('banishment votes are alphabetical while night choices stay shuffled per se
       }),
     );
     await targetPage.route(`**/api/games/${gameId}/view`, (route) =>
-      route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
+      route.fulfill({
+        status: 200,
+        json: { serverNow: Date.now(), version: 12, view: publicView },
+      }),
     );
     await targetPage.route(`**/api/games/${gameId}/commands`, (route) =>
       route.fulfill({
         status: 200,
-        json: { version: 13, view: publicView },
+        json: { serverNow: Date.now(), version: 13, view: publicView },
       }),
     );
     await targetPage.route(`**/api/games/${gameId}/private-view`, (route) =>
       route.fulfill({
         status: 200,
         json: {
+          serverNow: Date.now(),
           version: 12,
           view: {
             ...publicView,
@@ -988,6 +1036,7 @@ test('banishment votes are alphabetical while night choices stay shuffled per se
                 name,
               })),
               choices: {},
+              choiceSlots: [],
               chat: [],
               task: null,
               minimumDurationMs: 0,
@@ -1098,7 +1147,10 @@ test('private Notes hide after background and idle, then return with one tap', a
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 12, view: publicView } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: 12, view: publicView },
+    }),
   );
   await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
     privateRequests += 1;
@@ -1106,6 +1158,7 @@ test('private Notes hide after background and idle, then return with one tap', a
     await route.fulfill({
       status: 200,
       json: {
+        serverNow: Date.now(),
         version: 12,
         view: {
           ...publicView,
@@ -1114,6 +1167,7 @@ test('private Notes hide after background and idle, then return with one tap', a
             team: [],
             options: [],
             choices: {},
+            choiceSlots: [],
             chat: [],
             task: null,
             minimumDurationMs: 0,
@@ -1176,19 +1230,28 @@ test('held role text stays above the seal in compact phone viewports', async ({
   await page.route(`**/api/games/${gameId}/view`, (route) =>
     route.fulfill({
       status: 200,
-      json: { version: roleView.version, view: roleView },
+      json: {
+        serverNow: Date.now(),
+        version: roleView.version,
+        view: roleView,
+      },
     }),
   );
   await page.route(`**/api/games/${gameId}/commands`, (route) =>
     route.fulfill({
       status: 200,
-      json: { version: roleView.version + 1, view: roleView },
+      json: {
+        serverNow: Date.now(),
+        version: roleView.version + 1,
+        view: roleView,
+      },
     }),
   );
   await page.route(`**/api/games/${gameId}/private-view`, (route) =>
     route.fulfill({
       status: 200,
       json: {
+        serverNow: Date.now(),
         version: roleView.version,
         view: {
           ...roleView,
@@ -1197,6 +1260,7 @@ test('held role text stays above the seal in compact phone viewports', async ({
             team: [],
             options: [],
             choices: {},
+            choiceSlots: [],
             chat: [],
             task: null,
             minimumDurationMs: 0,
@@ -1286,7 +1350,10 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 12, view: currentView } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: 12, view: currentView },
+    }),
   );
   await page.goto(`/game/${gameId}`);
 
@@ -1376,7 +1443,10 @@ test('the lobby code and join QR are shared on each seated player phone', async 
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 12, view: lobbyView } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: 12, view: lobbyView },
+    }),
   );
   await page.goto(`/game/${gameId}`);
 
@@ -1414,6 +1484,7 @@ test('organiser confirms before moving on when players are unfinished', async ({
     route.fulfill({
       status: 200,
       json: {
+        serverNow: Date.now(),
         version: serverVersion,
         view: { ...publicView, version: serverVersion },
       },
@@ -1424,7 +1495,7 @@ test('organiser confirms before moving on when players are unfinished', async ({
     commandExpectedVersion = route.request().postDataJSON().expectedVersion;
     await route.fulfill({
       status: 200,
-      json: { version: 14, view: publicView },
+      json: { serverNow: Date.now(), version: 14, view: publicView },
     });
   });
 

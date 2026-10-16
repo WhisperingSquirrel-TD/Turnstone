@@ -3,6 +3,7 @@ import type { Event } from '../lib/engine/src/index';
 import { injectScenarioEngineFault } from '../scripts/src/scenarios/fault-injection';
 import { gameConfigSchema } from '../lib/shared/src/config';
 import { referenceReplay } from '../scripts/src/scenarios/reference-model';
+import { runCompleteGame } from '../scripts/src/scenarios/simulate';
 
 const baseConfig = {
   players: { count: 5 },
@@ -51,6 +52,30 @@ function startingEvents(
     }),
   ];
 }
+
+it('does not consume the second-slot random draw while checking the slot transition', () => {
+  const gameConfig = config({
+    players: { count: 8 },
+    traitors: {
+      number: 2,
+      sleeper: false,
+      recruitment: 'off',
+      murders: 2,
+      victimDecision: 'unanimous',
+      timeoutChoice: 'random',
+    },
+    endgame: { size: 3, parity: false },
+    schedule: { format: 'quick', plannedCycles: 1 },
+  });
+
+  expect(
+    runCompleteGame({
+      seed: 24328784,
+      strategy: 'tie-then-abstain',
+      config: gameConfig,
+    }).checks.referenceMatches,
+  ).toBe(true);
+});
 
 function majorityVoteTranscript(): Event[] {
   return [
@@ -177,7 +202,7 @@ it('validates the exact candidate set and chosen seat for a random tie-break', (
       injectScenarioEngineFault(events, 'wrong-random-candidate-set'),
     ),
   ).toThrow(
-    'Reference: random cycle-vote-tie-break candidate set or selected seat is invalid',
+    'Reference: random cycle-vote-tie-break choice is invalid',
   );
 });
 
@@ -263,9 +288,7 @@ it('applies the configured timeout rule after a split unanimous shadow re-vote',
     referenceReplay(
       events.filter((item) => item.type !== 'ShadowRoundAdvanced'),
     ),
-  ).toThrow(
-    'Reference: shadow step did not use its fixed second choice window',
-  );
+  ).toThrow('Reference: invalid shadow choice input');
 });
 
 it('rejects a DawnResolved event that murders a shielded target', () => {

@@ -1,9 +1,10 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 07:53 UTC.
-- Current milestone/step: SPEC §30 / D80 double-murder work is blocked on Verify #81. Public annotations identify missing `shadowSlot` in guide-step test fixtures and four reference-oracle failures at the dawn slot-count assertion; scenario shards, browser profiles and dependent checks also failed. Fix and re-run before any queued work.
-- Last pushed code commit/CI: `a406d0a`; Verify #81 (`38869224162`) — Failure. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38869224162.
-- Local verification for this step: engine/golden targeted tests, typechecks, lint, formatting and Pixel real-server rehearsal passed before push. Reproduced the four `scenario-reference.test.ts` failures locally; these are being fixed.
+- Updated: 16 October 2026, 10:01 UTC.
+- Current milestone/step: Repair Verify #81 before continuing SPEC §30. Local fixes address the missing `shadowSlot` fixture (in unpushed `f67b29c`), malformed synthetic event fixtures, speculative random-draw consumption in oracle transition validation, and stale browser mocks missing `choiceSlots`/`serverNow`. Fix batch is ready to push.
+- Last pushed code commit/CI: `a406d0a`; Verify #81 (`38869224162`) — Failure. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38869224162. `f67b29c` and the current fix batch are not pushed yet.
+- Local verification for this step: 309/309 unit tests, typecheck, test typecheck, lint, format, production build, scenario-worker smoke and scenario coverage-sharding test passed.
+- Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
 - Open questions: none. Provisional decisions: none. Other queued follow-ups: PIN pepper and join-storm hashing capacity; remain queued until this rule-change brief is green.
 - Risk: local WebKit still closes during page creation in Replit Nix. Verify #80 confirmed iPhone and iPad WebKit passed on GitHub.
 

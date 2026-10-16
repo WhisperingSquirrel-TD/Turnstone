@@ -1278,3 +1278,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Apply the rules in SPEC §30. Resolve double-murder slots independently with existing decision and fallback rules; preserve the task-miss cancellation for the whole night and stop later slots after an earlier terminal result. For regular votes, zero ballots in either the initial round or tie re-vote means no banishment and no further re-vote; one or more ballots keep the existing tie behavior. Keep the existing endgame random rule. Do not plan more than one banishment per cycle until the engine supports it. Represent an empty regular ballot as a distinct `VoteSkipped` event rather than changing the persisted `VoteClosed` shape, so older event streams remain readable and the oracle can identify the outcome explicitly.
 
 **Consequence:** Implement each rule under TDD, extending the independent reference oracle and golden coverage with each engine change. Double-murder UI keeps first/second prompt wording separate from resolution logic; Traitors see live picks in both slots, bots submit both, and fairness/reveal records include both outcomes. Guided rehearsal games use two murder slots to exercise the complete path. The public verdict and log disclose the no-vote outcome without changing the visitor allow-list. A real-server rehearsal must complete a double-murder night. Push only green increments and stop when this brief is green.
+
+## D81 — Local verification after engine and contract changes (owner, 16 October 2026)
+
+**Context:** The owner refined the efficiency rule for changes to the engine, shared contracts or schemas, the API spec, and generated clients.
+
+**Choice:** Before pushing such changes, run the full unit suite, typecheck, lint, format check, and scenario-report/coverage step locally. Leave browser profiles, Lighthouse, and the scenario shards to GitHub Actions.
+
+**Consequence:** Use targeted local checks for unrelated changes; do not run the full `verify` pipeline locally before every push.

@@ -90,11 +90,7 @@ export type State = {
     picks: { seatId: string; choice: string; round: 1 | 2 }[];
     chosen: string | null;
     outcome:
-      | 'murdered'
-      | 'protected'
-      | 'no-target'
-      | 'cancelled'
-      | 'game-ended';
+      'murdered' | 'protected' | 'no-target' | 'cancelled' | 'game-ended';
   }[];
   shields: string[];
   protected: string[];

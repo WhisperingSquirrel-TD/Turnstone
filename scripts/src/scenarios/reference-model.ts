@@ -147,6 +147,18 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
       !endgameDue(at),
     );
   };
+  const gameEndedBeforeMurderSlot = (cycleNumber: number) => {
+    const traitors = currentTraitors();
+    const previousMurders = murderSlots.filter(
+      (entry) => entry.cycle === cycleNumber && entry.outcome === 'murdered',
+    ).length;
+    const remainingSeats = living().length - previousMurders;
+    const remainingFaithful = remainingSeats - traitors.length;
+    return (
+      remainingSeats <= 2 ||
+      (config!.endgame.parity && traitors.length >= remainingFaithful)
+    );
+  };
   const expectedFinish = (at: number): Finish | 'sleeper-waiting' | null => {
     const aliveSeats = living();
     const traitors = aliveSeats.filter((seat) => seat.role === 'traitor');
@@ -178,7 +190,7 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
       (slot !== undefined && (recorded.slot ?? 1) !== slot)
     )
       throw new Error(
-        `Reference: random ${purpose} candidate set or selected seat is invalid`,
+        `Reference: random ${purpose} choice is invalid (expected candidates ${JSON.stringify(expectedCandidates)}${slot === undefined ? '' : ` for slot ${slot}`}; recorded ${JSON.stringify(recorded ?? null)})`,
       );
     return recorded.chosen;
   };
@@ -229,14 +241,7 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
     const alreadySelected = priorSlots.flatMap((entry) =>
       entry.chosen ? [entry.chosen] : [],
     );
-    const priorMurderCount = priorSlots.filter(
-      (entry) => entry.outcome === 'murdered',
-    ).length;
-    const remainingSeats = living().length - priorMurderCount;
-    const remainingFaithful = remainingSeats - traitors.length;
-    const gameEnded =
-      remainingSeats <= 2 ||
-      (config!.endgame.parity && traitors.length >= remainingFaithful);
+    const gameEnded = gameEndedBeforeMurderSlot(cycleNumber);
     const faithful = living()
       .filter((seat) => seat.role === 'faithful')
       .map((seat) => seat.id);
@@ -677,7 +682,8 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
           event.slot !== 2 ||
           !murderSlots.some(
             (entry) => entry.cycle === cycle && entry.slot === 1,
-          )
+          ) ||
+          gameEndedBeforeMurderSlot(cycle)
         )
           throw new Error('Reference: invalid second murder-slot transition');
         shadowSlot = 2;
@@ -752,16 +758,22 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
         break;
       }
       case 'MurderSlotResolved': {
+        const terminalSkippedSecondSlot =
+          event.slot === 2 && shadowSlot === 1 && shadowRound === 2;
         if (
           phase !== 'SHADOW' ||
           event.cycle !== cycle ||
-          event.slot !== shadowSlot ||
+          (event.slot !== shadowSlot && !terminalSkippedSecondSlot) ||
           shadowRound !== 2
         )
           throw new Error(
             'Reference: murder slot resolved outside its private window',
           );
         const expected = chooseMurderSlot(cycle, event.slot);
+        if (terminalSkippedSecondSlot && expected.outcome !== 'game-ended')
+          throw new Error(
+            'Reference: second murder slot skipped without an immediate win',
+          );
         const picksMatch =
           expected.picks.length === event.picks.length &&
           expected.picks.every(

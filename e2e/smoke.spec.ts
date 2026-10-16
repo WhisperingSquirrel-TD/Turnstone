@@ -117,19 +117,35 @@ test('private role is requested only during a hold and is removed on release', a
     expect(route.request().method()).toBe('POST');
     await route.fulfill({
       status: 200,
-      json: { version: 4, view: publicView },
+      json: { serverNow: Date.now(), version: 4, view: publicView },
     });
   });
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 3, view: publicView } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: 3, view: publicView },
+    }),
   );
   await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
     privateRequests += 1;
     await route.fulfill({
       status: 200,
       json: {
+        serverNow: Date.now(),
         version: 3,
-        view: { ...publicView, private: { role: 'faithful' } },
+        view: {
+          ...publicView,
+          private: {
+            role: 'faithful',
+            team: [],
+            options: [],
+            choices: {},
+            choiceSlots: [],
+            chat: [],
+            task: null,
+            minimumDurationMs: 0,
+          },
+        },
       },
     });
   });
@@ -234,15 +250,31 @@ test('notes show one privacy line without nested scrolling or excess top space',
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 1, view: publicView } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: 1, view: publicView },
+    }),
   );
   await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
     privateRequests += 1;
     await route.fulfill({
       status: 200,
       json: {
+        serverNow: Date.now(),
         version: 1,
-        view: { ...publicView, private: { role: 'faithful' } },
+        view: {
+          ...publicView,
+          private: {
+            role: 'faithful',
+            team: [],
+            options: [],
+            choices: {},
+            choiceSlots: [],
+            chat: [],
+            task: null,
+            minimumDurationMs: 0,
+          },
+        },
       },
     });
   });
@@ -374,19 +406,35 @@ test('private role, seal and footer stay inside small phone viewports', async ({
   await page.route(`**/api/games/${gameId}/commands`, (route) =>
     route.fulfill({
       status: 200,
-      json: { version: 4, view: publicView },
+      json: { serverNow: Date.now(), version: 4, view: publicView },
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: 3, view: publicView } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: 3, view: publicView },
+    }),
   );
   await page.route(`**/api/games/${gameId}/private-view`, (route) => {
     privateRequests += 1;
     return route.fulfill({
       status: 200,
       json: {
+        serverNow: Date.now(),
         version: 3,
-        view: { ...publicView, private: { role: 'faithful' } },
+        view: {
+          ...publicView,
+          private: {
+            role: 'faithful',
+            team: [],
+            options: [],
+            choices: {},
+            choiceSlots: [],
+            chat: [],
+            task: null,
+            minimumDurationMs: 0,
+          },
+        },
       },
     });
   });
@@ -567,7 +615,10 @@ test('game wordmark stays top-left and the action banner stays above the footer'
     }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
-    route.fulfill({ status: 200, json: { version: view.version, view } }),
+    route.fulfill({
+      status: 200,
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
   );
   await page.goto(`/game/${gameId}`);
   const guide = page.getByTestId('rehearsal-explainer');

@@ -297,9 +297,7 @@ export function viewFor(
             })),
           options: alive(state)
             .filter(
-              (seat) =>
-                seat.id !== own?.id &&
-                seat.id !== previousSlotChoice,
+              (seat) => seat.id !== own?.id && seat.id !== previousSlotChoice,
             )
             .map((seat) => ({ id: seat.id, name: seat.name })),
           choices: isTraitor
@@ -322,8 +320,7 @@ export function viewFor(
                         pick.round === round &&
                         alive(state).some(
                           (seat) =>
-                            seat.id === pick.seatId &&
-                            seat.role === 'traitor',
+                            seat.id === pick.seatId && seat.role === 'traitor',
                         ),
                     )
                     .sort((left, right) => left.seq - right.seq)
@@ -446,9 +443,8 @@ export function viewFor(
                 ? {
                     id: resolution.chosen,
                     name:
-                      state.seats.find(
-                        (seat) => seat.id === resolution.chosen,
-                      )?.name ?? '',
+                      state.seats.find((seat) => seat.id === resolution.chosen)
+                        ?.name ?? '',
                   }
                 : null,
               outcome: resolution.outcome,
