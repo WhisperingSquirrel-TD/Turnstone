@@ -577,6 +577,7 @@ export function createApp(
         roundTable: {
           debateMinutes: speed === 'fast' ? 2 : 15,
           voteMinutes: speed === 'fast' ? 1 : 3,
+          tieRule: 'revote-random',
           revealStyle: 'one-by-one',
           revealRole: 'always',
         },

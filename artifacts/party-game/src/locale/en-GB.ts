@@ -506,6 +506,13 @@ export const en = {
     roleUnknown: 'Your role',
     choosePlayer: 'Choose a player',
     votePrompt: 'Who do you vote to banish?',
+    tieRevotePrompt: (names: string[]) => {
+      const tiedNames =
+        names.length === 2
+          ? `${names[0]} and ${names[1]}`
+          : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+      return `It's a tie between ${tiedNames}. Vote again, choosing between them.`;
+    },
     shadowTraitorPrompt: 'Who will the Traitors take tonight?',
     shadowFaithfulPrompt: 'Who do you suspect most right now?',
     firstChoice: 'First choice',

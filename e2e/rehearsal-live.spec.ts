@@ -60,6 +60,7 @@ async function latestServerPhase(
   progress: { done: number; total: number };
   viewerSeatId?: string;
   voteCandidates?: string[];
+  revote: boolean;
   seats: { id: string; name: string; status: string }[];
 }> {
   return page.evaluate(
@@ -79,6 +80,7 @@ async function latestServerPhase(
           progress: { done: number; total: number };
           viewerSeatId?: string;
           voteCandidates?: string[];
+          revote: boolean;
           seats: { id: string; name: string; status: string }[];
         };
       };
@@ -230,6 +232,7 @@ async function submitPrivateChoice(
   page: Page,
   gameId: string,
   shadowContext: ShadowPrivateContext | null,
+  preferredVoteName?: string,
 ): Promise<void> {
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   const choiceList = page.getByTestId('private-choice-list');
@@ -291,7 +294,10 @@ async function submitPrivateChoice(
         choiceList.getByRole('button', { name: seat.name, exact: true }),
       ).toHaveCount(0);
     }
-    selectedName = displayedNames[0];
+    selectedName =
+      phaseBeforeChoice === 'VOTE' && preferredVoteName
+        ? preferredVoteName
+        : displayedNames[0];
     if (phaseBeforeChoice === 'SHADOW') {
       if (!shadowContext) {
         throw new Error(
@@ -571,6 +577,19 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       '8',
     );
     await page.getByTestId('input-rehearsal-name').fill('Morgan');
+    await page.evaluate(() => {
+      const fixedIds = [
+        '00000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-000000000002',
+      ];
+      let nextId = 0;
+      const cryptoObject = window.crypto;
+      const nativeRandomUUID = cryptoObject.randomUUID.bind(cryptoObject);
+      Object.defineProperty(cryptoObject, 'randomUUID', {
+        configurable: true,
+        value: () => fixedIds[nextId++] ?? nativeRandomUUID(),
+      });
+    });
     await page.getByTestId('button-speed-fast').click();
     const rehearsalStartResponsePromise = page.waitForResponse(
       (response) =>
@@ -653,6 +672,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     let sawVoteRevealInCurrentVerdict = false;
     let sawVoteReveal = false;
     let sawVerdictResult = false;
+    let sawForcedVoteTie = false;
+    let submittedVoteToForceTie = false;
+    let expectedTieCandidateIds: string[] = [];
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
       const phaseStartedAt = Date.now();
@@ -768,7 +790,106 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         }
       } else if (['VOTE', 'FINAL_BANISH'].includes(phase)) {
         if (seatStatus === 'alive') {
-          await submitPrivateChoice(page, activeGameId, null);
+          if (phase === 'VOTE' && !submittedVoteToForceTie) {
+            const { readGameEvents } = await import('@workspace/db/game-store');
+            await expect
+              .poll(
+                async () =>
+                  (await latestServerPhase(page, activeGameId)).progress.done,
+                { timeout: 10_000 },
+              )
+              .toBe(7);
+            const voteView = await latestSynchronizedServerPhase(
+              page,
+              activeGameId,
+            );
+            expect(voteView.revote).toBe(false);
+            const events = await readGameEvents(activeGameId);
+            const lastVoteClosedIndex = events.reduce(
+              (lastIndex, event, index) =>
+                event.type === 'VoteClosed' ? index : lastIndex,
+              -1,
+            );
+            const botVotes = events
+              .slice(lastVoteClosedIndex + 1)
+              .filter((event) => event.type === 'VoteSubmitted')
+              .filter((event) => event.seatId !== voteView.viewerSeatId);
+            const voteCounts = new Map<string, number>();
+            for (const vote of botVotes) {
+              voteCounts.set(
+                vote.target,
+                (voteCounts.get(vote.target) ?? 0) + 1,
+              );
+            }
+            const livingSeats = voteView.seats.filter(
+              (seat) => seat.status === 'alive',
+            );
+            const candidates = livingSeats.filter(
+              (seat) => seat.id !== voteView.viewerSeatId,
+            );
+            const highestCount = Math.max(
+              ...livingSeats.map((seat) => voteCounts.get(seat.id) ?? 0),
+            );
+            const leadingSeats = livingSeats.filter(
+              (seat) => (voteCounts.get(seat.id) ?? 0) === highestCount,
+            );
+            const voteToTie = candidates.find(
+              (seat) => (voteCounts.get(seat.id) ?? 0) === highestCount - 1,
+            );
+            if (!voteToTie) {
+              throw new Error(
+                `The fixed rehearsal seed cannot force a tie: ${JSON.stringify(
+                  Object.fromEntries(
+                    livingSeats.map((seat) => [
+                      seat.name,
+                      voteCounts.get(seat.id) ?? 0,
+                    ]),
+                  ),
+                )}`,
+              );
+            }
+            expectedTieCandidateIds = [
+              ...leadingSeats.map((seat) => seat.id),
+              voteToTie.id,
+            ].sort();
+            await submitPrivateChoice(page, activeGameId, null, voteToTie.name);
+            submittedVoteToForceTie = true;
+          } else if (phase === 'VOTE' && !sawForcedVoteTie) {
+            const tieView = await latestSynchronizedServerPhase(
+              page,
+              activeGameId,
+            );
+            expect(tieView.revote).toBe(true);
+            const tiedCandidateIds = tieView.voteCandidates;
+            if (!tiedCandidateIds) {
+              throw new Error(
+                'The server did not include tied candidates for the re-vote.',
+              );
+            }
+            expect([...tiedCandidateIds].sort()).toEqual(
+              expectedTieCandidateIds,
+            );
+            const tiedNames = tiedCandidateIds
+              .map(
+                (seatId) =>
+                  tieView.seats.find((seat) => seat.id === seatId)?.name,
+              )
+              .filter((name): name is string => Boolean(name))
+              .sort((left, right) =>
+                left.localeCompare(right, 'en-GB', { sensitivity: 'base' }),
+              );
+            const tiedNamesText =
+              tiedNames.length === 2
+                ? `${tiedNames[0]} and ${tiedNames[1]}`
+                : `${tiedNames.slice(0, -1).join(', ')} and ${tiedNames[tiedNames.length - 1]}`;
+            await expect(page.getByTestId('tie-revote-prompt')).toHaveText(
+              `It's a tie between ${tiedNamesText}. Vote again, choosing between them.`,
+            );
+            sawForcedVoteTie = true;
+            await submitPrivateChoice(page, activeGameId, null);
+          } else {
+            await submitPrivateChoice(page, activeGameId, null);
+          }
         } else {
           await expect(
             page.getByRole('dialog', { name: 'Shield your screen' }),
@@ -828,6 +949,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
 
     expect(sawVoteReveal).toBe(true);
     expect(sawVerdictResult).toBe(true);
+    expect(sawForcedVoteTie).toBe(true);
     await expect(game).toHaveAttribute('data-phase', 'FINISHED', {
       timeout: 5_000,
     });

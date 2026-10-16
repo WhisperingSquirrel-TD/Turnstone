@@ -304,6 +304,9 @@ ROLE REVEAL                          BANISHMENT VOTE
 | Turnstone                    |     | Turnstone              Online|
 | Your role                    |     | Vote for ... <x> of <y> ...  |
 | Shield card                  |     | Who do you vote to banish?   |
+|                              |     | It's a tie between <A> and   |
+|                              |     | <B>. Vote again, choosing    |
+|                              |     | between them.                |
 | [hold seal to reveal]        |     | [tap name] [tap name]        |
 | [Done]                       |     | You voted for <name>         |
 |                              |     | [change while allowed]       |

@@ -1302,3 +1302,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Keep the engine in VERDICT after resolving the final ballot until the next explicit phase advance. Retain and show all revealed ballots through the result, including the banished player's ballot, but do not project ballots outside VERDICT.
 
 **Consequence:** Every phone sees the complete vote reveal and banished-role result before the night shield appears. Rehearsal and engine regressions cover the sequence and confirm ballot privacy after VERDICT.
+
+## D84 — Explain tied re-votes with the actual candidates (16 October 2026)
+
+**Context:** The Round 5 rehearsal requires players to understand why the banishment list narrows after a tied vote.
+
+**Choice:** On a regular vote re-vote, show “It's a tie between <A> and <B>. Vote again, choosing between them.” Use the candidates recorded by the server, in alphabetical order; format larger ties as a natural comma-separated list. Do not show this copy on an initial vote or an endgame vote.
+
+**Consequence:** Players see the exact eligible tied group before choosing again. A forced-tie rehearsal test verifies the server state, candidate list and displayed copy together.

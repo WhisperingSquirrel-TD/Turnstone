@@ -794,6 +794,13 @@ function PlayerGame() {
     full?.seats ?? [],
     `${id}:${full?.viewerSeatId ?? ''}:${full?.phase ?? ''}:${full?.cycle ?? 0}:${full?.shadowSlot ?? 0}:${full?.shadowRound ?? 0}`,
   );
+  const tieCandidateNames =
+    full?.phase === 'VOTE' && full.revote
+      ? full.voteCandidates.flatMap((seatId) => {
+          const seat = full.seats.find((candidate) => candidate.id === seatId);
+          return seat ? [seat.name] : [];
+        })
+      : [];
   const shadowStatusLines =
     full && privateView
       ? ([1, 2] as const).map((slot) => {
@@ -1965,7 +1972,11 @@ function PlayerGame() {
                           )}
                           {full.phase === 'VOTE' ||
                           full.phase === 'FINAL_BANISH' ? (
-                            <BanishmentVoteScreen {...choiceControlProps} />
+                            <BanishmentVoteScreen
+                              {...choiceControlProps}
+                              revote={full.phase === 'VOTE' && full.revote}
+                              tieCandidateNames={tieCandidateNames}
+                            />
                           ) : (
                             <>
                               <p
