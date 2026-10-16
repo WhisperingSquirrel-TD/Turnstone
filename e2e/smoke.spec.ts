@@ -284,16 +284,12 @@ test('notes show one privacy line without nested scrolling or excess top space',
   await page.goto(`/game/${gameId}`);
   await page.getByTestId('button-open-notes').click();
 
-  const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
-  const shieldButton = shieldDialog.getByRole('button', {
-    name: /ready in|shielded/i,
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toHaveCount(0);
+  await expect(page.getByTestId('private-notes-content')).toBeVisible({
+    timeout: 1500,
   });
-  await expect(shieldButton).toHaveText('Ready in 3');
-  await page.clock.fastForward(3000);
-  await expect(shieldButton).toHaveText('I’m shielded');
-  await shieldButton.click();
-
-  await expect(page.getByTestId('private-notes-content')).toBeVisible();
   await expect(page.getByLabel('Write a note')).toBeVisible();
   await expect(
     page.getByText('Only you can see your notes.', { exact: true }),

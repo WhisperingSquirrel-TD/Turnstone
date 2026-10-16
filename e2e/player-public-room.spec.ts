@@ -246,14 +246,10 @@ async function revealNotes(
   const notesButton = page.getByRole('button', { name: 'Notes' });
   await expect(notesButton).toBeVisible();
   await notesButton.click();
-  const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
-  const shieldConfirmation = shieldDialog.getByRole('button', {
-    name: /i’m shielded/i,
-  });
-  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
-    timeout: 6500,
-  });
-  await shieldConfirmation.click();
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toHaveCount(0);
+  await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   await expect.poll(() => privateRequests).toBe(1);
   const notes = page.getByTestId('private-notes-content');
   await expect(notes).toBeVisible({ timeout: 1500 });
@@ -385,17 +381,10 @@ test('phone room shows public game state without a presenter', async ({
   await expect(notesButton).toBeVisible();
   await notesButton.click();
 
-  const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
-  const shieldConfirmation = shieldDialog.getByRole('button', {
-    name: /i’m shielded/i,
-  });
-  await expect(shieldDialog).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toHaveCount(0);
   await expect(page.getByTestId('private-notes-content')).toHaveCount(0);
-  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
-    timeout: 6500,
-  });
-  await shieldConfirmation.click();
-
   await expect.poll(() => privateRequests).toBe(1);
   await expect(page.getByTestId('private-notes-content')).toBeVisible({
     timeout: 1500,
@@ -598,19 +587,12 @@ test('rehearsal player can move on from public and voting screens', async ({
   await expect(voteGuide).toContainText('Everyone secretly votes');
   await voteGuide.getByRole('button', { name: 'Got it' }).click();
   await expect(voteGuide).toHaveCount(0);
-  const voteShield = page.getByRole('dialog', { name: 'Shield your screen' });
-  await expect(voteShield).toBeVisible();
-  await expect(page.getByText('Who do you vote to banish?')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Jamie' })).toHaveCount(0);
-  await expect(page.getByTestId('rehearsal-action-bar')).toHaveCount(0);
-  expect(privateViewRequests).toBe(0);
-  const shieldConfirmation = voteShield.getByRole('button', {
-    name: 'I’m shielded',
-  });
-  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
-    timeout: 6_500,
-  });
-  await shieldConfirmation.click();
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toHaveCount(0);
+  await expect(page.getByText('Who do you vote to banish?')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Jamie' })).toBeVisible();
+  await expect(page.getByTestId('rehearsal-action-bar')).toBeVisible();
   expect(privateViewRequests).toBe(0);
   const choiceList = page.getByTestId('private-choice-list');
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
@@ -713,23 +695,16 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   await page.goto(`/game/${gameId}`);
   await viewResponse;
 
-  const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
-  await expect(shieldDialog).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toHaveCount(0);
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   await expect(page.getByText('Your private role')).toHaveCount(0);
-  await expect(
-    page.getByRole('button', { name: 'Jamie', exact: true }),
-  ).toHaveCount(0);
-  const shieldConfirmation = shieldDialog.getByRole('button', {
-    name: /i’m shielded/i,
-  });
-  await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
-    timeout: 6500,
-  });
-  await shieldConfirmation.click();
-  await expect(shieldDialog).toHaveCount(0);
   const choiceList = page.getByTestId('private-choice-list');
   await expect(choiceList).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Jamie', exact: true }),
+  ).toBeVisible();
   const displayedChoices = await choiceList
     .getByRole('button')
     .allTextContents();
@@ -1069,13 +1044,9 @@ test('banishment votes are alphabetical while night choices stay shuffled per se
       }),
     );
     await targetPage.goto(`/game/${gameId}`);
-    const shield = targetPage
-      .getByRole('dialog', { name: 'Shield your screen' })
-      .getByRole('button', { name: /i’m shielded/i });
-    await expect(shield).toHaveAttribute('aria-disabled', 'false', {
-      timeout: 6500,
-    });
-    await shield.click();
+    await expect(
+      targetPage.getByRole('dialog', { name: 'Shield your screen' }),
+    ).toHaveCount(0);
     await expect(targetPage.getByTestId('private-choice-list')).toBeVisible();
     return targetPage
       .getByTestId('private-choice-list')
