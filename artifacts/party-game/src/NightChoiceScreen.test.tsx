@@ -48,4 +48,24 @@ describe('NightChoiceScreen', () => {
     expect(html).not.toContain('rehearsal-explanation-copy');
     expect(html).not.toContain('button-hold-reveal');
   });
+
+  it('keeps the keep-or-change confirmation inline with the active choice', () => {
+    const html = renderToString(
+      <NightChoiceScreen
+        {...controls}
+        selected="seat-a"
+        confirmChoice
+        slotLabel="Second choice"
+        prompt="Who will the Traitors take tonight?"
+        statusLines={['First pick: Alex', 'Waiting for everyone', '', '']}
+      />,
+    );
+
+    expect(html).toContain('Your pick: Alex');
+    expect(html).toContain('Confirm this choice?');
+    expect(html).toContain('Confirm');
+    expect(html).toContain('Choose again');
+    expect(html.match(/class="enter"/g)).toHaveLength(1);
+    expect(html).not.toContain('<dialog');
+  });
 });

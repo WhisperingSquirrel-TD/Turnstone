@@ -2124,16 +2124,22 @@ export function createApp(
         return;
       }
       if (!previous) {
-        const result = decide(state, parsed.data, {
-          now: options.testOnlyNow?.() ?? Date.now(),
-          actor,
-          random: options.testOnlyRandom ?? gameRandom,
-        });
-        if (!result.ok) {
-          sendError(response, 409, 'Command rejected');
-          return;
-        }
-        if (result.events.length > 0) {
+        const attempts = parsed.data.type === 'AcknowledgePrivate' ? 4 : 1;
+        let committed = false;
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+          const result = decide(state, parsed.data, {
+            now: options.testOnlyNow?.() ?? Date.now(),
+            actor,
+            random: options.testOnlyRandom ?? gameRandom,
+          });
+          if (!result.ok) {
+            sendError(response, 409, 'Command rejected');
+            return;
+          }
+          if (result.events.length === 0) {
+            committed = true;
+            break;
+          }
           const nextState = replayFrom(state, result.events);
           const stored = await appendGameEvents({
             ...idempotency,
@@ -2147,11 +2153,33 @@ export function createApp(
               dueAt: nextState.deadline,
             },
           });
-          if (!stored.ok) {
+          if (stored.ok) {
+            await publishGame(gameId);
+            committed = true;
+            break;
+          }
+          if (
+            parsed.data.type !== 'AcknowledgePrivate' ||
+            attempt + 1 === attempts
+          ) {
             sendError(response, 409, 'Command rejected');
             return;
           }
-          await publishGame(gameId);
+          // Rehearsal bots can write concurrently with this acknowledgement.
+          // Re-evaluate against the latest state rather than losing the tap to
+          // an optimistic-version conflict.
+          state = await loadGameState(gameId);
+          if (!state) {
+            sendError(response, 404, 'Not found');
+            return;
+          }
+          await new Promise((resolve) =>
+            setTimeout(resolve, 10 * (attempt + 1)),
+          );
+        }
+        if (!committed) {
+          sendError(response, 409, 'Command rejected');
+          return;
         }
       }
 

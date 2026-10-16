@@ -665,6 +665,9 @@ function PlayerGame() {
   const install = useContext(installContext);
   const queryClient = useQueryClient();
   const [shielded, setShielded] = useState(false);
+  const shieldedShadowCycle = useRef<number | null>(null);
+  const requestedShadowPrivateViewKey = useRef<string | null>(null);
+  const currentShadowPrivateViewKeyRef = useRef<string | null>(null);
   const [shieldPending, setShieldPending] = useState(false);
   const [held, setHeld] = useState(false);
   const [roleSeen, setRoleSeen] = useState(false);
@@ -893,8 +896,13 @@ function PlayerGame() {
     [command.reset, reveal.reset],
   );
   const cancelPrivate = useCallback(() => clearPrivate(), [clearPrivate]);
+  const shadowPrivateViewKey =
+    full?.phase === 'SHADOW'
+      ? `${id}:${full.cycle}:${full.shadowRound}:${full.shadowSlot}`
+      : null;
+  currentShadowPrivateViewKeyRef.current = shadowPrivateViewKey;
   const privateStepKey = full
-    ? `${full.phase}:${full.cycle}:${full.deadline ?? 'manual'}:${full.shadowSlot}:${full.shadowRound}:${notesOpen ? 'notes' : 'phase'}`
+    ? `${full.phase}:${full.cycle}:${full.phase === 'SHADOW' ? 'continuous-night' : (full.deadline ?? 'manual')}:${full.shadowSlot}:${full.shadowRound}:${notesOpen ? 'notes' : 'phase'}`
     : 'none';
   const activeGame = Boolean(
     full && !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
@@ -922,10 +930,78 @@ function PlayerGame() {
       return;
     }
     clearPrivate();
-    setShielded(!shieldRequired);
+    const keepNightShield =
+      full?.phase === 'SHADOW' && shieldedShadowCycle.current === full.cycle;
+    setShielded(!shieldRequired || keepNightShield);
     setRoleSeen(false);
     setPrivateCovered(false);
-    setShieldCountdown(shieldRequired ? 3 : 0);
+    setShieldCountdown(shieldRequired && !keepNightShield ? 3 : 0);
+    if (keepNightShield && shadowPrivateViewKey) {
+      if (requestedShadowPrivateViewKey.current !== shadowPrivateViewKey) {
+        requestedShadowPrivateViewKey.current = shadowPrivateViewKey;
+        setHoldMessage(en.game.privateLoading);
+        void (async () => {
+          try {
+            for (let attempt = 0; attempt < 2; attempt += 1) {
+              if (
+                currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey
+              )
+                return;
+              const latest = await gameQuery.refetch();
+              const latestView = latest.data?.view;
+              const latestShadowKey =
+                latestView && isFullView(latestView)
+                  ? `${id}:${latestView.cycle}:${latestView.shadowRound}:${latestView.shadowSlot}`
+                  : null;
+              if (latestShadowKey !== shadowPrivateViewKey) return;
+              try {
+                await command.mutateAsync({
+                  id,
+                  data: {
+                    type: 'AcknowledgePrivate',
+                    idempotencyKey: idempotencyKey(),
+                  },
+                });
+                break;
+              } catch {
+                // A competing bot update can invalidate the command version.
+                // Refetch once and retry; the private-view endpoint still
+                // enforces that acknowledgement succeeded before data is shown.
+              }
+            }
+            if (currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey)
+              return;
+            const response = await reveal.mutateAsync({ id });
+            if (currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey)
+              return;
+            const nextPrivateView = isFullView(response.view)
+              ? response.view.private
+              : null;
+            if (!nextPrivateView) {
+              setHoldMessage(en.game.privateUnavailable);
+              setPrivateCovered(true);
+              return;
+            }
+            setPrivateView(nextPrivateView);
+            setPrivateCovered(false);
+            setHoldMessage('');
+          } catch {
+            if (currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey)
+              return;
+            setHoldMessage(en.game.privateUnavailable);
+            setPrivateCovered(true);
+          } finally {
+            if (
+              currentShadowPrivateViewKeyRef.current === shadowPrivateViewKey
+            ) {
+              command.reset();
+              reveal.reset();
+            }
+          }
+        })();
+      }
+      return;
+    }
     if (full?.rehearsal && rehearsalGuideVisible) return;
     if (!shieldRequired) return;
     const startedAt = serverTimeNow(Date.now(), serverClockOffsetMs.current);
@@ -942,11 +1018,22 @@ function PlayerGame() {
     inPrivateMoment,
     shieldRequired,
     clearPrivate,
+    full?.phase,
+    full?.cycle,
+    shadowPrivateViewKey,
+    id,
+    gameQuery.refetch,
+    command.mutateAsync,
+    command.reset,
+    reveal.mutateAsync,
+    reveal.reset,
     full?.rehearsal,
     rehearsalGuideVisible,
   ]);
 
   useEffect(() => {
+    shieldedShadowCycle.current = null;
+    requestedShadowPrivateViewKey.current = null;
     setRehearsalGuideStarted(false);
     setRehearsalGuideDismissedSteps(new Set());
   }, [id]);
@@ -1180,6 +1267,10 @@ function PlayerGame() {
           ? response.view.private
           : null;
         if (!nextPrivateView) throw new Error('Private view unavailable');
+      }
+      if (full?.phase === 'SHADOW' && shadowPrivateViewKey) {
+        shieldedShadowCycle.current = full.cycle;
+        requestedShadowPrivateViewKey.current = shadowPrivateViewKey;
       }
       setPrivateView(nextPrivateView);
       setPrivateCovered(false);

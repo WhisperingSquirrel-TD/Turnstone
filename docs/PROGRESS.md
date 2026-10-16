@@ -1,12 +1,12 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 15:14 UTC.
-- Current milestone/step: Round 5 game flow — item 5, separating the night-choice screen before its behavior change.
-- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98. Item 5 screen extraction is locally green with behavior unchanged; one-shield behavior is next. Remaining items are pending.
-- Last pushed commit/CI: `5afe266`; Verify #98 (`38920621425`) — Success, all 19 Verify jobs passed, including four browser profiles and six scenario shards; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38920621425.
-- Local verification for item 4: three tie-screen unit tests and 18 pipeline tests pass; app and test typechecks, lint and format pass. The real-server 8-seat rehearsal passed with a forced tie, no presenter and no manual refresh. Pinned Gitleaks 8.30.1 checksum verified and full-history scan clean. Dependency audit reports one moderate finding and no high/critical findings; SAST and HoundDog report none.
+- Updated: 16 October 2026, 15:59 UTC.
+- Current milestone/step: Round 5 game flow — item 5, one continuous private moment across night-choice slots; targeted local checks pass and it is ready to push.
+- Round 5 item status: items 1, 2 and 9 passed Verify #96; item 3 passed #97; item 4 passed #98; item 5 screen extraction passed #99. One shield per night and sequential slots on one screen pass locally; awaiting Verify before item 6.
+- Last pushed commit/CI: `b3411cd`; Verify #99 (`38922480125`) — Success, all 19 Verify jobs passed, including four browser profiles and six scenario shards; 0 annotations. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38922480125.
+- Local verification for item 5: 11 targeted UI tests, typecheck, test typecheck, lint and format pass; `tests/http.test.ts` passed (21 tests); the real-server 8-seat rehearsal passed with one shield per night, no presenter and no manual refresh.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued after the M5 hands-on gate.
-- Risks: Pixel Chromium runs locally; local iPhone WebKit still lacks runtime libraries, while GitHub iPhone and iPad profiles passed in #93. The API workflow listens on port 8080 but logs deadline-scheduler iteration errors while 11 active rehearsal records exist; the cause is unverified and no records were changed.
+- Risks: Pixel Chromium runs locally; local iPhone WebKit still lacks runtime libraries, while GitHub iPhone and iPad profiles passed in #93. The API workflow still logs deadline-scheduler iteration errors; cause is unverified and no records were changed. One broader local server-coverage run failed a database deadline-claim assertion (2 claims instead of 1); targeted HTTP and rehearsal tests passed, and CI will verify.
 
 ## Previous verification history
 

@@ -1291,7 +1291,7 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 
 **Context:** The owner and reviewer supplied the next recorded rehearsal feedback and a detailed night-screen design. It adds phase-synchronised day/night presentation, public commentary, a single continuous private night moment and guided, player-paced rehearsal.
 
-**Choice:** Apply SPEC §31. Keep the shield only on role reveal and night choices; all choices are taps. Keep Faithful predictions private to their author during the game. Use one murder and eight seats in rehearsal, protect the human through their first complete day and night, and continue in watch mode after removal. Keep the day/night themes, commentary, status layout and public-step screens role-uniform.
+**Choice:** Apply SPEC §31. Keep the shield only on role reveal and night choices; all choices are taps. For a night, show one shield before the first choice and keep sequential first/second slots and the keep-or-change confirmation on the same screen without repeating the shield or explainer. Keep Faithful predictions private to their author during the game. Use one murder and eight seats in rehearsal, protect the human through their first complete day and night, and continue in watch mode after removal. Keep the day/night themes, commentary, status layout and public-step screens role-uniform.
 
 **Consequence:** Implement under TDD in small green pushes. Use a real-server rehearsal for the acceptance path, with forced cases for ties and human removal. The hands-on owner rehearsal remains the gate after Round 5; PIN pepper and join-storm capacity remain queued after that gate.
 

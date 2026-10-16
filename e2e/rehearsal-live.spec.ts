@@ -116,7 +116,7 @@ async function handleShield(
   gameId: string,
 ): Promise<ShadowPrivateContext | null> {
   const shield = page.getByRole('dialog', { name: 'Shield your screen' });
-  if (!(await shield.isVisible().catch(() => false))) return null;
+  await expect(shield).toBeVisible({ timeout: 5_000 });
   const phase = await currentPhase(page);
   const privateViewPromise =
     phase === 'SHADOW'
@@ -233,7 +233,8 @@ async function submitPrivateChoice(
   gameId: string,
   shadowContext: ShadowPrivateContext | null,
   preferredVoteName?: string,
-): Promise<void> {
+  excludedShadowChoiceName?: string,
+): Promise<string> {
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   const choiceList = page.getByTestId('private-choice-list');
   await expect(choiceList).toBeVisible({ timeout: 5_000 });
@@ -262,7 +263,11 @@ async function submitPrivateChoice(
       throw new Error('The shield step did not provide private night context.');
     }
     const shadowOptions =
-      phaseBeforeChoice === 'SHADOW' ? shadowContext?.options : undefined;
+      phaseBeforeChoice === 'SHADOW'
+        ? shadowContext?.options.filter(
+            (option) => option.name !== excludedShadowChoiceName,
+          )
+        : undefined;
     const displayedNames = (await choices.allTextContents()).map((name) =>
       name.trim(),
     );
@@ -364,8 +369,8 @@ async function submitPrivateChoice(
           `${phaseBeforeChoice} rejected the selected eligible choice (HTTP ${commandStatuses.join(', ') || 'none'}); the test does not retry another name.`,
         );
       }
-      if (await waiting.isVisible().catch(() => false)) return;
-      if ((await currentPhase(page)) !== phaseBeforeChoice) return;
+      if (await waiting.isVisible().catch(() => false)) return selectedName;
+      if ((await currentPhase(page)) !== phaseBeforeChoice) return selectedName;
       await page.waitForTimeout(100);
     }
     const latest = await latestServerPhase(page, gameId);
@@ -490,6 +495,33 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
   let socketSeatCookieSeen = false;
   const socketHttpDetails: string[] = [];
   const socketRequestDetails: string[] = [];
+  const privateHttpStatuses: string[] = [];
+  page.on('response', (response) => {
+    const pathname = new URL(response.url()).pathname;
+    if (
+      response.request().method() === 'POST' &&
+      (pathname.endsWith('/commands') || pathname.endsWith('/private-view'))
+    ) {
+      let commandType = '';
+      if (pathname.endsWith('/commands')) {
+        try {
+          const body = response.request().postDataJSON() as {
+            type?: unknown;
+            data?: { type?: unknown };
+            command?: { type?: unknown };
+          };
+          const type = body.type ?? body.data?.type ?? body.command?.type;
+          if (typeof type === 'string') commandType = `:${type}`;
+        } catch {
+          commandType = ':unparsed';
+        }
+      }
+      privateHttpStatuses.push(
+        `${pathname.endsWith('/private-view') ? 'private-view' : `command${commandType}`}:${response.status()}`,
+      );
+      if (privateHttpStatuses.length > 12) privateHttpStatuses.shift();
+    }
+  });
   const observeSocketPacket = (payload: unknown) => {
     const packet = String(payload).slice(0, 2);
     if (packet === '40') socketConnectAcks += 1;
@@ -664,6 +696,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       .toBeGreaterThan(0);
     const seenShadowSlots = new Set<number>();
     const seenFirstNightShadowSlots = new Set<number>();
+    const shadowContextByCycle = new Map<number, ShadowPrivateContext>();
+    const firstShadowChoiceByCycle = new Map<number, string>();
+    const shadowShieldCountByCycle = new Map<number, number>();
     const endedBeforeSecondSlotCycles = new Set<number>();
     const seenExplanations = new Set<Phase>();
     const checkedNoAutoAdvancePhases = new Set<Phase>();
@@ -775,13 +810,70 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         playerRole = await revealDealRole(page);
       } else if (['SHADOW', 'FINAL_VOTE'].includes(phase)) {
         if (seatStatus === 'alive') {
-          if (phase === 'SHADOW')
+          if (
+            phase === 'SHADOW' &&
+            !shadowContextByCycle.has(shadowCycleBefore)
+          ) {
             shadowContext = await handleShield(page, activeGameId);
-          if (phase === 'SHADOW')
-            await expect(page.getByTestId('shadow-slot-label')).toHaveText(
-              shadowSlotBefore === 1 ? 'First choice' : 'Second choice',
+            if (!shadowContext)
+              throw new Error('The first night choice had no shield context.');
+            shadowContextByCycle.set(shadowCycleBefore, shadowContext);
+            shadowShieldCountByCycle.set(
+              shadowCycleBefore,
+              (shadowShieldCountByCycle.get(shadowCycleBefore) ?? 0) + 1,
             );
-          await submitPrivateChoice(page, activeGameId, shadowContext);
+          } else if (phase === 'SHADOW') {
+            await expect(
+              page.getByRole('dialog', { name: 'Shield your screen' }),
+            ).toHaveCount(0);
+            expect(shadowShieldCountByCycle.get(shadowCycleBefore)).toBe(1);
+            await expect(
+              page.getByTestId('rehearsal-explanation-copy'),
+            ).toHaveCount(0);
+            shadowContext = shadowContextByCycle.get(shadowCycleBefore) ?? null;
+          }
+          if (phase === 'SHADOW') {
+            shadowContext ??=
+              shadowContextByCycle.get(shadowCycleBefore) ?? null;
+            if (!shadowContext)
+              throw new Error('The night choice has no private team context.');
+            try {
+              await expect(page.getByTestId('shadow-slot-label')).toHaveText(
+                shadowSlotBefore === 1 ? 'First choice' : 'Second choice',
+              );
+            } catch {
+              const current = await latestServerPhase(page, activeGameId);
+              const visibleText = (
+                await page.locator('body').innerText()
+              ).slice(0, 1200);
+              throw new Error(
+                `Night choice missing at cycle ${shadowCycleBefore}, slot ${shadowSlotBefore}, round ${shadowRoundBefore}; server phase=${current.phase}, cycle=${current.cycle}, progress=${JSON.stringify(current.progress)}; requests=${privateHttpStatuses.join(',')}; screen=${JSON.stringify(visibleText)}`,
+              );
+            }
+          }
+          const firstChoiceName =
+            phase === 'SHADOW' && shadowSlotBefore === 2
+              ? firstShadowChoiceByCycle.get(shadowCycleBefore)
+              : undefined;
+          if (
+            phase === 'SHADOW' &&
+            shadowSlotBefore === 2 &&
+            !firstChoiceName
+          ) {
+            throw new Error(
+              'The second night choice has no first-choice record.',
+            );
+          }
+          const selectedName = await submitPrivateChoice(
+            page,
+            activeGameId,
+            shadowContext,
+            undefined,
+            firstChoiceName,
+          );
+          if (phase === 'SHADOW' && shadowSlotBefore === 1) {
+            firstShadowChoiceByCycle.set(shadowCycleBefore, selectedName);
+          }
         } else {
           await expect(
             page.getByRole('dialog', { name: 'Shield your screen' }),
@@ -974,6 +1066,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     );
     expect([...seenShadowSlots].sort()).toEqual([1, 2]);
     expect([...seenFirstNightShadowSlots].sort()).toEqual([1, 2]);
+    expect(
+      [...shadowShieldCountByCycle.values()].every((count) => count === 1),
+    ).toBe(true);
     for (const cycle of endedBeforeSecondSlotCycles) {
       await expect(
         murderSlotRecords.filter({
