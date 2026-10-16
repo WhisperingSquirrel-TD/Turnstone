@@ -1,12 +1,12 @@
 # Status for reviewer
 
-- Updated: 16 October 2026, 10:39 UTC.
-- Current milestone/step: SPEC §30 rule changes and addendum complete; Verify #86 is green. Stopping for the reviewer.
-- Last pushed code commit/CI: `ff8f572`; Verify #86 (`38888255890`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38888255890.
-- Previous run context: Verify #85 (`38887804598`) failed in four browser profiles because a new screen assertion omitted the existing round label; the UI behavior was correct. The assertion now checks the exact displayed copy, and #86 is green.
-- Local verification: the screen test passed test typecheck, lint and formatting checks. The preceding step passed 310/310 unit tests across 60 files, scenario sharding/coverage assertions (17 goldens assigned exactly once), scenario worker smoke, typecheck, lint, format, production build and diff checks. The initial-abstention golden was first confirmed red, then passed through full golden replay and the independent oracle.
+- Updated: 16 October 2026, 10:53 UTC.
+- Current milestone/step: §30 rule changes and addendum await a green run. Verify #87 exposed an E2E assumption that every first-slot resolution must open slot 2; the engine correctly records a `game-ended` second slot when parity ends the game. The test now requires both actual choice screens on Night 1 and checks the recorded early-end outcome on later nights.
+- Last pushed commit/CI: `feec815`; Verify #87 (`38888772232`) — Failed only in `rehearsal-live` (one annotation) and dependent `required-checks`; all other jobs passed. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38888772232.
+- Last green code run: `ff8f572`; Verify #86 (`38888255890`) — Success across all jobs, including six scenario shards and merged report, four browser profiles and live rehearsal; 0 annotations across 19 check runs. Public run: https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/38888255890.
+- Local verification: the revised live rehearsal passed on Pixel; test typecheck, lint, format and diff checks passed. The preceding rule step passed 310/310 unit tests across 60 files, scenario sharding/coverage assertions (17 goldens assigned exactly once), scenario worker smoke, typecheck, lint, format and production build. The initial-abstention golden was confirmed red before implementation, then passed through full golden replay and the independent oracle.
 - Open questions: none. Provisional decisions: none. PIN pepper and join-storm hashing capacity remain queued and were not started.
-- Risk: local WebKit still closes during page creation in Replit Nix; GitHub WebKit profiles passed in #86. The local API workflow continues to log deadline-scheduler iteration errors; cause unverified, while GitHub integration and rehearsal jobs passed. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
+- Risk: `mesa` was installed through Replit system packages; Pixel Chromium now runs locally, but local iPhone WebKit still fails to launch because additional runtime libraries are missing. GitHub WebKit profiles passed in #86. The local API workflow continues to log deadline-scheduler iteration errors; cause unverified, while GitHub integration and rehearsal jobs passed. Staged-file and full-history secret scans passed; the broad workspace scan found 25 non-staged matches, with no values exposed.
 
 ## Previous verification history
 

@@ -55,6 +55,7 @@ async function latestServerPhase(
   gameId: string,
 ): Promise<{
   phase: string;
+  cycle: number;
   version: number;
   progress: { done: number; total: number };
   viewerSeatId?: string;
@@ -72,6 +73,7 @@ async function latestServerPhase(
       const payload = (await response.json()) as {
         view: {
           phase: string;
+          cycle: number;
           version: number;
           progress: { done: number; total: number };
           viewerSeatId?: string;
@@ -516,11 +518,17 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       })
       .toBeGreaterThan(0);
     const seenShadowSlots = new Set<number>();
+    const seenFirstNightShadowSlots = new Set<number>();
+    const endedBeforeSecondSlotCycles = new Set<number>();
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
       const phaseStartedAt = Date.now();
       const seatStatus = await ownSeatStatus(page, activeGameId);
       if (phase === 'FINISHED') break;
+      const shadowCycleBefore =
+        phase === 'SHADOW'
+          ? (await latestServerPhase(page, activeGameId)).cycle
+          : 0;
       const explanation = rehearsalExplanationByPhase[phase];
       if (!explanation) {
         throw new Error(`Rehearsal step ${phase} has no explanation copy.`);
@@ -558,7 +566,11 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         phase === 'SHADOW'
           ? Number(await game.getAttribute('data-shadow-slot'))
           : 0;
-      if (phase === 'SHADOW') seenShadowSlots.add(shadowSlotBefore);
+      if (phase === 'SHADOW') {
+        seenShadowSlots.add(shadowSlotBefore);
+        if (shadowCycleBefore === 1)
+          seenFirstNightShadowSlots.add(shadowSlotBefore);
+      }
       if (phase === 'DEAL') {
         await handleShield(page, activeGameId);
         playerRole = await revealDealRole(page);
@@ -625,7 +637,13 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         shadowSlotBefore === 1 &&
         shadowRoundBefore === 2
       ) {
-        await expect(game).toHaveAttribute('data-shadow-slot', '2');
+        const phaseAfterFirstSlot = await currentPhase(page);
+        if (phaseAfterFirstSlot === 'SHADOW') {
+          await expect(game).toHaveAttribute('data-shadow-slot', '2');
+        } else {
+          expect(['DAWN', 'FINISHED']).toContain(phaseAfterFirstSlot);
+          endedBeforeSecondSlotCycles.add(shadowCycleBefore);
+        }
       }
       expect(appDocumentLoads).toBe(0);
     }
@@ -653,12 +671,23 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       'Second choice',
     );
     expect([...seenShadowSlots].sort()).toEqual([1, 2]);
+    expect([...seenFirstNightShadowSlots].sort()).toEqual([1, 2]);
+    for (const cycle of endedBeforeSecondSlotCycles) {
+      await expect(
+        murderSlotRecords.filter({
+          hasText: `Night ${cycle} · Second choice`,
+        }),
+      ).toContainText('The game ended before this murder.');
+    }
     const firstNightRecords = murderSlotRecords.filter({
       hasText: 'Night 1',
     });
     await expect(firstNightRecords).toHaveCount(2);
     await expect(firstNightRecords.nth(0)).toContainText('First choice');
     await expect(firstNightRecords.nth(1)).toContainText('Second choice');
+    await expect(firstNightRecords.nth(1)).not.toContainText(
+      'The game ended before this murder.',
+    );
 
     const playerRows = page.locator('[data-testid^="player-seat-"]');
     const rowTexts = await playerRows.allTextContents();
