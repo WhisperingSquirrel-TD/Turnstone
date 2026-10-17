@@ -1249,7 +1249,7 @@ describe('Milestone 1 deterministic engine', () => {
     expect(game.state.pendingSleeper).toBe(false);
     expect(replay(game.events)).toEqual(game.state);
   });
-  it('counts only living acknowledgements, never leaking private names in progress', () => {
+  it('counts only living completed role views, never leaking private names in progress', () => {
     const game = fixture(8);
     command(game, { type: 'StartGame' });
     for (const seat of game.state.seats)
@@ -1257,12 +1257,28 @@ describe('Milestone 1 deterministic engine', () => {
         kind: 'player',
         seatId: seat.id,
       });
+    expect(viewFor({ kind: 'coordinator' }, game.state).progress).toEqual({
+      done: 0,
+      total: 8,
+    });
+    for (const seat of game.state.seats)
+      command(game, { type: 'AcknowledgePrivate', ready: true }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+    expect(viewFor({ kind: 'coordinator' }, game.state).progress).toEqual({
+      done: 8,
+      total: 8,
+    });
     const faithful = game.state.seats.find((seat) => seat.role === 'faithful')!;
     command(game, { type: 'MarkDeparted', seatId: faithful.id });
     expect(viewFor({ kind: 'coordinator' }, game.state).progress).toEqual({
       done: 7,
       total: 7,
     });
+    expect(
+      Object.keys(viewFor({ kind: 'coordinator' }, game.state).progress).sort(),
+    ).toEqual(['done', 'total']);
   });
   it('requires the uniform minimum time before closing a ballot', () => {
     const game = fixture(15);

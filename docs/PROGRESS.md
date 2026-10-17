@@ -1,13 +1,14 @@
 # Status for reviewer
 
-- Updated: 17 October 2026, 08:13 UTC. Current step: R5 item 10 ready for CI.
-- Last pushed: `917f32f`, [Verify #122](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39015464423) **Success**: all 19 jobs passed, no annotations. The browser-profile blocker is fixed.
-- R5 item 10: normal-size progress in the top commentary area; shielding no longer means ready. Role readiness is recorded only on Done; endgame counts submitted decisions. Local checks: 29 affected unit tests, affected iPhone/Pixel screen tests, real-server full rehearsal, typechecks and lint pass. This push awaits CI.
+- Updated: 17 October 2026, 08:16 UTC. Current step: R5 item 10 CI fixture correction.
+- Last pushed: `61db039`, [Verify #123](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39016588173): unit job failed because an old fixture still equated shielding with completion; other jobs were running at the check. Last fully green run: #122 (`917f32f`).
+- R5 item 10: explicit Done acknowledgement, real endgame decisions and normal-size commentary are implemented. The existing engine test now proves zero ready after shielding, eight after Done, and seven after a departure, retaining the original assertion. Local affected units 74/74, iPhone/Pixel screens, real-server rehearsal, typechecks and lint pass. Repair push awaits CI.
 - R5 done: 1–9, 21–24, 32–35; R5 item 10 implemented. Next: R5 15–16, 11–14/25–29/31, 17–20, then 30. R4 item 10 is distinct and already accepted.
 - Questions: none. Risks: production capacity remains unproven; prior generic dev scheduler errors remain uninvestigated. No new scope or paid services.
 
 ## Previous verification history
 
+- Verify #123 (`39016588173`), commit `61db039`: unit job failed on the old completed-role fixture; corrected by explicitly completing the roles and adding pre-completion and no-name assertions, not reducing the expected completed count.
 - Verify #122 (`39015464423`), commit `917f32f`: Success — all 19 jobs passed with no annotations, including all four browser profiles, real-server rehearsal and all scenario shards.
 - Verify #121 (`39014811224`), commit `1c83607`: Failure — original iPhone night-choice failures fixed; short-screen rehearsal layout still reserved space for a hidden organiser bar, failing the unchanged no-unnecessary-scroll assertion on all profiles.
 - Verify #120 (`38982785132`), commit `f3ea909`: Failure — iPhone night-choice Confirm was covered by the fixed footer; all other substantive jobs passed. Reproduced locally in actual WebKit, then the unchanged tests passed after reserving the footer outside the scrollport.
