@@ -1706,6 +1706,15 @@ function PlayerGame() {
     onChooseAgain: () => setConfirmChoice(false),
   };
 
+  const showOrganiserBar = Boolean(
+    full?.canAdvancePhase &&
+    activeGame &&
+    !showShieldCard &&
+    !held &&
+    !privateInteractionInProgress &&
+    !rehearsalGuideVisible,
+  );
+
   return (
     <Shell
       isPlayer
@@ -1764,11 +1773,7 @@ function PlayerGame() {
         {full && (
           <div
             className={
-              full.canAdvancePhase && activeGame
-                ? watchingRehearsal
-                  ? 'pb-40'
-                  : 'pb-24'
-                : ''
+              showOrganiserBar ? (watchingRehearsal ? 'pb-40' : 'pb-24') : ''
             }
             data-testid="player-game"
             data-phase={full.phase}
@@ -2487,57 +2492,52 @@ function PlayerGame() {
             )}
           </div>
         )}
-        {full?.canAdvancePhase &&
-          activeGame &&
-          !showShieldCard &&
-          !held &&
-          !privateInteractionInProgress &&
-          !rehearsalGuideVisible && (
-            <section
-              aria-label={
-                full.rehearsal
-                  ? en.game.rehearsalControls
-                  : en.game.organiserControls
-              }
-              className="game-action-bar fixed inset-x-0 z-30 border-t border-stone bg-hearth px-6 pt-3"
-              style={{
-                paddingBottom: '0.75rem',
-              }}
-              data-testid="rehearsal-action-bar"
-            >
-              <div className="mx-auto w-full max-w-[480px]">
-                {!full.rehearsal && (
-                  <p className="mb-2 text-sm text-ash">
-                    {en.game.organiserControls}
-                  </p>
-                )}
-                {commandMessage && (
-                  <p role="status" className="mb-2 text-sm text-ash">
-                    {commandMessage}
-                  </p>
-                )}
-                {watchingRehearsal && (
-                  <RehearsalWatchAction
-                    onClick={() => navigate(config.routes.rehearsal)}
-                  />
-                )}
-                <button
-                  className={
-                    full.rehearsal
-                      ? 'primary-action w-full'
-                      : 'quiet-action w-full'
-                  }
-                  type="button"
-                  disabled={command.isPending}
-                  onClick={requestMoveOn}
-                >
-                  {full.rehearsal
-                    ? en.game.nextRehearsalStep
-                    : en.game.organiserMoveOn}
-                </button>
-              </div>
-            </section>
-          )}
+        {full && showOrganiserBar && (
+          <section
+            aria-label={
+              full.rehearsal
+                ? en.game.rehearsalControls
+                : en.game.organiserControls
+            }
+            className="game-action-bar fixed inset-x-0 z-30 border-t border-stone bg-hearth px-6 pt-3"
+            style={{
+              paddingBottom: '0.75rem',
+            }}
+            data-testid="rehearsal-action-bar"
+          >
+            <div className="mx-auto w-full max-w-[480px]">
+              {!full.rehearsal && (
+                <p className="mb-2 text-sm text-ash">
+                  {en.game.organiserControls}
+                </p>
+              )}
+              {commandMessage && (
+                <p role="status" className="mb-2 text-sm text-ash">
+                  {commandMessage}
+                </p>
+              )}
+              {watchingRehearsal && (
+                <RehearsalWatchAction
+                  onClick={() => navigate(config.routes.rehearsal)}
+                />
+              )}
+              <button
+                className={
+                  full.rehearsal
+                    ? 'primary-action w-full'
+                    : 'quiet-action w-full'
+                }
+                type="button"
+                disabled={command.isPending}
+                onClick={requestMoveOn}
+              >
+                {full.rehearsal
+                  ? en.game.nextRehearsalStep
+                  : en.game.organiserMoveOn}
+              </button>
+            </div>
+          </section>
+        )}
         {advanceConfirmationOpen && full && !full.rehearsal && (
           <div
             className="game-fullscreen-overlay fixed inset-0 z-50 flex flex-col bg-charcoal"

@@ -238,10 +238,10 @@ h2,
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-bottom: var(--game-footer-dock-height) !important;
+  padding-bottom: 1rem !important;
 }
 .game-shell-main:has(.game-action-bar) {
-  padding-bottom: calc(var(--game-footer-dock-height) + 8rem) !important;
+  padding-bottom: 8rem !important;
 }
 .game-shell-main.private-moment-main {
   overflow-x: hidden;
