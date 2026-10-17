@@ -849,6 +849,12 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     let expectedTieCandidateIds: string[] = [];
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
+      await expect(page.locator('.game-shell')).toHaveAttribute(
+        'data-game-theme',
+        phase === 'SHADOW' || phase === 'LOBBY' || phase === 'DRAFT'
+          ? 'night'
+          : 'day',
+      );
       visitedPhases.add(phase);
       const phaseStartedAt = Date.now();
       const seatStatus = await ownSeatStatus(page, activeGameId);

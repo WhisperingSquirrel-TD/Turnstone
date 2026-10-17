@@ -281,6 +281,14 @@ Anti-template check: avoid dashboard cards, coloured player avatars, and any rol
 
 ## Round 5 — phase presentation and night screens
 
+### Implemented palette and review gallery
+
+The day palette retains the original brand tokens as its source. Day button fill is 88% Gilt / 12% Candle to give Charcoal labels AA contrast; ordinary text uses dark ink. The dark wordmark remains Candle/Gilt, while its day version uses Charcoal and a contrasting dark-Gilt accent. The approved Cairn shape is retained, with a dark treatment on light surfaces.
+
+The off-by-default **Always dark** control is under **Display**. Theme choice depends on the public phase, never the role. Night/morning fades are absent with reduced motion.
+
+Final review images and reproduction instructions are in [screens/round-5](screens/round-5/README.md). The matrix covers 320, 375, 390, 430 and 1280 px, both palettes, both role reveals, both night variants, Notes and all public game steps, with header and bottom-stack bounds checks.
+
 Keep the Stackstone talk-slide identity from §25 and the one-column phone layout. Day and night are the only game theme states; the active server phase switches every player's screen together. The home, entry and lobby stay dark. Each game-step component retains its own content and uses the same header, commentary alignment, action/footer stack and safe-area spacing.
 
 ```text

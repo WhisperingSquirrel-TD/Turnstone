@@ -1,12 +1,13 @@
 # Status for reviewer
 
-- Updated: 17 October 2026, 09:05 UTC. This push: `2110cdc` commentary/layout plus the public-footer cascade fix; new Verify pending. Last green: `780f527`, [Verify #124](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39016771968), all 19 jobs.
-- R5 1–16, 21–29 and 31–35 implemented; this group's CI is pending. Local affected units 32/32, Pixel/iPhone screens 48 passed (two desktop-only skips), typechecks/lint and full real-server rehearsal pass. Public/game/overlay footer alignment now passes unchanged bounds checks.
-- Remaining: R5 17–20 colours, then R5 30 final screenshots. Round 5 is **not** complete.
-- Afterwards only: plan housekeeping, Replit M4b/checklist and uploaded-content work if available. No deployment/DNS/production-secret changes; Milestone 6 waits for owner acceptance. Questions: none. Production capacity remains unproven.
+- Updated: 17 October 2026, 09:52 UTC. Last confirmed: `05119d7`, [Verify #125](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39019746309) **Success**, all 19 jobs. Current push: final R5 colours and screenshots; its Verify is pending.
+- R5 1–35 implemented. Local: 54 affected unit checks, 53 Pixel/iPhone browser cases (three intentional profile skips), typechecks/lint and the eight-seat real-server rehearsal pass. Day/night contrast and both-role night/Notes uniformity pass.
+- R5 30: 170 review images in `docs/screens/round-5/` (five widths, both palettes, about 4 MB), with header, scrolling and bottom-stack bounds checks. R5 is **not yet declared green** until this push passes CI.
+- Next only after green: plan housekeeping, Replit M4b/checklist and uploaded content if present. No deployment/DNS/production-secret changes; Milestone 6 waits for owner acceptance. Questions: none; production capacity remains unproven.
 
 ## Previous verification history
 
+- Verify #125 (`39019746309`), commit `05119d7`: Success on the public run page; all 19 jobs passed, including every browser profile, live rehearsal and scenario shard. R5 commentary/explainers/layout group verified.
 - Verify #124 (`39016771968`), commit `780f527`: Success — all 19 jobs passed, no annotations, including every browser profile and the real-server rehearsal. R5 item 10 accepted by CI.
 - Verify #123 (`39016588173`), commit `61db039`: unit job failed on the old completed-role fixture; corrected by explicitly completing the roles and adding pre-completion and no-name assertions, not reducing the expected completed count.
 - Verify #122 (`39015464423`), commit `917f32f`: Success — all 19 jobs passed with no annotations, including all four browser profiles, real-server rehearsal and all scenario shards.

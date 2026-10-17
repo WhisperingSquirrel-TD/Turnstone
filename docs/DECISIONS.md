@@ -1350,3 +1350,13 @@ Commentary is derived only from public game state, never a player's private choi
 **Why:** Round 5 requires understandable public progress and identical explanations on every role's phone. Its whole-page scrolling rule supersedes the earlier viewport-locked game shell: long screens scroll the document, not an inner game pane. Held secrets and full-screen dialogs still lock background scrolling. Header alignment follows the centred content column on wide screens; the action bar and footer reserve their measured combined height.
 
 **Test interpretation:** Earlier assertions requiring an unscrollable document and a scrolling inner main region are replaced by assertions requiring a non-scrolling inner region, genuine document scrolling for long content, and fully visible final controls above the fixed footer/action stack. Role-content viewport bounds, header matching and footer-alignment checks remain enforced.
+
+## R5 day/night display and final visual evidence
+
+The shared public phase selects the palette: entry/lobby and night remain dark; day steps use Candle backgrounds, Ash panels and Charcoal text. “Always dark” is an off-by-default local display override. No role enters the theme decision. Night/morning transitions respect reduced motion.
+
+The canonical Stackstone palette is unchanged. The day button mixes 12% Candle into Gilt so Charcoal labels meet 4.5:1; the original Gilt/Charcoal pair does not. Small day text uses dark ink, with a darker Gilt shade for headings, focus and the wordmark accent. The existing Cairn is rendered dark on light surfaces, not replaced by the unapproved Turnstone emblem.
+
+**Why:** R5 17–20 require both themes to stay legible and identical across roles. Root-palette tests now explicitly read `:root`, while separate scoped-palette and browser checks cover the day overrides; the original exact-colour assertions remain.
+
+**Evidence:** The R5 gallery in `docs/screens/round-5/` uses real app components and deterministic fixtures at all five required widths, in both palettes. Private scenes establish their viewport before opening a secret; privacy interruption handling is not disabled. The real-server rehearsal separately checks phase-driven themes with eight seats and no presenter or refresh.

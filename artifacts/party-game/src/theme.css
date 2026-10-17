@@ -6,6 +6,12 @@
   --gilt: #c8944a;
   --candle: #fafaf5;
   --ash: #d4cdc4;
+  --brand-charcoal: var(--charcoal);
+  --brand-hearth: var(--hearth);
+  --brand-stone: var(--stone);
+  --brand-gilt: var(--gilt);
+  --brand-candle: var(--candle);
+  --brand-ash: var(--ash);
 
   /* Existing foundation-shell aliases stay stable until their screen milestones. */
   --amber: var(--gilt); /* accent only */
@@ -23,4 +29,127 @@
   --font-body-regular: 400;
   --font-body-medium: 500;
   --font-headline-weight: 400;
+}
+
+.game-shell {
+  color-scheme: dark;
+  color: var(--candle);
+  --game-button-ink: var(--brand-hearth);
+  --game-button-fill: var(--brand-gilt);
+}
+
+.game-shell[data-game-theme='day'] {
+  color-scheme: light;
+  --game-page-background: var(--brand-candle);
+  --charcoal: var(--brand-candle);
+  --hearth: var(--brand-ash);
+  --candle: var(--brand-charcoal);
+  --ash: var(--brand-stone);
+  --stone: var(--brand-stone);
+  --gilt: color-mix(in srgb, var(--brand-gilt) 35%, var(--brand-hearth));
+  --game-button-ink: var(--brand-charcoal);
+  /* Original Gilt/Charcoal is below 4.5:1: a small Candle tint meets AA. */
+  --game-button-fill: color-mix(
+    in srgb,
+    var(--brand-gilt) 88%,
+    var(--brand-candle)
+  );
+}
+
+.game-shell .primary-action,
+.game-shell .bg-gilt {
+  background: var(--game-button-fill);
+  color: var(--game-button-ink);
+}
+
+.game-shell .game-fullscreen-overlay,
+.game-shell .privacy-shield {
+  background: var(--game-page-background, var(--hearth));
+}
+
+.game-shell[data-game-theme='night']:has([data-phase='SHADOW'])
+  .privacy-shield {
+  animation: game-night-enter 400ms ease-out;
+}
+@keyframes game-night-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.game-shell[data-game-theme='day'] .primary-action:disabled {
+  background: var(--brand-ash);
+  color: var(--brand-stone);
+}
+
+.game-shell[data-game-theme='day'] .text-gilt {
+  color: var(--candle);
+}
+
+.game-shell[data-game-theme='day'] :is(h1, h2, .turnstone-wordmark) .text-gilt {
+  color: var(--gilt);
+}
+
+.game-shell[data-game-theme='day'] .brand-mark-small {
+  filter: brightness(0) opacity(0.76);
+}
+
+.game-display-settings {
+  position: relative;
+  font-size: 0.875rem;
+}
+.game-display-settings summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  cursor: pointer;
+}
+.game-display-settings label {
+  position: absolute;
+  z-index: 40;
+  top: 100%;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 12rem;
+  min-height: 56px;
+  padding: 0.75rem;
+  border: 1px solid var(--stone);
+  background: var(--hearth);
+  color: var(--candle);
+}
+.game-theme-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: var(--game-page-background, var(--hearth));
+  color: var(--candle);
+  font-family: var(--font-headline);
+  font-size: 2rem;
+  animation: game-theme-fade 800ms ease-out forwards;
+}
+@keyframes game-theme-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-shell[data-game-theme='night']:has([data-phase='SHADOW'])
+    .privacy-shield {
+    animation: none;
+  }
+  .game-theme-transition {
+    display: none;
+    animation: none;
+  }
 }

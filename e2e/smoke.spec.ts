@@ -537,8 +537,8 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     }));
     expect(brandVisual.fontFamily).toContain('Playfair Display');
     expect(brandVisual.parts).toEqual([
-      { text: 'Turn', color: 'rgb(250, 250, 245)' },
-      { text: 'stone', color: 'rgb(200, 148, 74)' },
+      { text: 'Turn', color: 'rgb(61, 58, 56)' },
+      { text: 'stone', color: 'color(srgb 0.391765 0.312745 0.206078)' },
     ]);
     const shellBrandVisual = await page
       .locator('header.public-shell-header .turnstone-wordmark')

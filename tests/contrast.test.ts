@@ -2,8 +2,10 @@ import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 
 const theme = readFileSync('artifacts/party-game/src/theme.css', 'utf8');
+const rootTheme = theme.match(/:root\s*\{([^}]+)\}/)?.[1];
+if (!rootTheme) throw new Error('Missing root brand palette');
 const tokens = Object.fromEntries(
-  [...theme.matchAll(/--([\w-]+):\s*(#[\da-f]{6}|var\(--[\w-]+\))/gi)].map(
+  [...rootTheme.matchAll(/--([\w-]+):\s*(#[\da-f]{6}|var\(--[\w-]+\))/gi)].map(
     (match) => [match[1], match[2]],
   ),
 );

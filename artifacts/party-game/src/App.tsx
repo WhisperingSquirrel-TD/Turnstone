@@ -3,6 +3,7 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from '@tanstack/react-query';
+import { gameThemeForPhase } from './game-theme';
 import {
   createContext,
   lazy,
@@ -217,14 +218,36 @@ function Shell({
   privateMode = false,
   privateRevealActive = false,
   connectionStatus = null,
+  phase,
 }: {
   children: ReactNode;
   isPlayer?: boolean;
   privateMode?: boolean;
   privateRevealActive?: boolean;
   connectionStatus?: GameConnectionState | null;
+  phase?: string;
 }) {
   const navigate = useNavigate();
+  const [alwaysDark, setAlwaysDark] = useState(false);
+  const theme = gameThemeForPhase(phase, alwaysDark);
+  const previousPhase = useRef<string | undefined>(undefined);
+  const [themeMessage, setThemeMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (!phase) return;
+    const previous = previousPhase.current;
+    previousPhase.current = phase;
+    if (
+      !previous ||
+      alwaysDark ||
+      (previous === 'SHADOW') === (phase === 'SHADOW')
+    ) {
+      setThemeMessage(null);
+      return;
+    }
+    setThemeMessage(theme === 'night' ? en.app.nightFalls : en.app.morning);
+    const timer = setTimeout(() => setThemeMessage(null), 800);
+    return () => clearTimeout(timer);
+  }, [phase, theme, alwaysDark]);
   useEffect(() => {
     if (!isPlayer) return;
     const root = document.querySelector<HTMLElement>('.game-shell');
@@ -268,6 +291,7 @@ function Shell({
   }, []);
   return (
     <div
+      data-game-theme={isPlayer ? theme : undefined}
       className={`safe-page flex min-h-[100dvh] flex-col${isPlayer ? ' game-shell' : ''}${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
     >
       <a
@@ -324,6 +348,19 @@ function Shell({
           {isPlayer && connectionStatus && (
             <GameConnectionStatus status={connectionStatus} />
           )}
+          {isPlayer && (
+            <details className="game-display-settings">
+              <summary>{en.app.display}</summary>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={alwaysDark}
+                  onChange={(event) => setAlwaysDark(event.target.checked)}
+                />
+                {en.app.alwaysDark}
+              </label>
+            </details>
+          )}
           {isPlayer && standalone && (
             <>
               <button
@@ -360,6 +397,11 @@ function Shell({
           </details>
         )}
       </header>
+      {isPlayer && themeMessage && (
+        <div className="game-theme-transition" role="status" aria-live="polite">
+          {themeMessage}
+        </div>
+      )}
       <main
         id="main"
         tabIndex={-1}
@@ -1748,6 +1790,7 @@ function PlayerGame() {
   return (
     <Shell
       isPlayer
+      phase={full?.phase}
       privateMode={inPrivateMoment}
       privateRevealActive={held}
       connectionStatus={

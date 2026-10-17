@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import { mkdir } from 'node:fs/promises';
 import type { FullView } from '../lib/shared/src/contracts';
 import { pendingJoinRequestsResponseSchema } from '../lib/shared/src/contracts';
 
@@ -56,6 +58,452 @@ function createPublicView(gameId: string): FullView {
     fairness: null,
   } as FullView;
 }
+
+test('game-clock colours and Always dark keep text accessible in both palettes', async ({
+  page,
+}) => {
+  const gameId = 'theme-clock';
+  const view = createPublicView(gameId);
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.goto(`/game/${gameId}`);
+  const shell = page.locator('.game-shell');
+  await expect(shell).toHaveAttribute('data-game-theme', 'day');
+  await page.getByText('Display', { exact: true }).click();
+  const alwaysDark = page.getByRole('checkbox', { name: 'Always dark' });
+  await expect(alwaysDark).not.toBeChecked();
+  await alwaysDark.check();
+  await expect(shell).toHaveAttribute('data-game-theme', 'night');
+  expect(
+    await shell
+      .locator('.turnstone-wordmark > span')
+      .evaluateAll((parts) =>
+        parts.map((part) => getComputedStyle(part).color),
+      ),
+  ).toEqual(['rgb(250, 250, 245)', 'rgb(200, 148, 74)']);
+  await alwaysDark.uncheck();
+  await expect(shell).toHaveAttribute('data-game-theme', 'day');
+  await page.getByText('Display', { exact: true }).click();
+  for (const theme of ['day', 'night']) {
+    await shell.evaluate((element, palette) => {
+      (element as HTMLElement).dataset.gameTheme = palette;
+    }, theme);
+    const result = await new AxeBuilder({ page })
+      .withRules(['color-contrast'])
+      .analyze();
+    expect(result.violations).toEqual([]);
+  }
+  for (const phase of ['SHADOW', 'DAWN'] as const) {
+    view.phase = phase;
+    view.version += 1;
+    await page.goto(`/game/${gameId}`);
+    await expect(shell).toHaveAttribute(
+      'data-game-theme',
+      phase === 'SHADOW' ? 'night' : 'day',
+    );
+  }
+});
+
+test('night status has identical four-line geometry for both roles in both themes', async ({
+  page,
+}) => {
+  await page.clock.install();
+  let view = createPublicView('night-theme-uniformity');
+  view.phase = 'SHADOW';
+  view.shadowSlot = 1;
+  let role = 'faithful';
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  const envelope = () => ({
+    serverNow: Date.now(),
+    version: view.version,
+    view,
+  });
+  await page.route('**/api/games/night-theme-uniformity/view', (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route('**/api/games/night-theme-uniformity/commands', (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route(
+    '**/api/games/night-theme-uniformity/private-view',
+    (route) =>
+      route.fulfill({
+        json: {
+          ...envelope(),
+          view: {
+            ...view,
+            private: {
+              role,
+              team: [],
+              options: [],
+              choices: {},
+              choiceSlots: [],
+              chat: [],
+              task: null,
+              minimumDurationMs: 0,
+            },
+          },
+        },
+      }),
+  );
+  const snapshots: Record<string, unknown> = {};
+  for (role of ['faithful', 'traitor']) {
+    view = { ...view, version: view.version + 1 };
+    await page.goto('/game/night-theme-uniformity');
+    await expect(
+      page.getByRole('dialog', { name: 'Shield your screen' }),
+    ).toBeVisible();
+    await page.clock.fastForward(3_000);
+    await page.getByRole('button', { name: 'I’m shielded' }).click();
+    const status = page.getByTestId('shadow-status');
+    await expect(status).toBeVisible();
+    await expect(status.locator('p')).toHaveCount(4);
+    for (const theme of ['day', 'night']) {
+      await page.locator('.game-shell').evaluate((element, palette) => {
+        (element as HTMLElement).dataset.gameTheme = palette;
+      }, theme);
+      const geometry = await status.evaluate((element) => {
+        const box = element.getBoundingClientRect(),
+          style = getComputedStyle(element);
+        return {
+          width: Math.round(box.width * 1000) / 1000,
+          height: Math.round(box.height * 1000) / 1000,
+          color: style.color,
+          fontSize: style.fontSize,
+          lines: Array.from(element.children).map(
+            (line) =>
+              Math.round(line.getBoundingClientRect().height * 1000) / 1000,
+          ),
+        };
+      });
+      if (role === 'faithful') snapshots[theme] = geometry;
+      else expect(geometry).toEqual(snapshots[theme]);
+      expect(geometry.height).toBe(80);
+      expect(geometry.lines).toEqual([20, 20, 20, 20]);
+    }
+  }
+});
+
+test('Round 5 screen matrix keeps headers and the bottom stack clear at every width', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name !== 'Pixel',
+    'The full geometry matrix runs once; WebKit also runs the dedicated role and header bounds specs.',
+  );
+  test.setTimeout(180_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.clock.install();
+  const gameId = 'r5-screen-matrix';
+  let view = createPublicView(gameId);
+  let role: 'faithful' | 'traitor' = 'faithful';
+  const capture = process.env.R5_CAPTURE_SCREENS === '1';
+  const directory = 'docs/screens/round-5';
+  if (capture) await mkdir(directory, { recursive: true });
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  const envelope = () => ({
+    serverNow: Date.now(),
+    version: view.version,
+    view,
+  });
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route(`**/api/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(`**/api/games/${gameId}/private-view`, (route) =>
+    route.fulfill({
+      json: {
+        ...envelope(),
+        view: {
+          ...view,
+          private: {
+            role,
+            team: [],
+            options: view.seats
+              .filter(
+                (seat) =>
+                  seat.id !== view.viewerSeatId && seat.status === 'alive',
+              )
+              .map(({ id, name }) => ({ id, name })),
+            choices: {},
+            choiceSlots: [],
+            chat: [],
+            task: null,
+            minimumDurationMs: 0,
+          },
+        },
+      },
+    }),
+  );
+  const widths = [320, 375, 390, 430, 1280];
+  async function snapshot(label: string, held = false) {
+    for (const width of widths) {
+      const height =
+        width === 320
+          ? 568
+          : width === 375
+            ? 667
+            : width === 430
+              ? 932
+              : width === 1280
+                ? 900
+                : 844;
+      await page.setViewportSize({ width, height });
+      // Establish the viewport before opening a secret. A live resize correctly
+      // covers private content, so each visual scene starts with a fresh load.
+      await page.goto(`/game/${gameId}`);
+      await expect(page.getByTestId('player-game')).toHaveAttribute(
+        'data-phase',
+        view.phase,
+      );
+      await page.evaluate(() => document.fonts.ready);
+      const privacyShield = page.getByRole('dialog', {
+        name: 'Shield your screen',
+      });
+      if (!label.startsWith('shield-') && (await privacyShield.isVisible())) {
+        await page.clock.fastForward(3_000);
+        await privacyShield
+          .getByRole('button', { name: 'I’m shielded' })
+          .click();
+        await expect(privacyShield).not.toBeVisible();
+      }
+      if (label === 'notes') {
+        await page.getByRole('button', { name: 'Notes', exact: true }).click();
+        await expect(page.getByTestId('private-notes-content')).toBeVisible();
+      }
+      for (const palette of ['day', 'night']) {
+        if (view.phase === 'SHADOW' && !label.startsWith('shield-'))
+          await expect(page.getByTestId('shadow-status')).toBeVisible();
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.locator('.game-shell').evaluate((element, theme) => {
+          (element as HTMLElement).dataset.gameTheme = theme;
+        }, palette);
+        if (held) {
+          const seal = page.getByTestId('button-hold-reveal');
+          const box = await seal.boundingBox();
+          expect(box).not.toBeNull();
+          await page.mouse.move(
+            box!.x + box!.width / 2,
+            box!.y + box!.height / 2,
+          );
+          await page.mouse.down();
+          await page.clock.fastForward(1_200);
+          await expect(page.getByTestId('private-role-content')).toBeVisible();
+        }
+        const footer = page.getByRole('dialog', { name: 'Shield your screen' });
+        const shielded = await footer.isVisible();
+        const header = shielded
+          ? footer.getByTestId('text-entry-brand')
+          : page.locator('header.public-shell-header');
+        const headerBox = await header.boundingBox();
+        expect(headerBox).not.toBeNull();
+        const main = shielded ? footer : page.locator('main');
+        const textBoxes = await main
+          .locator(
+            'h1, h2, p, [role="status"], [data-testid="game-commentary"]',
+          )
+          .evaluateAll((elements) =>
+            elements
+              .filter(
+                (element) =>
+                  element.getClientRects().length > 0 &&
+                  getComputedStyle(element).visibility !== 'hidden',
+              )
+              .map((element) => {
+                const box = element.getBoundingClientRect();
+                return { text: element.textContent, top: box.top };
+              }),
+          );
+        for (const box of textBoxes)
+          expect(
+            box.top,
+            `${label}/${palette}/${width}: ${box.text}`,
+          ).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        ).toBe(true);
+        if (!shielded && !held)
+          expect(
+            await page
+              .locator('main')
+              .evaluate((element) => getComputedStyle(element).overflowY),
+          ).toBe('visible');
+        if (held) {
+          const box = await page
+            .getByTestId('private-role-content')
+            .boundingBox();
+          expect(box!.y).toBeGreaterThanOrEqual(
+            headerBox!.y + headerBox!.height,
+          );
+          expect(box!.y + box!.height).toBeLessThanOrEqual(height);
+        }
+        if (capture)
+          await page.screenshot({
+            path: `${directory}/${label}-${palette}-${width}.jpg`,
+            type: 'jpeg',
+            quality: 72,
+            scale: 'css',
+          });
+        if (held) await page.mouse.up();
+        if (!shielded && !held) {
+          const last = page
+            .locator('main button:visible:not(.game-action-bar button)')
+            .last();
+          if (await last.count()) {
+            await page.evaluate(() =>
+              window.scrollTo(0, document.documentElement.scrollHeight),
+            );
+            const box = await last.boundingBox();
+            const action = page.locator('.game-action-bar:visible');
+            const stack = await (
+              (await action.count())
+                ? action
+                : page.getByTestId('brand-footer-shell')
+            ).boundingBox();
+            expect(
+              box!.y + box!.height,
+              `${label}/${palette}/${width}: last action clear of bottom stack`,
+            ).toBeLessThanOrEqual(stack!.y + 1);
+          }
+          const bar = page.locator('.game-action-bar:visible');
+          if (await bar.count()) {
+            const barBox = await bar.boundingBox(),
+              footerBox = await page
+                .getByTestId('brand-footer-shell')
+                .boundingBox();
+            expect(
+              Math.abs(barBox!.y + barBox!.height - footerBox!.y),
+            ).toBeLessThanOrEqual(1);
+            expect(barBox!.width).toBe(footerBox!.width);
+          }
+        }
+      }
+    }
+  }
+  for (const phase of [
+    'LOBBY',
+    'DEAL',
+    'MISSION',
+    'DEBATE',
+    'VOTE',
+    'VERDICT',
+    'SHADOW',
+    'DAWN',
+    'ENDGAME',
+    'FINAL_VOTE',
+    'FINAL_BANISH',
+    'FINISHED',
+  ] as const) {
+    view = {
+      ...createPublicView(gameId),
+      phase,
+      shadowSlot: phase === 'SHADOW' ? 1 : 0,
+      deadline: null,
+      missionsEnabled: false,
+      canAdvancePhase: phase !== 'LOBBY' && phase !== 'FINISHED',
+      seats: [
+        'Morgan',
+        'Alex',
+        'Jamie',
+        'Sam',
+        'Drew',
+        'Blair',
+        'Taylor',
+        'Robin',
+      ].map((name, index) => ({
+        id: `seat-${name.toLowerCase()}`,
+        name,
+        status: index === 1 ? ('banished' as const) : ('alive' as const),
+        ...(phase === 'FINISHED'
+          ? { role: index === 1 ? ('traitor' as const) : ('faithful' as const) }
+          : {}),
+      })),
+      ...(phase === 'VERDICT'
+        ? {
+            publicAnnouncement: {
+              kind: 'verdict' as const,
+              cycle: 2,
+              seat: { id: 'seat-alex', name: 'Alex', role: 'traitor' as const },
+            },
+          }
+        : {}),
+      ...(phase === 'DAWN'
+        ? {
+            publicAnnouncement: {
+              kind: 'dawn' as const,
+              cycle: 2,
+              victims: [],
+            },
+          }
+        : {}),
+      ...(phase === 'FINISHED'
+        ? {
+            winner: 'faithful' as const,
+            publicAnnouncement: {
+              kind: 'finished' as const,
+              winner: 'faithful' as const,
+            },
+          }
+        : {}),
+    };
+    await page.goto(`/game/${gameId}`);
+    await expect(page.getByTestId('player-game')).toHaveAttribute(
+      'data-phase',
+      phase,
+    );
+    if (phase === 'DEAL' || phase === 'SHADOW') {
+      await expect(
+        page.getByRole('dialog', { name: 'Shield your screen' }),
+      ).toBeVisible();
+      await snapshot(`shield-${phase.toLowerCase()}`);
+      await page.clock.fastForward(3_000);
+      await page.getByRole('button', { name: 'I’m shielded' }).click();
+    }
+    if (phase === 'SHADOW')
+      await expect(page.getByTestId('shadow-status')).toBeVisible();
+    await snapshot(phase.toLowerCase(), phase === 'DEAL');
+    if (phase === 'DEBATE') {
+      await page.getByRole('button', { name: 'Notes', exact: true }).click();
+      await expect(page.getByTestId('private-notes-content')).toBeVisible();
+      await snapshot('notes');
+    }
+  }
+  role = 'traitor';
+  view = { ...view, phase: 'DEAL', winner: null, publicAnnouncement: null };
+  await snapshot('role-traitor', true);
+  view = {
+    ...view,
+    phase: 'SHADOW',
+    shadowSlot: 1,
+    winner: null,
+    publicAnnouncement: null,
+  };
+  await page.goto(`/game/${gameId}`);
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toBeVisible();
+  await page.clock.fastForward(3_000);
+  await page.getByRole('button', { name: 'I’m shielded' }).click();
+  await expect(page.getByTestId('shadow-status')).toBeVisible();
+  await snapshot('night-traitor');
+});
 
 test('coordinator creates a fresh late invitation without reopening the room code', async ({
   page,
@@ -194,7 +642,9 @@ async function revealNotes(
   page: Page,
   gameId: string,
   role: 'traitor' | 'faithful',
+  palette: 'day' | 'night' = 'day',
 ): Promise<unknown[]> {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   let privateRequests = 0;
   const publicView = createPublicView(gameId);
   await page.route('**/api/csrf', (route) =>
@@ -256,6 +706,9 @@ async function revealNotes(
   await expect.poll(() => privateRequests).toBe(1);
   const notes = page.getByTestId('private-notes-content');
   await expect(notes).toBeVisible({ timeout: 1500 });
+  await page.locator('.game-shell').evaluate((element, theme) => {
+    (element as HTMLElement).dataset.gameTheme = theme;
+  }, palette);
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   await expect(
     notes.getByText('Only you can see your notes.', { exact: true }),
@@ -812,7 +1265,7 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   );
   await expect(
     page.getByText('Who do you vote to banish?', { exact: true }),
-  ).toHaveCSS('color', 'rgb(250, 250, 245)');
+  ).toHaveCSS('color', 'rgb(61, 58, 56)');
   for (const choiceButton of await choiceList.getByRole('button').all()) {
     await expect(choiceButton).toBeEnabled();
     const visualState = await choiceButton.evaluate((element) => {
@@ -823,7 +1276,7 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
         opacity: style.opacity,
       };
     });
-    expect(visualState.color).toBe('rgb(250, 250, 245)');
+    expect(visualState.color).toBe('rgb(61, 58, 56)');
     expect(visualState.opacity).toBe('1');
     expect(visualState.cursor).not.toBe('not-allowed');
   }
@@ -1327,11 +1780,13 @@ test('Notes have the same geometry and colours for Traitor and Faithful', async 
     viewport: page.viewportSize() ?? { width: 402, height: 874 },
   });
   try {
-    const [faithfulSnapshot, traitorSnapshot] = await Promise.all([
-      revealNotes(page, 'notes-faithful', 'faithful'),
-      revealNotes(otherPage, 'notes-traitor', 'traitor'),
-    ]);
-    expect(traitorSnapshot).toEqual(faithfulSnapshot);
+    for (const palette of ['day', 'night'] as const) {
+      const [faithfulSnapshot, traitorSnapshot] = await Promise.all([
+        revealNotes(page, 'notes-faithful', 'faithful', palette),
+        revealNotes(otherPage, 'notes-traitor', 'traitor', palette),
+      ]);
+      expect(traitorSnapshot).toEqual(faithfulSnapshot);
+    }
   } finally {
     await otherPage.close();
   }
