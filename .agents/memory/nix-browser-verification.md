@@ -5,6 +5,6 @@ description: Why native package installation is not sufficient evidence of usabl
 
 Do not equate a successful native package installation, loader preflight or browser launch with successful WebKit page rendering in this Nix environment.
 
-**Why:** Multiple dependency approaches cleared loader failures, but the Ubuntu-packaged headless WebKit renderer still aborted on page creation because no supported EGL platform was available. Its launcher/library-cache assumptions also differ from Nix runtime outputs.
+**Why:** Loader preflight alone cleared library errors but rendering still failed without a supported EGL platform. Mesa's EGL vendor, software drivers and surfaceless platform enabled actual iPhone WebKit rendering and reproduced a footer interception that Chromium did not.
 
-**How to apply:** Before promising iPhone/iPad verification, create and render an actual page in the requested WebKit engine with a compatible headless graphics/display backend. Keep failed profiles visibly failed; do not substitute Chromium, skip assertions, or advance a milestone on partial browser evidence. For local Chromium Pixel checks, the cached Nix Mesa library must also be exposed to the Playwright process through `LD_LIBRARY_PATH`; installing system dependencies alone did not make `libgbm.so.1` discoverable. Keep WebKit verification in GitHub Actions.
+**How to apply:** Use the project's browser-runtime wrapper and verify actual rendering, not just launch. Keep failed profiles visibly failed; never substitute Chromium or skip assertions. Nix library outputs and Mesa's EGL vendor/driver discovery must all reach the browser process; installing system packages alone is insufficient.

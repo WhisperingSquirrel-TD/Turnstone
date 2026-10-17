@@ -233,6 +233,8 @@ h2,
 }
 .game-shell-main {
   min-height: 0 !important;
+  /* Keep the scrollport itself clear: WebKit can scroll a button behind fixed chrome. */
+  margin-bottom: var(--game-footer-dock-height);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
