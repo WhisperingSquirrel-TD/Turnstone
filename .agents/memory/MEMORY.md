@@ -9,6 +9,7 @@
 - [Invite closure and seat recovery](invite-seat-recovery.md) — closed or rotated invitations must not lock out existing seats; recovery still requires name and PIN.
 - [HTTP timeout environment](http-timeout-environment.md) — impure fetch may lack AbortSignal; workspace Node supports timed public status requests.
 - [Game chrome placement](game-chrome-placement.md) — use whole-page scrolling, align headers to the content column, and keep fixed controls clear of the shared footer.
+- [Review and hosting gates](review-hosting-gates.md) — finish Round 5 first; server preparation is not deployment approval, and Milestone 6 still needs owner acceptance.
 - [Attachment commit scope](attachment-commit-scope.md) — keep user-supplied attachments out of commits by default.
 - [Rehearsal vote advancement](rehearsal-vote-advancement.md) — close rehearsal ballots with the explicit Next step before asserting their result or re-vote.
 - [Rehearsal first-night safety](rehearsal-first-night-safety.md) — protect the human until the first completed Dawn, not a cycle counter or murder-resolution row.

@@ -1,10 +1,9 @@
 # Status for reviewer
 
-- Updated: 17 October 2026, 08:49 UTC. Last pushed: `780f527`, [Verify #124](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39016771968) **Success** — all 19 jobs, no annotations. Verify #120 and R5 item 10 are fixed.
-- R5 done: 1–10, 21–24, 32–35. Unpushed: R5 15–16 commentary/explainers and 11/13–14/25–28/31 layout work. R5 12/29 retain existing first-paint/result-label behaviour. Local affected units 32/32, typechecks/lint and the full real-server rehearsal pass; iPhone/Pixel role viewport checks pass.
-- Remaining local gate: the desktop public/game footer alignment assertion differs by 272px. Overlay header/footers and whole-page scrolling now pass their checks; the final shared-footer check still fails. The batch is not committed or pushed while that remains red.
-- Next after that gate: R5 17–20 day/night colours, then R5 30 finished-screen screenshots/visual checks. Round 5 is **not** complete.
-- Questions: none. Risks: production capacity remains unproven; prior generic dev scheduler errors remain uninvestigated. No new scope or paid services.
+- Updated: 17 October 2026, 09:05 UTC. This push: `2110cdc` commentary/layout plus the public-footer cascade fix; new Verify pending. Last green: `780f527`, [Verify #124](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39016771968), all 19 jobs.
+- R5 1–16, 21–29 and 31–35 implemented; this group's CI is pending. Local affected units 32/32, Pixel/iPhone screens 48 passed (two desktop-only skips), typechecks/lint and full real-server rehearsal pass. Public/game/overlay footer alignment now passes unchanged bounds checks.
+- Remaining: R5 17–20 colours, then R5 30 final screenshots. Round 5 is **not** complete.
+- Afterwards only: plan housekeeping, Replit M4b/checklist and uploaded-content work if available. No deployment/DNS/production-secret changes; Milestone 6 waits for owner acceptance. Questions: none. Production capacity remains unproven.
 
 ## Previous verification history
 
