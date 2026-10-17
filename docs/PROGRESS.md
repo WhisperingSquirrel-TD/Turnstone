@@ -1,10 +1,13 @@
 # Status for reviewer
 
-- **Round 5 is green.** Updated: 17 October 2026, 10:47 UTC. `f61ff58`, [Verify #126](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39022854952) **Success**, all 19 jobs. R5 1–35 complete; 170 review images in `docs/screens/round-5/`. Owner can retry a fresh phone rehearsal now.
-- Current push: M4b server preparation/checklist; Verify pending. Local: 11 unit checks, complete 5-/40-seat HTTP/socket restart games, 4 Pixel/iPhone production checks, build, types and lint. Also fixes failed-start worker lifetime after an old dev process held the port. No production changes.
-- Content skipped: eight owner source files absent. Milestone 6 waits for owner Milestone 5 acceptance. Risks: production peak capacity unproven; older development snapshots need compatibility work (data preserved).
+- **Waiting for owner: Milestone 5 acceptance. Round 5 is green (R5 1–35).** Updated: 17 October 2026, 10:55 UTC. Owner can retry a fresh phone rehearsal; 170 review images are in `docs/screens/round-5/`.
+- Last verified implementation: `5654db3`, [Verify #127](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39026343438) **Success**, all 19 jobs. M4b server preparation/checklist complete; this push records CI evidence only.
+- Content skipped: eight owner source files absent. No publishing, paid service, domain, DNS or production-secret changes. Milestone 6 remains blocked on phone acceptance.
+- Risks: production peak capacity unproven; older development snapshots need compatibility work (data preserved). The development API now starts correctly; failed binds no longer start its worker.
 
 ## Previous verification history
+
+- Verify #127 (`39026343438`), commit `5654db3`: Success on the public run page; all 19 jobs passed, including every browser profile, Lighthouse, live rehearsal and scenario shard. M4b source and owner checklist verified; no deployment.
 
 - Verify #126 (`39022854952`), commit `f61ff58`: Success on the public run page, all 19 jobs; final R5 themes, contrast, live rehearsal, all browser profiles and scenario shards green.
 

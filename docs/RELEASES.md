@@ -13,4 +13,4 @@ No production deployment has been performed or authorised.
 ## Verified development baseline
 
 - `f61ff585b0c0bdaca8be8ca39ed90aa10e2f25c9` — Round 5; [Verify #126, run 39022854952](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39022854952), **Success**, all 19 jobs. This is CI evidence, not owner phone acceptance or deployment approval.
-- M4b source preparation is pending its own Verify result. Its successful commit/run must be added before it can be considered for an owner-approved release.
+- `5654db3d611976c1e64f471d5b4f6d06d859cca4` — M4b server preparation and owner checklist; [Verify #127, run 39026343438](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39026343438), **Success**, all 19 jobs, public page checked. No production release or owner deployment approval.
