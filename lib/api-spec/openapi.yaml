@@ -651,6 +651,9 @@ components:
           type: string
           minLength: 1
           maxLength: 128
+        ready:
+          type: boolean
+          description: For AcknowledgePrivate, true only after the player has finished viewing their role.
       additionalProperties: true
     PrivateViewRequest:
       type: object
@@ -919,7 +922,16 @@ components:
       type: object
       additionalProperties: false
       required:
-        [role, team, options, choices, choiceSlots, chat, task, minimumDurationMs]
+        [
+          role,
+          team,
+          options,
+          choices,
+          choiceSlots,
+          chat,
+          task,
+          minimumDurationMs,
+        ]
       properties:
         role:
           oneOf:
@@ -1123,14 +1135,7 @@ components:
                 items:
                   type: object
                   additionalProperties: false
-                  required:
-                    [
-                      seatId,
-                      seatName,
-                      choiceSeatId,
-                      choiceName,
-                      round,
-                    ]
+                  required: [seatId, seatName, choiceSeatId, choiceName, round]
                   properties:
                     seatId: { type: string }
                     seatName: { type: string }
@@ -1148,8 +1153,7 @@ components:
                   - type: 'null'
               outcome:
                 type: string
-                enum:
-                  [murdered, protected, no-target, cancelled, game-ended]
+                enum: [murdered, protected, no-target, cancelled, game-ended]
     Role:
       type: string
       enum: [traitor, faithful]

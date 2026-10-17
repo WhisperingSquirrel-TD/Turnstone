@@ -68,6 +68,7 @@ export type State = {
     redealUsed: boolean;
   } | null;
   acks: string[];
+  readySeats?: string[];
   votes: Record<string, string>;
   revealed: string[];
   target: string | null;

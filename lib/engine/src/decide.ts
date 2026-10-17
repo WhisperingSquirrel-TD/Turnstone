@@ -335,7 +335,10 @@ export function decide(
         )
       )
         return error('WRONG_PHASE');
-      emit('PrivateAcknowledged', { seatId: actingSeat!.id });
+      emit('PrivateAcknowledged', {
+        seatId: actingSeat!.id,
+        ...(cmd.ready === true ? { ready: true } : {}),
+      });
       if (
         state.phase === 'DEAL' &&
         !state.taskAssignments.some(

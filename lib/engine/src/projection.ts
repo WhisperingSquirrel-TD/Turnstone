@@ -219,7 +219,16 @@ export function viewFor(
         state.phase === 'VOTE' || state.phase === 'FINAL_BANISH'
           ? alive(state).filter((seat) => state.votes[seat.id] !== undefined)
               .length
-          : alive(state).filter((seat) => state.acks.includes(seat.id)).length,
+          : state.phase === 'FINAL_VOTE'
+            ? alive(state).filter(
+                (seat) => state.endVotes[seat.id] !== undefined,
+              ).length
+            : state.phase === 'DEAL'
+              ? alive(state).filter((seat) =>
+                  (state.readySeats ?? []).includes(seat.id),
+                ).length
+              : alive(state).filter((seat) => state.acks.includes(seat.id))
+                  .length,
       total: alive(state).length,
     },
     votedSeatIds:

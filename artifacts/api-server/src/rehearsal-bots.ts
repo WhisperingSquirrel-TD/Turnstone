@@ -63,8 +63,15 @@ export function nextRehearsalBotCommand(
     'FINAL_VOTE',
     'FINAL_BANISH',
   ]);
-  if (privatePhases.has(state.phase) && !state.acks.includes(seatId))
-    return { type: 'AcknowledgePrivate' };
+  if (
+    privatePhases.has(state.phase) &&
+    (!state.acks.includes(seatId) ||
+      (state.phase === 'DEAL' && !(state.readySeats ?? []).includes(seatId)))
+  )
+    return {
+      type: 'AcknowledgePrivate',
+      ...(state.phase === 'DEAL' ? { ready: true } : {}),
+    };
 
   const humanSeatId = state.seats.find(
     (candidate) => !state.config.rehearsal.botSeatIds.includes(candidate.id),

@@ -39,7 +39,7 @@ export const commandSchema = z.union([
   command('AdvancePhase'),
   command('Pause'),
   command('Resume'),
-  command('AcknowledgePrivate'),
+  command('AcknowledgePrivate', { ready: z.boolean().optional() }),
   command('RequestRedeal'),
   command('SubmitVote', { target: id }),
   command('SubmitShadowChoice', {
@@ -107,7 +107,7 @@ export const eventSchema = z.discriminatedUnion('type', [
     sleeper: id.nullable(),
     redeal: z.boolean(),
   }),
-  event('PrivateAcknowledged', { seatId: id }),
+  event('PrivateAcknowledged', { seatId: id, ready: z.boolean().optional() }),
   event('VoteSubmitted', { seatId: id, target: id }),
   event('VoteRevealed', { seatId: id }),
   event('VoteSkipped', {}),

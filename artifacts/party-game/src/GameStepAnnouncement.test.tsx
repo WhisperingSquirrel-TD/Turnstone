@@ -24,6 +24,18 @@ function announcement(props: Partial<AnnouncementInput>) {
 }
 
 describe('GameStepAnnouncement', () => {
+  it('puts the actual vote count in normal-size commentary before choices', () => {
+    const html = renderToStaticMarkup(
+      <GameStepAnnouncement
+        {...base}
+        phase="VOTE"
+        progress={{ done: 4, total: 6 }}
+      />,
+    );
+    expect(html).toContain('4 of 6 have voted');
+    expect(html).toContain('game-commentary');
+    expect(html).not.toContain('text-sm');
+  });
   it('explains a double-murder night before its first choice', () => {
     const html = renderToStaticMarkup(
       <>

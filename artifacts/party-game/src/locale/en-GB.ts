@@ -397,6 +397,7 @@ export const en = {
       `${done} of ${total} have voted`,
     readyProgress: (done: number, total: number) =>
       `${done} of ${total} are ready`,
+    readyFailed: 'We could not mark you as ready. Tap Done to try again.',
     playerOutcome: (
       winner: 'traitor' | 'faithful',
       role: 'traitor' | 'faithful',

@@ -110,6 +110,7 @@ test('private role is requested only during a hold and is removed on release', a
   page,
 }) => {
   let privateRequests = 0;
+  const readinessAcknowledgements: boolean[] = [];
   const gameId = 'rehearsal-id';
   const publicView: FullView = {
     id: gameId,
@@ -155,6 +156,11 @@ test('private role is requested only during a hold and is removed on release', a
   );
   await page.route(`**/api/games/${gameId}/commands`, async (route) => {
     expect(route.request().method()).toBe('POST');
+    const data = route.request().postDataJSON();
+    if (data.type === 'AcknowledgePrivate') {
+      readinessAcknowledgements.push(data.ready === true);
+      if (data.ready === true) publicView.progress.done = 1;
+    }
     await route.fulfill({
       status: 200,
       json: { serverNow: Date.now(), version: 4, view: publicView },
@@ -212,6 +218,9 @@ test('private role is requested only during a hold and is removed on release', a
   await expect(shieldButton).toHaveText('I’m shielded');
   await expect(shieldButton).toBeEnabled();
   await shieldButton.click();
+  await expect(page.getByTestId('phase-progress-status')).toHaveText(
+    '0 of 5 are ready',
+  );
 
   const holdPad = page.getByRole('button', {
     name: /hold the seal to see your role/i,
@@ -230,6 +239,12 @@ test('private role is requested only during a hold and is removed on release', a
   await expect(page.getByText('Faithful', { exact: true })).toBeVisible();
   await page.mouse.up();
   await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
+  expect(readinessAcknowledgements).toEqual([false]);
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect.poll(() => readinessAcknowledgements).toEqual([false, true]);
+  await expect(page.getByTestId('phase-progress-status')).toHaveText(
+    '1 of 5 are ready',
+  );
   expect(
     await page.evaluate(() => ({
       title: document.title,

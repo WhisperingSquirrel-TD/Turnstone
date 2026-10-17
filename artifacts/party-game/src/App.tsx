@@ -1805,7 +1805,33 @@ function PlayerGame() {
               murderSlots={full.murderSlots}
               phase={full.phase}
               shadowRound={full.shadowRound}
+              progress={full.progress}
             />
+            {((!isBanishmentPhase &&
+              ['DEAL', 'FINAL_VOTE'].includes(full.phase)) ||
+              full.paused ||
+              (!full.rehearsal && explanationKey)) && (
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+                {!isBanishmentPhase && (
+                  <PhaseProgressStatus
+                    phase={full.phase}
+                    paused={full.paused}
+                    done={full.progress.done}
+                    total={full.progress.total}
+                  />
+                )}
+                {!full.rehearsal && explanationKey && (
+                  <details className="text-sm text-ash">
+                    <summary className="min-h-11 cursor-pointer py-2">
+                      {en.game.whatsThis}
+                    </summary>
+                    <p className="mt-2">
+                      {en.game.rehearsalGuide[explanationKey]}
+                    </p>
+                  </details>
+                )}
+              </div>
+            )}
             {!inPrivateMoment && (
               <VerdictScreen
                 announcement={
@@ -1824,14 +1850,6 @@ function PlayerGame() {
                   full.publicAnnouncement.cycle === full.cycle
                 }
               />
-            )}
-            {!full.rehearsal && explanationKey && (
-              <details className="mb-4 text-sm text-ash">
-                <summary className="min-h-11 cursor-pointer py-2">
-                  {en.game.whatsThis}
-                </summary>
-                <p className="mt-2">{en.game.rehearsalGuide[explanationKey]}</p>
-              </details>
             )}
             {full.phase === 'LOBBY' && (
               <section className="status-rule mb-7 pt-5">
@@ -1901,17 +1919,6 @@ function PlayerGame() {
                 {en.game.wakeLockFallback}
               </p>
             )}
-            {!inPrivateMoment &&
-              full.phase !== 'FINISHED' &&
-              full.phase !== 'SHADOW' &&
-              !isBanishmentPhase && (
-                <PhaseProgressStatus
-                  phase={full.phase}
-                  paused={full.paused}
-                  done={full.progress.done}
-                  total={full.progress.total}
-                />
-              )}
             {!inPrivateMoment && isBanishmentPhase && (
               <section>
                 <VoteProgressSummary rows={voteProgressRows} />
@@ -2031,17 +2038,6 @@ function PlayerGame() {
 
             {inPrivateMoment && (
               <div className="private-moment-panel">
-                {full.phase !== 'SHADOW' &&
-                  !isBanishmentPhase &&
-                  (!shieldRequired || shielded) && (
-                    <PhaseProgressStatus
-                      phase={full.phase}
-                      paused={full.paused}
-                      done={full.progress.done}
-                      total={full.progress.total}
-                      compact
-                    />
-                  )}
                 {shieldRequired && !shielded ? null : privateCovered ? (
                   <>
                     <button
@@ -2134,13 +2130,34 @@ function PlayerGame() {
                       <button
                         className="primary-action w-full"
                         type="button"
-                        onClick={() => {
-                          setRoleSeen(false);
-                          setActionDone(true);
+                        disabled={command.isPending}
+                        onClick={async () => {
+                          setCommandMessage('');
+                          try {
+                            await command.mutateAsync({
+                              id,
+                              data: {
+                                type: 'AcknowledgePrivate',
+                                ready: true,
+                                idempotencyKey: idempotencyKey(),
+                              },
+                            });
+                            setRoleSeen(false);
+                            setActionDone(true);
+                            command.reset();
+                            void gameQuery.refetch();
+                          } catch {
+                            setCommandMessage(en.game.readyFailed);
+                          }
                         }}
                       >
                         {en.game.notesDone}
                       </button>
+                    )}
+                    {full.phase === 'DEAL' && commandMessage && (
+                      <p role="alert" className="text-ash">
+                        {commandMessage}
+                      </p>
                     )}
                   </>
                 ) : (

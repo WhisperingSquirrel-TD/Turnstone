@@ -1,13 +1,14 @@
 # Status for reviewer
 
-- Updated: 17 October 2026, 07:55 UTC. Current step: finish browser repair before R5 item 10.
-- Last pushed: `1c83607`, [Verify #121](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39014811224) **failed**: night Confirm now works, but all profiles caught redundant padding reserved for hidden organiser controls. Other substantive jobs passed.
-- Repair: reserve footer space once and reserve organiser space only when its bar is visible. Unchanged affected browser specs pass locally on actual iPhone WebKit and Pixel: 48 passed, two desktop-only cases skipped; typecheck/lint pass. Local WebKit now renders using Mesa EGL. Follow-up push/CI pending.
-- R5 done: 1–9, 32–35. R5 21–24 implemented, awaiting green CI. Next: R5 10, 15–16, 11–14/25–29/31, 17–20, then 30. R4 item 10 is distinct and already accepted.
+- Updated: 17 October 2026, 08:13 UTC. Current step: R5 item 10 ready for CI.
+- Last pushed: `917f32f`, [Verify #122](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39015464423) **Success**: all 19 jobs passed, no annotations. The browser-profile blocker is fixed.
+- R5 item 10: normal-size progress in the top commentary area; shielding no longer means ready. Role readiness is recorded only on Done; endgame counts submitted decisions. Local checks: 29 affected unit tests, affected iPhone/Pixel screen tests, real-server full rehearsal, typechecks and lint pass. This push awaits CI.
+- R5 done: 1–9, 21–24, 32–35; R5 item 10 implemented. Next: R5 15–16, 11–14/25–29/31, 17–20, then 30. R4 item 10 is distinct and already accepted.
 - Questions: none. Risks: production capacity remains unproven; prior generic dev scheduler errors remain uninvestigated. No new scope or paid services.
 
 ## Previous verification history
 
+- Verify #122 (`39015464423`), commit `917f32f`: Success — all 19 jobs passed with no annotations, including all four browser profiles, real-server rehearsal and all scenario shards.
 - Verify #121 (`39014811224`), commit `1c83607`: Failure — original iPhone night-choice failures fixed; short-screen rehearsal layout still reserved space for a hidden organiser bar, failing the unchanged no-unnecessary-scroll assertion on all profiles.
 - Verify #120 (`38982785132`), commit `f3ea909`: Failure — iPhone night-choice Confirm was covered by the fixed footer; all other substantive jobs passed. Reproduced locally in actual WebKit, then the unchanged tests passed after reserving the footer outside the scrollport.
 

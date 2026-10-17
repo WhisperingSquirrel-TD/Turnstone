@@ -77,6 +77,7 @@ describe('server rehearsal bot policy', () => {
     const game = rehearsalGame();
     expect(nextRehearsalBotCommand(game.state, 's1')).toMatchObject({
       type: 'AcknowledgePrivate',
+      ready: true,
     });
   });
 

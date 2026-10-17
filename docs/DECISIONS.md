@@ -1336,3 +1336,9 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 **Choice:** Use the actual join HTTP path and salted, peppered scrypt hashes. Skip the redundant second verification only when this request successfully inserted the new seat-access row; existing rows and concurrent insert losers still verify the submitted PIN. Set the API start default to `UV_THREADPOOL_SIZE=8`, preserving an explicit environment override. Keep the current scrypt cost and pepper.
 
 **Consequence:** On the local 8-core development container, three 32-join samples had median 56.87 joins/s with pool 4 and 66.82 joins/s with pool 8; direct hash medians were 99.57/s and 157.67/s. Direct hashing exceeded the target rate in this environment, but full HTTP joins did not, so the results neither identify scrypt alone as the bottleneck nor establish production capacity. No security-cost change or paid/production capacity test is authorized. If a representative pre-launch measurement shows hashing is the bottleneck, the owner must choose between more cores, a tuned scrypt cost that retains the pepper, or hashing only on device recovery.
+
+## R5 item 10: readiness is a completed action
+
+Shield acknowledgement authorises the private view but does not mean a player has seen their role. The role screen sends an explicit ready acknowledgement only when the player taps Done after revealing it. Rehearsal bots complete their own role step immediately. Existing snapshots without completion data start with no completed role views; shielding is never substituted for completion.
+
+**Why:** The owner's phone showed everyone ready before the human had revealed their role. Endgame readiness likewise counts submitted decisions, not shield acknowledgements. Vote counts and readiness sit in normal-size commentary above the content; night screens expose no choosing progress.

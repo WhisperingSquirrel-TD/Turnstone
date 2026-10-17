@@ -56,6 +56,7 @@ export function evolve(previous: State | null, input: unknown): State {
       seats: [],
       deal: null,
       acks: [],
+      readySeats: [],
       votes: {},
       revealed: [],
       target: null,
@@ -155,6 +156,7 @@ export function evolve(previous: State | null, input: unknown): State {
         };
       });
       state.acks = [];
+      state.readySeats = [];
       state.shadow = {};
       state.chat = [];
       state.pendingSleeper = false;
@@ -168,6 +170,7 @@ export function evolve(previous: State | null, input: unknown): State {
         state.revealed = [];
       }
       state.phase = event.phase;
+      state.readySeats = [];
       state.phaseStarted = event.at;
       state.deadline = event.deadline;
       state.shadowEndAt = event.shadowEndAt;
@@ -200,6 +203,10 @@ export function evolve(previous: State | null, input: unknown): State {
     case 'PrivateAcknowledged':
       if (!previous.acks.includes(event.seatId))
         state.acks = [...previous.acks, event.seatId];
+      if (previous.phase === 'DEAL' && event.ready === true)
+        state.readySeats = [
+          ...new Set([...(previous.readySeats ?? []), event.seatId]),
+        ];
       scheduleCompletedEndgameVote(state, event.at);
       break;
     case 'VoteSubmitted':

@@ -6,6 +6,7 @@ type GameStepAnnouncementProps = {
   murderSlots: number;
   phase: string;
   shadowRound: number;
+  progress?: { done: number; total: number };
 };
 
 export function GameStepAnnouncement({
@@ -14,6 +15,7 @@ export function GameStepAnnouncement({
   murderSlots,
   phase,
   shadowRound,
+  progress,
 }: GameStepAnnouncementProps) {
   let message: string | null = null;
 
@@ -29,15 +31,21 @@ export function GameStepAnnouncement({
     message = en.game.finalContinue;
   }
 
-  if (!message) return null;
+  const votes =
+    progress && ['VOTE', 'FINAL_BANISH'].includes(phase)
+      ? en.game.votesProgress(progress.done, progress.total)
+      : null;
+  if (!message && !votes) return null;
 
   return (
     <p
-      className="mb-4 text-sm text-ash"
-      data-testid="game-context-line"
+      className="mb-4 text-base text-ash"
+      data-testid="game-commentary"
       aria-live="polite"
     >
-      {message}
+      {message && <span data-testid="game-context-line">{message}</span>}
+      {message && votes && ' '}
+      {votes && <span data-testid="vote-progress-commentary">{votes}</span>}
     </p>
   );
 }
