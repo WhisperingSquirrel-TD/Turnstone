@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:client": "node dist/client-build-cli.mjs ../party-game/dist/public",
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "UV_THREADPOOL_SIZE=${UV_THREADPOOL_SIZE:-8} node --enable-source-maps ./dist/index.mjs",

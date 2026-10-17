@@ -14,3 +14,5 @@
 - [Rehearsal vote advancement](rehearsal-vote-advancement.md) — close rehearsal ballots with the explicit Next step before asserting their result or re-vote.
 - [Rehearsal first-night safety](rehearsal-first-night-safety.md) — protect the human until the first completed Dawn, not a cycle counter or murder-resolution row.
 - [Public copy test surfaces](public-copy-test-surfaces.md) — test marketing or FAQ text in the rendered preview and detail interaction, not by assuming they share content.
+- [Production CSP verification](production-csp-verification.md) — test built Node output in Chromium and WebKit; Vite and successful hydration can miss blocked resources.
+- [Workflow listener ownership](workflow-listener-ownership.md) — an HTTP 200 can come from an old process after restart; verify the new instance actually binds.

@@ -1,11 +1,12 @@
 # Status for reviewer
 
-- Updated: 17 October 2026, 09:52 UTC. Last confirmed: `05119d7`, [Verify #125](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39019746309) **Success**, all 19 jobs. Current push: final R5 colours and screenshots; its Verify is pending.
-- R5 1–35 implemented. Local: 54 affected unit checks, 53 Pixel/iPhone browser cases (three intentional profile skips), typechecks/lint and the eight-seat real-server rehearsal pass. Day/night contrast and both-role night/Notes uniformity pass.
-- R5 30: 170 review images in `docs/screens/round-5/` (five widths, both palettes, about 4 MB), with header, scrolling and bottom-stack bounds checks. R5 is **not yet declared green** until this push passes CI.
-- Next only after green: plan housekeeping, Replit M4b/checklist and uploaded content if present. No deployment/DNS/production-secret changes; Milestone 6 waits for owner acceptance. Questions: none; production capacity remains unproven.
+- **Round 5 is green.** Updated: 17 October 2026, 10:47 UTC. `f61ff58`, [Verify #126](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39022854952) **Success**, all 19 jobs. R5 1–35 complete; 170 review images in `docs/screens/round-5/`. Owner can retry a fresh phone rehearsal now.
+- Current push: M4b server preparation/checklist; Verify pending. Local: 11 unit checks, complete 5-/40-seat HTTP/socket restart games, 4 Pixel/iPhone production checks, build, types and lint. Also fixes failed-start worker lifetime after an old dev process held the port. No production changes.
+- Content skipped: eight owner source files absent. Milestone 6 waits for owner Milestone 5 acceptance. Risks: production peak capacity unproven; older development snapshots need compatibility work (data preserved).
 
 ## Previous verification history
+
+- Verify #126 (`39022854952`), commit `f61ff58`: Success on the public run page, all 19 jobs; final R5 themes, contrast, live rehearsal, all browser profiles and scenario shards green.
 
 - Verify #125 (`39019746309`), commit `05119d7`: Success on the public run page; all 19 jobs passed, including every browser profile, live rehearsal and scenario shard. R5 commentary/explainers/layout group verified.
 - Verify #124 (`39016771968`), commit `780f527`: Success — all 19 jobs passed, no annotations, including every browser profile and the real-server rehearsal. R5 item 10 accepted by CI.

@@ -1,5 +1,15 @@
 # Decisions and open choices — complete specification
 
+## 17 October 2026 — queued server preparation after green Round 5
+
+Round 5 is green at `f61ff58` / Verify #126 (all 19 jobs). Follow the owner's queued order: completed M5 plan housekeeping, Replit-only M4b server work and the owner's checklist. This permission is server preparation only: no publishing, paid services, production secrets, domain or DNS changes; Milestone 6 still waits for explicit Milestone 5 phone acceptance.
+
+Production static files use self-only executable scripts/styles, with first-paint CSS extracted during the build before Brotli/gzip compression. This avoids weakening CSP to accommodate Vite's inline critical style; the API nonce policy remains separate. Real built-server checks run on both Pixel and iPhone rather than relying on Vite's development policy.
+
+The eight owner content sources are not uploaded, so the conditional content import/decoy change is skipped. Existing wording is not rewritten.
+
+An older development rehearsal snapshot fails cached replay while full canonical event replay succeeds. Preserve all data; do not silently expire or delete games. Fresh rehearsal and current restart tests pass, but historical-snapshot compatibility remains a separate non-blocking risk to record for review.
+
 ## CI and hosting review — 13 October 2026
 
 ### D31 — Termination benchmark and bounded verification sample

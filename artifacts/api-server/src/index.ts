@@ -3,9 +3,18 @@ import { createApp } from './app';
 import { parseEnvironment } from './config/env';
 import { logger } from './lib/logger';
 import { createServerAppOptions } from './server-options';
+import { fileURLToPath } from 'node:url';
+import { assertClientBuild } from './static-client';
+import { startHttpService } from './server-startup';
 
 // Validate before importing the database or opening a listening socket.
 const environment = parseEnvironment(process.env);
+const clientDirectory =
+  environment.NODE_ENV === 'production'
+    ? fileURLToPath(new URL('../../party-game/dist/public/', import.meta.url))
+    : undefined;
+if (clientDirectory)
+  await assertClientBuild(clientDirectory, { prepared: true });
 const { db, pool } = await import('@workspace/db');
 const { countActiveGames } = await import('@workspace/db/game-store');
 const { findViewerSession } = await import('@workspace/db/seat-access-store');
@@ -71,6 +80,7 @@ const app = createApp(
   },
   {
     ...serverOptions,
+    clientDirectory,
     processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
   },
 );
@@ -90,14 +100,27 @@ const scheduler = createDeadlineScheduler({
   processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
   onError: () => logger.error('Deadline scheduler iteration failed'),
 });
-server.listen(environment.PORT, '0.0.0.0', () => {
-  logger.info({ port: environment.PORT }, 'Server listening');
-});
-server.on('error', () => {
-  logger.error('Server failed to listen');
+void startHttpService(
+  server,
+  environment.PORT,
+  () => {
+    logger.info({ port: environment.PORT }, 'Server listening');
+    scheduler.start();
+  },
+  async () => {
+    logger.error('Server failed to listen');
+    process.exitCode = 1;
+    try {
+      await scheduler.stop();
+      await realtime.close();
+    } finally {
+      await pool.end();
+    }
+  },
+).catch(() => {
+  logger.error('Server startup cleanup failed');
   process.exitCode = 1;
 });
-scheduler.start();
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(signal, () => {
     void (async () => {

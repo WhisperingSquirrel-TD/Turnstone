@@ -76,8 +76,10 @@ import {
   cookieNameForPresenterGame,
 } from './session-auth';
 import { security } from './middlewares/security';
+import { staticClient } from './static-client';
 
 export type AppOptions = {
+  clientDirectory?: string;
   resolveViewer?: (request: Request) => Viewer | Promise<Viewer>;
   resolveCoordinatorViewer?: (request: Request) => Viewer | Promise<Viewer>;
   /** Test-only deterministic clock; the production server never supplies it. */
@@ -218,6 +220,7 @@ export function createApp(
   const app = express();
   app.disable('x-powered-by');
   app.use(security);
+  if (options.clientDirectory) app.use(staticClient(options.clientDirectory));
   app.use(
     cors({
       origin(origin, callback) {

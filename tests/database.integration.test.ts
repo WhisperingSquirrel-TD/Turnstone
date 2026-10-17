@@ -4218,11 +4218,26 @@ it.each([5, 40])(
 
     let now = commands[0]!.now;
     const serverRandom = scenarioRandom(seed);
+    const staticFiles = await import('node:fs/promises');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const clientDirectory = await staticFiles.mkdtemp(
+      join(tmpdir(), 'turnstone-restart-'),
+    );
+    await Promise.all(
+      ['index.html', 'app-shell.html'].map((file) =>
+        staticFiles.writeFile(
+          join(clientDirectory, file),
+          '<main>Turnstone restart shell</main>',
+        ),
+      ),
+    );
     let activeRealtime: Awaited<ReturnType<typeof attachRealtime>> | undefined;
     const socketClients: ClientSocket[] = [];
     const projectionErrors: string[] = [];
     const createRuntime = async () => {
       const app = createApp(async () => {}, {
+        clientDirectory,
         resolveViewer: (request) => {
           const seatId = request.header('x-test-seat');
           return seatId
@@ -4368,6 +4383,9 @@ it.each([5, 40])(
         Cookie: `turnstone-csrf=${csrfToken}`,
         'X-CSRF-Token': csrfToken,
       };
+      expect((await request(runtime.url).get('/play')).text).toBe(
+        '<main>Turnstone restart shell</main>',
+      );
       for (let index = 0; index < commands.length; index++) {
         const entry = commands[index]!;
         const commandType = entry.command.type;
@@ -4376,6 +4394,10 @@ it.each([5, 40])(
         if (commandType === 'SubmitVote' && !restarted) {
           await closeRuntime(runtime);
           runtime = await createRuntime();
+          expect((await request(runtime.url).get(`/game/${gameId}`)).text).toBe(
+            '<main>Turnstone restart shell</main>',
+          );
+          expect((await request(runtime.url).get('/readyz')).status).toBe(200);
           await connectPlayers(runtime);
           restarted = true;
         }
@@ -4507,6 +4529,7 @@ it.each([5, 40])(
     } finally {
       await closeRuntime(runtime);
       await db.execute(sql`delete from games where id = ${gameId}`);
+      await staticFiles.rm(clientDirectory, { recursive: true, force: true });
     }
   },
   120_000,
