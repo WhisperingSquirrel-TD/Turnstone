@@ -2,7 +2,7 @@ import { gameViewResponseSchema } from '@workspace/shared';
 
 type Listener = (payload?: unknown) => void;
 
-export type GameConnectionState = 'reconnecting' | 'online';
+export type GameConnectionState = 'connecting' | 'reconnecting' | 'online';
 
 export interface GameRealtimeSocket {
   connected: boolean;
@@ -17,11 +17,17 @@ export function attachGameView(
   onView: (response: ReturnType<typeof gameViewResponseSchema.parse>) => void,
   onStatus: (status: GameConnectionState) => void = () => {},
 ): () => void {
+  let connectedBefore = socket.connected;
+  let reconnecting = false;
   const watch = () => {
-    onStatus('reconnecting');
+    connectedBefore = true;
+    onStatus(reconnecting ? 'reconnecting' : 'connecting');
     socket.emit('game:watch', { gameId });
   };
-  const disconnected = () => onStatus('reconnecting');
+  const disconnected = () => {
+    reconnecting = connectedBefore;
+    onStatus(reconnecting ? 'reconnecting' : 'connecting');
+  };
   const receiveView: Listener = (payload) => {
     const parsed = gameViewResponseSchema.safeParse(payload);
     if (!parsed.success) return;
@@ -32,7 +38,7 @@ export function attachGameView(
     onStatus('online');
   };
 
-  onStatus('reconnecting');
+  onStatus('connecting');
   socket.on('connect', watch);
   socket.on('disconnect', disconnected);
   socket.on('connect_error', disconnected);

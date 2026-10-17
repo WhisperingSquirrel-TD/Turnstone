@@ -1342,3 +1342,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 Shield acknowledgement authorises the private view but does not mean a player has seen their role. The role screen sends an explicit ready acknowledgement only when the player taps Done after revealing it. Rehearsal bots complete their own role step immediately. Existing snapshots without completion data start with no completed role views; shielding is never substituted for completion.
 
 **Why:** The owner's phone showed everyone ready before the human had revealed their role. Endgame readiness likewise counts submitted decisions, not shield acknowledgements. Vote counts and readiness sit in normal-size commentary above the content; night screens expose no choosing progress.
+
+## R5 commentary, explainers and scrolling
+
+Commentary is derived only from public game state, never a player's private choices. Rehearsal coaching is role-neutral. Explainers use their step names, appear automatically once per step type per game, and remain available through “What's this?”. The Faithful outcome reads “You were one of the Faithful.”
+
+**Why:** Round 5 requires understandable public progress and identical explanations on every role's phone. Its whole-page scrolling rule supersedes the earlier viewport-locked game shell: long screens scroll the document, not an inner game pane. Held secrets and full-screen dialogs still lock background scrolling. Header alignment follows the centred content column on wide screens; the action bar and footer reserve their measured combined height.
+
+**Test interpretation:** Earlier assertions requiring an unscrollable document and a scrolling inner main region are replaced by assertions requiring a non-scrolling inner region, genuine document scrolling for long content, and fully visible final controls above the fixed footer/action stack. Role-content viewport bounds, header matching and footer-alignment checks remain enforced.

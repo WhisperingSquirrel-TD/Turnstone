@@ -225,6 +225,36 @@ function Shell({
   connectionStatus?: GameConnectionState | null;
 }) {
   const navigate = useNavigate();
+  useEffect(() => {
+    if (!isPlayer) return;
+    const root = document.querySelector<HTMLElement>('.game-shell');
+    if (!root) return;
+    const measure = () => {
+      const footer = root.querySelector<HTMLElement>('.game-brand-footer');
+      const actions = root.querySelector<HTMLElement>('.game-action-bar');
+      const footerHeight = footer?.getBoundingClientRect().height ?? 0;
+      root.style.setProperty('--game-footer-dock-height', `${footerHeight}px`);
+      root.style.setProperty(
+        '--game-bottom-stack-height',
+        `${footerHeight + (actions?.getBoundingClientRect().height ?? 0)}px`,
+      );
+    };
+    const resize = new ResizeObserver(measure);
+    const watch = () => {
+      resize.disconnect();
+      root
+        .querySelectorAll('.game-brand-footer, .game-action-bar')
+        .forEach((element) => resize.observe(element));
+      measure();
+    };
+    const mutations = new MutationObserver(watch);
+    mutations.observe(root, { childList: true, subtree: true });
+    watch();
+    return () => {
+      mutations.disconnect();
+      resize.disconnect();
+    };
+  }, [isPlayer]);
   const [standalone, setStandalone] = useState(false);
   useEffect(() => {
     const displayMode = window.matchMedia('(display-mode: standalone)');
@@ -662,7 +692,7 @@ function PlayerGame() {
   const [installMessage, setInstallMessage] = useState('');
   const [wakeLockFallback, setWakeLockFallback] = useState(false);
   const [connectionStatus, setConnectionStatus] =
-    useState<GameConnectionState>('reconnecting');
+    useState<GameConnectionState>('connecting');
   const [fullscreenMessage, setFullscreenMessage] = useState('');
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -843,7 +873,7 @@ function PlayerGame() {
 
   useEffect(() => {
     if (!hasPlayerSeat) return;
-    setConnectionStatus('reconnecting');
+    setConnectionStatus('connecting');
     const api = new URL(config.apiOrigin ?? '/', window.location.origin);
     const prefix = api.pathname.replace(/\/+$/, '');
     const socket = io(api.origin, {
@@ -1806,11 +1836,25 @@ function PlayerGame() {
               phase={full.phase}
               shadowRound={full.shadowRound}
               progress={full.progress}
+              context={{
+                phase: full.phase,
+                cycle: full.cycle,
+                aliveCount: full.seats.filter((seat) => seat.status === 'alive')
+                  .length,
+                publicLog: full.publicLog,
+                seats: full.seats,
+                winner: full.winner,
+              }}
+              coachingTip={
+                full.rehearsal && explanationKey && full.phase !== 'DEAL'
+                  ? en.game.coachingTips[explanationKey]
+                  : undefined
+              }
             />
             {((!isBanishmentPhase &&
               ['DEAL', 'FINAL_VOTE'].includes(full.phase)) ||
               full.paused ||
-              (!full.rehearsal && explanationKey)) && (
+              explanationKey) && (
               <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
                 {!isBanishmentPhase && (
                   <PhaseProgressStatus
@@ -1818,9 +1862,14 @@ function PlayerGame() {
                     paused={full.paused}
                     done={full.progress.done}
                     total={full.progress.total}
+                    coachingTip={
+                      full.rehearsal && full.phase === 'DEAL'
+                        ? en.game.coachingTips.role
+                        : undefined
+                    }
                   />
                 )}
-                {!full.rehearsal && explanationKey && (
+                {explanationKey && (
                   <details className="text-sm text-ash">
                     <summary className="min-h-11 cursor-pointer py-2">
                       {en.game.whatsThis}
@@ -1834,6 +1883,12 @@ function PlayerGame() {
             )}
             {!inPrivateMoment && (
               <VerdictScreen
+                coachingTip={
+                  full.rehearsal ? en.game.coachingTips.verdict : undefined
+                }
+                aliveCount={
+                  full.seats.filter((seat) => seat.status === 'alive').length
+                }
                 announcement={
                   full.phase === 'VERDICT' &&
                   full.publicAnnouncement?.kind === 'no_votes'
@@ -2023,6 +2078,12 @@ function PlayerGame() {
                 full.phase === 'DAWN' ||
                 full.phase === 'FINISHED') && (
                 <VerdictScreen
+                  coachingTip={
+                    full.rehearsal ? en.game.coachingTips.verdict : undefined
+                  }
+                  aliveCount={
+                    full.seats.filter((seat) => seat.status === 'alive').length
+                  }
                   announcement={
                     full.phase === 'VERDICT' &&
                     full.publicAnnouncement?.kind === 'verdict'
@@ -2061,11 +2122,11 @@ function PlayerGame() {
                       aria-live="polite"
                       data-testid="private-role-content"
                     >
+                      <h1 className="display text-2xl text-candle">
+                        {en.game.guideTitles.role}
+                      </h1>
                       {held && privateView && (
                         <div className="private-role-card">
-                          <p className="text-sm text-ash">
-                            {en.game.privateRole}
-                          </p>
                           <h2 className="display mt-1 text-3xl">
                             {privateView.role === 'traitor'
                               ? en.game.roleTraitor
@@ -2608,7 +2669,7 @@ function PlayerGame() {
                 className="display text-3xl text-candle"
                 id="rehearsal-guide-title"
               >
-                {en.game.guideTitle}
+                {en.game.guideTitles[renderedRehearsalGuideKey]}
               </h2>
               <p
                 className="mt-5 text-lg leading-relaxed text-ash"

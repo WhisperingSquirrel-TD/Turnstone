@@ -557,7 +557,10 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     if (!shieldBrandBounds || !shellBrandBounds) {
       throw new Error('The shield or shell wordmark has no visible bounds.');
     }
-    expect(shieldBrandBounds.x).toBe(shellBrandBounds.x);
+    expect(
+      shieldBrandBounds.x,
+      JSON.stringify({ shieldBrandBounds, shellBrandBounds }),
+    ).toBe(shellBrandBounds.x);
     expect(shieldBrandBounds.y).toBe(shellBrandBounds.y);
     expect(shieldBrandBounds.height).toBe(shellBrandBounds.height);
     await shieldConfirmation.click();
@@ -566,6 +569,24 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     await expect(progress).toHaveText('0 of 5 are ready');
     const seal = page.getByTestId('button-hold-reveal');
     const sealBounds = await seal.boundingBox();
+    expect(
+      await page
+        .locator('.game-shell-main')
+        .evaluate((element) => getComputedStyle(element).overflowY),
+    ).toBe('visible');
+    const roleHeading = await page
+      .getByRole('heading', { name: 'Your role', exact: true })
+      .boundingBox();
+    const headerBounds = await page
+      .locator('.player-shell-header')
+      .boundingBox();
+    const footerBounds = await page
+      .getByTestId('brand-footer-shell')
+      .boundingBox();
+    expect(roleHeading!.y).toBeGreaterThanOrEqual(
+      headerBounds!.y + headerBounds!.height,
+    );
+    expect(footerBounds!.width).toBeCloseTo(viewport.width, 0);
     if (!sealBounds) throw new Error('Hold seal has no visible bounds');
     const progressBounds = await progress.boundingBox();
     if (!progressBounds)
@@ -588,7 +609,10 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     await page.mouse.down();
     await expect.poll(() => privateRequests).toBe(1);
 
-    const roleLabel = page.getByText('Your private role', { exact: true });
+    const roleLabel = page.getByRole('heading', {
+      name: 'Your role',
+      exact: true,
+    });
     const role = page.getByRole('heading', { name: 'Faithful', exact: true });
     await expect(role).toBeVisible({ timeout: 2000 });
     const [labelBounds, roleBounds, revealedSealBounds] = await Promise.all([
@@ -708,7 +732,10 @@ test('game wordmark stays top-left and the action banner stays above the footer'
   ).toBeLessThanOrEqual(1);
   expect(guideWordmarkBounds.x).toBeLessThanOrEqual(24);
   expect(guideWordmarkBounds.x).toBe(shellWordmarkBounds.x);
-  expect(guideWordmarkBounds.y).toBe(shellWordmarkBounds.y);
+  expect(
+    guideWordmarkBounds.y,
+    JSON.stringify({ guideWordmarkBounds, shellWordmarkBounds }),
+  ).toBe(shellWordmarkBounds.y);
   await expect(guide).toContainText('Each step explains itself');
   await guide.getByRole('button', { name: 'Got it' }).click();
   await expect(guide).toContainText('Everyone talks it over');
@@ -743,15 +770,14 @@ test('game wordmark stays top-left and the action banner stays above the footer'
       mainOverflowY: getComputedStyle(main).overflowY,
     };
   });
-  expect(scrollMetrics.mainScrollHeight).toBeGreaterThan(
-    scrollMetrics.mainHeight,
-  );
-  expect(scrollMetrics.mainOverflowY).toBe('auto');
-  expect(scrollMetrics.documentHeight).toBeLessThanOrEqual(
+  expect(scrollMetrics.mainScrollHeight).toBe(scrollMetrics.mainHeight);
+  expect(scrollMetrics.mainOverflowY).toBe('visible');
+  expect(scrollMetrics.documentHeight).toBeGreaterThan(
     scrollMetrics.viewportHeight,
   );
   await page.evaluate(() => window.scrollTo(0, 300));
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await page.evaluate(() => window.scrollTo(0, 0));
   const [actionBounds, footerBounds, wordmarkBounds] = await Promise.all([
     actionBar.boundingBox(),
     footer.boundingBox(),
@@ -771,10 +797,9 @@ test('game wordmark stays top-left and the action banner stays above the footer'
   expect(
     Math.abs(568 - footerBounds.y - footerBounds.height),
   ).toBeLessThanOrEqual(1);
-  const mainRegion = page.locator('main#main');
-  await mainRegion.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
+  await page.evaluate(() =>
+    window.scrollTo(0, document.documentElement.scrollHeight),
+  );
   const [notesBounds, scrolledActionBounds, scrolledFooterBounds] =
     await Promise.all([
       page.getByTestId('button-open-notes').boundingBox(),
@@ -792,7 +817,8 @@ test('game wordmark stays top-left and the action banner stays above the footer'
   expect(
     scrolledActionBounds.y + scrolledActionBounds.height,
   ).toBeLessThanOrEqual(scrolledFooterBounds.y);
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await page.evaluate(() => window.scrollTo(0, 0));
 
   await page.setViewportSize({ width: 1024, height: 768 });
   const [desktopActionBounds, desktopFooterBounds, desktopWordmarkBounds] =
@@ -806,7 +832,10 @@ test('game wordmark stays top-left and the action banner stays above the footer'
       'The desktop game header, action bar or footer has no bounds.',
     );
   }
-  expect(desktopWordmarkBounds.x).toBeLessThanOrEqual(24);
+  const desktopContentBounds = await page
+    .getByTestId('player-game')
+    .boundingBox();
+  expect(desktopWordmarkBounds.x).toBe(desktopContentBounds!.x);
   expect(desktopWordmarkBounds.y).toBeLessThanOrEqual(40);
   expect(
     desktopActionBounds.y + desktopActionBounds.height,
@@ -826,7 +855,8 @@ test('game wordmark stays top-left and the action banner stays above the footer'
   if (!wideWordmarkBounds || !wideFooterBounds) {
     throw new Error('The wide-screen game wordmark or footer has no bounds.');
   }
-  expect(wideWordmarkBounds.x).toBeLessThanOrEqual(24);
+  const wideContentBounds = await page.getByTestId('player-game').boundingBox();
+  expect(wideWordmarkBounds.x).toBe(wideContentBounds!.x);
 
   view.rehearsal = false;
   await page.reload();
@@ -849,8 +879,8 @@ test('game wordmark stays top-left and the action banner stays above the footer'
       'The organiser confirmation, header or footer has no bounds.',
     );
   }
-  expect(confirmationWordmarkBounds.x).toBe(desktopWordmarkBounds.x);
-  expect(confirmationWordmarkBounds.y).toBe(desktopWordmarkBounds.y);
+  expect(confirmationWordmarkBounds.x).toBe(wideWordmarkBounds.x);
+  expect(confirmationWordmarkBounds.y).toBe(wideWordmarkBounds.y);
   expect(
     Math.abs(confirmationFooterBounds.width - wideFooterBounds.width),
   ).toBeLessThanOrEqual(1);

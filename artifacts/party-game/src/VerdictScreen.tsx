@@ -19,6 +19,8 @@ type VerdictScreenProps = {
   seats?: VoteSeat[];
   showVoteReveal?: boolean;
   animateReveal?: boolean;
+  aliveCount?: number;
+  coachingTip?: string;
 };
 
 type VoteRevealRow = {
@@ -69,6 +71,8 @@ export function VerdictScreen({
   seats = [],
   showVoteReveal = false,
   animateReveal = false,
+  aliveCount,
+  coachingTip,
 }: VerdictScreenProps) {
   const voteRows = showVoteReveal ? makeVoteRevealRows(ballots, seats) : [];
 
@@ -126,6 +130,21 @@ export function VerdictScreen({
             )}
           </h1>
         </section>
+      )}
+      {announcement && aliveCount !== undefined && (
+        <div className={animateReveal ? 'verdict-result mt-3' : 'mt-3'}>
+          <p className="text-base text-ash" data-testid="verdict-commentary">
+            {en.game.commentary.afterVerdict(aliveCount)}
+          </p>
+          {coachingTip && (
+            <p
+              className="mt-1 text-sm text-ash"
+              data-testid="rehearsal-coaching"
+            >
+              {coachingTip}
+            </p>
+          )}
+        </div>
       )}
     </>
   );

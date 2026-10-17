@@ -1,13 +1,14 @@
 # Status for reviewer
 
-- Updated: 17 October 2026, 08:16 UTC. Current step: R5 item 10 CI fixture correction.
-- Last pushed: `61db039`, [Verify #123](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39016588173): unit job failed because an old fixture still equated shielding with completion; other jobs were running at the check. Last fully green run: #122 (`917f32f`).
-- R5 item 10: explicit Done acknowledgement, real endgame decisions and normal-size commentary are implemented. The existing engine test now proves zero ready after shielding, eight after Done, and seven after a departure, retaining the original assertion. Local affected units 74/74, iPhone/Pixel screens, real-server rehearsal, typechecks and lint pass. Repair push awaits CI.
-- R5 done: 1–9, 21–24, 32–35; R5 item 10 implemented. Next: R5 15–16, 11–14/25–29/31, 17–20, then 30. R4 item 10 is distinct and already accepted.
+- Updated: 17 October 2026, 08:49 UTC. Last pushed: `780f527`, [Verify #124](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39016771968) **Success** — all 19 jobs, no annotations. Verify #120 and R5 item 10 are fixed.
+- R5 done: 1–10, 21–24, 32–35. Unpushed: R5 15–16 commentary/explainers and 11/13–14/25–28/31 layout work. R5 12/29 retain existing first-paint/result-label behaviour. Local affected units 32/32, typechecks/lint and the full real-server rehearsal pass; iPhone/Pixel role viewport checks pass.
+- Remaining local gate: the desktop public/game footer alignment assertion differs by 272px. Overlay header/footers and whole-page scrolling now pass their checks; the final shared-footer check still fails. The batch is not committed or pushed while that remains red.
+- Next after that gate: R5 17–20 day/night colours, then R5 30 finished-screen screenshots/visual checks. Round 5 is **not** complete.
 - Questions: none. Risks: production capacity remains unproven; prior generic dev scheduler errors remain uninvestigated. No new scope or paid services.
 
 ## Previous verification history
 
+- Verify #124 (`39016771968`), commit `780f527`: Success — all 19 jobs passed, no annotations, including every browser profile and the real-server rehearsal. R5 item 10 accepted by CI.
 - Verify #123 (`39016588173`), commit `61db039`: unit job failed on the old completed-role fixture; corrected by explicitly completing the roles and adding pre-completion and no-name assertions, not reducing the expected completed count.
 - Verify #122 (`39015464423`), commit `917f32f`: Success — all 19 jobs passed with no annotations, including all four browser profiles, real-server rehearsal and all scenario shards.
 - Verify #121 (`39014811224`), commit `1c83607`: Failure — original iPhone night-choice failures fixed; short-screen rehearsal layout still reserved space for a hidden organiser bar, failing the unchanged no-unnecessary-scroll assertion on all profiles.

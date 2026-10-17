@@ -222,9 +222,9 @@ h2,
 }
 .game-fullscreen-overlay {
   padding-top: max(1rem, env(safe-area-inset-top));
-  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-right: max(24px, env(safe-area-inset-right));
   padding-bottom: 0;
-  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-left: max(24px, env(safe-area-inset-left));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -233,19 +233,17 @@ h2,
 }
 .game-shell-main {
   min-height: 0 !important;
-  /* Keep the scrollport itself clear: WebKit can scroll a button behind fixed chrome. */
-  margin-bottom: var(--game-footer-dock-height);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding-bottom: 1rem !important;
-}
-.game-shell-main:has(.game-action-bar) {
-  padding-bottom: 8rem !important;
+  max-width: 480px;
+  margin-bottom: 0;
+  overflow: visible;
+  padding-top: 1rem !important;
+  padding-bottom: calc(
+    var(--game-bottom-stack-height, var(--game-footer-dock-height)) + 1rem
+  ) !important;
 }
 .game-shell-main.private-moment-main {
-  overflow-x: hidden;
-  overflow-y: auto;
+  display: block;
+  overflow: visible;
 }
 .game-shell-main:has(.game-fullscreen-overlay),
 .game-shell-main:has(.privacy-shield[open]),
@@ -253,33 +251,32 @@ h2,
   overflow: hidden !important;
 }
 .game-shell {
-  position: fixed;
-  inset: 0;
-  height: 100dvh;
+  position: relative;
+  height: auto;
   min-height: 100dvh;
-  overflow: hidden;
+  padding-inline: max(24px, env(safe-area-inset-left));
+  padding-bottom: 0;
+  background: var(--game-page-background, var(--hearth));
+}
+.game-shell [data-testid='player-game'] {
+  padding-bottom: 0;
 }
 .game-brand-footer {
   position: fixed;
   z-index: 20;
   left: 50%;
   bottom: 0;
-  width: min(
-    var(--brand-footer-max-width),
-    calc(
-      100vw - max(1rem, env(safe-area-inset-left)) -
-        max(1rem, env(safe-area-inset-right))
-    )
-  );
-  max-width: var(--brand-footer-max-width);
+  width: 100%;
+  max-width: none;
   min-height: var(--game-footer-dock-height);
   margin: 0;
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  background: var(--hearth);
+  background: var(--game-page-background, var(--hearth));
 }
 .game-action-bar {
-  bottom: calc(var(--game-footer-dock-height) + 0.5rem);
+  bottom: var(--game-footer-dock-height);
+  background: var(--game-page-background, var(--hearth));
 }
 .game-footer-adjacent {
   bottom: calc(var(--game-footer-dock-height) + 0.5rem);
@@ -322,13 +319,29 @@ h2,
 .private-role-slot {
   display: grid;
   width: 100%;
-  min-height: 5.5rem;
+  min-height: 4.5rem;
   flex: 0 0 auto;
   place-items: center;
 }
 .private-role-card {
   max-width: 100%;
   padding-inline: 0.5rem;
+}
+html:has(.private-moment-shell--held),
+body:has(.private-moment-shell--held),
+html:has(.game-fullscreen-overlay),
+body:has(.game-fullscreen-overlay) {
+  overflow: hidden;
+}
+.game-fullscreen-overlay .entry-brand {
+  position: static;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  flex-shrink: 0;
+}
+.game-fullscreen-overlay .entry-brand > .turnstone-wordmark {
+  min-height: 44px;
 }
 .private-action-content {
   width: 100%;
@@ -373,6 +386,12 @@ h2,
 }
 .privacy-shield .entry-brand > .turnstone-wordmark {
   min-height: 44px;
+}
+.privacy-shield .entry-brand {
+  left: 50%;
+  right: auto;
+  width: min(480px, calc(100% - 48px));
+  transform: translateX(-50%);
 }
 .privacy-shield::backdrop {
   background: var(--hearth);

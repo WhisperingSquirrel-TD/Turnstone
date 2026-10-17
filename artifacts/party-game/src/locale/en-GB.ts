@@ -10,6 +10,7 @@ export const en = {
     connectionStatus: 'Connection status',
     online: 'Online',
     reconnecting: 'Reconnecting...',
+    connecting: 'Connecting...',
     back: 'Back',
     refresh: 'Refresh',
     brandName: 'Stackstone Consulting',
@@ -402,7 +403,8 @@ export const en = {
       winner: 'traitor' | 'faithful',
       role: 'traitor' | 'faithful',
     ) => {
-      const roleLabel = role === 'traitor' ? 'a Traitor' : 'a Faithful';
+      const roleLabel =
+        role === 'traitor' ? 'a Traitor' : 'one of the Faithful';
       if (winner === role) return `You won as ${roleLabel}.`;
       const winningTeam = winner === 'traitor' ? 'Traitors' : 'Faithful';
       return `The ${winningTeam} won. You were ${roleLabel}.`;
@@ -471,6 +473,62 @@ export const en = {
       FINISHED: "The game is complete. Everyone's roles are revealed.",
     },
     guideTitle: 'How this step works',
+    guideTitles: {
+      start: 'Your practice game',
+      role: 'Your role',
+      conversation: 'The conversation',
+      mission: 'The mission',
+      vote: 'The vote',
+      verdict: 'The verdict',
+      night: 'Night',
+      dawn: 'Dawn',
+      notes: 'Notes',
+      endgame: 'Endgame',
+      finalVote: 'End or continue',
+      finalBanish: 'The final vote',
+      complete: 'Game complete',
+    },
+    coachingTips: {
+      start: 'You control the pace of this practice game.',
+      role: 'Keep your role secret.',
+      conversation: 'In a real game, people argue their case out loud now.',
+      mission: 'In a real game, everyone works together.',
+      vote: 'Real players are choosing privately now.',
+      verdict:
+        "Real players would be watching each other's faces as names are read out.",
+      night: 'Keep your phone shielded while you choose.',
+      dawn: 'In a real game, the group reacts to the news together.',
+      notes: 'These notes are just for you.',
+      endgame: 'In a real game, discuss the risk before choosing.',
+      finalVote: 'In a real game, discuss the risk before choosing.',
+      finalBanish: 'One more banishment could change the outcome.',
+      complete: 'You can practise again whenever you like.',
+    },
+    commentary: {
+      noBanishment: 'Nobody has been banished yet.',
+      conversation: (day: number, alive: number, last: string) =>
+        `Day ${day}. ${alive} players remain. ${last}`,
+      lastBanished: (name: string) => `${name} was banished last.`,
+      taken: (names: string[]) =>
+        names.length
+          ? `${names.join(' and ')} ${names.length === 1 ? 'was' : 'were'} taken in the night.`
+          : 'Nobody was taken in the night.',
+      morning: (names: string[]) =>
+        names.length
+          ? `Morning. ${names.join(' and ')} ${names.length === 1 ? 'was' : 'were'} taken in the night.`
+          : 'Morning. Nobody was taken in the night.',
+      vote: 'Vote for the player you think is a Traitor.',
+      night: (night: number) =>
+        `Night ${night}. Everyone answers privately at the same moment, so nobody can tell who is choosing.`,
+      banished: (name: string, role?: 'traitor' | 'faithful') =>
+        `${name} has been banished.${role ? ` They were ${role === 'faithful' ? 'one of the Faithful' : 'a Traitor'}.` : ''}`,
+      afterVerdict: (alive: number) =>
+        `${alive} players remain. Night falls next.`,
+      result: (winner: 'traitor' | 'faithful') =>
+        `The ${winner === 'traitor' ? 'Traitors' : 'Faithful'} win.`,
+      complete: 'Game complete.',
+      mission: 'Work together on the mission.',
+    },
     guideGotIt: 'Got it',
     whatsThis: "What's this?",
     rehearsalGuide: {

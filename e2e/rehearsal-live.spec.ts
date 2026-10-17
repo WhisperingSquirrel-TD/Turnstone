@@ -1481,7 +1481,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     ).includes('Traitors')
       ? 'Traitor'
       : 'Faithful';
-    const ownRoleLabel = playerRole === 'Traitor' ? 'a Traitor' : 'a Faithful';
+    const ownRoleLabel =
+      playerRole === 'Traitor' ? 'a Traitor' : 'one of the Faithful';
     const outcomeText =
       playerRole === winningRole
         ? `You won as ${ownRoleLabel}.`

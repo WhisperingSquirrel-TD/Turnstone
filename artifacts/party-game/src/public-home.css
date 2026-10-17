@@ -23,8 +23,18 @@
 
 .player-shell-header {
   width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+}
+
+[data-testid='brand-footer-static'],
+.safe-page:not(.game-shell) > [data-testid='brand-footer-shell'] {
+  position: relative;
+  left: 50%;
+  width: 100vw;
   max-width: none;
-  margin-inline: 0;
+  padding-inline: max(24px, env(safe-area-inset-left));
+  transform: translateX(-50%);
 }
 
 .public-home-nav {
@@ -105,19 +115,13 @@
 }
 
 .game-brand-footer-overlay {
-  width: min(
-    var(--brand-footer-max-width),
-    calc(
-      100vw - max(1rem, env(safe-area-inset-left)) -
-        max(1rem, env(safe-area-inset-right))
-    )
-  );
-  max-width: var(--brand-footer-max-width);
+  width: 100vw;
+  max-width: none;
   min-height: var(--game-footer-dock-height);
   align-self: center;
-  margin: auto auto 0;
+  margin: auto calc(50% - 50vw) 0;
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-  background: var(--hearth);
+  background: var(--game-page-background, var(--hearth));
 }
 
 .public-home-menu {

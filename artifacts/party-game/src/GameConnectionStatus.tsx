@@ -18,7 +18,11 @@ export function GameConnectionStatus({
         aria-hidden="true"
         className={`h-2 w-2 rounded-full ${isOnline ? 'bg-gilt' : 'bg-ash'}`}
       />
-      {isOnline ? en.app.online : en.app.reconnecting}
+      {isOnline
+        ? en.app.online
+        : status === 'connecting'
+          ? en.app.connecting
+          : en.app.reconnecting}
     </span>
   );
 }

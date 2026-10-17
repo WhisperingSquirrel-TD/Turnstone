@@ -583,14 +583,14 @@ test('rehearsal player can move on from public and voting screens', async ({
   });
 
   await page.goto(`/game/${gameId}`);
-  const stepGuide = page.getByRole('dialog', {
-    name: 'How this step works',
-  });
+  const stepGuide = page.getByTestId('rehearsal-explainer');
   await expect(stepGuide).toBeVisible();
+  await expect(stepGuide).toHaveAccessibleName('Your practice game');
   await expect(stepGuide).toContainText(
     'Computer players fill the other seats',
   );
   await stepGuide.getByRole('button', { name: 'Got it' }).click();
+  await expect(stepGuide).toHaveAccessibleName('The conversation');
   await expect(stepGuide).toContainText('Everyone talks it over');
   await stepGuide.getByRole('button', { name: 'Got it' }).click();
   await expect(stepGuide).toHaveCount(0);
@@ -602,7 +602,7 @@ test('rehearsal player can move on from public and voting screens', async ({
   ).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Next step' }).click();
-  const voteGuide = page.getByRole('dialog', { name: 'How this step works' });
+  const voteGuide = page.getByRole('dialog', { name: 'The vote' });
   await expect(voteGuide).toBeVisible();
   await expect(voteGuide).toContainText('Everyone secretly votes');
   await voteGuide.getByRole('button', { name: 'Got it' }).click();
@@ -831,10 +831,32 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
     .getByTestId('private-choice-content')
     .evaluate((element) => getComputedStyle(element).overflowY);
   expect(contentOverflow).not.toMatch(/auto|scroll/);
-  const pageCanScroll = await page.evaluate(
-    () => document.scrollingElement!.scrollHeight > window.innerHeight,
+  // R5 item 25: genuine overflow scrolls the document, never an inner game pane.
+  const scrolling = await page.locator('.game-shell-main').evaluate((main) => ({
+    innerOverflow: getComputedStyle(main).overflowY,
+    innerScroll: main.scrollHeight > main.clientHeight,
+    documentHeight: document.scrollingElement!.scrollHeight,
+    contentBottom: main.getBoundingClientRect().bottom + window.scrollY,
+  }));
+  expect(scrolling.innerOverflow).toBe('visible');
+  expect(scrolling.innerScroll).toBe(false);
+  expect(scrolling.documentHeight).toBeLessThanOrEqual(
+    Math.ceil(scrolling.contentBottom),
   );
-  expect(pageCanScroll).toBe(false);
+  const lastChoice = page
+    .getByTestId('private-choice-list')
+    .getByRole('button')
+    .last();
+  await lastChoice.evaluate((element) =>
+    element.scrollIntoView({ block: 'center' }),
+  );
+  const lastChoiceBounds = await lastChoice.boundingBox();
+  const footerBounds = await page
+    .getByTestId('brand-footer-shell')
+    .boundingBox();
+  expect(lastChoiceBounds!.y + lastChoiceBounds!.height).toBeLessThanOrEqual(
+    footerBounds!.y,
+  );
   await expect(
     page.getByRole('button', { name: 'Morgan', exact: true }),
   ).toHaveCount(0);

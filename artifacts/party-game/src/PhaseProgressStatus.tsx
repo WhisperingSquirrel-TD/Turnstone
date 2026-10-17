@@ -6,6 +6,7 @@ type PhaseProgressStatusProps = {
   done: number;
   total: number;
   compact?: boolean;
+  coachingTip?: string;
 };
 
 export function PhaseProgressStatus({
@@ -13,6 +14,7 @@ export function PhaseProgressStatus({
   paused,
   done,
   total,
+  coachingTip,
 }: PhaseProgressStatusProps) {
   const message = paused
     ? en.game.paused
@@ -33,6 +35,11 @@ export function PhaseProgressStatus({
       >
         {message}
       </p>
+      {coachingTip && (
+        <p className="mt-1 text-sm text-ash" data-testid="rehearsal-coaching">
+          {coachingTip}
+        </p>
+      )}
     </div>
   );
 }

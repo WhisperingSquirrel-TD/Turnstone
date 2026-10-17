@@ -1,4 +1,8 @@
 import { en } from '@/locale/en-GB';
+import {
+  publicStepCommentary,
+  type CommentaryContext,
+} from './game-commentary';
 
 type GameStepAnnouncementProps = {
   aliveCount: number;
@@ -7,6 +11,8 @@ type GameStepAnnouncementProps = {
   phase: string;
   shadowRound: number;
   progress?: { done: number; total: number };
+  context?: CommentaryContext;
+  coachingTip?: string;
 };
 
 export function GameStepAnnouncement({
@@ -16,13 +22,15 @@ export function GameStepAnnouncement({
   phase,
   shadowRound,
   progress,
+  context,
+  coachingTip,
 }: GameStepAnnouncementProps) {
   let message: string | null = null;
 
   if (phase === 'SHADOW') {
     if (shadowRound === 2) message = en.game.unanimousNoDecision;
     else if (murderSlots === 2) message = en.game.doubleMurderReason;
-  } else if (phase === 'FINAL_VOTE') {
+  } else if (phase === 'FINAL_VOTE' || phase === 'ENDGAME') {
     message =
       endRule === 'unanimous'
         ? en.game.finalDecisionUnanimous(aliveCount)
@@ -35,17 +43,26 @@ export function GameStepAnnouncement({
     progress && ['VOTE', 'FINAL_BANISH'].includes(phase)
       ? en.game.votesProgress(progress.done, progress.total)
       : null;
-  if (!message && !votes) return null;
+  // VerdictScreen owns its ordered reveal; never announce its result early.
+  const summary =
+    context && phase !== 'VERDICT' ? publicStepCommentary(context) : null;
+  if (!message && !votes && !summary) return null;
 
   return (
-    <p
-      className="mb-4 text-base text-ash"
-      data-testid="game-commentary"
-      aria-live="polite"
-    >
-      {message && <span data-testid="game-context-line">{message}</span>}
-      {message && votes && ' '}
-      {votes && <span data-testid="vote-progress-commentary">{votes}</span>}
-    </p>
+    <div className="mb-4" data-testid="game-commentary">
+      <p className="text-base text-ash" aria-live="polite">
+        {summary && message && <>{summary} </>}
+        {(message || summary) && (
+          <span data-testid="game-context-line">{message ?? summary}</span>
+        )}
+        {(message || summary) && votes && ' '}
+        {votes && <span data-testid="vote-progress-commentary">{votes}</span>}
+      </p>
+      {coachingTip && (
+        <p className="mt-1 text-sm text-ash" data-testid="rehearsal-coaching">
+          {coachingTip}
+        </p>
+      )}
+    </div>
   );
 }

@@ -77,19 +77,21 @@ describe('player game socket', () => {
     stop();
   });
 
-  it('stays reconnecting until a valid view resyncs and drops back on disconnect', () => {
+  it('starts connecting, then reconnects only after a connection has dropped', () => {
     const socket = fakeSocket();
     const onView = vi.fn();
     const onStatus = vi.fn();
     const stop = attachGameView(socket, 'game-789', onView, onStatus);
 
-    expect(onStatus).toHaveBeenLastCalledWith('reconnecting');
+    expect(onStatus).toHaveBeenLastCalledWith('connecting');
+    socket.fire('connect_error');
+    expect(onStatus).toHaveBeenLastCalledWith('connecting');
 
     socket.fire('connect');
     expect(socket.emit).toHaveBeenCalledWith('game:watch', {
       gameId: 'game-789',
     });
-    expect(onStatus).toHaveBeenLastCalledWith('reconnecting');
+    expect(onStatus).toHaveBeenLastCalledWith('connecting');
 
     socket.fire('game:view', {
       version: 5,
@@ -101,7 +103,7 @@ describe('player game socket', () => {
       },
     });
     expect(onView).not.toHaveBeenCalled();
-    expect(onStatus).toHaveBeenLastCalledWith('reconnecting');
+    expect(onStatus).toHaveBeenLastCalledWith('connecting');
 
     socket.fire('game:view', {
       serverNow: Date.now(),
