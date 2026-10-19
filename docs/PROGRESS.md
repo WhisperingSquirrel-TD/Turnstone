@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green:** Verify #159 (`f01aa72`), 19/19 jobs green. That commit contains only the accepted coverage-step patch; the owner will apply it in GitHub, so Verify does not enforce server coverage yet.
+**Latest green:** Verify #160 (`b9eeaea`), 19/19 jobs green. The accepted coverage-step patch (`f01aa72`) is not applied; the owner will apply it in GitHub, so Verify does not enforce server coverage yet.
 
 **LP-8 Verify #156 (`3704b3d`): GREEN (19/19).** `audit`, `browsers (desktop, chromium)`, `browsers (Pixel, chromium)`, `browsers (iPhone, webkit)`, `browsers (iPad, webkit)`, `integration`, `property`, `unit`, `static-checks`, `lighthouse`, `rehearsal-live`, `merge-scenario-reports`, `required-checks` and all six scenario shards succeeded.
 
@@ -12,7 +12,9 @@
 
 **Ubuntu runner review (19 October):** 12 jobs use `ubuntu-24.04` (11 Verify, one promote); no change recommended. GitHub refreshes the image behind this label, so OS packages can drift.
 
-**Next queue:** Add the read-only Phase A publish checklist; continue M6-3 to M6-5 starting with safe undo; then apply CP-1 only after those items and M6-5 are green.
+**Phase A:** Read-only publish checklist added to `docs/HOSTING.md`. No deployment, settings, domain, DNS, secrets or paid service were changed.
+
+**Next queue:** Continue M6-3 to M6-5 starting with safe undo; then apply CP-1 only after M6-5 is green.
 
 **LP-8 local status:** All six static pages and coming-soon rules are implemented. Targeted unit tests, typecheck, lint, format, production build, static build, desktop Chromium, Pixel Chromium and local Firefox pass. Lighthouse scores are 1.00 for all required categories on all six public pages. iPhone/iPad WebKit cannot launch locally because this Nix container lacks Playwright's WebKit host libraries; Verify installs WebKit with its system dependencies.
 

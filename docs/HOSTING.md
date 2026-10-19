@@ -31,7 +31,7 @@ Weekly VM resizing is rejected: it saves about $3.50 a week and there is no sche
 
 Replit documentation checked 19 October 2026:
 
-- Static deployments are free, apart from outbound transfer beyond the plan allowance. Response headers, caching rules and path rewrites are supported in `.replit`; no fallback host is needed. Sources: [Static deployments](https://docs.replit.com/features/publishing/deployment-types#static), [static deployment configuration](https://docs.replit.com/features/deployment-customization/static-deployments-advanced), [deployment pricing](https://docs.replit.com/billing/deployment-pricing).
+- Static deployments have no hosting charge; outbound data transfer is published at $0.05/GiB, with account credits and budget limits affecting the actual bill. Static deployment configuration supports response headers and path rewrites in `.replit`. No account-specific monthly quote has been checked. Sources: [Static deployments](https://docs.replit.com/features/publishing/deployment-types#static), [static deployment configuration](https://docs.replit.com/features/deployment-customization/static-deployments-advanced), [deployment pricing](https://docs.replit.com/billing/deployment-pricing), [managing spend](https://docs.replit.com/billing/managing-spend).
 - Reserved VMs have a fixed hourly rate for the selected machine while running; changing configuration requires redeployment. Deleting/unpublishing stops further charges. The docs do not specify partial-hour rounding or explicitly state whether resizing/removal is prorated; confirm the displayed amount in Publishing before approval. Sources: [deployment types](https://docs.replit.com/features/publishing/deployment-types), [machine configuration](https://docs.replit.com/features/publishing/machine-configuration), [publishing overview](https://docs.replit.com/features/publishing/overview).
 - A production PostgreSQL database suspends after five minutes without requests; compute billing pauses while suspended, but storage billing continues while the database exists. Sources: [usage-based billing](https://docs.replit.com/billing/about-usage-based-billing), [development and production databases](https://docs.replit.com/features/data-and-storage/development-and-production).
 - Autoscale may run multiple instances and scale to zero. WebSockets are supported, but scaling to zero terminates active connections; the docs do not guarantee sticky routing across instances. The game must reconnect and resynchronize, and any future multi-instance deployment needs an explicit realtime-state design and test. Sources: [deployment types](https://docs.replit.com/features/publishing/deployment-types), [publishing overview](https://docs.replit.com/features/publishing/overview).
@@ -62,9 +62,35 @@ Release only an exact green-Verify commit; see [RELEASES.md](RELEASES.md). No de
 
 ### Phase A: static coming-soon deployment
 
-- [ ] Explicitly approve publishing the static public pages; app/game routes remain noindex and game creation remains closed.
-- [ ] Explicitly approve the 123-reg A and TXT DNS records. Use only the exact hostnames and values shown by Replit at publishing time; do not invent values or change DNS before approval.
-- [ ] Approve a spend limit. Static hosting is free, but outbound transfer beyond the plan allowance may be billable.
+#### Confirmed project settings (read-only review, 19 October 2026)
+
+- **Deployment type:** Replit Static Deployment. The target hostname is `oathstone.stackstoneconsulting.co.uk`; it is not connected and no publish has been performed.
+- **Build command:** `pnpm --filter @workspace/party-game run build:static-public`. This sets `COMING_SOON_MODE=true` and `PRE_LAUNCH_NOINDEX=true`, then runs Vite.
+- **Publish directory:** `artifacts/party-game/dist/static-public`.
+- **Contents:** the static output builder writes exactly six public pages (`/`, `/about`, `/how-to-play`, `/faq`, `/compare`, `/coming-soon`), `app-shell.html`, `404.html`, `robots.txt`, `sitemap.xml`, `llms.txt`, stylesheet/font assets, the favicon and brand SVGs. It does not copy JavaScript bundles, API code, the game server or database. `tests/static-public-build.test.ts` asserts the pages have no scripts or game-route links and checks the fallback/indexing rules. Vite also creates `dist/public`, but that directory is not the proposed publish directory.
+- **Coming-soon and closed game:** the static build uses the explicit coming-soon mode, indexes public marketing pages and keeps app/fallback routes noindex. The static package has no API or game server, so game creation, joining and play cannot operate. The Node startup guard is not run for Static Deployment; on a future server deployment it still refuses crawling-enabled startup unless `COMING_SOON_MODE=true`.
+
+#### Replit configuration: confirmed and unconfirmed
+
+- The current `.replit` is **not** set up for Phase A: it has `deploymentTarget = "autoscale"`, the existing application router and a `postBuild` store-prune command. It has no static build command, `staticDir` or `[[deployment.responseHeaders]]` entries.
+- `.replit` already contains `[[deployment.rewrites]]` entries mapping app/game routes to `/app-shell.html`. Replit documents rewrites for Static Deployments, but these entries have not been exercised under a static target; confirm them in a preview after the owner changes the target to `static`.
+- The Node server currently sets hashed-asset caching to `public, max-age=31536000, immutable` and unversioned documents to `no-cache`. It also supplies its own security headers. Static Deployment will not run that Node middleware. Replit documents `[[deployment.responseHeaders]]`, but no static header rules are configured in `.replit`; map and verify the required cache/security headers in the static preview before publishing. Their live behavior is unconfirmed.
+
+#### Cost, budget, domain and rollback
+
+- **Published base price:** static hosting is $0/month; Replit lists outbound transfer at $0.05/GiB. The account's actual monthly total is **not shown** in this read-only review because no deployment or Publishing quote exists.
+- **Spend limit:** set the account Billing usage-limit/budget cap to a numeric amount Tom explicitly approves. No amount is selected or configured. Replit says the cap can suspend services when reached; confirm its scope and displayed value before publish.
+- **Custom domain:** after an approved publish, Replit's Publishing flow will show a domain-specific A record and TXT verification record. Their exact hostnames and values are generated for that domain and are not available now. Copy only what Replit displays; add nothing to 123-reg until Tom separately approves the DNS change.
+- **Rollback:** if the published site is wrong, restore the prior Replit project checkpoint, rebuild the same static output and republish. Before any later DNS edit, record the existing 123-reg values; reverting DNS also requires explicit approval. No rollback or DNS action is being performed now.
+
+#### Tom's approval and publish actions, in order
+
+1. Approve Phase A Static Deployment, the hostname, the build command/output directory above, and a numeric monthly spend cap.
+2. In Replit Publishing, select Static Deployment; set `deploymentTarget = "static"`, build command and `staticDir` to the values above. Confirm the `.replit` rewrite rules and add/test the required `responseHeaders` rules. No such settings have been changed in this review.
+3. Review the static preview and verify all six pages, app-shell and 404 fallbacks, robots/sitemap/llms files, response headers, caching and the exact cost/budget displayed by Replit.
+4. Publish only after Tom's explicit approval. The Phase A publication contains no secrets, database or game server.
+5. After publishing, add `oathstone.stackstoneconsulting.co.uk` in Replit and copy its exact A and TXT records. Obtain separate approval before entering those values at 123-reg; leave the company site's root records untouched.
+6. Verify HTTPS, canonical URLs, public indexing and the app-shell fallback. If anything fails, use the checkpoint rollback above and republish the restored build.
 
 - [ ] Approve a VM size and its displayed fixed charge. A **pilot-only candidate** is 0.5 vCPU / 2 GiB; do not treat this as capacity approval for §20. The accepted [CAPACITY.md](CAPACITY.md) measurements do not establish production peak capacity; benchmark before selecting Christmas capacity or making throughput claims.
 - [ ] After explicit approval, create separate production `PIN_PEPPER` and session secrets in Publishing's production secrets settings; preserve any required previous pepper during a planned rotation. Never copy development values into documents/Git or ask the owner to paste secrets into chat. Confirm the production database, migrations, HTTPS origin and secure-cookie configuration without printing values.
@@ -73,6 +99,6 @@ Release only an exact green-Verify commit; see [RELEASES.md](RELEASES.md). No de
 - [ ] Approve a usage spending limit **and a separate Reserved VM budget**. Replit's usage cap does not cap the VM's fixed charge. Confirm actual prices and resize billing in the Publishing panel before spending; no automatic paid scale-up has been configured.
 - [ ] **23 December 2026:** with approval, scale up to the measured/approved peak size, allow for a restart and check readiness/socket resync. **27 December 2026:** with approval, scale back to the agreed pilot size and repeat those checks. Choose the actual peak size and bill before either action.
 
-Official references checked 17 October 2026: [Reserved VM pricing](https://docs.replit.com/billing/aug-cloud-billing-updates), [custom domains](https://docs.replit.com/features/publishing/custom-domains), [spend limits](https://docs.replit.com/billing/managing-spend). Use the current panel quote, not a price copied into this checklist.
+Official references checked 19 October 2026: [Static Deployment Configuration](https://docs.replit.com/features/deployment-customization/static-deployments-advanced), [deployment types](https://docs.replit.com/features/publishing/deployment-types), [custom domains](https://docs.replit.com/build/add-custom-domain), [deployment pricing](https://docs.replit.com/billing/deployment-pricing), [managing spend](https://docs.replit.com/billing/managing-spend), [checkpoints and rollbacks](https://docs.replit.com/features/version-control/checkpoints-and-rollbacks). Use the live Publishing/Billing panel values, not guessed DNS records or an account-specific price copied from another deployment.
 
 Do not deploy, connect the domain, add production secrets or change DNS until the owner explicitly approves those actions.
