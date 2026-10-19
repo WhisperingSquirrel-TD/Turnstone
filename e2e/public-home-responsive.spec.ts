@@ -176,3 +176,80 @@ test('the public home page stays mobile-first and glow edges stay contained', as
   await page.mouse.up();
   await expect(demo).toContainText('Hold to reveal');
 });
+
+test('the 375×667 phone viewport keeps home copy and actions on-screen', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['desktop', 'pixel', 'iphone'].some((profile) =>
+      testInfo.project.name.toLowerCase().includes(profile),
+    ),
+    'Fixed phone viewport regression runs in desktop, Pixel and iPhone profiles',
+  );
+
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+  const geometry = await page.evaluate(() => {
+    const hero = document.querySelector('.public-home-hero');
+    const actions = document.querySelector('.public-home-actions');
+    if (!hero || !actions) throw new Error('Home hero or actions are missing');
+
+    const textBounds = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (!element) throw new Error(`Missing home text: ${selector}`);
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const { left, right } = range.getBoundingClientRect();
+      return { left, right };
+    };
+    const heroBounds = hero.getBoundingClientRect();
+    const actionBounds = Array.from(
+      actions.querySelectorAll('a'),
+      (element) => {
+        const { left, right, bottom } = element.getBoundingClientRect();
+        return { left, right, bottom };
+      },
+    );
+
+    return {
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      hero: { left: heroBounds.left, right: heroBounds.right },
+      text: [
+        textBounds('.public-home-wordmark'),
+        textBounds('.public-home-subtitle'),
+        textBounds('.public-home-byline'),
+      ],
+      actionBounds,
+    };
+  });
+
+  expect(geometry.viewportWidth).toBe(375);
+  expect(geometry.actionBounds).toHaveLength(3);
+  for (const [index, bounds] of geometry.text.entries()) {
+    expect(
+      bounds.left,
+      `home text ${index + 1} clips past the left edge`,
+    ).toBeGreaterThanOrEqual(geometry.hero.left);
+    expect(
+      bounds.right,
+      `home text ${index + 1} clips past the right edge`,
+    ).toBeLessThanOrEqual(geometry.hero.right);
+  }
+  for (const [index, bounds] of geometry.actionBounds.entries()) {
+    expect(
+      bounds.left,
+      `entry action ${index + 1} clips past the left edge`,
+    ).toBeGreaterThanOrEqual(geometry.hero.left);
+    expect(
+      bounds.right,
+      `entry action ${index + 1} clips past the right edge`,
+    ).toBeLessThanOrEqual(geometry.hero.right);
+    expect(
+      bounds.bottom,
+      `entry action ${index + 1} is below the first screen`,
+    ).toBeLessThanOrEqual(geometry.viewportHeight);
+  }
+});

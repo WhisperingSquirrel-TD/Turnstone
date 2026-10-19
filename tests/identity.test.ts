@@ -12,9 +12,7 @@ describe('single-source owner identity', () => {
     const ownerName = /Product name: APP_NAME is "([^"]+)"/.exec(spec)?.[1];
     expect(ownerName).toBeTruthy();
     expect(config.appName).toBe(ownerName);
-    expect(config.tagline).toBe(
-      `${config.appName}: the traitor game where everyone plays.`,
-    );
+    expect(config.tagline).toBe('A game of traitors and faithful.');
     expect(config.byline).toBe('made by Stackstone Consulting');
     expect(config.organisation).toEqual({
       name: config.builder,

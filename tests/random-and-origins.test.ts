@@ -20,7 +20,7 @@ describe('secure production entropy and owner domains', () => {
   });
   it('keeps the canonical site/RP ID and uses same-origin API paths', () => {
     const spec = readFileSync('docs/SPEC.md', 'utf8');
-    const site = /Domain: public site and app shell at (\S+) on Vercel/.exec(
+    const site = /Domain: public site and app shell at (\S+) on Replit/.exec(
       spec,
     )?.[1];
     const selectedOrigin = /from the single origin `([^`]+)`/.exec(spec)?.[1];

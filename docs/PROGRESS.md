@@ -1,11 +1,11 @@
 # Status for reviewer
 
-**Phase A rename:** RN2–RN4 implemented locally; RN5 is blocked on the tracked-attachment discrepancy, and RN6 still needs exact-copy/metadata verification. No publish, deployment, domain, DNS, production-secret or paid-service change.
+**Phase A rename:** RN2–RN4 are in `af976f1`; Verify #142 (run `39266490173`) failed on three stale test expectations. Their corrections pass targeted local checks; corrective push pending. RN5/RN6 have not started. No publish, deployment, domain, DNS, production-secret or paid-service change.
 
 - RN1 baseline: 383 tracked text matches — tests 153, docs/agents 125, UI 30, locale 15, server/shared 15, workflows 5, config/metadata 9, brand text 7, attachments 24; 15 old-name paths. No raster logo contains name text; concept-C SVG title metadata and asset paths are renamed, artwork unchanged.
-- Protected owner actions: create `OATHSTONE_GITHUB_TOKEN` in Replit Secrets and `OATHSTONE_PROMOTION_ENABLED` in GitHub Actions Variables with matching values, update their consumers, then remove the old names; keep repository path `WhisperingSquirrel-TD/Turnstone`.
-- Attachment discrepancy: 43 `attached_assets/` files are already tracked; 12 contain 24 old-name text matches. Two new images are untracked. All are untouched; the RN5 tracked-file guard needs an owner decision on these 43 files.
-- Local: typecheck, test typecheck, lint, format, 88 targeted unit tests, 59 integration tests, production build, and 16 Pixel/desktop browser tests passed (2 profile skips). The larger home layout still has one old body sentence to replace in RN6.
+- Protected owner actions: rename `TURNSTONE_GITHUB_TOKEN` to `OATHSTONE_GITHUB_TOKEN` in Replit Secrets and `TURNSTONE_PROMOTION_ENABLED` to `OATHSTONE_PROMOTION_ENABLED` in GitHub Actions Variables, preserve matching values, update consumers, then remove old names; keep repository path `WhisperingSquirrel-TD/Turnstone`.
+- Attachments: owner approved preserving originals locally and untracking the 12 tracked files with 24 old-name text matches after Verify is green. The two new screenshots remain untracked.
+- Local corrective checks: 4 unit tests; typecheck, test typecheck, lint and format passed. Seven targeted browser checks passed across Pixel, iPhone, iPad and desktop (one expected skip); the 375×667 home screenshot issue did not reproduce.
 - Latest confirmed green: Verify #141 on `9b94e46`. The lookup for `9b12ac4` used an abbreviated SHA and found no run, so it is not counted as a result.
 - M6 safe-undo work is preserved locally and paused until the rename is green.
 
