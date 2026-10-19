@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { createApp } from '../artifacts/api-server/src/app';
+import {
+  createApp,
+  createReadinessStatusReader,
+} from '../artifacts/api-server/src/app';
 import {
   PRE_LAUNCH_NOINDEX,
   type DeploymentMode,
@@ -36,6 +39,48 @@ describe('health and readiness', () => {
     expect(response.headers['x-robots-tag']).toBe(
       PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,
     );
+  });
+  it('caches database readiness results for at least one minute', async () => {
+    let now = 1_000_000;
+    let probeSucceeds = false;
+    const dateNow = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    const probe = vi.fn(async () => {
+      if (!probeSucceeds) throw new Error('database unavailable');
+    });
+    try {
+      const app = createApp(probe);
+      expect((await request(app).get('/api/readyz')).status).toBe(503);
+      expect(probe).toHaveBeenCalledTimes(1);
+      expect((await request(app).get('/healthz')).body).toEqual({
+        status: 'ok',
+      });
+      expect(probe).toHaveBeenCalledTimes(1);
+
+      probeSucceeds = true;
+      now += 59_999;
+      expect((await request(app).get('/readyz')).status).toBe(503);
+      expect(probe).toHaveBeenCalledTimes(1);
+
+      now += 1;
+      expect((await request(app).get('/api/readyz')).status).toBe(200);
+      expect(probe).toHaveBeenCalledTimes(2);
+    } finally {
+      dateNow.mockRestore();
+    }
+  });
+  it('shares one in-flight database probe across concurrent readiness requests', async () => {
+    let releaseProbe: (() => void) | undefined;
+    const probeGate = new Promise<void>((resolve) => {
+      releaseProbe = resolve;
+    });
+    const probe = vi.fn(() => probeGate);
+    const readStatus = createReadinessStatusReader(probe);
+    const first = readStatus();
+    const second = readStatus();
+    expect(probe).toHaveBeenCalledTimes(1);
+    releaseProbe?.();
+    expect(await Promise.all([first, second])).toEqual(['ready', 'ready']);
+    expect(probe).toHaveBeenCalledTimes(1);
   });
   it('sets baseline security headers including independent unpredictable nonces', async () => {
     const app = createApp(async () => {});

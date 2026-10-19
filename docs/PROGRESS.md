@@ -1,8 +1,8 @@
 # Status for reviewer
 
-- Updated: 19 October 2026, 10:37 UTC. **Phase A:** LA-1 Verify #142, LA-2 Verify #144 and LA-3 Verify #145 are green; LA-4 exact copy and static build pass locally.
-- Last push: `80717d9`, Verify #145 Success; LA-4 push is next. Canonicals use the configured origin, but no deployment is active.
-- No open code questions. Deployment remains owner-approval-gated; no publish, domain, DNS, secrets or paid services. Eight attachments remain untracked.
+- Updated: 19 October 2026, 10:47 UTC. **Phase A:** LA-1 Verify #142, LA-2 #144, LA-3 #145 and LA-4 #146 are green; LA-5 tests/typecheck pass and API is running.
+- Last push: `01d3f4f`, Verify #146 Success; next push is LA-5. Canonicals use the configured origin, but no deployment is active.
+- No open code questions. Deployment remains approval-gated; no publish, domain, DNS, secrets or paid services. Eight attachments remain untracked.
 - After LA-7: resume remaining M6 items; stop first for Phase A deployment approval.
 
 ## Previous verification history

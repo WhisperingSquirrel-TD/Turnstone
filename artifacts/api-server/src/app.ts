@@ -273,11 +273,47 @@ function sendError(response: Response, status: number, error: string): void {
   response.status(status).json(apiErrorResponseSchema.parse({ error }));
 }
 
+type ReadinessStatus = 'ready' | 'unavailable';
+
+const readinessCacheTtlMs = 60_000;
+
+export function createReadinessStatusReader(
+  probeDatabase: () => Promise<void>,
+  now: () => number = () => Date.now(),
+): () => Promise<ReadinessStatus> {
+  let cached: { status: ReadinessStatus; expiresAt: number } | undefined;
+  let inFlight: Promise<ReadinessStatus> | undefined;
+
+  return async () => {
+    if (cached && now() < cached.expiresAt) return cached.status;
+    if (inFlight) return inFlight;
+
+    const probe = (async (): Promise<ReadinessStatus> => {
+      let status: ReadinessStatus;
+      try {
+        await probeDatabase();
+        status = 'ready';
+      } catch {
+        status = 'unavailable';
+      }
+      cached = { status, expiresAt: now() + readinessCacheTtlMs };
+      return status;
+    })();
+    inFlight = probe;
+    try {
+      return await probe;
+    } finally {
+      if (inFlight === probe) inFlight = undefined;
+    }
+  };
+}
+
 export function createApp(
   probeDatabase: () => Promise<void>,
   options: AppOptions = {},
 ): Express {
   const app = express();
+  const readReadinessStatus = createReadinessStatusReader(probeDatabase);
   app.disable('x-powered-by');
   const activeDeploymentMode = options.deploymentMode ?? deploymentMode;
   app.use(security(activeDeploymentMode));
@@ -470,10 +506,10 @@ export function createApp(
     res.json(HealthCheckResponse.parse({ status: 'ok' }));
   });
   app.get(['/api/readyz', '/readyz'], async (_req, res) => {
-    try {
-      await probeDatabase();
-      res.json(ReadinessCheckResponse.parse({ status: 'ready' }));
-    } catch {
+    const status = await readReadinessStatus();
+    if (status === 'ready') {
+      res.json(ReadinessCheckResponse.parse({ status }));
+    } else {
       res
         .status(503)
         .json(ReadinessCheckResponse.parse({ status: 'unavailable' }));
