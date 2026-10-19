@@ -1,6 +1,9 @@
 import type { Plugin } from 'vite';
 import { createNonce, securityHeaders } from '@workspace/security';
-import { PRE_LAUNCH_NOINDEX } from '@workspace/security/deployment';
+import {
+  deploymentMode,
+  shouldNoindexPath,
+} from '@workspace/security/deployment';
 
 export function devSecurityHeaders(nonce: string, apiOrigin?: string) {
   const headers = securityHeaders(nonce, true);
@@ -18,11 +21,9 @@ export function devSecurityHeaders(nonce: string, apiOrigin?: string) {
     throw new Error('VITE_API_ORIGIN must be an HTTP(S) origin.');
   }
 
-  headers['Content-Security-Policy'] =
-    headers['Content-Security-Policy'].replace(
-      "connect-src 'self'",
-      `connect-src 'self' ${parsedOrigin.origin}`,
-    );
+  headers['Content-Security-Policy'] = headers[
+    'Content-Security-Policy'
+  ].replace("connect-src 'self'", `connect-src 'self' ${parsedOrigin.origin}`);
   return headers;
 }
 
@@ -31,14 +32,24 @@ export function noncePlugin(): Plugin {
     name: 'per-response-csp',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
+        const pathname = new URL(req.url ?? '/', 'http://vite.local').pathname;
+        const basePath = new URL(
+          server.config.base,
+          'http://vite.local',
+        ).pathname.replace(/\/+$/, '');
+        const route =
+          basePath && pathname === basePath
+            ? '/'
+            : pathname.startsWith(`${basePath}/`)
+              ? pathname.slice(basePath.length)
+              : pathname;
         const nonce = createNonce();
         for (const [key, value] of Object.entries(
           devSecurityHeaders(nonce, process.env.VITE_API_ORIGIN),
         ))
           res.setHeader(key, value);
-        if (PRE_LAUNCH_NOINDEX)
+        if (shouldNoindexPath(route, deploymentMode))
           res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-        const pathname = new URL(req.url ?? '/', 'http://vite.local').pathname;
         if (
           pathname === '/api' ||
           pathname.startsWith('/api/') ||

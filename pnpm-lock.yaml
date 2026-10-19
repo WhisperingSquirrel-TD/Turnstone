@@ -363,6 +363,10 @@ importers:
   lib/engine: {}
 
   lib/security:
+    dependencies:
+      '@workspace/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: 25.9.6

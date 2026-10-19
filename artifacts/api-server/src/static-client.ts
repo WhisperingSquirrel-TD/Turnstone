@@ -2,23 +2,34 @@ import type { RequestHandler } from 'express';
 import { stat, access, readFile } from 'node:fs/promises';
 import { resolve, sep, join, extname } from 'node:path';
 import { isAppShellRoute, APP_ROUTE_PATHS } from '@workspace/shared/app-routes';
-import { PRE_LAUNCH_NOINDEX } from '@workspace/security/deployment';
+import {
+  deploymentMode,
+  renderRobotsTxt,
+  type DeploymentMode,
+} from '@workspace/security/deployment';
 
 export async function assertClientBuild(
   directory: string,
-  options: { prepared?: boolean } = {},
+  options: { prepared?: boolean; deploymentMode?: DeploymentMode } = {},
 ): Promise<void> {
+  const activeDeploymentMode = options.deploymentMode ?? deploymentMode;
   await Promise.all(
     ['index.html', 'app-shell.html', 'robots.txt'].map((file) =>
       access(join(directory, file)),
     ),
   );
-  if (PRE_LAUNCH_NOINDEX) {
-    const robots = (await readFile(join(directory, 'robots.txt'), 'utf8'))
-      .trim()
-      .replace(/\r/g, '');
-    if (robots !== 'User-agent: *\nDisallow: /')
-      throw new Error('Built client must disallow pre-launch crawling');
+  const robots = (await readFile(join(directory, 'robots.txt'), 'utf8'))
+    .trim()
+    .replace(/\r/g, '');
+  const expectedRobots = renderRobotsTxt(activeDeploymentMode)
+    .trim()
+    .replace(/\r/g, '');
+  if (robots !== expectedRobots) {
+    throw new Error(
+      activeDeploymentMode.comingSoonMode
+        ? 'Built client robots policy does not match coming-soon mode'
+        : 'Built client must disallow pre-launch crawling',
+    );
   }
   if (options.prepared) {
     for (const file of ['index.html', 'app-shell.html']) {

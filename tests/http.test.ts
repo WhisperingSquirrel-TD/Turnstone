@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../artifacts/api-server/src/app';
-import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
+import {
+  PRE_LAUNCH_NOINDEX,
+  type DeploymentMode,
+} from '../lib/security/src/deployment';
 import { entryFailureMessages, gameConfigSchema } from '../lib/shared/src';
 
 describe('health and readiness', () => {
@@ -201,6 +204,40 @@ describe('health and readiness', () => {
     expect(capacityResponse.body).toEqual({
       error: 'Busy right now, try again in a few minutes',
     });
+  });
+
+  it('refuses real-game and rehearsal creation with a clear coming-soon message', async () => {
+    const deploymentMode: DeploymentMode = {
+      preLaunchNoindex: true,
+      comingSoonMode: true,
+    };
+    const app = createApp(async () => {}, { deploymentMode });
+    const closedMessage =
+      'Game creation is closed while Turnstone is coming soon.';
+    expect(
+      (await request(app).get('/api/healthz')).headers['x-robots-tag'],
+    ).toBe('noindex, nofollow');
+
+    const game = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        id: 'coming-soon-game',
+        idempotencyKey: 'coming-soon-game-request',
+        config: gameConfigSchema.parse({}),
+      });
+    expect(game.status).toBe(503);
+    expect(game.body).toEqual({ error: closedMessage });
+
+    const rehearsal = await request(app).post('/api/rehearsals').send({
+      gameId: 'coming-soon-practice',
+      idempotencyKey: 'coming-soon-practice-request',
+      name: 'Morgan',
+      playerCount: 6,
+      speed: 'fast',
+    });
+    expect(rehearsal.status).toBe(503);
+    expect(rehearsal.body).toEqual({ error: closedMessage });
   });
 
   it('issues a host-only CSRF cookie and requires its token on browser mutations', async () => {

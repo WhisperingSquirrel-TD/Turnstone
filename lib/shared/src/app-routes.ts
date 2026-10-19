@@ -14,6 +14,12 @@ export const APP_ROUTE_PATHS = {
   compare: '/compare',
 } as const;
 
+export const PUBLIC_MARKETING_ROUTE_PATHS = [
+  APP_ROUTE_PATHS.home,
+  APP_ROUTE_PATHS.faq,
+  APP_ROUTE_PATHS.compare,
+] as const;
+
 export const APP_SHELL_ROUTE_BASES = [
   APP_ROUTE_PATHS.play,
   APP_ROUTE_PATHS.create,

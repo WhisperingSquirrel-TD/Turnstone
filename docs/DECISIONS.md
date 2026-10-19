@@ -1386,3 +1386,11 @@ The canonical Stackstone palette is unchanged. The day button mixes 12% Candle i
 **Why:** R5 17–20 require both themes to stay legible and identical across roles. Root-palette tests now explicitly read `:root`, while separate scoped-palette and browser checks cover the day overrides; the original exact-colour assertions remain.
 
 **Evidence:** The R5 gallery in `docs/screens/round-5/` uses real app components and deterministic fixtures at all five required widths, in both palettes. Private scenes establish their viewport before opening a secret; privacy interruption handling is not disabled. The real-server rehearsal separately checks phase-driven themes with eight seats and no presenter or refresh.
+
+## D88 — Coming-soon mode separates public indexing from app access (owner-approved, 19 October 2026)
+
+**Context:** The owner approved making public marketing pages findable before launch while keeping the game closed and app routes private to crawlers.
+
+**Choice:** Add `COMING_SOON_MODE` as a separate, explicit setting from `PRE_LAUNCH_NOINDEX`. Only coming-soon mode may permit indexing of public marketing pages; app, join, play, practice and API routes remain noindex and disallowed in `robots.txt`. Refuse to start with crawling enabled unless coming-soon mode is explicitly enabled. Refuse game and rehearsal creation with a plain-English closed message.
+
+**Consequence:** Coming-soon indexing does not open the game or authorize publishing, deployment, domain, DNS, production-secret or paid-service changes. Default builds remain noindex until the owner explicitly approves Phase A.

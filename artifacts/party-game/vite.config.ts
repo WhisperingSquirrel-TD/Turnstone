@@ -1,9 +1,13 @@
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { APP_ROUTE_PATHS, isAppShellRoute } from '@workspace/shared/app-routes';
+import {
+  deploymentMode,
+  renderRobotsTxt,
+} from '@workspace/security/deployment';
 import { noncePlugin } from './vite.security';
 import { config } from './src/config';
 import { createWebManifest } from './src/pwa-manifest';
@@ -36,6 +40,8 @@ if (!Number.isInteger(port) || port < 1 || port > 65535)
 if (!basePath?.startsWith('/'))
   throw new Error('Missing or invalid environment variable: BASE_PATH');
 const baseHref = basePath.endsWith('/') ? basePath : `${basePath}/`;
+let writeRobotsForBuild = false;
+let robotsOutputPath: string | undefined;
 
 function appRelativePath(pathname: string): string {
   const prefix = basePath.endsWith('/') ? basePath : `${basePath}/`;
@@ -126,6 +132,16 @@ export default defineConfig({
     },
     {
       name: 'prerender-public-content-pages',
+      configResolved(resolvedConfig) {
+        if (resolvedConfig.command === 'build') {
+          writeRobotsForBuild = true;
+          robotsOutputPath = path.resolve(
+            resolvedConfig.root,
+            resolvedConfig.build.outDir,
+            'robots.txt',
+          );
+        }
+      },
       transformIndexHtml: {
         order: 'pre',
         handler: (html, context) => {
@@ -170,6 +186,10 @@ export default defineConfig({
               '__PUBLIC_DESCRIPTION__',
               escapeHtml(en.publicSite.answer(config.appName)),
             )
+            .replaceAll(
+              '__PUBLIC_ROBOTS__',
+              config.preLaunch ? 'noindex, nofollow' : 'index, follow',
+            )
             .replaceAll('__CANONICAL_URL__', escapeHtml(config.siteOrigin))
             .replaceAll(
               '__PUBLIC_JSON_LD__',
@@ -183,6 +203,12 @@ export default defineConfig({
           const pathname = new URL(request.url ?? '/', 'http://vite.local')
             .pathname;
           const route = appRelativePath(pathname);
+          if (route === '/robots.txt') {
+            response.statusCode = 200;
+            response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            response.end(renderRobotsTxt(deploymentMode));
+            return;
+          }
           if (
             route === APP_ROUTE_PATHS.faq ||
             route === APP_ROUTE_PATHS.compare
@@ -271,6 +297,11 @@ export default defineConfig({
           fileName: 'llms.txt',
           source: renderLlmsTxt(),
         });
+      },
+      closeBundle() {
+        if (writeRobotsForBuild && robotsOutputPath) {
+          writeFileSync(robotsOutputPath, renderRobotsTxt(deploymentMode));
+        }
       },
     },
     react(),

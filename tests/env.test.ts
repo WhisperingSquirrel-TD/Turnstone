@@ -33,6 +33,22 @@ describe('environment validation', () => {
       }),
     ).toThrow('MAX_ACTIVE_GAMES');
   });
+  it('requires explicit coming-soon mode before allowing public crawling', () => {
+    expect(() =>
+      parseEnvironment({
+        ...valid,
+        PRE_LAUNCH_NOINDEX: 'false',
+      }),
+    ).toThrow('COMING_SOON_MODE');
+
+    const comingSoon = parseEnvironment({
+      ...valid,
+      PRE_LAUNCH_NOINDEX: 'false',
+      COMING_SOON_MODE: 'true',
+    });
+    expect(comingSoon.PRE_LAUNCH_NOINDEX).toBe(false);
+    expect(comingSoon.COMING_SOON_MODE).toBe(true);
+  });
   for (const key of [
     'DATABASE_URL',
     'SESSION_SECRET',

@@ -80,6 +80,10 @@ import {
 } from '@workspace/security/seat-pin';
 import { gameRandom } from '@workspace/security/game-random';
 import {
+  deploymentMode,
+  type DeploymentMode,
+} from '@workspace/security/deployment';
+import {
   cookieNameForCoordinatorGame,
   cookieNameForGame,
   cookieNameForJoinRequest,
@@ -114,6 +118,7 @@ export type AppOptions = {
     limit: number,
     windowMs: number,
   ) => Promise<boolean>;
+  deploymentMode?: DeploymentMode;
 };
 
 const csrfCookieName = 'turnstone-csrf';
@@ -274,7 +279,8 @@ export function createApp(
 ): Express {
   const app = express();
   app.disable('x-powered-by');
-  app.use(security);
+  const activeDeploymentMode = options.deploymentMode ?? deploymentMode;
+  app.use(security(activeDeploymentMode));
   if (options.clientDirectory) app.use(staticClient(options.clientDirectory));
   app.use(
     cors({
@@ -495,6 +501,14 @@ export function createApp(
         sendError(response, 403, 'Invalid request');
         return;
       }
+      if (activeDeploymentMode.comingSoonMode) {
+        sendError(
+          response,
+          503,
+          'Game creation is closed while Turnstone is coming soon.',
+        );
+        return;
+      }
       const parsed = commandSchema.safeParse(request.body);
       if (
         !parsed.success ||
@@ -597,6 +611,14 @@ export function createApp(
     try {
       if (!hasValidCsrf(request)) {
         sendError(response, 403, 'Invalid request');
+        return;
+      }
+      if (activeDeploymentMode.comingSoonMode) {
+        sendError(
+          response,
+          503,
+          'Game creation is closed while Turnstone is coming soon.',
+        );
         return;
       }
       const parsed = rehearsalStartRequestSchema.safeParse(request.body);

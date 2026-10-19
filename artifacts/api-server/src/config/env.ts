@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { resolveDeploymentMode } from '@workspace/security/deployment';
 
 const environmentSchema = z
   .object({
@@ -12,6 +13,8 @@ const environmentSchema = z
     PIN_PEPPER_PREVIOUS: z.string().min(32).optional(),
     PIN_PEPPER_PREVIOUS_VERSION: z.coerce.number().int().min(1).optional(),
     PORT: z.coerce.number().int().min(1).max(65535),
+    PRE_LAUNCH_NOINDEX: z.enum(['true', 'false']).optional(),
+    COMING_SOON_MODE: z.enum(['true', 'false']).optional(),
     NODE_ENV: z
       .enum(['development', 'production', 'test'])
       .default('development'),
@@ -24,6 +27,16 @@ const environmentSchema = z
     MAX_ACTIVE_GAMES: z.coerce.number().int().min(1).optional(),
   })
   .superRefine((environment, context) => {
+    if (
+      environment.PRE_LAUNCH_NOINDEX === 'false' &&
+      environment.COMING_SOON_MODE !== 'true'
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['COMING_SOON_MODE'],
+        message: 'Required when crawling is permitted',
+      });
+    }
     const hasPreviousPepper = environment.PIN_PEPPER_PREVIOUS !== undefined;
     const hasPreviousVersion =
       environment.PIN_PEPPER_PREVIOUS_VERSION !== undefined;
@@ -65,6 +78,14 @@ const environmentSchema = z
         message: 'Required in production',
       });
     }
+  })
+  .transform((environment) => {
+    const mode = resolveDeploymentMode(environment);
+    return {
+      ...environment,
+      PRE_LAUNCH_NOINDEX: mode.preLaunchNoindex,
+      COMING_SOON_MODE: mode.comingSoonMode,
+    };
   });
 
 export function parseEnvironment(input: Record<string, unknown>) {

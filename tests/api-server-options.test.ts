@@ -10,6 +10,8 @@ it('wires the configured public origin into invite links and credentialed CORS',
     PIN_PEPPER: 'test-only-pin-pepper-secret-0123456789abcdef',
     PIN_PEPPER_VERSION: 1,
     MAX_ACTIVE_GAMES: 1_000,
+    PRE_LAUNCH_NOINDEX: true,
+    COMING_SOON_MODE: false,
   };
   const options = createServerAppOptions({
     environment,
@@ -21,6 +23,10 @@ it('wires the configured public origin into invite links and credentialed CORS',
   expect(options.publicBaseUrl).toBe(environment.APP_BASE_URL);
   expect(options.allowedOrigins).toEqual([environment.APP_BASE_URL]);
   expect(options.secureCookies).toBe(true);
+  expect(options.deploymentMode).toEqual({
+    preLaunchNoindex: true,
+    comingSoonMode: false,
+  });
   expect(options.rateLimitSecret).toBe(environment.SESSION_SECRET);
   expect(options.pinPepperConfig).toEqual({
     current: {

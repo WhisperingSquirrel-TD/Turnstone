@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { PRE_LAUNCH_NOINDEX } from '@workspace/security/deployment';
+import { deploymentMode } from '@workspace/security/deployment';
 import { APP_ROUTE_PATHS } from '@workspace/shared/app-routes';
 
 const appName = 'Turnstone';
@@ -27,7 +27,7 @@ export const config = {
   apiOrigin: configuredApiOrigin,
   appIconPath: 'brand/stackstone-icon-dark-outlined.svg',
   socialLinks: [] as const,
-  preLaunch: PRE_LAUNCH_NOINDEX,
+  preLaunch: deploymentMode.preLaunchNoindex && !deploymentMode.comingSoonMode,
   organisation: {
     name: builder,
     url: 'https://stackstoneconsulting.co.uk/',

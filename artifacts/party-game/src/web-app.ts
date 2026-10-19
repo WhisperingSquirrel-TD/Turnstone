@@ -3,19 +3,30 @@ import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { APP_ROUTE_PATHS, isAppShellRoute } from '@workspace/shared/app-routes';
 import { createNonce, securityHeaders } from '@workspace/security';
-import { PRE_LAUNCH_NOINDEX } from '../../../lib/security/src/deployment';
+import {
+  deploymentMode,
+  shouldNoindexPath,
+  type DeploymentMode,
+} from '../../../lib/security/src/deployment';
 
 export function createWebApp(
   publicDirectory: string,
-  options: { forLighthouseAudit?: true } = {},
+  options: {
+    forLighthouseAudit?: true;
+    deploymentMode?: DeploymentMode;
+  } = {},
 ) {
   const app = express();
+  const activeDeploymentMode = options.deploymentMode ?? deploymentMode;
   app.disable('x-powered-by');
-  app.use((_req, res, next) => {
+  app.use((req, res, next) => {
     const nonce = createNonce();
     res.locals.nonce = nonce;
     res.set(securityHeaders(nonce));
-    if (PRE_LAUNCH_NOINDEX && !options.forLighthouseAudit) {
+    if (
+      shouldNoindexPath(req.path, activeDeploymentMode) &&
+      !options.forLighthouseAudit
+    ) {
       res.set('X-Robots-Tag', 'noindex, nofollow');
     }
     next();

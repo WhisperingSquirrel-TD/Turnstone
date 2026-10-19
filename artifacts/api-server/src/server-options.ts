@@ -1,5 +1,6 @@
 import type { Request } from 'express';
 import type { PinPepperConfig } from '@workspace/security/seat-pin';
+import type { DeploymentMode } from '@workspace/security/deployment';
 import type { AppOptions } from './app';
 
 type ServerEnvironment = {
@@ -11,6 +12,8 @@ type ServerEnvironment = {
   PIN_PEPPER_VERSION: number;
   PIN_PEPPER_PREVIOUS?: string;
   PIN_PEPPER_PREVIOUS_VERSION?: number;
+  PRE_LAUNCH_NOINDEX: boolean;
+  COMING_SOON_MODE: boolean;
   MAX_ACTIVE_GAMES?: number;
 };
 
@@ -49,6 +52,10 @@ export function createServerAppOptions({
     publishGame,
     allowedOrigins,
     maxActiveGames: environment.MAX_ACTIVE_GAMES,
+    deploymentMode: {
+      preLaunchNoindex: environment.PRE_LAUNCH_NOINDEX,
+      comingSoonMode: environment.COMING_SOON_MODE,
+    } satisfies DeploymentMode,
     countActiveGames,
     secureCookies: environment.NODE_ENV === 'production',
     rateLimitSecret: environment.SESSION_SECRET,

@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- Updated: 19 October 2026, 09:16 UTC. **M6-1:** Verify #140 failed in browser profiles; root cause was missing coordinator-access mocks in the late-invite E2E setup. Added them and reproduced the fix locally.
-- Last push: `6131639`; Verify #140 **Failure**. The affected E2E passes on desktop, iPad, Pixel and iPhone locally; fix commit pending.
-- Q3 remains provisional: designated seats, or a strict majority of living players when none are designated. No SPEC §3 change.
-- Risks: no app behavior change in this browser-test fix. Eight supplied content files remain untracked and unintegrated; no deployment or production changes.
+- Updated: 19 October 2026, 09:41 UTC. **Phase A LA-1:** explicit coming-soon mode; public pages crawlable only in that mode, app/API routes stay noindex, and game creation is closed.
+- Last green: Verify #141 **Success** on `9b94e46`. LA-1 targeted tests, typechecks, lint, format, and both coming-soon/default builds pass locally; commit pending.
+- Hard stops: no publish, deployment, domain, DNS, secrets or paid services. Eight content attachments remain untracked.
+- Next: LA-2 static public output, then LA-3–LA-7; resume remaining M6 items only afterwards.
 
 ## Previous verification history
 
