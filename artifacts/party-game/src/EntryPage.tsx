@@ -24,6 +24,7 @@ import {
   joinRequestStatusResponseSchema,
   isEntryFailureMessage,
   pendingJoinRequestsResponseSchema,
+  presenterPairingResponseSchema,
   rehearsalStartRequestSchema,
   shortCodeJoinRequestSchema,
   type FullView,
@@ -740,6 +741,19 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     }
   }
 
+  async function createPresenterPairing(): Promise<{
+    code: string;
+    expiresAt: number;
+  }> {
+    if (!coordinatorGameId) throw new Error('coordinator-view-unavailable');
+    return postJson(
+      `/games/${encodeURIComponent(coordinatorGameId)}/presenter-pairings`,
+      {},
+      presenterPairingResponseSchema,
+      csrfToken,
+    );
+  }
+
   async function startGame(): Promise<void> {
     if (!coordinatorGameId || !coordinatorView) return;
     if (lateJoinMode) {
@@ -844,13 +858,18 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     lateJoinMode && invitationKind !== 'late' ? '' : shareUrl;
   const coordinatorPanel =
     mode === 'coordinate' &&
+    coordinatorGameId &&
     coordinatorView &&
     coordinatorServerNow !== null &&
-    !['DRAFT', 'LOBBY'].includes(coordinatorView.phase) ? (
+    coordinatorView.phase !== 'DRAFT' ? (
       <Suspense fallback={<p role="status">{en.coordinator.loading}</p>}>
         <LazyCoordinatorConsole
           view={{ ...coordinatorView, serverNow: coordinatorServerNow }}
           onCommand={runCoordinatorCommand}
+          presenterPath={webPath(
+            `${config.routes.tv}/${encodeURIComponent(coordinatorGameId)}`,
+          )}
+          onCreatePresenterPairing={createPresenterPairing}
         />
       </Suspense>
     ) : undefined;

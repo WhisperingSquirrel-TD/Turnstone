@@ -95,15 +95,28 @@ const nonActivePhases = new Set<FullView['phase']>([
 export function CoordinatorConsole({
   view,
   onCommand,
+  presenterPath,
+  onCreatePresenterPairing,
 }: {
   view: CoordinatorConsoleView;
   onCommand: (command: CoordinatorCommand) => Promise<void>;
+  presenterPath: string;
+  onCreatePresenterPairing: () => Promise<{
+    code: string;
+    expiresAt: number;
+  }>;
 }) {
   const [localNow, setLocalNow] = useState(() => Date.now());
   const [confirmMove, setConfirmMove] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [presenterPairing, setPresenterPairing] = useState<{
+    code: string;
+    expiresAt: number;
+  } | null>(null);
+  const [pairingBusy, setPairingBusy] = useState(false);
+  const [pairingError, setPairingError] = useState('');
   const active = !nonActivePhases.has(view.phase);
 
   useEffect(() => {
@@ -132,6 +145,19 @@ export function CoordinatorConsole({
       return false;
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function createPresenterPairing() {
+    if (pairingBusy) return;
+    setPairingBusy(true);
+    setPairingError('');
+    try {
+      setPresenterPairing(await onCreatePresenterPairing());
+    } catch {
+      setPairingError(en.coordinator.presenterPairingError);
+    } finally {
+      setPairingBusy(false);
     }
   }
 
@@ -212,6 +238,63 @@ export function CoordinatorConsole({
           </ul>
         </section>
       )}
+      <section
+        className="mt-7 grid gap-3"
+        aria-labelledby="coordinator-presenter-heading"
+        data-testid="coordinator-presenter"
+      >
+        <h2 id="coordinator-presenter-heading" className="display text-2xl">
+          {en.coordinator.presenterHeading}
+        </h2>
+        <p className="text-ash">{en.coordinator.presenterDescription}</p>
+        {pairingError && (
+          <p className="entry-error" role="alert">
+            {pairingError}
+          </p>
+        )}
+        <button
+          className="entry-secondary-action"
+          data-testid="button-create-presenter-pairing"
+          type="button"
+          disabled={pairingBusy}
+          onClick={() => void createPresenterPairing()}
+        >
+          {pairingBusy
+            ? en.coordinator.presenterPairingPending
+            : en.coordinator.createPresenterPairing}
+        </button>
+        {presenterPairing && (
+          <div className="grid gap-2 border border-stone bg-hearth p-4">
+            <a
+              className="entry-secondary-action"
+              data-testid="link-presenter-screen"
+              href={presenterPath}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {en.coordinator.openPresenterScreen}
+            </a>
+            <label className="entry-label" htmlFor="coordinator-presenter-code">
+              {en.coordinator.presenterPairingCode}
+            </label>
+            <input
+              className="entry-field"
+              data-testid="text-presenter-pairing-code"
+              id="coordinator-presenter-code"
+              type="text"
+              readOnly
+              value={presenterPairing.code}
+              onFocus={(event) => event.currentTarget.select()}
+            />
+            <p className="entry-help">
+              {new Date(presenterPairing.expiresAt).toLocaleTimeString(
+                'en-GB',
+                { hour: '2-digit', minute: '2-digit' },
+              )}
+            </p>
+          </div>
+        )}
+      </section>
       {error && (
         <p className="entry-error" role="alert">
           {error}

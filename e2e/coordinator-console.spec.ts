@@ -67,6 +67,7 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   const gameId = 'coordinator-console-test';
   let view = createView();
   const commands: Array<Record<string, unknown>> = [];
+  const pairingCode = 'A'.repeat(43);
   const responseSchemaCheck = gameViewResponseSchema.safeParse({
     serverNow: Date.now(),
     version: view.version,
@@ -86,6 +87,12 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   );
   await page.route(`**/games/${gameId}/join-requests`, (route) =>
     route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(`**/games/${gameId}/presenter-pairings`, (route) =>
+    route.fulfill({
+      status: 201,
+      json: { code: pairingCode, expiresAt: Date.now() + 10 * 60_000 },
+    }),
   );
   await page.route(`**/games/${gameId}/commands`, async (route) => {
     const command = route.request().postDataJSON() as Record<string, unknown>;
@@ -130,6 +137,16 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await expect(
     coordinatorConsole.getByTestId('coordinator-pin-lockouts'),
   ).toContainText('Alex is locked out after too many PIN attempts');
+
+  await coordinatorConsole
+    .getByTestId('button-create-presenter-pairing')
+    .click();
+  await expect(
+    coordinatorConsole.getByTestId('text-presenter-pairing-code'),
+  ).toHaveValue(pairingCode);
+  await expect(
+    coordinatorConsole.getByTestId('link-presenter-screen'),
+  ).toHaveAttribute('href', /\/tv\/coordinator-console-test$/);
 
   await page.getByTestId('button-coordinator-pause').click();
   await expect(page.getByTestId('button-coordinator-pause')).toHaveText(

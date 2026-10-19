@@ -93,6 +93,10 @@ setBaseUrl(config.apiOrigin);
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
 });
+const LazyPresenterPage = lazy(async () => {
+  const module = await import('./PresenterPage');
+  return { default: module.PresenterPage };
+});
 const LobbyQRCode = lazy(async () => {
   const module = await import('qrcode.react');
   return {
@@ -2790,11 +2794,24 @@ export function AppRoutes() {
               path={`${config.routes.game}/:id`}
               element={<PlayerGame />}
             />
+            <Route
+              path={`${config.routes.tv}/:id`}
+              element={<PresenterRoute />}
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </CsrfProvider>
       </InstallPromptProvider>
     </QueryClientProvider>
+  );
+}
+
+function PresenterRoute() {
+  const csrfToken = useContext(csrfContext);
+  return (
+    <Suspense fallback={<main role="status">{en.presenter.loading}</main>}>
+      <LazyPresenterPage csrfToken={csrfToken} />
+    </Suspense>
   );
 }
 

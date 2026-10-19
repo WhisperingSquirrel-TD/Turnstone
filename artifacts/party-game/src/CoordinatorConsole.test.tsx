@@ -23,7 +23,15 @@ const view: CoordinatorConsoleView = {
 describe('CoordinatorConsole', () => {
   it('shows phase, server-clock countdown, aggregate progress and logistics controls', () => {
     const html = renderToString(
-      <CoordinatorConsole view={view} onCommand={async () => {}} />,
+      <CoordinatorConsole
+        view={view}
+        presenterPath="/tv/test"
+        onCreatePresenterPairing={async () => ({
+          code: 'A'.repeat(43),
+          expiresAt: 1_800_000_600_000,
+        })}
+        onCommand={async () => {}}
+      />,
     );
 
     expect(html).toContain('The vote');
@@ -51,6 +59,11 @@ describe('CoordinatorConsole', () => {
     const html = renderToString(
       <CoordinatorConsole
         view={{ ...view, publicLog }}
+        presenterPath="/tv/test"
+        onCreatePresenterPairing={async () => ({
+          code: 'A'.repeat(43),
+          expiresAt: 1_800_000_600_000,
+        })}
         onCommand={async () => {}}
       />,
     );
@@ -76,6 +89,11 @@ describe('CoordinatorConsole', () => {
             },
           ],
         }}
+        presenterPath="/tv/test"
+        onCreatePresenterPairing={async () => ({
+          code: 'A'.repeat(43),
+          expiresAt: 1_800_000_600_000,
+        })}
         onCommand={async () => {}}
       />,
     );

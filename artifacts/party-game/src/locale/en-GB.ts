@@ -30,6 +30,15 @@ export const en = {
     pinLockoutsHeading: 'PIN lockouts',
     seatPinLocked: (name: string, time: string) =>
       `${name} is locked out after too many PIN attempts, until ${time}.`,
+    presenterHeading: 'Presenter screen (optional)',
+    presenterDescription:
+      'Use a shared display for public updates. This one-time pairing code is not the six-character game code.',
+    createPresenterPairing: 'Create presenter pairing code',
+    presenterPairingCode: 'One-time presenter pairing code',
+    openPresenterScreen: 'Open presenter screen',
+    presenterPairingPending: 'Creating code…',
+    presenterPairingError:
+      'Could not create a presenter code. Check that this game was created with the presenter option enabled.',
     noTimer: 'No timer',
     paused: 'Paused',
     movingOn: 'Moving on...',
@@ -49,6 +58,32 @@ export const en = {
     cancel: 'Cancel',
     keepPlaying: 'Keep playing',
     error: 'The change could not be saved. Check the connection and try again.',
+  },
+  presenter: {
+    pairHeading: 'Connect a presenter screen',
+    pairDescription:
+      'Enter the one-time pairing code from the organiser. It is not the six-character game code.',
+    pairCodeLabel: 'Presenter pairing code',
+    pairButton: 'Pair this screen',
+    pairPending: 'Connecting…',
+    pairError:
+      'That presenter code could not be used. Ask the organiser to create a new one.',
+    securityPending: 'The security check is still loading. Please try again.',
+    loading: 'Connecting to the game…',
+    notFound:
+      'This game could not be found. Check the link with the organiser.',
+    waiting: 'The presenter screen is ready once the organiser pairs it.',
+    currentStep: 'Current step',
+    nightPrivate: 'Night choices are private. Everyone is choosing now.',
+    lobbyCode: 'Game code',
+    joinPrompt: 'Scan to join, or enter this code:',
+    playersJoined: (count: number) =>
+      `${count} ${count === 1 ? 'player has' : 'players have'} joined`,
+    latestUpdates: 'Latest updates',
+    noUpdates: 'No public updates yet.',
+    prizePot: (amount: number, unit: string) => `Prize pot: ${amount} ${unit}`,
+    results: 'Results',
+    role: (name: string, role: string) => `${name}: ${role}`,
   },
   home: {
     eyebrow: 'A game for everyone',
