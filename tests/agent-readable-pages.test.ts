@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  APP_ROUTE_PATHS,
-  PUBLIC_MARKETING_ROUTE_PATHS,
-} from '../lib/shared/src/app-routes';
+import { APP_ROUTE_PATHS } from '../lib/shared/src/app-routes';
 import {
   renderRobotsTxt,
   type DeploymentMode,
@@ -28,6 +25,7 @@ const pages: ReadonlyArray<{ slug: PublicPageSlug; route: string }> = [
   { slug: 'compare', route: APP_ROUTE_PATHS.compare },
   { slug: 'coming-soon', route: APP_ROUTE_PATHS.comingSoon },
 ];
+const indexablePages = pages.filter(({ slug }) => slug !== 'coming-soon');
 
 function publicDocument(slug: PublicPageSlug): string {
   return renderPublicPageDocument({
@@ -72,7 +70,9 @@ describe('agent-readable public pages', () => {
     expect(new Set(titles).size).toBe(pages.length);
     expect(new Set(descriptions).size).toBe(pages.length);
     for (const [index, page] of pages.entries()) {
-      const canonical = new URL(page.route, config.siteOrigin).href;
+      const canonicalRoute =
+        page.slug === 'coming-soon' ? APP_ROUTE_PATHS.home : page.route;
+      const canonical = new URL(canonicalRoute, config.siteOrigin).href;
       const html = documents[index]!;
       expect(html).toContain(`rel="canonical" href="${canonical}"`);
       expect(html).toContain(`property="og:url" content="${canonical}"`);
@@ -90,9 +90,12 @@ describe('agent-readable public pages', () => {
     const text = renderLlmsTxt();
     expect(text).toContain('Oathstone');
     expect(text).toContain(config.siteOrigin);
-    for (const route of PUBLIC_MARKETING_ROUTE_PATHS) {
+    for (const { route } of indexablePages) {
       expect(text).toContain(new URL(route, config.siteOrigin).href);
     }
+    expect(text).not.toContain(
+      new URL(APP_ROUTE_PATHS.comingSoon, config.siteOrigin).href,
+    );
     expect(text).toContain(
       'Is there a free alternative to the WhatsApp traitors game?',
     );
@@ -100,13 +103,13 @@ describe('agent-readable public pages', () => {
     expect(text).not.toContain(`${config.siteOrigin}/api`);
   });
 
-  it('lists only the public pages in the XML sitemap', () => {
+  it('lists only the indexable public pages in the XML sitemap', () => {
     const sitemap = renderSitemapXml();
     const locations = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(
       (match) => match[1],
     );
     expect(locations).toEqual(
-      pages.map(({ route }) => new URL(route, config.siteOrigin).href),
+      indexablePages.map(({ route }) => new URL(route, config.siteOrigin).href),
     );
     expect(
       new Set(locations.map((location) => new URL(location!).origin)),
