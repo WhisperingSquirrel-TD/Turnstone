@@ -853,12 +853,6 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         <LazyCoordinatorConsole
           view={{ ...coordinatorView, serverNow: coordinatorServerNow }}
           onCommand={runCoordinatorCommand}
-          onReturnToGame={() => {
-            if (coordinatorGameId)
-              navigate(
-                webPath(`/game/${encodeURIComponent(coordinatorGameId)}`),
-              );
-          }}
         />
       </Suspense>
     ) : undefined;

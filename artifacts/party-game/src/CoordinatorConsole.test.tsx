@@ -20,11 +20,7 @@ const view: CoordinatorConsoleView = {
 describe('CoordinatorConsole', () => {
   it('shows phase, server-clock countdown, aggregate progress and logistics controls', () => {
     const html = renderToString(
-      <CoordinatorConsole
-        view={view}
-        onCommand={async () => {}}
-        onReturnToGame={() => {}}
-      />,
+      <CoordinatorConsole view={view} onCommand={async () => {}} />,
     );
 
     expect(html).toContain('The vote');

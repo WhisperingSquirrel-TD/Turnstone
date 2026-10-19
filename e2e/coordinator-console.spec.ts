@@ -92,14 +92,20 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await page.route('**/socket.io/**', (route) => route.abort());
 
   await page.goto(`/coordinate/${gameId}`);
-  await expect(page.getByTestId('coordinator-console')).toBeVisible();
+  const coordinatorConsole = page.getByTestId('coordinator-console');
+  await expect(coordinatorConsole).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Invite a late player' }),
+  ).toBeVisible();
   await expect(page.getByTestId('coordinator-current-step')).toHaveText(
     'The vote',
   );
   await expect(page.getByTestId('coordinator-progress')).toHaveText(
     '1 of 4 done',
   );
-  await expect(page.getByText('Morgan', { exact: true })).toHaveCount(0);
+  await expect(
+    coordinatorConsole.getByText('Morgan', { exact: true }),
+  ).toHaveCount(0);
 
   await page.getByTestId('button-coordinator-pause').click();
   await expect(page.getByTestId('button-coordinator-pause')).toHaveText(

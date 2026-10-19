@@ -1088,7 +1088,7 @@ export function EntryExperience({
         )}
 
         {screen === 'lobby' && coordinatorPanel}
-        {screen === 'lobby' && !coordinatorPanel && (
+        {screen === 'lobby' && (
           <section className="entry-lobby enter" aria-labelledby="entry-title">
             <h1 id="entry-title" className="entry-heading">
               {lateJoinMode ? copy.lateInviteHeading : copy.lobbyHeading}

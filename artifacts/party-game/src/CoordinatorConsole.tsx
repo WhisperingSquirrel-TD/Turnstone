@@ -80,11 +80,9 @@ const nonActivePhases = new Set<FullView['phase']>([
 export function CoordinatorConsole({
   view,
   onCommand,
-  onReturnToGame,
 }: {
   view: CoordinatorConsoleView;
   onCommand: (command: CoordinatorCommand) => Promise<void>;
-  onReturnToGame: () => void;
 }) {
   const [localNow, setLocalNow] = useState(() => Date.now());
   const [confirmMove, setConfirmMove] = useState(false);
@@ -264,14 +262,6 @@ export function CoordinatorConsole({
           </button>
         </section>
       )}
-      <button
-        className="entry-secondary-action"
-        data-testid="button-return-to-game"
-        type="button"
-        onClick={onReturnToGame}
-      >
-        {en.entry.backToGame}
-      </button>
     </section>
   );
 }
