@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Baseline:** Verify #154 is green on `dd7c38a`. The RN5/RN6 rename and guard are green. Verify #150's failures were fixed in #152; #153's integration false positive was fixed in #154.
+**Latest green:** Verify #157 (`f8ff971`), including the attachment-cleanup commit. The RN5/RN6 rename and guard are green; Verify #150's failures were fixed in #152, and #153's integration false positive in #154.
 
 **LP-8 Verify #156 (`3704b3d`): GREEN (19/19).** `audit`, `browsers (desktop, chromium)`, `browsers (Pixel, chromium)`, `browsers (iPhone, webkit)`, `browsers (iPad, webkit)`, `integration`, `property`, `unit`, `static-checks`, `lighthouse`, `rehearsal-live`, `merge-scenario-reports`, `required-checks` and all six scenario shards succeeded.
 
@@ -8,7 +8,9 @@
 
 **Attachment cleanup:** The 12 old-name text attachments and two supplied screenshots were present only in a local-only commit, not on GitHub. They are now untracked and remain on disk; exact-path ignore entries were added after confirming no build or source code uses them. The 31 older tracked attachment files are unchanged.
 
-**Next queue:** Explain server coverage and add tests for uncovered new code; report the Ubuntu 24.04 pin review; continue M6-3 to M6-5 starting with safe undo; then apply CP-1 only after those items and M6-5 are green.
+**Server coverage:** Started at 81.59% lines (1,206/1,478) with all 94 selected tests passing, but the 85% coverage command correctly exited red. Added integration coverage for coordinator delegate, presence and takeover paths plus departed-seat restrictions. It now passes at 85.79% (1,268/1,478), with all 94 tests passing and the threshold unchanged. The standalone GitHub Verify workflow does not run this coverage command; `pnpm run verify` does.
+
+**Next queue:** Report the Ubuntu 24.04 pin review; add the read-only Phase A publish checklist; continue M6-3 to M6-5 starting with safe undo; then apply CP-1 only after those items and M6-5 are green.
 
 **LP-8 local status:** All six static pages and coming-soon rules are implemented. Targeted unit tests, typecheck, lint, format, production build, static build, desktop Chromium, Pixel Chromium and local Firefox pass. Lighthouse scores are 1.00 for all required categories on all six public pages. iPhone/iPad WebKit cannot launch locally because this Nix container lacks Playwright's WebKit host libraries; Verify installs WebKit with its system dependencies.
 
@@ -28,6 +30,20 @@
 **Exclusions:** Historical verification and release records retain the old name. Attachment files remain untracked and out of commits.
 
 **Hard stops:** No publish, deployment, domain, DNS, production-secret or paid-service changes.
+
+## Server coverage review — 19 October 2026
+
+The 85% line threshold is configured by `test:server-coverage` in `package.json`. The GitHub Verify workflow runs Unit and Integration separately and does not invoke `test:server-coverage`; therefore Verify can be green without enforcing this threshold. The repository's `pnpm run verify` command does invoke it.
+
+Current uncovered executable lines from the passing server-coverage report:
+
+- `artifacts/api-server/src/app.ts` (178): 142, 195, 201–202, 205, 207, 209, 274, 427, 435, 575, 593–594, 617–618, 621–622, 626–627, 681, 793–794, 807–808, 826, 865–866, 891, 915–916, 919–920, 947, 951–952, 962, 968–969, 1007–1008, 1042–1043, 1104–1105, 1156–1157, 1161, 1167–1168, 1172–1173, 1177–1178, 1195–1196, 1200–1201, 1207–1208, 1225–1226, 1229–1230, 1235, 1237–1238, 1243, 1245, 1248–1249, 1261, 1280–1281, 1288, 1301–1302, 1352–1353, 1375–1376, 1385–1386, 1402–1403, 1413–1414, 1419, 1479–1480, 1512, 1562–1563, 1643–1644, 1660, 1671–1672, 1704–1705, 1745–1746, 1795–1797, 1813–1815, 1822–1824, 2012, 2029–2030, 2066–2067, 2087–2088, 2097, 2149, 2251, 2284–2285, 2318–2319, 2328, 2344–2345, 2366–2367, 2393, 2409–2410, 2431–2432, 2498, 2511, 2524–2525, 2530–2531, 2566, 2571, 2581, 2592–2593, 2599–2600, 2625, 2647–2648, 2656–2657, 2688, 2750–2751, 2782–2783, 2785–2786, 2797–2798, 2854, 2859, 2881, 2886, 2904–2905, 2936, 2940–2941, 2946–2949, 2951–2952, 2956–2957.
+- `artifacts/api-server/src/realtime.ts` (25): 61, 105–107, 124, 151, 164–173, 180–182, 219, 244–246, 261, 285.
+- `artifacts/api-server/src/deadline-scheduler.ts` (6): 33, 39, 41, 116, 129–130.
+- `artifacts/api-server/src/config/env.ts` (1): 58.
+- `artifacts/api-server/src/middlewares/security.ts`: none.
+
+The initial 81.59% report included substantial uncovered coordinator-takeover handling in `app.ts`: 93 lines traced to the takeover implementation commit, alongside older API error paths. New tests exercise the coordinator routes and now leave 31 lines from that commit uncovered; most remaining uncovered app lines are older routes and error handling. The server's departed-seat guard is explicitly tested. Engine/reducer departure code is not part of this script's configured server-file include list, so this report does not measure its coverage.
 
 ## Previous verification history
 

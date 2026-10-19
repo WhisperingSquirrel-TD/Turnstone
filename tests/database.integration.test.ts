@@ -549,6 +549,130 @@ it('supports designated and majority logistics takeovers without exposing secret
       created.headers['set-cookie'],
     ).find((cookie) => cookie.startsWith('oathstone-coordinator-'));
     expect(originalCoordinatorCookie).toBeDefined();
+    const originalCoordinatorCookiePair =
+      originalCoordinatorCookie!.split(';')[0]!;
+    const originalCoordinatorRequestCookie = `${originalCoordinatorCookiePair}; oathstone-csrf=${csrfToken}`;
+
+    const listedDelegates = await request(app)
+      .get(`/api/games/${gameId}/coordinator/delegates`)
+      .set('Cookie', originalCoordinatorCookiePair);
+    expect(listedDelegates.status).toBe(200);
+    expect(listedDelegates.body).toEqual({ limit: 1, seatIds: [] });
+
+    await request(app)
+      .put(`/api/games/${gameId}/coordinator/delegates`)
+      .set('Cookie', originalCoordinatorCookiePair)
+      .send({ seatIds: [seats[1]!.id] })
+      .expect(403, { error: 'Invalid request' });
+    await request(app)
+      .put(`/api/games/${gameId}/coordinator/delegates`)
+      .set('Cookie', originalCoordinatorRequestCookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ seatIds: 'not-an-array' })
+      .expect(400, { error: 'Invalid request' });
+    await request(app)
+      .put(`/api/games/${gameId}/coordinator/delegates`)
+      .set('Cookie', originalCoordinatorRequestCookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ seatIds: [seats[1]!.id, seats[2]!.id] })
+      .expect(409, { error: 'Selection could not be saved' });
+
+    const coordinatorProbeApp = createApp(async () => {}, {
+      resolveCoordinatorViewer: () => ({ kind: 'coordinator' }),
+      testOnlyNow: () => fixedNow,
+      consumeRateLimit: async () => true,
+    });
+    await request(coordinatorProbeApp)
+      .get('/api/games/missing-game/coordinator/delegates')
+      .expect(404, { error: 'Not found' });
+    await request(coordinatorProbeApp)
+      .put(`/api/games/${gameId}/coordinator/delegates`)
+      .set('Cookie', `oathstone-csrf=${csrfToken}`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ seatIds: [seats[0]!.id] })
+      .expect(401, { error: 'Authentication required' });
+    await request(coordinatorProbeApp)
+      .post(`/api/games/${gameId}/coordinator/presence`)
+      .set('Cookie', `oathstone-csrf=${csrfToken}`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({})
+      .expect(401, { error: 'Authentication required' });
+
+    const rateLimitedCoordinatorApp = createApp(async () => {}, {
+      resolveCoordinatorViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-coordinator-rate-limit-secret',
+      consumeRateLimit: async () => false,
+    });
+    await request(rateLimitedCoordinatorApp)
+      .put(`/api/games/${gameId}/coordinator/delegates`)
+      .set('Cookie', `oathstone-csrf=${csrfToken}`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ seatIds: [] })
+      .expect(429, { error: 'Too many requests' });
+    await request(rateLimitedCoordinatorApp)
+      .post(`/api/games/${gameId}/coordinator/presence`)
+      .set('Cookie', `oathstone-csrf=${csrfToken}`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({})
+      .expect(429, { error: 'Too many requests' });
+    await request(app)
+      .post(`/api/games/${gameId}/coordinator/presence`)
+      .set('Cookie', originalCoordinatorCookiePair)
+      .send({})
+      .expect(403, { error: 'Invalid request' });
+
+    const rateLimitedPlayerApp = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'player', seatId: seats[0]!.id }),
+      rateLimitSecret: 'integration-test-takeover-rate-limit-secret',
+      consumeRateLimit: async () => false,
+    });
+    await request(rateLimitedPlayerApp)
+      .post(`/api/games/${gameId}/takeover`)
+      .set('Cookie', `oathstone-csrf=${csrfToken}`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({})
+      .expect(429, { error: 'Too many requests' });
+    await request(rateLimitedPlayerApp)
+      .post(`/api/games/${gameId}/takeover/vote`)
+      .set('Cookie', `oathstone-csrf=${csrfToken}`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ requestId: randomUUID(), approve: true })
+      .expect(429, { error: 'Too many requests' });
+    await request(rateLimitedPlayerApp)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', `oathstone-csrf=${csrfToken}`)
+      .set('X-CSRF-Token', csrfToken)
+      .send({})
+      .expect(429, { error: 'Too many requests' });
+
+    const playerCookieWithoutCsrf = `${cookieNameForGame(gameId)}=${seats[0]!.token}`;
+    await request(app)
+      .post(`/api/games/${gameId}/takeover`)
+      .set('Cookie', playerCookieWithoutCsrf)
+      .send({})
+      .expect(403, { error: 'Invalid request' });
+    await request(app)
+      .post(`/api/games/${gameId}/takeover/vote`)
+      .set('Cookie', playerCookieWithoutCsrf)
+      .send({ requestId: randomUUID(), approve: true })
+      .expect(403, { error: 'Invalid request' });
+    await request(app)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', playerCookieWithoutCsrf)
+      .send({})
+      .expect(403, { error: 'Invalid request' });
+    await request(app)
+      .post(`/api/games/${gameId}/takeover/vote`)
+      .set('Cookie', postHeaders(0).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ requestId: randomUUID(), approve: 'yes' })
+      .expect(400, { error: 'Invalid request' });
+    await request(app)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', postHeaders(0).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ requestId: 42 })
+      .expect(400, { error: 'Invalid request' });
 
     const delegateSelection = await request(app)
       .put(`/api/games/${gameId}/coordinator/delegates`)
@@ -559,6 +683,20 @@ it('supports designated and majority logistics takeovers without exposing secret
       .set('X-CSRF-Token', csrfToken)
       .send({ seatIds: [seats[1]!.id] });
     expect(delegateSelection.status).toBe(200);
+    expect(
+      (
+        await request(app)
+          .get(`/api/games/${gameId}/coordinator/delegates`)
+          .set('Cookie', originalCoordinatorCookiePair)
+      ).body,
+    ).toEqual({ limit: 1, seatIds: [seats[1]!.id] });
+    const coordinatorPresence = await request(app)
+      .post(`/api/games/${gameId}/coordinator/presence`)
+      .set('Cookie', originalCoordinatorRequestCookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({});
+    expect(coordinatorPresence.status).toBe(200);
+    expect(coordinatorPresence.body).toEqual({ status: 'online' });
     const storedDelegates = await getCoordinatorTakeoverRecord(
       gameId,
       fixedNow,
@@ -593,18 +731,39 @@ it('supports designated and majority logistics takeovers without exposing secret
       canClaim: false,
     });
 
+    await request(app)
+      .post(`/api/games/${gameId}/takeover`)
+      .set('Cookie', postHeaders(0).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({})
+      .expect(409, { error: 'Takeover is not currently available' });
+    await request(app)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', postHeaders(0).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({})
+      .expect(409, { error: 'Takeover is not currently available' });
+
     const delegateClaim = await request(app)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', postHeaders(2).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({});
+    expect(delegateClaim.status).toBe(409);
+    const actualDelegateClaim = await request(app)
       .post(`/api/games/${gameId}/takeover/claim`)
       .set('Cookie', postHeaders(1).Cookie)
       .set('X-CSRF-Token', csrfToken)
       .send({});
-    expect(delegateClaim.status).toBe(200);
+    expect(actualDelegateClaim.status).toBe(200);
     const delegatedCoordinatorCookie = cookieValues(
-      delegateClaim.headers['set-cookie'],
+      actualDelegateClaim.headers['set-cookie'],
     ).find((cookie) => cookie.startsWith('oathstone-coordinator-'));
     expect(delegatedCoordinatorCookie).toBeDefined();
-    expect(delegateClaim.body).toEqual({ status: 'transferred' });
-    expect(JSON.stringify(delegateClaim.body)).not.toMatch(/token|secret/i);
+    expect(actualDelegateClaim.body).toEqual({ status: 'transferred' });
+    expect(JSON.stringify(actualDelegateClaim.body)).not.toMatch(
+      /token|secret/i,
+    );
 
     const clearDelegates = await request(app)
       .put(`/api/games/${gameId}/coordinator/delegates`)
@@ -641,6 +800,12 @@ it('supports designated and majority logistics takeovers without exposing secret
       .set('X-CSRF-Token', csrfToken)
       .send({ requestId, approve: true });
     expect(secondApproval.body.status).toBe('approved');
+    await request(app)
+      .post(`/api/games/${gameId}/takeover/vote`)
+      .set('Cookie', postHeaders(4).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ requestId, approve: true })
+      .expect(409, { error: 'Takeover is not currently available' });
 
     const approvedStatus = await request(app)
       .get(`/api/games/${gameId}/takeover`)
@@ -658,6 +823,12 @@ it('supports designated and majority logistics takeovers without exposing secret
     expect(JSON.stringify(approvedStatus.body)).not.toMatch(
       /role|ballot|choice|token|secret/i,
     );
+    await request(app)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', postHeaders(1).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ requestId })
+      .expect(409, { error: 'Takeover is not currently available' });
     const majorityClaim = await request(app)
       .post(`/api/games/${gameId}/takeover/claim`)
       .set('Cookie', postHeaders(0).Cookie)
@@ -687,6 +858,79 @@ it('supports designated and majority logistics takeovers without exposing secret
         (seat: Record<string, unknown>) => !('role' in seat),
       ),
     ).toBe(true);
+
+    const departedSeatId = seats[4]!.id;
+    const departureEvent = eventSchema.parse({
+      seq: state.version + 1,
+      at: fixedNow,
+      schemaVersion: 1,
+      type: 'SeatRemoved',
+      seatId: departedSeatId,
+      reason: 'departed',
+      publicRole: false,
+    });
+    const departedState = evolve(state, departureEvent);
+    const departureAppend = await appendGameEvents({
+      gameId,
+      actorId: 'test-coordinator-takeover',
+      idempotencyKey: randomUUID(),
+      requestHash: randomUUID(),
+      expectedVersion: state.version,
+      events: [departureEvent],
+      snapshot: { seq: departedState.version, state: departedState },
+      deadline: { kind: departedState.phase, dueAt: departedState.deadline },
+    });
+    expect(departureAppend.ok).toBe(true);
+
+    const departedSelection = await request(app)
+      .put(`/api/games/${gameId}/coordinator/delegates`)
+      .set(
+        'Cookie',
+        `${majorityCoordinatorCookie!.split(';')[0]}; oathstone-csrf=${csrfToken}`,
+      )
+      .set('X-CSRF-Token', csrfToken)
+      .send({ seatIds: [departedSeatId] });
+    expect(departedSelection.status).toBe(409);
+    expect(departedSelection.body).toEqual({
+      error: 'Selection could not be saved',
+    });
+    await request(app)
+      .post(`/api/games/${gameId}/seats/${departedSeatId}/pin/reset`)
+      .set(
+        'Cookie',
+        `${majorityCoordinatorCookie!.split(';')[0]}; oathstone-csrf=${csrfToken}`,
+      )
+      .set('X-CSRF-Token', csrfToken)
+      .send({ expectedVersion: departedState.version, newPin: '8642' })
+      .expect(404, { error: 'Not found' });
+    await request(app)
+      .get(`/api/games/${gameId}/takeover`)
+      .set('Cookie', seatCookie(4))
+      .expect(401, { error: 'Authentication required' });
+
+    const staleCapabilityPresence = await request(coordinatorProbeApp)
+      .post(`/api/games/${gameId}/coordinator/presence`)
+      .set('Cookie', originalCoordinatorRequestCookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({});
+    expect(staleCapabilityPresence.status).toBe(401);
+    expect(staleCapabilityPresence.body).toEqual({
+      error: 'Authentication required',
+    });
+
+    await db.execute(
+      sql`delete from game_coordinator_capabilities where game_id = ${gameId}`,
+    );
+    await request(app)
+      .get(`/api/games/${gameId}/takeover`)
+      .set('Cookie', seatCookie(0))
+      .expect(404, { error: 'Not found' });
+    await request(app)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', postHeaders(0).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({})
+      .expect(409, { error: 'Takeover is not currently available' });
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }
