@@ -1394,3 +1394,11 @@ The canonical Stackstone palette is unchanged. The day button mixes 12% Candle i
 **Choice:** Add `COMING_SOON_MODE` as a separate, explicit setting from `PRE_LAUNCH_NOINDEX`. Only coming-soon mode may permit indexing of public marketing pages; app, join, play, practice and API routes remain noindex and disallowed in `robots.txt`. Refuse to start with crawling enabled unless coming-soon mode is explicitly enabled. Refuse game and rehearsal creation with a plain-English closed message.
 
 **Consequence:** Coming-soon indexing does not open the game or authorize publishing, deployment, domain, DNS, production-secret or paid-service changes. Default builds remain noindex until the owner explicitly approves Phase A.
+
+## D89 — Phase A static-first launch and seasonal cost plan (owner-approved, 19 October 2026)
+
+**Context:** The owner wants public pages discoverable quickly while keeping the game closed and operating at minimal cost.
+
+**Choice:** Phase A is a static coming-soon site. Phase B may use a 1–2 vCPU Reserved VM for Halloween week, practice-first and real games only if ready. Phase C returns to static by default through 22 December unless an approved pilot remains open. Phase D, 23–27 December, uses a peak VM size selected by load testing; scale down after 27 December. Weekly resizing is rejected, and scale-to-zero for the game server remains a later experiment limited to one instance.
+
+**Consequence:** The usage cap does not cap a continuously billed Reserved VM. Static hosting is preferred for Phase A; no publishing, deployment, domain, DNS, production-secret or paid-service change is authorized by this plan. The Phase A checklist and researched costs belong in `docs/HOSTING.md`.

@@ -56,3 +56,34 @@ preview would violate the standing privacy rule.
 
 **Status:** Resolved by the owner on 14 October 2026: keep the launch-mode
 fixture test-only and retain the regression proving real builds stay noindex.
+
+## Q4 — Reserved VM proration on resize or removal
+
+**Question:** How are partial-hour charges rounded when a Reserved VM is resized,
+unpublished or removed?
+
+**Finding:** Replit's current documentation describes the fixed hourly rate
+while the VM runs and says deletion stops further charges, but does not specify
+partial-hour rounding or explicitly confirm proration.
+
+**Next step:** Before any approved VM change, check the exact charge and billing
+effect shown in Publishing. Do not infer a refund or schedule a resize from the
+hourly rate alone.
+
+**Status:** Unresolved platform detail; no VM change is authorized.
+
+## Q5 — Autoscale WebSocket routing across instances
+
+**Question:** Does Replit Autoscale guarantee that a WebSocket reconnect reaches
+the same instance, or provide sticky routing across multiple instances?
+
+**Finding:** Replit documents WebSocket support and scale-to-zero, but the
+reviewed documentation does not guarantee session affinity. Scale-to-zero
+terminates active connections.
+
+**Recommendation:** Treat routing as non-sticky unless Replit documents
+otherwise. A future multi-instance game deployment must prove reconnect,
+resynchronization and shared realtime state before use.
+
+**Status:** Unresolved documentation detail; Autoscale/scale-to-zero remains a
+later experiment, limited to one game-server instance.

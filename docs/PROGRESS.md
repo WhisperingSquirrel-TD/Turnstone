@@ -1,9 +1,8 @@
 # Status for reviewer
 
-- Updated: 19 October 2026, 10:47 UTC. **Phase A:** LA-1 Verify #142, LA-2 #144, LA-3 #145 and LA-4 #146 are green; LA-5 tests/typecheck pass and API is running.
-- Last push: `01d3f4f`, Verify #146 Success; next push is LA-5. Canonicals use the configured origin, but no deployment is active.
-- No open code questions. Deployment remains approval-gated; no publish, domain, DNS, secrets or paid services. Eight attachments remain untracked.
-- After LA-7: resume remaining M6 items; stop first for Phase A deployment approval.
+- Updated: 19 October 2026, 10:58 UTC. **Phase A:** LA-1 #142, LA-2 #144, LA-3 #145, LA-4 #146 and LA-5 #147 are green; LA-6 research and LA-7 docs are complete locally.
+- Last push: `cd55665`, Verify #147 Success. Open platform unknowns: Reserved VM proration and Autoscale WebSocket affinity (Q4–Q5); canonical origin is configured but not live.
+- Next: push Phase A documentation; after green, record “Waiting for owner: Phase A deployment approval” and resume M6. No publish, domain, DNS, secrets or paid services; eight attachments remain untracked.
 
 ## Previous verification history
 
