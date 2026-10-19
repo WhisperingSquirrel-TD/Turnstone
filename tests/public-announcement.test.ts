@@ -122,6 +122,11 @@ describe('shared public announcements', () => {
       cycle: state.cycle,
       seat: { id: removed.id, name: removed.name },
     });
+    expect(viewFor({ kind: 'presenter' }, state).publicAnnouncement).toEqual({
+      kind: 'verdict',
+      cycle: state.cycle,
+      seat: { id: removed.id, name: removed.name },
+    });
   });
 
   it('announces the revealed role to every seated viewer when configured', () => {
@@ -141,18 +146,22 @@ describe('shared public announcements', () => {
       (seat) =>
         viewFor({ kind: 'player', seatId: seat.id }, state).publicAnnouncement,
     );
+    const presenterAnnouncement = viewFor(
+      { kind: 'presenter' },
+      state,
+    ).publicAnnouncement;
 
-    expect(announcements).toEqual(
-      state.seats.map(() => ({
-        kind: 'verdict',
-        cycle: state.cycle,
-        seat: {
-          id: removed.id,
-          name: removed.name,
-          role: removed.role,
-        },
-      })),
-    );
+    const revealedAnnouncement = {
+      kind: 'verdict',
+      cycle: state.cycle,
+      seat: {
+        id: removed.id,
+        name: removed.name,
+        role: removed.role,
+      },
+    };
+    expect(announcements).toEqual(state.seats.map(() => revealedAnnouncement));
+    expect(presenterAnnouncement).toEqual(revealedAnnouncement);
   });
 
   it('publishes the final outcome identically to players and coordinators', () => {
@@ -176,6 +185,10 @@ describe('shared public announcements', () => {
       viewFor({ kind: 'player', seatId: game.state.seats[0]!.id }, state)
         .publicAnnouncement,
     );
+    expect(viewFor({ kind: 'presenter' }, state).publicAnnouncement).toEqual({
+      kind: 'finished',
+      winner: 'faithful',
+    });
     const phoneAnnouncements = game.state.seats.map(
       (seat) =>
         viewFor({ kind: 'player', seatId: seat.id }, state).publicAnnouncement,

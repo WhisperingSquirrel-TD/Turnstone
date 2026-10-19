@@ -1,6 +1,16 @@
 const independenceStatement =
   'Oathstone is an independent game made by Stackstone Consulting. It is not affiliated with, or endorsed by, any TV programme or its producers.';
 
+type PublicRole = 'traitor' | 'faithful';
+
+const publicBanishmentResult = (name: string, role?: PublicRole | null) =>
+  role
+    ? `${name} has been banished. They were ${role === 'traitor' ? 'Traitor' : 'Faithful'}.`
+    : `${name} has been banished.`;
+
+const publicGameResult = (winner: PublicRole) =>
+  `The ${winner === 'traitor' ? 'Traitors' : 'Faithful'} won.`;
+
 export const en = {
   skip: 'Skip to main content',
   nav: { label: 'Main', home: 'Home', play: 'Play', menu: 'Menu' },
@@ -138,6 +148,8 @@ export const en = {
           ? 'Everyone must agree to end.'
           : 'A majority must agree to end.'
       }`,
+    banishedResult: publicBanishmentResult,
+    gameResult: publicGameResult,
     paused: 'Paused',
     lobbyCode: 'Game code',
     joinPrompt: 'Scan to join, or enter this code:',
@@ -526,10 +538,7 @@ export const en = {
     dawnNoOneTaken: 'No one was taken.',
     dawnTaken: (name: string) => `${name} was taken in the night.`,
     banished: (name: string) => `${name} was banished.`,
-    banishedResult: (name: string, role?: 'traitor' | 'faithful' | null) =>
-      role
-        ? `${name} has been banished. They were ${role === 'traitor' ? 'Traitor' : 'Faithful'}.`
-        : `${name} has been banished.`,
+    banishedResult: publicBanishmentResult,
     banishedRole: (role: 'traitor' | 'faithful') =>
       `Their role was ${role === 'traitor' ? 'Traitor' : 'Faithful'}.`,
     noVotesAnnouncement: 'No votes were cast. Nobody is banished.',
@@ -584,8 +593,7 @@ export const en = {
     publicLogScheduleShift: (minutes: number) =>
       `The schedule has been shifted by ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
     publicLogCoordinatorUndo: 'The coordinator reversed the last action.',
-    publicLogFinished: (winner: 'traitor' | 'faithful') =>
-      `The ${winner === 'traitor' ? 'Traitors' : 'Faithful'} won.`,
+    publicLogFinished: publicGameResult,
     rehearseAgain: 'Practise again',
     backToStart: 'Back to start',
     noPublicUpdates: 'No public updates yet.',

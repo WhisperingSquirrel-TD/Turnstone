@@ -164,12 +164,10 @@ export function viewFor(
       seat: {
         id: seat.id,
         name: seat.name,
-        ...(!presenter && seat.publicRole && seat.role
-          ? { role: seat.role }
-          : {}),
+        ...(seat.publicRole && seat.role ? { role: seat.role } : {}),
       },
     };
-  } else if (announcement?.kind === 'finished' && !presenter) {
+  } else if (announcement?.kind === 'finished') {
     publicAnnouncement = {
       kind: 'finished',
       winner: announcement.winner,

@@ -1,16 +1,16 @@
 # Status for reviewer
 
-**Latest green:** Verify #164 (`abc5584`) succeeded, including iPhone and iPad WebKit.
+**Latest green:** Verify #166 (`c27684e`) passed all 19 jobs, including desktop and Pixel Chromium, iPhone and iPad WebKit, and `required-checks`. This fixes #165.
 
-**Verify #165 (`05bddae`): RED.** Failed jobs: `unit`, `browsers (desktop, chromium)`, `browsers (Pixel, chromium)`, `browsers (iPhone, webkit)`, `browsers (iPad, webkit)` and dependent `required-checks`. Other jobs passed.
+**Verify #165 (`05bddae`): RED, corrected in #166.** Failed jobs were `unit`, all four browser profiles and dependent `required-checks`. The route tests rendered a lazy fallback; game-header CSS was only loaded by the lazy entry route; and presenter content overflowed at 200% text. Streaming SSR tests, shared static header CSS and wrapping presenter styles fixed these without weakening checks.
 
 **M6-2 safe undo:** Expiry, invalidation and role-reveal boundaries are covered; green in #163.
 
-**M6-3 presenter:** Public projection omits ballots, voter/candidate IDs, per-seat roles, endgame winner and fairness data; aggregate progress and result copy are role-neutral. Green in #164.
+**M6-3 presenter:** Owner-approved follow-up now exposes a banished role only through the public verdict announcement when `publicRole` is true, and the winner only through the public finish announcement. Per-seat roles, ballots, voter/candidate IDs, night choices, tasks, shields, fairness and private data remain excluded. Full unit (443), server coverage (85.92% lines), 2,571 scenario games, typecheck, lint, format, build and Pixel/desktop presenter tests pass locally; Verify pending.
 
-**M6-4 fix:** Unit route rendering now waits for lazy content; shared brand styles load on every route; the presenter header wraps at 200% text size. No tests or thresholds were weakened. Routes/bundles (11), typecheck, lint, build and targeted Pixel/desktop browser checks pass locally. WebKit cannot launch here because its host libraries are missing. Fresh Verify pending; VoiceOver/TalkBack manual checks remain unperformed.
+**M6-4 accessibility:** Automated checks are green in #166. VoiceOver/TalkBack manual checks remain unperformed.
 
-**Next:** Wait for the M6-4 fix Verify; do not advance before green.
+**Next:** Wait for the presenter follow-up Verify; then resume M6-4 and finish M6-5.
 
 ## Earlier milestone results
 

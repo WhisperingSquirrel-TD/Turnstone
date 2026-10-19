@@ -49,9 +49,13 @@ function announcementText(view: FullView): string {
   const announcement = view.publicAnnouncement;
   if (!announcement) return '';
   if (announcement.kind === 'no_votes') return en.game.noVotesAnnouncement;
-  if (announcement.kind === 'finished') return en.presenter.gameComplete;
+  if (announcement.kind === 'finished')
+    return en.presenter.gameResult(announcement.winner);
   if (announcement.kind === 'verdict') {
-    return `${announcement.seat.name} has been banished.`;
+    return en.presenter.banishedResult(
+      announcement.seat.name,
+      announcement.seat.role,
+    );
   }
   return announcement.victims.length
     ? en.game.publicLogDawn(announcement.victims.map((victim) => victim.name))

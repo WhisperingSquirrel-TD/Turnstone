@@ -481,11 +481,16 @@ describe('Milestone 1 deterministic engine', () => {
       ).toBe(false);
     }
   });
-  it('keeps presenter projections free of role and completion details', () => {
+  it('shows only public banished roles and the public game result to presenters', () => {
     const game = fixture(5);
     command(game, { type: 'StartGame' });
     const banished = game.state.seats[0]!;
+    const stillPlaying = game.state.seats[1]!;
+    if (!banished.role || !stillPlaying.role)
+      throw new Error('The test seats have no assigned roles');
+    banished.status = 'banished';
     banished.publicRole = true;
+    stillPlaying.publicRole = true;
     game.state.phase = 'VERDICT';
     game.state.publicAnnouncement = {
       kind: 'verdict',
@@ -497,10 +502,12 @@ describe('Milestone 1 deterministic engine', () => {
     expect(verdict.seats.every((seat) => seat.role === undefined)).toBe(true);
     expect(verdict.publicAnnouncement).toMatchObject({
       kind: 'verdict',
-      seat: { id: banished.id, name: banished.name },
+      seat: { id: banished.id, name: banished.name, role: banished.role },
     });
-    if (verdict.publicAnnouncement?.kind === 'verdict')
-      expect(verdict.publicAnnouncement.seat.role).toBeUndefined();
+    banished.publicRole = false;
+    const hiddenVerdict = viewFor({ kind: 'presenter' }, game.state);
+    if (hiddenVerdict.publicAnnouncement?.kind === 'verdict')
+      expect(hiddenVerdict.publicAnnouncement.seat.role).toBeUndefined();
     expect(verdict.private).toBeNull();
 
     game.state.phase = 'FINISHED';
@@ -516,14 +523,23 @@ describe('Milestone 1 deterministic engine', () => {
     const finished = viewFor({ kind: 'presenter' }, game.state);
     expect(finished.seats.every((seat) => seat.role === undefined)).toBe(true);
     expect(finished.winner).toBeNull();
-    expect(finished.publicAnnouncement).toBeNull();
+    expect(finished.publicAnnouncement).toEqual({
+      kind: 'finished',
+      winner: 'faithful',
+    });
     expect(finished.publicLog).not.toContainEqual(
       expect.objectContaining({ action: 'finished' }),
     );
+    expect(finished.ballots).toEqual({});
+    expect(finished.voteCandidates).toEqual([]);
+    expect(finished.votedSeatIds).toEqual([]);
     expect(finished.fairness).toBeNull();
     expect(finished.private).toBeNull();
-    expect(JSON.stringify(finished).toLowerCase()).not.toContain('traitor');
-    expect(JSON.stringify(finished).toLowerCase()).not.toContain('faithful');
+
+    game.state.publicAnnouncement = null;
+    const resultNotYetPublic = viewFor({ kind: 'presenter' }, game.state);
+    expect(resultNotYetPublic.winner).toBeNull();
+    expect(resultNotYetPublic.publicAnnouncement).toBeNull();
   });
   it('requires the shield acknowledgement during private voting', () => {
     const game = fixture(15);
