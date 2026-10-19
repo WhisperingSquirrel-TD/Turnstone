@@ -7,6 +7,7 @@ import {
   getCoordinatorMoveConfirmation,
   type CoordinatorConsoleView,
 } from './CoordinatorConsole';
+import { en } from './locale/en-GB';
 
 const view: CoordinatorConsoleView = {
   phase: 'VOTE',
@@ -15,6 +16,7 @@ const view: CoordinatorConsoleView = {
   deadline: 1_800_000_030_000,
   serverNow: 1_800_000_000_000,
   progress: { done: 3, total: 8 },
+  publicLog: [],
 };
 
 describe('CoordinatorConsole', () => {
@@ -34,6 +36,27 @@ describe('CoordinatorConsole', () => {
     expect(html).toContain('End game early');
     expect(html).not.toContain('Practice player');
     expect(html).not.toContain('Traitor');
+  });
+
+  it('shows public updates without adding private player details', () => {
+    const publicLog: CoordinatorConsoleView['publicLog'] = [
+      {
+        seq: 4,
+        at: 1_800_000_000_000,
+        action: 'banishment',
+        seat: { id: 'seat-casey', name: 'Casey' },
+      },
+    ];
+    const html = renderToString(
+      <CoordinatorConsole
+        view={{ ...view, publicLog }}
+        onCommand={async () => {}}
+      />,
+    );
+
+    expect(html).toContain(en.game.latestUpdates);
+    expect(html).toContain(en.game.publicLogBanishment('Casey'));
+    expect(html).not.toContain('Morgan');
   });
 
   it('asks before moving on when some players have not finished', () => {

@@ -17,6 +17,20 @@ export interface CoordinatorConsoleView {
   deadline: number | null;
   serverNow: number;
   progress: FullView['progress'];
+  publicLog: FullView['publicLog'];
+}
+
+function formatPublicUpdate(entry: FullView['publicLog'][number]): string {
+  if (entry.action === 'device_recovered')
+    return en.game.publicLogDeviceRecovered(entry.name);
+  if (entry.action === 'seat_pin_reset')
+    return en.game.publicLogPinReset(entry.name);
+  if (entry.action === 'dawn')
+    return en.game.publicLogDawn(entry.victims.map((victim) => victim.name));
+  if (entry.action === 'no_votes') return en.game.noVotesAnnouncement;
+  if (entry.action === 'banishment')
+    return en.game.publicLogBanishment(entry.seat.name);
+  return en.game.publicLogFinished(entry.winner);
 }
 
 export function getCoordinatorMoveConfirmation(progress: {
@@ -147,6 +161,29 @@ export function CoordinatorConsole({
           </dd>
         </div>
       </dl>
+      <section
+        className="mt-7"
+        aria-labelledby="coordinator-public-log-heading"
+        data-testid="coordinator-public-log"
+      >
+        <h2 id="coordinator-public-log-heading" className="display text-2xl">
+          {en.game.latestUpdates}
+        </h2>
+        <ul className="mt-2 divide-y divide-stone">
+          {view.publicLog
+            .slice()
+            .sort((first, second) => second.seq - first.seq)
+            .slice(0, 5)
+            .map((entry) => (
+              <li key={entry.seq} className="py-3 text-sm text-ash">
+                {formatPublicUpdate(entry)}
+              </li>
+            ))}
+          {view.publicLog.length === 0 && (
+            <li className="py-3 text-sm text-ash">{en.game.noPublicUpdates}</li>
+          )}
+        </ul>
+      </section>
       {error && (
         <p className="entry-error" role="alert">
           {error}

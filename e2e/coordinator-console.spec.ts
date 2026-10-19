@@ -39,7 +39,14 @@ function createView(): FullView {
     winner: null,
     publicAnnouncement: null,
     private: null,
-    publicLog: [],
+    publicLog: [
+      {
+        seq: 5,
+        at: Date.now(),
+        action: 'banishment',
+        seat: { id: 'seat-taylor', name: 'Taylor' },
+      },
+    ],
     coordinatorAlerts: [],
     fairness: null,
   } as FullView;
@@ -106,6 +113,11 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await expect(
     coordinatorConsole.getByText('Morgan', { exact: true }),
   ).toHaveCount(0);
+  await expect(
+    coordinatorConsole
+      .getByTestId('coordinator-public-log')
+      .getByText(/Taylor/),
+  ).toBeVisible();
 
   await page.getByTestId('button-coordinator-pause').click();
   await expect(page.getByTestId('button-coordinator-pause')).toHaveText(
