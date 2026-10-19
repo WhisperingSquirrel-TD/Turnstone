@@ -26,7 +26,6 @@ import {
   readGameEvents,
   readLatestGameSnapshot,
   getGameUndoStatus,
-  invalidateGameUndoWindow,
   readGameUndoWindow,
   claimDueGameDeadlines,
   completeGameDeadline,
@@ -1517,7 +1516,7 @@ it('appends versioned events transactionally and deduplicates idempotent retries
   }
 });
 
-it('persists, invalidates, and atomically consumes coordinator undo windows', async () => {
+it('persists, expires, invalidates, and atomically consumes coordinator undo windows', async () => {
   const gameId = randomUUID();
   const now = 1_800_000_100_000;
   const createdEvent = eventSchema.parse({
@@ -1709,9 +1708,137 @@ it('persists, invalidates, and atomically consumes coordinator undo windows', as
       events: [lastPhaseEvent],
       undoCapture: { state: routeUndoState, expiresAt: now + 60_000 },
     });
-    expect(await invalidateGameUndoWindow(gameId, 8, now + 12)).toBe(true);
-    expect(await getGameUndoStatus(gameId, 8, now + 13)).toBeNull();
-    expect(await invalidateGameUndoWindow(gameId, 7, now + 14)).toBe(false);
+    const undoBeforePrivateView = await request(coordinatorApp)
+      .get(`/api/games/${gameId}/view`)
+      .expect(200);
+    expect(undoBeforePrivateView.body.view.coordinatorUndo).toEqual({
+      expiresAt: now + 60_000,
+    });
+    expect(await getGameUndoStatus(gameId, 8, now + 59_999)).toEqual({
+      expiresAt: now + 60_000,
+    });
+    expect(await getGameUndoStatus(gameId, 8, now + 60_000)).toBeNull();
+    expect(await readGameUndoWindow(gameId, 8, now + 60_000)).toBeNull();
+
+    const playerApp = createApp(async () => {}, {
+      resolveViewer: async () => ({
+        kind: 'player',
+        seatId: joinedEvent.seatId,
+      }),
+    });
+    const playerCsrf = await request(playerApp).get('/api/csrf').expect(200);
+    const playerCsrfToken = playerCsrf.body.csrfToken as string;
+    const releasedPrivateView = await request(playerApp)
+      .post(`/api/games/${gameId}/private-view`)
+      .set('Cookie', `oathstone-csrf=${playerCsrfToken}`)
+      .set('X-CSRF-Token', playerCsrfToken)
+      .send({ purpose: 'notes' })
+      .expect(200);
+    expect(releasedPrivateView.body.view).not.toHaveProperty('restoreState');
+
+    const viewAfterPrivateRelease = await request(coordinatorApp)
+      .get(`/api/games/${gameId}/view`)
+      .expect(200);
+    expect(viewAfterPrivateRelease.body.view.coordinatorUndo).toBeNull();
+    await request(coordinatorApp)
+      .post(`/api/games/${gameId}/commands`)
+      .set('Cookie', `oathstone-csrf=${csrf.body.csrfToken}`)
+      .set('X-CSRF-Token', csrf.body.csrfToken)
+      .send({
+        type: 'UndoCoordinatorAction',
+        idempotencyKey: 'undo-after-private-release',
+        expectedVersion: 8,
+      })
+      .expect(409, {
+        error:
+          'The undo window has closed or the game has changed. No changes were made.',
+      });
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('does not offer undo for a coordinator action that reveals roles', async () => {
+  const gameId = randomUUID();
+  const now = 1_800_000_100_000;
+  const createdEvent = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+  const seatIds = Array.from({ length: 5 }, () => randomUUID());
+  const lobbyAndSeats = [
+    eventSchema.parse({
+      seq: 2,
+      at: now + 1,
+      schemaVersion: 1,
+      type: 'PhaseChanged',
+      phase: 'LOBBY',
+      deadline: null,
+      shadowEndAt: null,
+      cycle: 0,
+    }),
+    ...seatIds.map((seatId, index) =>
+      eventSchema.parse({
+        seq: index + 3,
+        at: now + index + 2,
+        schemaVersion: 1,
+        type: 'SeatJoined',
+        seatId,
+        name: `Player ${index + 1}`,
+      }),
+    ),
+  ];
+  try {
+    await createGameWithEvent({
+      event: createdEvent,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'undo-protected-start-create',
+      requestHash: 'undo-protected-start-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'undo-protected-start-lobby',
+      requestHash: 'undo-protected-start-lobby',
+      events: lobbyAndSeats,
+    });
+
+    const app = createApp(async () => {}, {
+      resolveViewer: async () => ({ kind: 'coordinator' }),
+    });
+    const csrf = await request(app).get('/api/csrf').expect(200);
+    const token = csrf.body.csrfToken as string;
+    const started = await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .set('Cookie', `oathstone-csrf=${token}`)
+      .set('X-CSRF-Token', token)
+      .send({
+        type: 'StartGame',
+        idempotencyKey: 'undo-protected-start',
+        expectedVersion: 7,
+      });
+    expect(started.status, JSON.stringify(started.body)).toBe(200);
+    expect(started.body.view.phase).toBe('DEAL');
+    expect(started.body.view.coordinatorUndo).toBeNull();
+
+    await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .set('Cookie', `oathstone-csrf=${token}`)
+      .set('X-CSRF-Token', token)
+      .send({
+        type: 'UndoCoordinatorAction',
+        idempotencyKey: 'undo-protected-start-rejected',
+        expectedVersion: started.body.version,
+      })
+      .expect(409, {
+        error:
+          'The undo window has closed or the game has changed. No changes were made.',
+      });
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }

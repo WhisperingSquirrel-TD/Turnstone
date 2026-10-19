@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green:** Verify #160 (`b9eeaea`), 19/19 jobs green. The accepted coverage-step patch (`f01aa72`) is not applied; the owner will apply it in GitHub, so Verify does not enforce server coverage yet.
+**Latest green:** Verify #161 (`b456732`), 19/19 jobs green, including iPhone/iPad WebKit and public-page checks. The accepted coverage patch (`f01aa72`) is not applied; the owner will apply it, so Verify does not enforce server coverage yet.
 
 **LP-8 Verify #156 (`3704b3d`): GREEN (19/19).** `audit`, `browsers (desktop, chromium)`, `browsers (Pixel, chromium)`, `browsers (iPhone, webkit)`, `browsers (iPad, webkit)`, `integration`, `property`, `unit`, `static-checks`, `lighthouse`, `rehearsal-live`, `merge-scenario-reports`, `required-checks` and all six scenario shards succeeded.
 
@@ -14,7 +14,9 @@
 
 **Phase A:** Read-only publish checklist added to `docs/HOSTING.md`. No deployment, settings, domain, DNS, secrets or paid service were changed.
 
-**Next queue:** Continue M6-3 to M6-5 starting with safe undo; then apply CP-1 only after M6-5 is green.
+**M6 safe undo:** Existing server behavior is covered by targeted integration tests for expiry, private-screen invalidation/stale rejection, and no undo after role reveal. No runtime behavior changed.
+
+**Next queue:** M6-3 presenter views, M6-4 accessibility/readability, then M6-5 exit criteria; CP-1 remains after M6-5 is green.
 
 **LP-8 local status:** All six static pages and coming-soon rules are implemented. Targeted unit tests, typecheck, lint, format, production build, static build, desktop Chromium, Pixel Chromium and local Firefox pass. Lighthouse scores are 1.00 for all required categories on all six public pages. iPhone/iPad WebKit cannot launch locally because this Nix container lacks Playwright's WebKit host libraries; Verify installs WebKit with its system dependencies.
 
