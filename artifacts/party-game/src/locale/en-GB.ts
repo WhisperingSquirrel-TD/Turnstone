@@ -185,6 +185,7 @@ export const en = {
       'Turnstone is a free hidden-traitor party game for 5 to 40 people, played on phones in the same room or over a video call. It is coming soon.',
     comingSoonBody:
       'Turnstone is a free hidden-traitor party game for 5 to 40 people, played on phones in the same room or over a video call. It is coming soon.',
+    comingSoonByline: 'A Stackstone game.',
     independenceStatement,
     faqHeading: 'Frequently asked questions',
     faqDescription:

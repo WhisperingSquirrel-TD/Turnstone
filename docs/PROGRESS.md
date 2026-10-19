@@ -1,8 +1,8 @@
 # Status for reviewer
 
-- Updated: 19 October 2026, 10:31 UTC. **Phase A:** LA-1 Verify #142 green; LA-2 Verify #144 green; LA-3 locally green, CI pending.
-- Last push: `df07d40`, Verify #144 Success. Canonicals use the configured site origin; Replit reports no active deployment, so URLs are not live yet.
-- Next: push LA-3, then LA-4. No open code questions; deployment remains owner-approval-gated. No publish, domain, DNS, secrets or paid services; eight attachments remain untracked.
+- Updated: 19 October 2026, 10:37 UTC. **Phase A:** LA-1 Verify #142, LA-2 Verify #144 and LA-3 Verify #145 are green; LA-4 exact copy and static build pass locally.
+- Last push: `80717d9`, Verify #145 Success; LA-4 push is next. Canonicals use the configured origin, but no deployment is active.
+- No open code questions. Deployment remains owner-approval-gated; no publish, domain, DNS, secrets or paid services. Eight attachments remain untracked.
 - After LA-7: resume remaining M6 items; stop first for Phase A deployment approval.
 
 ## Previous verification history

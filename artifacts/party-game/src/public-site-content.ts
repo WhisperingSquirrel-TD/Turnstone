@@ -399,7 +399,7 @@ export function renderPublicComingSoonHtml(basePath = '/'): string {
           <p class="public-home-subtitle">${escapeHtml(en.entry.subtitle)}</p>
           <p class="public-home-byline">${escapeHtml(en.entry.welcomeDescription)}</p>
           <p>${escapeHtml(en.publicSite.comingSoonBody)}</p>
-          <p>${escapeHtml(config.byline)}</p>
+          <p>${escapeHtml(en.publicSite.comingSoonByline)}</p>
         </div>
       </section>
     </main>

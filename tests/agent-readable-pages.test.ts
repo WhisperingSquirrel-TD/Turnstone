@@ -39,6 +39,21 @@ function publicDocument(slug: PublicPageSlug): string {
 }
 
 describe('agent-readable public pages', () => {
+  it('uses the owner-approved coming-soon copy without a date or signup form', () => {
+    const html = publicDocument('coming-soon');
+    expect(html).toContain('A game of traitors and faithful.');
+    expect(html).toContain('Everyone plays. Even the host.');
+    expect(html).toContain(
+      'Turnstone is a free hidden-traitor party game for 5 to 40 people, played on phones in the same room or over a video call. It is coming soon.',
+    );
+    expect(html).toContain('A Stackstone game.');
+    expect(html).toContain(
+      'Turnstone is an independent game made by Stackstone Consulting.',
+    );
+    expect(html).not.toContain('<form');
+    expect(html).not.toContain('type="email"');
+  });
+
   it('gives every public page unique canonical, description and share metadata', () => {
     const documents = pages.map(({ slug }) => publicDocument(slug));
     const titles = documents.map(
