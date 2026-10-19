@@ -24,6 +24,7 @@ export const en = {
     heading: 'Game controls',
     loading: 'Loading game controls…',
     currentStep: 'Current step',
+    paused: 'Paused',
     timeLeft: 'Time left',
     privateProgress: 'Private progress',
     progress: (done: number, total: number) => `${done} of ${total} done`,
@@ -40,7 +41,6 @@ export const en = {
     presenterPairingError:
       'Could not create a presenter code. Check that this game was created with the presenter option enabled.',
     noTimer: 'No timer',
-    paused: 'Paused',
     movingOn: 'Moving on...',
     pause: 'Pause game',
     resume: 'Resume game',
@@ -75,6 +75,7 @@ export const en = {
     waiting: 'The presenter screen is ready once the organiser pairs it.',
     currentStep: 'Current step',
     nightPrivate: 'Night choices are private. Everyone is choosing now.',
+    paused: 'Paused',
     lobbyCode: 'Game code',
     joinPrompt: 'Scan to join, or enter this code:',
     playersJoined: (count: number) =>

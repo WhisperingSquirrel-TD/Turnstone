@@ -108,6 +108,7 @@ test('presenter pairs with a one-time code and receives only the public lobby vi
 test('presenter shows the public verdict without exposing private ballots or a disabled pot', async ({
   page,
 }) => {
+  await page.clock.install({ time: new Date(Date.now() + 120_000) });
   const gameId = 'presenter-verdict-test';
   const pairingCode = 'B'.repeat(43);
   const visitorView = {
@@ -121,6 +122,7 @@ test('presenter shows the public verdict without exposing private ballots or a d
     id: gameId,
     lobbyCode: undefined,
     phase: 'VERDICT',
+    deadline: Date.now() + 120_000,
     publicAnnouncement: {
       kind: 'verdict',
       cycle: 0,
@@ -169,6 +171,7 @@ test('presenter shows the public verdict without exposing private ballots or a d
     page.getByText('Sam has been banished. They were Faithful.'),
   ).toBeVisible();
   await expect(page.getByText('Sam was banished.')).toBeVisible();
+  await expect(page.getByTestId('presenter-countdown')).toHaveText(/1:59|2:00/);
   await expect(page.getByText('private-ballot-seat')).toHaveCount(0);
   await expect(page.getByText(/Prize pot:/)).toHaveCount(0);
 });

@@ -87,6 +87,8 @@ export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
   const [pairingError, setPairingError] = useState('');
   const [connectionStatus, setConnectionStatus] =
     useState<GameConnectionState>('connecting');
+  const [clientNow, setClientNow] = useState(Date.now());
+  const [serverOffset, setServerOffset] = useState(0);
   const gameQuery = useGetGameView(id, {
     query: { enabled: Boolean(id), queryKey: getGetGameViewQueryKey(id) },
     request: { credentials: 'include' },
@@ -96,6 +98,17 @@ export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
       ? gameQuery.data.view
       : null;
   const paired = Boolean(full);
+
+  useEffect(() => {
+    if (gameQuery.data) {
+      setServerOffset(gameQuery.data.serverNow - Date.now());
+    }
+  }, [gameQuery.data?.serverNow]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClientNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!paired || !id) return;
@@ -233,6 +246,11 @@ export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
       })
     : '';
   const resultLine = announcementText(full);
+  const serverTime = clientNow + serverOffset;
+  const secondsRemaining =
+    full.deadline === null
+      ? null
+      : Math.max(0, Math.ceil((full.deadline - serverTime) / 1000));
 
   return (
     <div className="presenter-page" data-testid="presenter-game-view">
@@ -242,6 +260,15 @@ export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
           <p className="presenter-game-name">{full.gameName}</p>
         )}
         <h1>{phaseTitle(full)}</h1>
+        {(full.paused || secondsRemaining !== null) && (
+          <p className="presenter-countdown" data-testid="presenter-countdown">
+            {full.paused
+              ? en.presenter.paused
+              : secondsRemaining === null
+                ? ''
+                : `${Math.floor(secondsRemaining / 60)}:${String(secondsRemaining % 60).padStart(2, '0')}`}
+          </p>
+        )}
         {full.phase === 'SHADOW' && (
           <p className="presenter-commentary">{en.presenter.nightPrivate}</p>
         )}

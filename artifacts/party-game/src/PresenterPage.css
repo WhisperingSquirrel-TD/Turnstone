@@ -67,6 +67,13 @@
   font-size: clamp(1rem, 1.8vw, 1.3rem);
 }
 
+.presenter-countdown {
+  color: var(--entry-gilt, #c99a52);
+  font-family: var(--entry-display, Georgia, serif);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-variant-numeric: tabular-nums;
+}
+
 .presenter-pot {
   width: fit-content;
   margin-block: 1.5rem;
