@@ -161,16 +161,21 @@ React is retained. If the actual route budget cannot be met, record measured opt
 
 **References:** §3, §9, §11, §16–18, §25.
 
-- [ ] Phone-first logistics, count-only private progress, public logs, extension/pause/resume/shift, seat management, PIN reset approvals, co-coordinator rights and early-end confirmation.
+- [x] Phone-first coordinator logistics: count-only progress, public logs, extensions, pause/resume, schedule shifts, seat departure, co-coordinator management and confirmed early end.
+- [x] Coordinator-only PIN lockout alerts and rate-limited reset endpoint; reset actions are publicly logged without storing or logging the PIN.
+- [ ] Owner to define the PIN-reset approval interaction before adding a coordinator-screen reset form; there is no pending player request/approval flow.
 - [x] Safe undo window only when no private information was released; offline takeover/co-coordinator prompting and majority approval.
 - [x] M6-3 presenter projection is public-only: no ballots, voter/candidate IDs, private per-seat roles, night choices, tasks, shields, fairness data or top-level winner. A banished role appears only when `publicRole` is true, and the winning side only in the public finished announcement; phase commentary and vote progress stay aggregate and role-neutral.
-- [ ] Paired `/tv` public view, QR/lobby/timetable/countdowns, private warnings, vote reveals, mission/pot/endgame/reveal displays, text-mirrored narration and sound consent.
-- [ ] Use the shared §25 palette and typography on coordinator and presenter screens; preserve role-neutral styling and room-readable type.
+- [x] Paired `/tv` public view, QR/lobby, phase countdown, public verdict/result, endgame and pot display; paired views and adversarial public payloads are covered in browser and projection tests.
+- [x] Use the shared §25 palette and typography on coordinator and presenter screens; preserve role-neutral styling and room-readable type.
+- [ ] Keep presenter ballot reveals excluded: the public-only projection deliberately does not contain ballots or voter/candidate IDs. Spoken narration remains organiser-phone-only under §26; do not add presenter audio without an owner-approved change.
+- [ ] Presenter timetable and mission-detail views depend on public schedule/content data not currently present in the presenter projection; revisit after the content source and schedule view are approved.
 - [x] Accessibility and route checks: axe, keyboard focus, 320px/4K layout, 200% text, reduced motion, wake-lock fallback, adversarial public payloads, separate route chunks and the initial/shared JavaScript gzip budget.
 - [x] Keep coordinator, presenter and wizard separately lazy-loaded; enforce the 250 KB initial/shared JavaScript gzip budget in the build checks.
-- [ ] Connect advance scheduling/busy messaging to the measured-capacity server policy.
+- [x] Apply the configured 80% active-game admission threshold and clear busy response to new game/rehearsal creation without blocking existing games; the policy and boundary are tested.
+- [ ] Owner to approve a representative capacity test and production `MAX_ACTIVE_GAMES` value; no production or paid capacity test has been run.
 
-**Exit:** Journeys, takeover and schedule shifts pass; no secret disclosure; verify green.
+**Automated exit:** Takeover, schedule shifts, public-only presenter projection, accessibility/route checks and secrecy tests pass; Verify #170 is green. Manual screen-reader/device checks, the PIN-reset approval UX, presenter schedule/content additions and a representative production-capacity value remain open as listed above.
 
 ## Task 7 — Complete game features and rehearsal
 

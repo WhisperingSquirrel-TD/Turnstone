@@ -1,18 +1,12 @@
 # Status for reviewer
 
-**Latest green:** Verify #169 (`b7e48d3`) passed all 19 jobs, including desktop and Pixel Chromium, iPhone and iPad WebKit, and `required-checks`.
+**Latest green:** Verify #170 (`04990cc`) passed all 19 jobs, including all four browser profiles, Lighthouse, `required-checks` and scenario shards.
 
-**Verify #165 (`05bddae`): RED, corrected in #166.** Failed jobs were `unit`, all four browser profiles and dependent `required-checks`. The route tests rendered a lazy fallback; game-header CSS was only loaded by the lazy entry route; and presenter content overflowed at 200% text. Streaming SSR tests, shared static header CSS and wrapping presenter styles fixed these without weakening checks.
+**Milestone 6 — automated items verified:** takeover/coordinator secrecy, undo and schedule shifts; coordinator logistics; public-only `/tv` pairing, verdict and finish; accessibility, route, keyboard, reduced-motion and bundle checks; configured admission-capacity behaviour. Targeted coordinator/presenter browser tests (Pixel and desktop), takeover/admission integration tests, unit tests, typecheck, lint and format check passed locally.
 
-**M6-2 safe undo:** Expiry, invalidation and role-reveal boundaries are covered; green in #163.
+**Task 6 owner items:** manual VoiceOver/TalkBack and real-device checks; approve the PIN-reset request/approval interaction; confirm whether to add timetable/mission details to the public presenter projection; run a representative capacity test and approve `MAX_ACTIVE_GAMES`. Presenter ballots remain excluded and narration remains organiser-phone-only under §26.
 
-**M6-3 presenter:** Owner-approved follow-up exposes a banished role only through the public verdict announcement when `publicRole` is true, and the winner only through the public finish announcement. Per-seat roles, ballots, voter/candidate IDs, night choices, tasks, shields, fairness and private data remain excluded. Green in #167; full unit (443), server coverage (85.92% lines), 2,571 scenario games, typecheck, lint, format, build and Pixel/desktop presenter tests pass locally.
-
-**M6-4 accessibility:** Main automated checks are green in #166; presenter verdict/results axe checks are green in #168 and locally on Pixel/desktop. VoiceOver/TalkBack manual checks remain unperformed.
-
-**M6-5 exit checks:** Targeted takeover/secrecy integration, schedule-shift engine and Pixel/desktop coordinator tests pass locally; Verify #169 is green. Remaining Task 6 checklist items are still open in `PLAN.md`.
-
-**Next:** Continue the open Task 6 work; stop for reviewer only when the full exit criteria are met.
+**Next:** CP-1 content patch v2.1, local copies only; content remains untracked and unintegrated.
 
 ## Earlier milestone results
 
