@@ -1564,12 +1564,13 @@ it('persists, expires, invalidates, and atomically consumes coordinator undo win
       expiresAt: now + 60_000,
     });
 
+    const joinedSeatId = randomUUID();
     const joinedEvent = eventSchema.parse({
       seq: 3,
       at: now + 3,
       schemaVersion: 1,
       type: 'SeatJoined',
-      seatId: randomUUID(),
+      seatId: joinedSeatId,
       name: 'A player',
     });
     const joinedState = evolve(lobbyState, joinedEvent);
@@ -1723,7 +1724,7 @@ it('persists, expires, invalidates, and atomically consumes coordinator undo win
     const playerApp = createApp(async () => {}, {
       resolveViewer: async () => ({
         kind: 'player',
-        seatId: joinedEvent.seatId,
+        seatId: joinedSeatId,
       }),
     });
     const playerCsrf = await request(playerApp).get('/api/csrf').expect(200);

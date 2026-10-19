@@ -2,6 +2,8 @@
 
 **Latest green:** Verify #161 (`b456732`), 19/19 jobs green, including iPhone/iPad WebKit and public-page checks. The accepted coverage patch (`f01aa72`) is not applied; the owner will apply it, so Verify does not enforce server coverage yet.
 
+**Verify #162 (`ff5c85c`): RED.** `static-checks` failed `typecheck:tests` with TS2339 because a parsed event union was accessed as if it always had `seatId`; `required-checks` failed as a consequence. The other 17 jobs passed. The test now uses a separate typed seat ID, preserving all assertions; targeted tests, test typecheck, lint and formatting pass locally. A fresh Verify is pending.
+
 **LP-8 Verify #156 (`3704b3d`): GREEN (19/19).** `audit`, `browsers (desktop, chromium)`, `browsers (Pixel, chromium)`, `browsers (iPhone, webkit)`, `browsers (iPad, webkit)`, `integration`, `property`, `unit`, `static-checks`, `lighthouse`, `rehearsal-live`, `merge-scenario-reports`, `required-checks` and all six scenario shards succeeded.
 
 **Verify #155 (`8dca2ca`): CANCELLED, not green.** Its Unit command failed on three stale assertions in `tests/agent-readable-pages.test.ts`: they expected `/coming-soon` to have its own canonical URL and to appear in `llms.txt` and `sitemap.xml`, contrary to LP-8.2. The audit command itself passed; the Unit and Audit jobs later concluded cancelled, and `required-checks` failed. GitHub reported no cancelling actor and no competing Verify run; the workflow permits same-branch concurrency cancellation, but the available data does not expose the cancellation trigger. The Unit failure was a deterministic test assertion, not a browser or runner failure. The expectations were corrected without changing application behavior.
