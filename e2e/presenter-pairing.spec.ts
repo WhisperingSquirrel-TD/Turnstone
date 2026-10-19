@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import {
   gameViewResponseSchema,
   presenterPairResponseSchema,
@@ -87,8 +88,59 @@ test('presenter pairs with a one-time code and receives only the public lobby vi
   await page.goto(`/tv/${gameId}`);
   await expect(page.getByTestId('presenter-pairing-form')).toBeVisible();
   await expect(page.getByText('ABC234', { exact: true })).toHaveCount(0);
-  await page.getByLabel('Presenter pairing code').fill(pairingCode);
-  await page.getByRole('button', { name: 'Pair this screen' }).click();
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = '200%';
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => {
+    document.documentElement.style.removeProperty('font-size');
+  });
+  await page.setViewportSize({ width: 3840, height: 2160 });
+  const presenterBounds = await page.locator('.presenter-main').boundingBox();
+  expect(presenterBounds?.width).toBeLessThanOrEqual(1200);
+  expect(
+    await page
+      .locator('.presenter-main')
+      .evaluate((element) => parseFloat(getComputedStyle(element).fontSize)),
+  ).toBeGreaterThanOrEqual(16);
+  const undersizedPresenterTargets = await page
+    .locator('.presenter-main input, .presenter-main button')
+    .evaluateAll((controls) =>
+      controls
+        .map((control) => {
+          const bounds = control.getBoundingClientRect();
+          return { width: bounds.width, height: bounds.height };
+        })
+        .filter(({ width, height }) => width < 44 || height < 44),
+    );
+  expect(undersizedPresenterTargets).toEqual([]);
+  const pairingInput = page.getByLabel('Presenter pairing code');
+  const pairingButton = page.getByRole('button', { name: 'Pair this screen' });
+  await page.keyboard.press('Tab');
+  await expect(pairingInput).toBeFocused();
+  const inputFocusStyle = await pairingInput.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      outlineStyle: style.outlineStyle,
+      outlineWidth: style.outlineWidth,
+    };
+  });
+  expect(inputFocusStyle.outlineStyle).not.toBe('none');
+  expect(parseFloat(inputFocusStyle.outlineWidth)).toBeGreaterThan(0);
+  await pairingInput.fill(pairingCode);
+  await page.keyboard.press('Tab');
+  await expect(pairingButton).toBeFocused();
+  await page.keyboard.press('Enter');
 
   await expect(page.getByTestId('presenter-game-view')).toBeVisible();
   await expect(page.getByTestId('presenter-lobby-code')).toHaveText('ABC234');
@@ -96,6 +148,13 @@ test('presenter pairs with a one-time code and receives only the public lobby vi
   await expect(page.getByText('A public game')).toBeVisible();
   await expect(page.getByText('Faithful')).toHaveCount(0);
   await expect(page.getByText('Traitor')).toHaveCount(0);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
 
   expect(
     gameViewResponseSchema.safeParse({

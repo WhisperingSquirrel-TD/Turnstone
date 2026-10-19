@@ -266,6 +266,12 @@ test('notes show one privacy line without nested scrolling or excess top space',
 }) => {
   let privateRequests = 0;
   const gameId = 'notes-screen-baseline';
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'wakeLock', {
+      configurable: true,
+      value: undefined,
+    });
+  });
   const publicView: FullView = {
     id: gameId,
     viewerSeatId: 'human-seat',
@@ -342,6 +348,11 @@ test('notes show one privacy line without nested scrolling or excess top space',
   await page.setViewportSize({ width: 320, height: 568 });
   await page.clock.install();
   await page.goto(`/game/${gameId}`);
+  await expect(
+    page.getByText(
+      'Your screen may lock during play. Tap it to keep the game visible.',
+    ),
+  ).toBeVisible();
   await page.getByTestId('button-open-notes').click();
 
   await expect(

@@ -74,7 +74,6 @@ import {
   type GameConnectionState,
   type GameRealtimeSocket,
 } from './game-socket';
-import { EntryPage } from './EntryPage';
 import { HoldRoleDemo } from './HoldRoleDemo';
 import { lobbyCodeJoinUrl } from './lobby-code-url';
 import {
@@ -93,6 +92,10 @@ setBaseUrl(config.apiOrigin);
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+});
+const LazyEntryPage = lazy(async () => {
+  const module = await import('./EntryPage');
+  return { default: module.EntryPage };
 });
 const LazyPresenterPage = lazy(async () => {
   const module = await import('./PresenterPage');
@@ -626,7 +629,11 @@ function Play({
   mode?: 'play' | 'join' | 'coordinate' | 'waiting';
 }) {
   const csrfToken = useContext(csrfContext);
-  return <EntryPage mode={mode} csrfToken={csrfToken} />;
+  return (
+    <Suspense fallback={<main role="status">{en.entry.loadingSetup}</main>}>
+      <LazyEntryPage mode={mode} csrfToken={csrfToken} />
+    </Suspense>
+  );
 }
 
 function NotFound() {

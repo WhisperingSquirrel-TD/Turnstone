@@ -315,7 +315,7 @@ export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
               <p>{en.presenter.playersJoined(full.seats.length)}</p>
             </div>
             <div data-testid="presenter-join-qr">
-              <PresenterQr value={joinUrl} />
+              <PresenterQr value={joinUrl} title={en.presenter.qrLabel} />
             </div>
           </section>
         )}
@@ -360,11 +360,11 @@ function PresenterHeader({ status }: { status: GameConnectionState }) {
   );
 }
 
-function PresenterQr({ value }: { value: string }) {
+function PresenterQr({ value, title }: { value: string; title: string }) {
   return (
     <div className="presenter-qr">
       {value ? (
-        <QRCode value={value} />
+        <QRCode value={value} title={title} />
       ) : (
         <span role="status">{en.presenter.waiting}</span>
       )}
@@ -372,9 +372,9 @@ function PresenterQr({ value }: { value: string }) {
   );
 }
 
-function QRCode({ value }: { value: string }) {
+function QRCode({ value, title }: { value: string; title: string }) {
   const [Component, setComponent] =
-    useState<ComponentType<{ value: string; size: number }>>();
+    useState<ComponentType<{ value: string; size: number; title?: string }>>();
   useEffect(() => {
     let active = true;
     void import('qrcode.react').then((module) => {
@@ -385,7 +385,7 @@ function QRCode({ value }: { value: string }) {
     };
   }, []);
   return Component ? (
-    <Component value={value} size={280} />
+    <Component value={value} size={280} title={title} />
   ) : (
     <span role="status">{en.entry.qrPreparing}</span>
   );

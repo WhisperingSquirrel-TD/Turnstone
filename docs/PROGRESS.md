@@ -1,16 +1,20 @@
 # Status for reviewer
 
-**Latest green:** Verify #163 (`e727e10`) succeeded.
-
-**Verify #162:** `static-checks` failed test typecheck (TS2339: un-narrowed event union); `required-checks` failed as a consequence. Fixed in #163 with a separate typed seat ID; assertions unchanged.
+**Latest green:** Verify #164 (`abc5584`) succeeded, including iPhone and iPad WebKit.
 
 **M6-2 safe undo:** Expiry, invalidation and role-reveal boundaries are covered; green in #163.
 
-**M6-3 presenter:** Views now omit ballots, voter/candidate IDs, per-seat roles, endgame winner and fairness data; show aggregate vote progress and neutral result copy. Unit, server, Pixel, typecheck, lint and build pass. Local iPhone WebKit remains blocked after Nix dependency installation; Verify pending.
+**M6-3 presenter:** Public projection omits ballots, voter/candidate IDs, per-seat roles, endgame winner and fairness data; aggregate progress and result copy are role-neutral. Green in #164.
 
-**Next:** Wait for M6-3 Verify; then M6-4, M6-5 and CP-1.
+**M6-4 local:** Axe, keyboard focus, 320px/4K layout, 200% text, reduced motion, wake-lock fallback, route chunks and the 250 KB gzip budget pass. Typecheck, lint, build and targeted Pixel browser checks pass. Verify pending; VoiceOver/TalkBack manual checks remain unperformed.
+
+**Next:** Wait for M6-4 Verify; then M6-5 and CP-1.
 
 ## Earlier milestone results
+
+**Verify #163 (`e727e10`): GREEN.** #162 failed `static-checks` test typecheck (TS2339: an un-narrowed event union); `required-checks` failed as a consequence. The separate typed seat-ID fix kept all assertions unchanged.
+
+**Local workflow restart:** A stale Vite/API process group from the previous run held ports 22814/8080. Only those identified old groups were stopped; the new processes now bind and serve on the configured ports.
 
 **LP-8 Verify #156 (`3704b3d`): GREEN (19/19).** `audit`, `browsers (desktop, chromium)`, `browsers (Pixel, chromium)`, `browsers (iPhone, webkit)`, `browsers (iPad, webkit)`, `integration`, `property`, `unit`, `static-checks`, `lighthouse`, `rehearsal-live`, `merge-scenario-reports`, `required-checks` and all six scenario shards succeeded.
 

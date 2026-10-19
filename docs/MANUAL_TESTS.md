@@ -7,6 +7,7 @@ Not executed yet; do not count these as passed.
 - Home and `/play` at 320 px, portrait/landscape and 200%/400% zoom; no clipped text or horizontal scrolling.
 - iPhone Safari, Android Chrome, iPad Safari, desktop keyboard: navigation, reload and readable text.
 - VoiceOver/TalkBack: skip link, nav landmarks, one h1, main, footer.
+- Coordinator and presenter on desktop, tablet and phone: keyboard-only navigation, visible focus, announced headings/status, labelled pairing input and QR, and no role or ballot details.
 - Keyboard-only: visible focus and logical order; no trap.
 - Verify direct navigation and reload on `/play`; missing page explains how to return.
 - Verify no fake join/start controls, no seasonal or prohibited branding.

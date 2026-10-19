@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import {
   gameViewResponseSchema,
   type FullView,
@@ -139,6 +140,79 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await page.goto(`/coordinate/${gameId}`);
   const coordinatorConsole = page.getByTestId('coordinator-console');
   await expect(coordinatorConsole).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 900 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = '200%';
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await expect(
+    coordinatorConsole.getByRole('heading', { name: 'Game controls' }),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    document.documentElement.style.removeProperty('font-size');
+  });
+  await page.setViewportSize({ width: 3840, height: 2160 });
+  const coordinatorBounds = await coordinatorConsole.boundingBox();
+  expect(coordinatorBounds?.width).toBeLessThanOrEqual(1200);
+  expect(
+    await coordinatorConsole.evaluate((element) =>
+      parseFloat(getComputedStyle(element).fontSize),
+    ),
+  ).toBeGreaterThanOrEqual(16);
+  const undersizedButtons = await coordinatorConsole
+    .locator('button')
+    .evaluateAll((buttons) =>
+      buttons
+        .map((button) => {
+          const bounds = button.getBoundingClientRect();
+          return { width: bounds.width, height: bounds.height };
+        })
+        .filter(({ width, height }) => width < 44 || height < 44),
+    );
+  expect(undersizedButtons).toEqual([]);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await page.keyboard.press('Tab');
+  const focusedControl = await page.evaluate(() => {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement)) return null;
+    const style = getComputedStyle(active);
+    return {
+      tag: active.tagName,
+      outlineStyle: style.outlineStyle,
+      outlineWidth: parseFloat(style.outlineWidth),
+    };
+  });
+  expect(focusedControl?.tag).not.toBe('BODY');
+  expect(focusedControl?.outlineStyle).not.toBe('none');
+  expect(focusedControl?.outlineWidth).toBeGreaterThan(0);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const motionDurations = await coordinatorConsole.evaluate((element) => {
+    const toMilliseconds = (value: string) =>
+      value.endsWith('ms') ? parseFloat(value) : parseFloat(value) * 1000;
+    const elements = [element, ...Array.from(element.querySelectorAll('*'))];
+    return elements.flatMap((item) => {
+      const style = getComputedStyle(item);
+      return [style.animationDuration, style.transitionDuration]
+        .flatMap((values) => values.split(','))
+        .map((value) => toMilliseconds(value.trim()));
+    });
+  });
+  expect(Math.max(0, ...motionDurations)).toBeLessThanOrEqual(0.01);
   await expect(
     page.getByRole('heading', { name: 'Invite a late player' }),
   ).toBeVisible();

@@ -119,6 +119,7 @@ export const en = {
       'That presenter code could not be used. Ask the organiser to create a new one.',
     securityPending: 'The security check is still loading. Please try again.',
     loading: 'Connecting to the game…',
+    qrLabel: 'Scan this code to join the game.',
     notFound:
       'This game could not be found. Check the link with the organiser.',
     waiting: 'The presenter screen is ready once the organiser pairs it.',
@@ -340,6 +341,7 @@ export const en = {
   },
   entry: {
     brandDescriptor: 'Oathstone',
+    loadingSetup: 'Loading game setup…',
     headlineFirst: 'Oathstone',
     headlineSecond: '',
     subtitle: 'A game of traitors and faithful.',

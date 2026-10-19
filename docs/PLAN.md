@@ -166,8 +166,9 @@ React is retained. If the actual route budget cannot be met, record measured opt
 - [x] M6-3 presenter projection is public-only: no ballots, voter/candidate IDs, per-seat roles, endgame winner or fairness data; phase commentary and vote progress are aggregate and role-neutral.
 - [ ] Paired `/tv` public view, QR/lobby/timetable/countdowns, private warnings, vote reveals, mission/pot/endgame/reveal displays, text-mirrored narration and sound consent.
 - [ ] Use the shared §25 palette and typography on coordinator and presenter screens; preserve role-neutral styling and room-readable type.
-- [ ] Keyboard, large-screen readability, wake-lock fallback and reduced-motion tests; adversarial coordinator/presenter payload and route checks.
-- [ ] Keep coordinator, presenter and wizard separately lazy-loaded, add initial-load size checks when each route exists, and connect advance scheduling/busy messaging to the measured-capacity server policy.
+- [x] Accessibility and route checks: axe, keyboard focus, 320px/4K layout, 200% text, reduced motion, wake-lock fallback, adversarial public payloads, separate route chunks and the initial/shared JavaScript gzip budget.
+- [x] Keep coordinator, presenter and wizard separately lazy-loaded; enforce the 250 KB initial/shared JavaScript gzip budget in the build checks.
+- [ ] Connect advance scheduling/busy messaging to the measured-capacity server policy.
 
 **Exit:** Journeys, takeover and schedule shifts pass; no secret disclosure; verify green.
 
