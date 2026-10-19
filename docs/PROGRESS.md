@@ -2,7 +2,9 @@
 
 **Verify #150:** Failed jobs: `static-checks`, `unit`, `property`, `integration`, `scenarios (0, 6)` through `scenarios (5, 6)`, `merge-scenario-reports`, and `required-checks`. `coordinatorUndo` was missing from the shared view allow-list and several typed fixtures. The allow-list and fixtures were corrected; Verify #152 on `5491fe8` is green.
 
-**Phase A rename:** RN1 inventory recorded 383 matches across tests (153), docs/agents (125), UI (30), locale (15), server/shared (15), workflows (5), config/metadata (9), brand text (7) and attachments (24). RN2–RN4 are pushed in `af976f1`; RN5 guard and 12 approved attachment untracks are ready, and RN6 copy/host/metadata/static-output tests pass locally. This commit is awaiting Verify.
+**Verify #153:** `integration` failed and `required-checks` followed. The public-log PIN scan matched random seat-ID digits; it now asserts the reset event shape and checks PIN absence in all non-metadata event payloads. The targeted integration test passes locally; corrective push pending.
+
+**Phase A rename:** RN1 inventory recorded 383 matches across tests (153), docs/agents (125), UI (30), locale (15), server/shared (15), workflows (5), config/metadata (9), brand text (7) and attachments (24). RN2–RN4 are pushed in `af976f1`; RN5/RN6 are pushed in `4a15a9d`, but Verify #153 is red. LP-8 is gated until a green Verify.
 
 **Owner actions:** Create `OATHSTONE_GITHUB_TOKEN` in Replit Secrets and `OATHSTONE_PROMOTION_ENABLED` in GitHub Actions Variables with the existing matching values, update their consumers, then remove the old names. Preserve repository URL `https://github.com/WhisperingSquirrel-TD/Turnstone`.
 

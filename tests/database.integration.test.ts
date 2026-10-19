@@ -3728,12 +3728,26 @@ it('locks PIN recovery after five failed attempts without exposing whether the n
     const afterReset = await request(app)
       .get(`/api/games/${gameId}/view`)
       .expect(200);
-    expect(afterReset.body.view.publicLog).toContainEqual(
-      expect.objectContaining({ action: 'seat_pin_reset', seatId }),
+    const resetLogEntry = afterReset.body.view.publicLog.find(
+      (entry: { action: string; seatId?: string }) =>
+        entry.action === 'seat_pin_reset' && entry.seatId === seatId,
     );
-    expect(JSON.stringify(afterReset.body.view.publicLog)).not.toContain(
-      replacementPin,
+    expect(resetLogEntry).toEqual({
+      seq: expect.any(Number),
+      at: expect.any(Number),
+      action: 'seat_pin_reset',
+      seatId,
+      name: 'Locked Seat',
+    });
+    const publicLogPayloads = afterReset.body.view.publicLog.map(
+      (entry: Record<string, unknown>) =>
+        Object.fromEntries(
+          Object.entries(entry).filter(
+            ([key]) => !['seq', 'at', 'seatId'].includes(key),
+          ),
+        ),
     );
+    expect(JSON.stringify(publicLogPayloads)).not.toContain(replacementPin);
     await request(app)
       .post(`/api/games/${gameId}/seats/${seatId}/pin/reset`)
       .send({
