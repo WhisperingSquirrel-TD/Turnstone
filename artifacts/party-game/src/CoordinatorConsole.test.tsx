@@ -17,6 +17,7 @@ const view: CoordinatorConsoleView = {
   serverNow: 1_800_000_000_000,
   progress: { done: 3, total: 8 },
   publicLog: [],
+  coordinatorAlerts: [],
 };
 
 describe('CoordinatorConsole', () => {
@@ -57,6 +58,31 @@ describe('CoordinatorConsole', () => {
     expect(html).toContain(en.game.latestUpdates);
     expect(html).toContain(en.game.publicLogBanishment('Casey'));
     expect(html).not.toContain('Morgan');
+  });
+
+  it('shows PIN lockout alerts only when the coordinator has one', () => {
+    const html = renderToString(
+      <CoordinatorConsole
+        view={{
+          ...view,
+          coordinatorAlerts: [
+            {
+              seq: 7,
+              at: 1_800_000_000_000,
+              code: 'seat_pin_locked',
+              seatId: 'seat-alex',
+              name: 'Alex',
+              lockedUntil: 1_800_000_900_000,
+            },
+          ],
+        }}
+        onCommand={async () => {}}
+      />,
+    );
+
+    expect(html).toContain(en.coordinator.pinLockoutsHeading);
+    expect(html).toContain('Alex is locked out after too many PIN attempts');
+    expect(html).not.toContain('1234');
   });
 
   it('asks before moving on when some players have not finished', () => {

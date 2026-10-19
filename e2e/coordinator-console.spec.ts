@@ -47,7 +47,16 @@ function createView(): FullView {
         seat: { id: 'seat-taylor', name: 'Taylor' },
       },
     ],
-    coordinatorAlerts: [],
+    coordinatorAlerts: [
+      {
+        seq: 6,
+        at: Date.now(),
+        code: 'seat_pin_locked',
+        seatId: 'seat-alex',
+        name: 'Alex',
+        lockedUntil: Date.now() + 15 * 60_000,
+      },
+    ],
     fairness: null,
   } as FullView;
 }
@@ -118,6 +127,9 @@ test('coordinator can pause, extend and safely advance an active game', async ({
       .getByTestId('coordinator-public-log')
       .getByText(/Taylor/),
   ).toBeVisible();
+  await expect(
+    coordinatorConsole.getByTestId('coordinator-pin-lockouts'),
+  ).toContainText('Alex is locked out after too many PIN attempts');
 
   await page.getByTestId('button-coordinator-pause').click();
   await expect(page.getByTestId('button-coordinator-pause')).toHaveText(

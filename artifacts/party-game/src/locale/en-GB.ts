@@ -27,6 +27,9 @@ export const en = {
     timeLeft: 'Time left',
     privateProgress: 'Private progress',
     progress: (done: number, total: number) => `${done} of ${total} done`,
+    pinLockoutsHeading: 'PIN lockouts',
+    seatPinLocked: (name: string, time: string) =>
+      `${name} is locked out after too many PIN attempts, until ${time}.`,
     noTimer: 'No timer',
     paused: 'Paused',
     movingOn: 'Moving on...',

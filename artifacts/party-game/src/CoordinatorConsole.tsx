@@ -18,6 +18,7 @@ export interface CoordinatorConsoleView {
   serverNow: number;
   progress: FullView['progress'];
   publicLog: FullView['publicLog'];
+  coordinatorAlerts: FullView['coordinatorAlerts'];
 }
 
 function formatPublicUpdate(entry: FullView['publicLog'][number]): string {
@@ -184,6 +185,33 @@ export function CoordinatorConsole({
           )}
         </ul>
       </section>
+      {view.coordinatorAlerts.length > 0 && (
+        <section
+          className="mt-7"
+          aria-labelledby="coordinator-pin-lockouts-heading"
+          data-testid="coordinator-pin-lockouts"
+        >
+          <h2
+            id="coordinator-pin-lockouts-heading"
+            className="display text-2xl"
+          >
+            {en.coordinator.pinLockoutsHeading}
+          </h2>
+          <ul className="mt-2 divide-y divide-stone">
+            {view.coordinatorAlerts.map((alert) => (
+              <li key={alert.seq} className="py-3 text-sm text-ash">
+                {en.coordinator.seatPinLocked(
+                  alert.name,
+                  new Date(alert.lockedUntil).toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {error && (
         <p className="entry-error" role="alert">
           {error}
