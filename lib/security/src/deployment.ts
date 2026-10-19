@@ -75,14 +75,38 @@ export function shouldNoindexPath(
   return mode.preLaunchNoindex || mode.comingSoonMode;
 }
 
-export function renderRobotsTxt(mode: DeploymentMode = deploymentMode): string {
+export function renderRobotsTxt(
+  mode: DeploymentMode = deploymentMode,
+  sitemapUrl?: string,
+): string {
   if (!mode.comingSoonMode) return 'User-agent: *\nDisallow: /\n';
-  return [
-    'User-agent: *',
+  const rules = [
     'Allow: /',
     ...APP_SHELL_ROUTE_BASES.map((route) => `Disallow: ${route}`),
     'Disallow: /api/',
     'Disallow: /socket.io/',
+    'Disallow: /app-shell.html',
+    'Disallow: /404.html',
+  ];
+  const searchAgents = [
+    'OAI-SearchBot',
+    'GPTBot',
+    'ChatGPT-User',
+    'ClaudeBot',
+    'Claude-SearchBot',
+    'Claude-User',
+    'PerplexityBot',
+    'Google-Extended',
+    'Applebot-Extended',
+  ];
+  return [
+    'User-agent: *',
+    ...rules,
+    '',
+    ...searchAgents.map((agent) => `User-agent: ${agent}`),
+    ...rules,
+    '',
+    ...(sitemapUrl ? [`Sitemap: ${sitemapUrl}`] : []),
     '',
   ].join('\n');
 }

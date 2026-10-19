@@ -1,8 +1,8 @@
 # Status for reviewer
 
-- Updated: 19 October 2026, 10:20 UTC. **LA-2:** Verify #143 failed because `/practice` was missing from Vercel shell rewrites; synced locally and targeted test passes.
-- Next: push route-sync correction and wait for green Verify before LA-3.
-- Hard stops: no publish, deployment, domain, DNS, secrets or paid services. Eight content attachments remain untracked.
+- Updated: 19 October 2026, 10:31 UTC. **Phase A:** LA-1 Verify #142 green; LA-2 Verify #144 green; LA-3 locally green, CI pending.
+- Last push: `df07d40`, Verify #144 Success. Canonicals use the configured site origin; Replit reports no active deployment, so URLs are not live yet.
+- Next: push LA-3, then LA-4. No open code questions; deployment remains owner-approval-gated. No publish, domain, DNS, secrets or paid services; eight attachments remain untracked.
 - After LA-7: resume remaining M6 items; stop first for Phase A deployment approval.
 
 ## Previous verification history

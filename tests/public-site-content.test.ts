@@ -103,7 +103,7 @@ describe('public-site shared content', () => {
     const faqHtml = renderPublicFaqHtml();
     const compareHtml = renderPublicCompareHtml();
     const llmsText = renderLlmsTxt();
-    const faqPage = structuredPublicData().find(
+    const faqPage = structuredPublicData({ includeFaqPage: true }).find(
       (item) => item['@type'] === 'FAQPage',
     );
     for (const faq of additionalFaqs) {

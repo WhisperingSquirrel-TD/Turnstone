@@ -12,8 +12,11 @@ import {
   renderRobotsTxt,
   type DeploymentMode,
 } from '@workspace/security/deployment';
+import { config } from './config';
 import {
+  renderLlmsTxt,
   renderPublicPageDocument,
+  renderSitemapXml,
   type PublicPageSlug,
 } from './public-site-content';
 
@@ -147,9 +150,14 @@ export async function buildStaticPublicSite({
   });
   await writeFile(join(output, 'app-shell.html'), appFallback, 'utf8');
   await writeFile(join(output, '404.html'), appFallback, 'utf8');
+  await writeFile(join(output, 'llms.txt'), renderLlmsTxt(), 'utf8');
+  await writeFile(join(output, 'sitemap.xml'), renderSitemapXml(), 'utf8');
   await writeFile(
     join(output, 'robots.txt'),
-    renderRobotsTxt(deploymentMode),
+    renderRobotsTxt(
+      deploymentMode,
+      new URL('/sitemap.xml', config.siteOrigin).href,
+    ),
     'utf8',
   );
 }

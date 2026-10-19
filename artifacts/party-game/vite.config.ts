@@ -18,6 +18,7 @@ import {
   renderPublicHomeHtml,
   renderPublicAppShellHtml,
   renderPublicPageDocument,
+  renderSitemapXml,
   structuredPublicData,
   type PublicPageSlug,
 } from './src/public-site-content';
@@ -211,7 +212,21 @@ export default defineConfig({
           if (route === '/robots.txt') {
             response.statusCode = 200;
             response.setHeader('Content-Type', 'text/plain; charset=utf-8');
-            response.end(renderRobotsTxt(deploymentMode));
+            response.end(
+              renderRobotsTxt(
+                deploymentMode,
+                new URL('/sitemap.xml', config.siteOrigin).href,
+              ),
+            );
+            return;
+          }
+          if (route === '/sitemap.xml') {
+            response.statusCode = 200;
+            response.setHeader(
+              'Content-Type',
+              'application/xml; charset=utf-8',
+            );
+            response.end(renderSitemapXml());
             return;
           }
           const publicPage = publicPageSlugForRoute(route);
@@ -303,9 +318,20 @@ export default defineConfig({
       },
       async closeBundle() {
         if (writeRobotsForBuild && robotsOutputPath && staticPublicOutputPath) {
-          writeFileSync(robotsOutputPath, renderRobotsTxt(deploymentMode));
+          const publicOutputDirectory = path.dirname(robotsOutputPath);
+          writeFileSync(
+            robotsOutputPath,
+            renderRobotsTxt(
+              deploymentMode,
+              new URL('/sitemap.xml', config.siteOrigin).href,
+            ),
+          );
+          writeFileSync(
+            path.join(publicOutputDirectory, 'sitemap.xml'),
+            renderSitemapXml(),
+          );
           await buildStaticPublicSite({
-            sourceDirectory: path.dirname(robotsOutputPath),
+            sourceDirectory: publicOutputDirectory,
             outputDirectory: staticPublicOutputPath,
             deploymentMode,
           });

@@ -5,7 +5,10 @@ import {
   shouldNoindexPath,
   type DeploymentMode,
 } from '@workspace/security/deployment';
-import { APP_ROUTE_PATHS } from '@workspace/shared/app-routes';
+import {
+  APP_ROUTE_PATHS,
+  PUBLIC_MARKETING_ROUTE_PATHS,
+} from '@workspace/shared/app-routes';
 
 export interface PublicFact {
   id: string;
@@ -125,21 +128,48 @@ export function getPublicFacts(): PublicFact[] {
   ];
 }
 
-export function structuredPublicData(): Record<string, unknown>[] {
-  const answer = en.publicSite.answer(config.appName);
+export function structuredPublicData({
+  includeFaqPage = false,
+}: { includeFaqPage?: boolean } = {}): Record<string, unknown>[] {
+  const description = en.publicSite.comingSoonBody;
   const facts = getPublicFacts().map((fact) => ({
     '@type': 'PropertyValue',
     name: fact.label,
     value: fact.value,
   }));
+  const organisationId = new URL('#organization', config.organisation.url).href;
+  const websiteId = new URL('#website', config.siteOrigin).href;
   return [
     {
       '@context': 'https://schema.org',
-      '@type': 'WebApplication',
+      '@type': 'Organization',
+      '@id': organisationId,
+      name: config.organisation.name,
+      url: config.organisation.url,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: config.organisation.location.locality,
+        addressRegion: config.organisation.location.region,
+        addressCountry: 'GB',
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      '@id': websiteId,
       name: config.appName,
       url: config.siteOrigin,
       inLanguage: 'en-GB',
-      description: answer,
+      publisher: { '@id': organisationId },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      '@id': new URL('#application', config.siteOrigin).href,
+      name: config.appName,
+      url: config.siteOrigin,
+      inLanguage: 'en-GB',
+      description,
       applicationCategory: 'GameApplication',
       operatingSystem: 'Any modern web browser',
       isAccessibleForFree: true,
@@ -153,25 +183,21 @@ export function structuredPublicData(): Record<string, unknown>[] {
         'The organiser plays too',
         'Privacy shield designed for private reveals',
       ],
-      additionalProperty: facts,
-      publisher: {
-        '@type': 'Organization',
-        name: config.organisation.name,
-        url: config.organisation.url,
-        address: {
-          '@type': 'PostalAddress',
-          addressLocality: config.organisation.location.locality,
-          addressRegion: config.organisation.location.region,
-          addressCountry: 'GB',
-        },
+      numberOfPlayers: {
+        '@type': 'QuantitativeValue',
+        minValue: 5,
+        maxValue: 40,
       },
+      additionalProperty: facts,
+      publisher: { '@id': organisationId },
     },
     {
       '@context': 'https://schema.org',
       '@type': 'Game',
+      '@id': new URL('#game', config.siteOrigin).href,
       name: `${config.appName} hidden-role game`,
       url: config.siteOrigin,
-      description: answer,
+      description,
       numberOfPlayers: {
         '@type': 'QuantitativeValue',
         minValue: 5,
@@ -184,18 +210,22 @@ export function structuredPublicData(): Record<string, unknown>[] {
       },
       additionalProperty: facts,
     },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: en.publicSite.faq.map((item) => ({
-        '@type': 'Question',
-        name: item.question,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: item.answer,
-        },
-      })),
-    },
+    ...(includeFaqPage
+      ? [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: en.publicSite.faq.map((item) => ({
+              '@type': 'Question',
+              name: item.question,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: item.answer,
+              },
+            })),
+          },
+        ]
+      : []),
   ];
 }
 
@@ -378,6 +408,21 @@ export function renderPublicComingSoonHtml(basePath = '/'): string {
 }
 
 export function renderLlmsTxt(): string {
+  const pageLabels: Record<
+    (typeof PUBLIC_MARKETING_ROUTE_PATHS)[number],
+    string
+  > = {
+    [APP_ROUTE_PATHS.home]: en.nav.home,
+    [APP_ROUTE_PATHS.about]: en.publicSite.aboutHeading,
+    [APP_ROUTE_PATHS.howToPlay]: en.publicSite.howToPlayHeading,
+    [APP_ROUTE_PATHS.faq]: en.publicSite.faqHeading,
+    [APP_ROUTE_PATHS.compare]: en.publicSite.compareHeading,
+    [APP_ROUTE_PATHS.comingSoon]: en.publicSite.comingSoonPageTitle,
+  };
+  const pages = PUBLIC_MARKETING_ROUTE_PATHS.map(
+    (route) =>
+      `- [${pageLabels[route]}](${new URL(route, config.siteOrigin).href})`,
+  ).join('\n');
   const facts = getPublicFacts()
     .map((fact) => `- ${fact.label}: ${fact.value}`)
     .join('\n');
@@ -390,6 +435,9 @@ export function renderLlmsTxt(): string {
   return `# ${config.appName}
 
 ${en.publicSite.answer(config.appName)}
+
+## Public pages
+${pages}
 
 ## Key facts
 ${facts}
@@ -405,6 +453,18 @@ ${questions}
 `;
 }
 
+export function renderSitemapXml(): string {
+  const entries = PUBLIC_MARKETING_ROUTE_PATHS.map(
+    (route) =>
+      `  <url><loc>${escapeHtml(new URL(route, config.siteOrigin).href)}</loc></url>`,
+  ).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries}
+</urlset>
+`;
+}
+
 export function renderPublicStaticDocument({
   content,
   title,
@@ -415,6 +475,7 @@ export function renderPublicStaticDocument({
   fontPreloadHrefs,
   robotsDirective,
   includeStructuredData = true,
+  structuredData,
 }: {
   content: string;
   title: string;
@@ -425,11 +486,11 @@ export function renderPublicStaticDocument({
   fontPreloadHrefs: readonly string[];
   robotsDirective?: string;
   includeStructuredData?: boolean;
+  structuredData?: Record<string, unknown>[];
 }): string {
-  const jsonLd = JSON.stringify(structuredPublicData()).replaceAll(
-    '<',
-    '\\u003c',
-  );
+  const jsonLd = JSON.stringify(
+    structuredData ?? structuredPublicData(),
+  ).replaceAll('<', '\\u003c');
   const stylesheets = stylesheetHrefs
     .map((href) => `<link rel="stylesheet" href="${escapeHtml(href)}">`)
     .join('');
@@ -448,9 +509,14 @@ export function renderPublicStaticDocument({
     <meta name="description" content="${escapeHtml(description)}">
     <meta name="robots" content="${escapeHtml(robotsDirective ?? (config.preLaunch ? 'noindex, nofollow' : 'index, follow'))}">
     ${canonicalUrl ? `<link rel="canonical" href="${escapeHtml(canonicalUrl)}">` : ''}
+    ${canonicalUrl ? `<meta property="og:url" content="${escapeHtml(canonicalUrl)}">` : ''}
+    <meta property="og:site_name" content="${escapeHtml(config.appName)}">
     <meta property="og:title" content="${escapeHtml(title)}">
     <meta property="og:description" content="${escapeHtml(description)}">
     <meta property="og:type" content="website">
+    ${canonicalUrl ? `<meta name="twitter:card" content="summary_large_image"><meta name="twitter:url" content="${escapeHtml(canonicalUrl)}">` : ''}
+    <meta name="twitter:title" content="${escapeHtml(title)}">
+    <meta name="twitter:description" content="${escapeHtml(description)}">
     <link rel="icon" type="image/svg+xml" href="${escapeHtml(`${normaliseBasePath(basePath)}favicon.svg`)}">
     ${fontPreloads}
     ${stylesheets}
@@ -534,5 +600,6 @@ export function renderPublicPageDocument({
       robotsDirective ??
       (shouldNoindexPath(route, mode) ? 'noindex, nofollow' : 'index, follow'),
     includeStructuredData,
+    structuredData: structuredPublicData({ includeFaqPage: page === 'faq' }),
   });
 }

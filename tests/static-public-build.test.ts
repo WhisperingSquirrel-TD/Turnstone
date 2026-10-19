@@ -98,6 +98,8 @@ it('builds public pages and an app fallback without scripts or game assets', asy
   );
 
   const robots = await readFile(join(outputDirectory, 'robots.txt'), 'utf8');
+  const sitemap = await readFile(join(outputDirectory, 'sitemap.xml'), 'utf8');
+  const llms = await readFile(join(outputDirectory, 'llms.txt'), 'utf8');
   expect(robots).toContain('Allow: /');
   expect(robots).toContain('Disallow: /play');
   expect(robots).toContain('Disallow: /practice');
@@ -108,6 +110,9 @@ it('builds public pages and an app fallback without scripts or game assets', asy
     ),
   ).toBe(true);
   expect(shouldNoindexPath('/practice', deploymentMode)).toBe(true);
+  expect(sitemap).toContain('/coming-soon');
+  expect(sitemap).not.toContain('/play');
+  expect(llms).toContain('/how-to-play');
 
   const files = await listFiles(outputDirectory);
   expect(files.some((file) => file.endsWith('.js'))).toBe(false);
