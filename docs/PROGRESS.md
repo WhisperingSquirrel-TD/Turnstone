@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- **Milestone 5 real-phone rehearsal accepted; Milestone 6 is in progress.** Updated: 19 October 2026, 05:53 UTC.
-- Last code push: `e594a09`, [Verify #130](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39206515475) **Success**, including the browser profiles. #129 failed when the console hid late-invite logistics; #130 verifies both screens.
-- M6 first slice: active-game controls with aggregate-only progress, server-clock countdown, pause/resume, 1/5/15-minute extensions, and confirmation before advancing or ending. Local typecheck, lint, unit, Pixel/iPhone E2E pass; console screen tests use mocked HTTP.
-- Content skipped: eight owner source files absent. No publishing, paid service, domain, DNS or production-secret changes; production peak capacity remains unproven.
+- **Milestone 5 real-phone rehearsal accepted; Milestone 6 is in progress.** Updated: 19 October 2026, 06:04 UTC.
+- Last verified code push: `e594a09`, [Verify #130](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39206515475) **Success**, including browser profiles. Current code commit `18d8b6c` adds the latest five public updates to the coordinator console; Verify is pending.
+- Local typecheck, lint, 5 coordinator unit tests and Pixel/iPhone coordinator E2E pass. M6 console includes aggregate-only progress, server-clock countdown, pause/resume, extensions, confirmations and public updates.
+- Eight owner content attachments are now present but not processed; they remain uncommitted. No publishing, paid service, domain, DNS or production-secret changes; production peak capacity remains unproven.
 
 ## Previous verification history
 
