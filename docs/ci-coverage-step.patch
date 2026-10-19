@@ -1,0 +1,23 @@
+diff --git a/.github/workflows/verify.yml b/.github/workflows/verify.yml
+--- a/.github/workflows/verify.yml
++++ b/.github/workflows/verify.yml
+@@ -130,8 +130,9 @@ jobs:
+           echo "::add-mask::$pin_pepper"
+           echo "PIN_PEPPER=$pin_pepper" >> "$GITHUB_ENV"
+       - run: pnpm run db:migrate:dev
+-      - run: pnpm run test:integration
++      - name: Run integration tests with the 85% server coverage gate
++        run: pnpm run test:server-coverage
+ 
+   scenarios:
+     runs-on: ubuntu-24.04
+     timeout-minutes: 10
+@@ -352,7 +353,7 @@ jobs:
+       - static-checks
+       - unit
+       - property
+-      - integration
++      - integration # Includes the 85% server coverage gate.
+       - rehearsal-live
+       - scenarios
+       - merge-scenario-reports
