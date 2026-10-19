@@ -277,6 +277,13 @@ test('presenter shows the public verdict without exposing private ballots or a d
   await expect(page.getByTestId('presenter-countdown')).toHaveText(/1:59|2:00/);
   await expect(page.getByText('private-ballot-seat')).toHaveCount(0);
   await expect(page.getByText(/Prize pot:/)).toHaveCount(0);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
 });
 
 test('presenter shows the public game result but never per-seat roles', async ({
@@ -359,6 +366,13 @@ test('presenter shows the public game result but never per-seat roles', async ({
   await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Alex: Traitor')).toHaveCount(0);
   await expect(page.getByText('Sam: Faithful')).toHaveCount(0);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
 });
 
 test('presenter does not announce the winner before the result is public', async ({
