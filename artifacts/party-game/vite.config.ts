@@ -11,15 +11,15 @@ import {
 import { noncePlugin } from './vite.security';
 import { config } from './src/config';
 import { createWebManifest } from './src/pwa-manifest';
+import { buildStaticPublicSite } from './src/static-public-build';
 import {
   getPublicTitle,
   renderLlmsTxt,
-  renderPublicCompareHtml,
-  renderPublicFaqHtml,
   renderPublicHomeHtml,
   renderPublicAppShellHtml,
-  renderPublicStaticDocument,
+  renderPublicPageDocument,
   structuredPublicData,
+  type PublicPageSlug,
 } from './src/public-site-content';
 import { en } from './src/locale/en-GB';
 
@@ -42,6 +42,7 @@ if (!basePath?.startsWith('/'))
 const baseHref = basePath.endsWith('/') ? basePath : `${basePath}/`;
 let writeRobotsForBuild = false;
 let robotsOutputPath: string | undefined;
+let staticPublicOutputPath: string | undefined;
 
 function appRelativePath(pathname: string): string {
   const prefix = basePath.endsWith('/') ? basePath : `${basePath}/`;
@@ -52,26 +53,28 @@ function appRelativePath(pathname: string): string {
   return route === '/index.html' ? '/' : route;
 }
 
+function publicPageSlugForRoute(route: string): PublicPageSlug | undefined {
+  const routeSlugs: ReadonlyArray<[string, PublicPageSlug]> = [
+    [APP_ROUTE_PATHS.about, 'about'],
+    [APP_ROUTE_PATHS.howToPlay, 'how-to-play'],
+    [APP_ROUTE_PATHS.faq, 'faq'],
+    [APP_ROUTE_PATHS.compare, 'compare'],
+    [APP_ROUTE_PATHS.comingSoon, 'coming-soon'],
+  ];
+  return routeSlugs.find(([pageRoute]) => route === pageRoute)?.[1];
+}
+
 function pageDocument(
-  kind: 'faq' | 'compare',
+  page: PublicPageSlug,
   stylesheetHrefs: readonly string[],
   fontPreloadHrefs: readonly string[],
 ): string {
-  const isFaq = kind === 'faq';
-  return renderPublicStaticDocument({
-    content: isFaq
-      ? renderPublicFaqHtml(basePath)
-      : renderPublicCompareHtml(basePath),
-    title: isFaq
-      ? `${config.appName}: ${en.publicSite.faqHeading}`
-      : `${config.appName}: ${en.publicSite.compareHeading}`,
-    description: isFaq
-      ? en.publicSite.faqDescription
-      : en.publicSite.compareDescription,
-    canonicalUrl: new URL(`/${kind}`, config.siteOrigin).href,
+  return renderPublicPageDocument({
+    page,
     basePath,
     stylesheetHrefs,
     fontPreloadHrefs,
+    mode: deploymentMode,
   });
 }
 
@@ -140,6 +143,10 @@ export default defineConfig({
             resolvedConfig.build.outDir,
             'robots.txt',
           );
+          staticPublicOutputPath = path.resolve(
+            resolvedConfig.root,
+            'dist/static-public',
+          );
         }
       },
       transformIndexHtml: {
@@ -147,12 +154,10 @@ export default defineConfig({
         handler: (html, context) => {
           const pathname = new URL(context.path, 'http://vite.local').pathname;
           const route = appRelativePath(pathname);
-          if (
-            route === APP_ROUTE_PATHS.faq ||
-            route === APP_ROUTE_PATHS.compare
-          ) {
+          const publicPage = publicPageSlugForRoute(route);
+          if (publicPage) {
             return pageDocument(
-              route === APP_ROUTE_PATHS.faq ? 'faq' : 'compare',
+              publicPage,
               [`${baseHref}src/index.css`, `${baseHref}src/public-home.css`],
               [
                 `${baseHref}src/fonts/playfair-display-latin-400-normal.woff2`,
@@ -209,17 +214,15 @@ export default defineConfig({
             response.end(renderRobotsTxt(deploymentMode));
             return;
           }
-          if (
-            route === APP_ROUTE_PATHS.faq ||
-            route === APP_ROUTE_PATHS.compare
-          ) {
+          const publicPage = publicPageSlugForRoute(route);
+          if (publicPage) {
             const fontPreloadHrefs = [
               `${baseHref}src/fonts/playfair-display-latin-400-normal.woff2`,
               `${baseHref}src/fonts/dm-sans-latin-400-normal.woff2`,
               `${baseHref}src/fonts/dm-sans-latin-500-normal.woff2`,
             ];
             const document = pageDocument(
-              route === APP_ROUTE_PATHS.faq ? 'faq' : 'compare',
+              publicPage,
               [`${baseHref}src/index.css`, `${baseHref}src/public-home.css`],
               fontPreloadHrefs,
             );
@@ -298,9 +301,14 @@ export default defineConfig({
           source: renderLlmsTxt(),
         });
       },
-      closeBundle() {
-        if (writeRobotsForBuild && robotsOutputPath) {
+      async closeBundle() {
+        if (writeRobotsForBuild && robotsOutputPath && staticPublicOutputPath) {
           writeFileSync(robotsOutputPath, renderRobotsTxt(deploymentMode));
+          await buildStaticPublicSite({
+            sourceDirectory: path.dirname(robotsOutputPath),
+            outputDirectory: staticPublicOutputPath,
+            deploymentMode,
+          });
         }
       },
     },

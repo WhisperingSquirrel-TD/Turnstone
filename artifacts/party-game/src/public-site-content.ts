@@ -1,5 +1,11 @@
 import { config } from './config';
 import { en } from './locale/en-GB';
+import {
+  deploymentMode,
+  shouldNoindexPath,
+  type DeploymentMode,
+} from '@workspace/security/deployment';
+import { APP_ROUTE_PATHS } from '@workspace/shared/app-routes';
 
 export interface PublicFact {
   id: string;
@@ -47,6 +53,8 @@ function renderPublicHeader(basePath: string): string {
       ${renderTurnstoneWordmark(basePath)}
       <nav class="public-home-nav" aria-label="${escapeHtml(en.nav.label)}">
         <a href="${escapeHtml(basePath)}">${escapeHtml(en.nav.home)}</a>
+        <a href="${escapeHtml(`${basePath}about`)}">${escapeHtml(en.publicSite.aboutHeading)}</a>
+        <a href="${escapeHtml(`${basePath}how-to-play`)}">${escapeHtml(en.publicSite.howToPlayHeading)}</a>
         <a href="${escapeHtml(`${basePath}faq`)}">${escapeHtml(en.publicSite.faqHeading)}</a>
         <a href="${escapeHtml(`${basePath}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a>
         <a href="${escapeHtml(`${basePath}play`)}">${escapeHtml(en.nav.play)}</a>
@@ -55,6 +63,8 @@ function renderPublicHeader(basePath: string): string {
         <summary>${escapeHtml(en.nav.menu)}</summary>
         <div>
           <a href="${escapeHtml(basePath)}">${escapeHtml(en.nav.home)}</a>
+          <a href="${escapeHtml(`${basePath}about`)}">${escapeHtml(en.publicSite.aboutHeading)}</a>
+          <a href="${escapeHtml(`${basePath}how-to-play`)}">${escapeHtml(en.publicSite.howToPlayHeading)}</a>
           <a href="${escapeHtml(`${basePath}faq`)}">${escapeHtml(en.publicSite.faqHeading)}</a>
           <a href="${escapeHtml(`${basePath}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a>
           <a href="${escapeHtml(`${basePath}play`)}">${escapeHtml(en.nav.play)}</a>
@@ -66,6 +76,10 @@ function renderPublicHeader(basePath: string): string {
 
 function renderStackstoneFooterLink(basePath: string): string {
   return `<a class="brand-credit-link inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.appIconPath}`)}" alt="" width="24" height="24"></a>`;
+}
+
+function renderPublicFooter(basePath: string, extra = ''): string {
+  return `<footer class="public-home-footer" data-testid="brand-footer-static"><span>${escapeHtml(config.byline)}</span><p class="public-independence">${escapeHtml(en.publicSite.independenceStatement)}</p>${renderStackstoneFooterLink(basePath)}${extra}</footer>`;
 }
 
 function renderFaqDetails(
@@ -185,7 +199,10 @@ export function structuredPublicData(): Record<string, unknown>[] {
   ];
 }
 
-export function renderPublicHomeHtml(basePath = '/'): string {
+export function renderPublicHomeHtml(
+  basePath = '/',
+  options: { staticOnly?: boolean } = {},
+): string {
   const base = normaliseBasePath(basePath);
   const firstPart = config.appName.slice(
     0,
@@ -208,6 +225,14 @@ export function renderPublicHomeHtml(basePath = '/'): string {
     )
     .join('');
   const questions = renderFaqDetails(en.publicSite.faq);
+  const demo = options.staticOnly
+    ? ''
+    : `<section class="home-role-demo public-home-demo" aria-label="${escapeHtml(en.publicSite.demoHeading)}">
+          <h2 id="home-demo-heading">${escapeHtml(en.publicSite.demoHeading)}</h2>
+          <p>${escapeHtml(en.publicSite.demoDescription)}</p>
+          <button class="home-role-seal" type="button" aria-labelledby="home-demo-heading home-demo-seal-label" data-public-role-demo data-demo-prompt="${escapeHtml(en.publicSite.demoPrompt)}" data-traitor-label="${escapeHtml(en.game.roleTraitor)}" data-faithful-label="${escapeHtml(en.game.roleFaithful)}"><span aria-hidden="true" class="home-role-seal-ring"></span><span id="home-demo-seal-label" class="home-role-label" aria-live="polite" aria-atomic="true">${escapeHtml(en.publicSite.demoPrompt)}</span></button>
+          <a class="home-demo-link" href="${escapeHtml(playUrl)}">${escapeHtml(en.publicSite.demoLink)}</a>
+        </section>`;
 
   return `
     ${renderPublicHeader(base)}
@@ -223,12 +248,7 @@ export function renderPublicHomeHtml(basePath = '/'): string {
             <a class="quiet-action no-underline" href="${escapeHtml(practiseUrl)}">${escapeHtml(en.publicSite.practiseAlone)}</a>
           </nav>
         </div>
-        <section class="home-role-demo public-home-demo" aria-label="${escapeHtml(en.publicSite.demoHeading)}">
-          <h2 id="home-demo-heading">${escapeHtml(en.publicSite.demoHeading)}</h2>
-          <p>${escapeHtml(en.publicSite.demoDescription)}</p>
-          <button class="home-role-seal" type="button" aria-labelledby="home-demo-heading home-demo-seal-label" data-public-role-demo data-demo-prompt="${escapeHtml(en.publicSite.demoPrompt)}" data-traitor-label="${escapeHtml(en.game.roleTraitor)}" data-faithful-label="${escapeHtml(en.game.roleFaithful)}"><span aria-hidden="true" class="home-role-seal-ring"></span><span id="home-demo-seal-label" class="home-role-label" aria-live="polite" aria-atomic="true">${escapeHtml(en.publicSite.demoPrompt)}</span></button>
-          <a class="home-demo-link" href="${escapeHtml(playUrl)}">${escapeHtml(en.publicSite.demoLink)}</a>
-        </section>
+        ${demo}
       </section>
       <section class="public-home-section public-home-answer-section">
         <p class="public-home-answer">${escapeHtml(en.publicSite.answer(config.appName))}</p>
@@ -248,7 +268,7 @@ export function renderPublicHomeHtml(basePath = '/'): string {
         <a class="public-page-link" href="${escapeHtml(`${base}faq`)}">${escapeHtml(en.publicSite.seeAllQuestions)}</a>
       </section>
     </main>
-    <footer class="public-home-footer" data-testid="brand-footer-static"><span>${escapeHtml(config.byline)}</span>${renderStackstoneFooterLink(base)}<a href="${escapeHtml(`${base}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a></footer>
+    ${renderPublicFooter(base, `<a href="${escapeHtml(`${base}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a>`)}
     <span class="sr-only">${appName}</span>
   `;
 }
@@ -265,7 +285,7 @@ export function renderPublicFaqHtml(basePath = '/'): string {
       </section>
       ${renderFactsBlock('public-faq-facts-heading')}
     </main>
-    <footer class="public-home-footer" data-testid="brand-footer-static"><span>${escapeHtml(config.byline)}</span>${renderStackstoneFooterLink(base)}</footer>
+      ${renderPublicFooter(base)}
   `;
 }
 
@@ -294,7 +314,66 @@ export function renderPublicCompareHtml(basePath = '/'): string {
         <div class="public-home-faq">${renderFaqDetails(en.publicSite.faq.slice(-3))}</div>
       </section>
     </main>
-    <footer class="public-home-footer" data-testid="brand-footer-static"><span>${escapeHtml(config.byline)}</span>${renderStackstoneFooterLink(base)}</footer>
+      ${renderPublicFooter(base)}
+  `;
+}
+
+export function renderPublicAboutHtml(basePath = '/'): string {
+  const base = normaliseBasePath(basePath);
+  return `
+    ${renderPublicHeader(base)}
+    <main id="main" class="public-home-content">
+      <section class="public-home-section" aria-labelledby="public-about-heading">
+        <h1 id="public-about-heading">${escapeHtml(en.publicSite.aboutHeading)}</h1>
+        <p class="public-home-answer">${escapeHtml(en.publicSite.answer(config.appName))}</p>
+        <p>${escapeHtml(en.publicSite.independenceStatement)}</p>
+      </section>
+    </main>
+    ${renderPublicFooter(base)}
+  `;
+}
+
+export function renderPublicHowToPlayHtml(basePath = '/'): string {
+  const base = normaliseBasePath(basePath);
+  const steps = en.publicSite.howItWorks
+    .map(
+      (step, index) =>
+        `<li><h2>${index + 1}. ${escapeHtml(step.heading)}</h2><p>${escapeHtml(step.body)}</p></li>`,
+    )
+    .join('');
+  return `
+    ${renderPublicHeader(base)}
+    <main id="main" class="public-home-content">
+      <section class="public-home-section" aria-labelledby="public-how-to-play-heading">
+        <h1 id="public-how-to-play-heading">${escapeHtml(en.publicSite.howToPlayHeading)}</h1>
+        <p class="public-home-answer">${escapeHtml(en.publicSite.howToPlayDescription)}</p>
+        <ol class="public-home-steps">${steps}</ol>
+      </section>
+    </main>
+    ${renderPublicFooter(base)}
+  `;
+}
+
+export function renderPublicComingSoonHtml(basePath = '/'): string {
+  const base = normaliseBasePath(basePath);
+  const firstPart = config.appName.slice(
+    0,
+    config.appName.length - config.wordmarkAccentSuffix.length,
+  );
+  return `
+    ${renderPublicHeader(base)}
+    <main id="main" class="public-home-content">
+      <section class="public-home-hero" aria-labelledby="coming-soon-title">
+        <div class="public-home-hero-copy">
+          <h1 id="coming-soon-title" class="public-home-wordmark"><span>${escapeHtml(firstPart)}</span><span class="text-gilt">${escapeHtml(config.wordmarkAccentSuffix)}</span></h1>
+          <p class="public-home-subtitle">${escapeHtml(en.entry.subtitle)}</p>
+          <p class="public-home-byline">${escapeHtml(en.entry.welcomeDescription)}</p>
+          <p>${escapeHtml(en.publicSite.comingSoonBody)}</p>
+          <p>${escapeHtml(config.byline)}</p>
+        </div>
+      </section>
+    </main>
+    ${renderPublicFooter(base)}
   `;
 }
 
@@ -334,14 +413,18 @@ export function renderPublicStaticDocument({
   basePath,
   stylesheetHrefs,
   fontPreloadHrefs,
+  robotsDirective,
+  includeStructuredData = true,
 }: {
   content: string;
   title: string;
   description: string;
-  canonicalUrl: string;
+  canonicalUrl: string | null;
   basePath: string;
   stylesheetHrefs: readonly string[];
   fontPreloadHrefs: readonly string[];
+  robotsDirective?: string;
+  includeStructuredData?: boolean;
 }): string {
   const jsonLd = JSON.stringify(structuredPublicData()).replaceAll(
     '<',
@@ -363,18 +446,93 @@ export function renderPublicStaticDocument({
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>${escapeHtml(title)}</title>
     <meta name="description" content="${escapeHtml(description)}">
-    <meta name="robots" content="${config.preLaunch ? 'noindex, nofollow' : 'index, follow'}">
-    <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+    <meta name="robots" content="${escapeHtml(robotsDirective ?? (config.preLaunch ? 'noindex, nofollow' : 'index, follow'))}">
+    ${canonicalUrl ? `<link rel="canonical" href="${escapeHtml(canonicalUrl)}">` : ''}
     <meta property="og:title" content="${escapeHtml(title)}">
     <meta property="og:description" content="${escapeHtml(description)}">
     <meta property="og:type" content="website">
     <link rel="icon" type="image/svg+xml" href="${escapeHtml(`${normaliseBasePath(basePath)}favicon.svg`)}">
     ${fontPreloads}
     ${stylesheets}
-    <script type="application/ld+json">${jsonLd}</script>
+    ${includeStructuredData ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
   </head>
   <body>
     <div id="static-home" class="safe-page">${content}</div>
   </body>
 </html>`;
+}
+
+export type PublicPageSlug =
+  'home' | 'about' | 'how-to-play' | 'faq' | 'compare' | 'coming-soon';
+
+const PUBLIC_PAGE_PATHS: Record<PublicPageSlug, string> = {
+  home: APP_ROUTE_PATHS.home,
+  about: APP_ROUTE_PATHS.about,
+  'how-to-play': APP_ROUTE_PATHS.howToPlay,
+  faq: APP_ROUTE_PATHS.faq,
+  compare: APP_ROUTE_PATHS.compare,
+  'coming-soon': APP_ROUTE_PATHS.comingSoon,
+};
+
+export function renderPublicPageDocument({
+  page,
+  basePath = '/',
+  stylesheetHrefs,
+  fontPreloadHrefs,
+  mode = deploymentMode,
+  robotsDirective,
+  canonicalUrl,
+  includeStructuredData = true,
+}: {
+  page: PublicPageSlug;
+  basePath?: string;
+  stylesheetHrefs: readonly string[];
+  fontPreloadHrefs: readonly string[];
+  mode?: DeploymentMode;
+  robotsDirective?: string;
+  canonicalUrl?: string | null;
+  includeStructuredData?: boolean;
+}): string {
+  const route = PUBLIC_PAGE_PATHS[page];
+  const title = {
+    home: getPublicTitle(),
+    about: `${config.appName}: ${en.publicSite.aboutHeading}`,
+    'how-to-play': `${config.appName}: ${en.publicSite.howToPlayHeading}`,
+    faq: `${config.appName}: ${en.publicSite.faqHeading}`,
+    compare: `${config.appName}: ${en.publicSite.compareHeading}`,
+    'coming-soon': en.publicSite.comingSoonPageTitle,
+  }[page];
+  const description = {
+    home: en.publicSite.answer(config.appName),
+    about: en.publicSite.aboutDescription,
+    'how-to-play': en.publicSite.howToPlayDescription,
+    faq: en.publicSite.faqDescription,
+    compare: en.publicSite.compareDescription,
+    'coming-soon': en.publicSite.comingSoonDescription,
+  }[page];
+  const content = {
+    home: renderPublicHomeHtml(basePath, { staticOnly: true }),
+    about: renderPublicAboutHtml(basePath),
+    'how-to-play': renderPublicHowToPlayHtml(basePath),
+    faq: renderPublicFaqHtml(basePath),
+    compare: renderPublicCompareHtml(basePath),
+    'coming-soon': renderPublicComingSoonHtml(basePath),
+  }[page];
+
+  return renderPublicStaticDocument({
+    content,
+    title,
+    description,
+    canonicalUrl:
+      canonicalUrl === undefined
+        ? new URL(route, config.siteOrigin).href
+        : canonicalUrl,
+    basePath,
+    stylesheetHrefs,
+    fontPreloadHrefs,
+    robotsDirective:
+      robotsDirective ??
+      (shouldNoindexPath(route, mode) ? 'noindex, nofollow' : 'index, follow'),
+    includeStructuredData,
+  });
 }

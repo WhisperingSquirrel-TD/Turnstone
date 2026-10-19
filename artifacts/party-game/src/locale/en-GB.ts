@@ -1,3 +1,6 @@
+const independenceStatement =
+  'Turnstone is an independent game made by Stackstone Consulting. It is not affiliated with, or endorsed by, any TV programme or its producers.';
+
 export const en = {
   skip: 'Skip to main content',
   nav: { label: 'Main', home: 'Home', play: 'Play', menu: 'Menu' },
@@ -171,6 +174,18 @@ export const en = {
           'Play remotely with scheduled private moments and time to discuss between steps.',
       },
     ],
+    aboutHeading: 'About Turnstone',
+    aboutDescription:
+      'Turnstone is an independent party game made by Stackstone Consulting.',
+    howToPlayHeading: 'How to play',
+    howToPlayDescription:
+      'A quick guide to joining and playing Turnstone together.',
+    comingSoonPageTitle: 'Turnstone is coming soon',
+    comingSoonDescription:
+      'Turnstone is a free hidden-traitor party game for 5 to 40 people, played on phones in the same room or over a video call. It is coming soon.',
+    comingSoonBody:
+      'Turnstone is a free hidden-traitor party game for 5 to 40 people, played on phones in the same room or over a video call. It is coming soon.',
+    independenceStatement,
     faqHeading: 'Frequently asked questions',
     faqDescription:
       'Answers about group size, playing on phones, privacy and how to join.',
@@ -225,8 +240,7 @@ export const en = {
       },
       {
         question: 'Is Turnstone the official game from the TV show?',
-        answer:
-          'No. Turnstone is an independent game made by Stackstone Consulting. It is not affiliated with, or endorsed by, any TV programme or its producers.',
+        answer: `No. ${independenceStatement}`,
       },
       {
         question: 'Do I need WhatsApp or an app?',

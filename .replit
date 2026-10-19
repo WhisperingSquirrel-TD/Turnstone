@@ -8,6 +8,74 @@ deploymentTarget = "autoscale"
 args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
+# Used only if the owner later selects Replit Static Deployment; this does not change the current Autoscale target.
+[[deployment.rewrites]]
+from = "/play"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/play/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/practice"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/practice/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/create"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/create/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/join"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/join/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/join-request"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/join-request/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/coordinate"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/coordinate/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/game"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/game/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/tv"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/tv/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/account"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/account/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/admin"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/admin/*"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/recap"
+to = "/app-shell.html"
+[[deployment.rewrites]]
+from = "/recap/*"
+to = "/app-shell.html"
+
 [workflows]
 runButton = "Project"
 

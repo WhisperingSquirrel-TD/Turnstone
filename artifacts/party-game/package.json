@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
+    "build:static-public": "PORT=3000 BASE_PATH=/ COMING_SOON_MODE=true PRE_LAUNCH_NOINDEX=true vite build --config vite.config.ts",
     "serve": "tsx src/serve.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- Updated: 19 October 2026, 09:41 UTC. **Phase A LA-1:** explicit coming-soon mode; public pages crawlable only in that mode, app/API routes stay noindex, and game creation is closed.
-- Last green: Verify #141 **Success** on `9b94e46`. LA-1 targeted tests, typechecks, lint, format, and both coming-soon/default builds pass locally; commit pending.
+- Updated: 19 October 2026, 10:13 UTC. **Phase A LA-1:** Verify #142 **Success** on `e02f493`; **LA-2:** static public output built and locally verified, CI pending.
+- Next: LA-3 agent-readable pages and metadata. No deployment or production changes.
 - Hard stops: no publish, deployment, domain, DNS, secrets or paid services. Eight content attachments remain untracked.
-- Next: LA-2 static public output, then LA-3–LA-7; resume remaining M6 items only afterwards.
+- After LA-7: resume remaining M6 items; stop first for Phase A deployment approval.
 
 ## Previous verification history
 
