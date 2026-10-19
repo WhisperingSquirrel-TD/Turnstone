@@ -49,3 +49,19 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# User-supplied review and content attachments kept locally, not used by the build
+/attached_assets/Pasted-HOSTING-DECISION-owner-approved-14-Oct-2026-Replaces-SP_1791986830881.txt
+/attached_assets/Pasted-HOSTING-DECISION-owner-approved-14-Oct-2026-Replaces-SP_1791986835746.txt
+/attached_assets/Pasted-HOSTING-DECISION-owner-approved-14-Oct-2026-Replaces-SP_1791986839011.txt
+/attached_assets/Pasted-HOSTING-DECISION-owner-approved-14-Oct-2026-Replaces-SP_1791986848200.txt
+/attached_assets/Pasted-HOSTING-DECISION-owner-approved-14-Oct-2026-Replaces-SP_1791986852222.txt
+/attached_assets/Pasted-HOSTING-DECISION-owner-approved-14-Oct-2026-Replaces-SP_1791986854993.txt
+/attached_assets/Pasted-ROUND-4-owner-rehearsal-15-Oct-Fix-under-TDD-targeted-t_1792053594206.txt
+/attached_assets/README_1792389710809.md
+/attached_assets/image_1792417265191.png
+/attached_assets/image_1792417332418.png
+/attached_assets/missions_1792389710788.json
+/attached_assets/seasons_1792389710823.json
+/attached_assets/task-decoys_1792389710861.json
+/attached_assets/traitor-tasks_1792389710910.json
