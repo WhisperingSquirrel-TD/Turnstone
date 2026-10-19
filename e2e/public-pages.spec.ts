@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
+import { PUBLIC_MARKETING_ROUTE_PATHS } from '../lib/shared/src/app-routes';
 
 const requiredQuestions = [
   'Is there a free alternative to the WhatsApp traitors game?',
@@ -200,6 +201,167 @@ test('the comparison route opens directly in a fresh browser page', async ({
   await expect(
     page.getByRole('heading', { level: 1, name: 'Compare game formats' }),
   ).toBeVisible();
+});
+
+test('all public pages fit the requested widths in portrait and landscape', async ({
+  page,
+}) => {
+  const widths = [320, 360, 375, 390, 414, 768, 1024, 1280];
+
+  for (const route of PUBLIC_MARKETING_ROUTE_PATHS) {
+    const response = await page.goto(route);
+    expect(response?.status(), route).toBe(200);
+    for (const width of widths) {
+      for (const height of [
+        Math.max(900, width + 100),
+        Math.max(240, Math.min(700, width - 1)),
+      ]) {
+        await page.setViewportSize({ width, height });
+        const layout = await page.evaluate(() => {
+          const visible = (element: Element) => {
+            const rect = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return (
+              rect.width > 0 &&
+              rect.height > 0 &&
+              style.display !== 'none' &&
+              style.visibility !== 'hidden'
+            );
+          };
+          const targets = Array.from(
+            document.querySelectorAll(
+              'a, button, summary, input, select, textarea',
+            ),
+          )
+            .filter(visible)
+            .map((element) => {
+              const { width, height } = element.getBoundingClientRect();
+              return { width, height, label: element.textContent?.trim() };
+            });
+          const copySizes = Array.from(
+            document.querySelectorAll(
+              'main p, main li, main summary, main dt, main dd, main blockquote, main label, main a, footer .brand-credit',
+            ),
+          )
+            .filter(visible)
+            .map((element) =>
+              Number.parseFloat(getComputedStyle(element).fontSize),
+            );
+          const clippedText = Array.from(
+            document.querySelectorAll(
+              'main h1, main h2, main p, main a, main button, main summary, main li',
+            ),
+          )
+            .filter(visible)
+            .flatMap((element) => {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              return Array.from(range.getClientRects())
+                .filter(
+                  (rect) =>
+                    rect.left < -1 || rect.right > window.innerWidth + 1,
+                )
+                .map(() => element.textContent?.trim());
+            });
+          return {
+            scrollWidth: Math.max(
+              document.documentElement.scrollWidth,
+              document.body.scrollWidth,
+            ),
+            viewportWidth: window.innerWidth,
+            undersizedTargets: targets.filter(
+              (target) => target.width < 44 || target.height < 44,
+            ),
+            clippedText,
+            smallestBodyCopy: Math.min(...copySizes),
+          };
+        });
+
+        expect(
+          layout.scrollWidth,
+          `${route} at ${width}px × ${height}px`,
+        ).toBeLessThanOrEqual(layout.viewportWidth);
+        expect(
+          layout.undersizedTargets,
+          `${route} has a tap target below 44px at ${width}px × ${height}px`,
+        ).toEqual([]);
+        expect(
+          layout.clippedText,
+          `${route} has clipped text at ${width}px × ${height}px`,
+        ).toEqual([]);
+        expect(
+          layout.smallestBodyCopy,
+          `${route} body copy is below 16px at ${width}px × ${height}px`,
+        ).toBeGreaterThanOrEqual(16);
+      }
+    }
+  }
+});
+
+test('public pages have a working keyboard skip link and visible focus style', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const skipLink = page.getByRole('link', { name: 'Skip to content' });
+  await page.keyboard.press('Tab');
+  await expect(skipLink).toBeFocused();
+  const focusStyle = await skipLink.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      outlineStyle: style.outlineStyle,
+      outlineWidth: style.outlineWidth,
+    };
+  });
+  expect(focusStyle.outlineStyle).not.toBe('none');
+  expect(Number.parseFloat(focusStyle.outlineWidth)).toBeGreaterThan(0);
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#main$/);
+});
+
+test('all public pages remain readable without JavaScript and honour reduced motion', async ({
+  page,
+}) => {
+  let blockedScripts = 0;
+  await page.route('**/*', async (route) => {
+    if (route.request().resourceType() === 'script') {
+      blockedScripts += 1;
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+
+  for (const route of PUBLIC_MARKETING_ROUTE_PATHS) {
+    const response = await page.goto(route);
+    expect(response?.status(), route).toBe(200);
+    await expect(page.locator('main#main h1'), route).toBeVisible();
+    expect(
+      (await page.locator('main#main').innerText()).trim().length,
+      `${route} must contain readable public content`,
+    ).toBeGreaterThan(20);
+    expect(
+      await page.locator('meta[name="viewport"]').getAttribute('content'),
+      route,
+    ).toContain('viewport-fit=cover');
+  }
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const motion = await page
+    .locator('.public-home-content h1')
+    .evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+        transitionDuration: Math.max(
+          ...style.transitionDuration
+            .split(',')
+            .map((value) => Number.parseFloat(value)),
+        ),
+      };
+    });
+  expect(motion.reducedMotion).toBe(true);
+  expect(motion.transitionDuration).toBeLessThan(0.001);
+  expect(blockedScripts).toBeGreaterThan(0);
 });
 
 test('home and app first paint stay styled with JavaScript disabled', async ({

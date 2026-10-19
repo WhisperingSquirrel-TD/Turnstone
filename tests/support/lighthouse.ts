@@ -1,7 +1,9 @@
 import { chromium } from '@playwright/test';
 import lighthouse from 'lighthouse';
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { buildStaticPublicSite } from '../../artifacts/party-game/src/static-public-build';
 import { createWebApp } from '../../artifacts/party-game/src/web-app';
+import { PUBLIC_MARKETING_ROUTE_PATHS } from '../../lib/shared/src/app-routes';
 
 // The launch-mode copy is test-only: the actual build and preview remain noindex.
 const publicDirectory = new URL(
@@ -14,21 +16,11 @@ const launchModeDirectory = new URL(
 ).pathname;
 await mkdir('generated-artifacts/lighthouse', { recursive: true });
 await rm(launchModeDirectory, { recursive: true, force: true });
-await cp(publicDirectory, launchModeDirectory, { recursive: true });
-const launchIndexPath = new URL('index.html', `file://${launchModeDirectory}`);
-const noindexHtml = await readFile(launchIndexPath, 'utf8');
-const indexableHtml = noindexHtml.replace(
-  /(<meta name="robots" content=")noindex, nofollow(")/,
-  '$1index, follow$2',
-);
-if (indexableHtml === noindexHtml) {
-  throw new Error('The Lighthouse launch fixture could not enable indexing.');
-}
-await writeFile(launchIndexPath, indexableHtml);
-await writeFile(
-  new URL('robots.txt', `file://${launchModeDirectory}`),
-  'User-agent: *\nAllow: /\n',
-);
+await buildStaticPublicSite({
+  sourceDirectory: publicDirectory,
+  outputDirectory: launchModeDirectory,
+  deploymentMode: { preLaunchNoindex: false, comingSoonMode: true },
+});
 
 const server = createWebApp(publicDirectory).listen(0, '127.0.0.1');
 const launchModeServer = createWebApp(launchModeDirectory, {
@@ -65,14 +57,24 @@ try {
     throw new Error('The public home page must not request a CSRF token.');
   }
   await publicPage.close();
+  const publicPages = PUBLIC_MARKETING_ROUTE_PATHS.map(
+    (route) =>
+      [
+        route === '/' ? 'home' : route.slice(1),
+        route,
+        launchModeAddress.port,
+      ] as const,
+  );
   for (const [label, path, port] of [
-    ['home', '/', launchModeAddress.port],
-    ['play', '/play', address.port],
+    ...publicPages,
+    ['play', '/play', address.port] as const,
   ]) {
     const requiredCategories =
       label === 'home'
         ? (['performance', 'accessibility', 'best-practices', 'seo'] as const)
-        : (['accessibility'] as const);
+        : label === 'play'
+          ? (['accessibility'] as const)
+          : (['accessibility', 'best-practices', 'seo'] as const);
     const result = await lighthouse(`http://127.0.0.1:${port}${path}`, {
       port: 9222,
       onlyCategories: [...requiredCategories],

@@ -2,6 +2,7 @@ import './index.css';
 import './public-home.css';
 import './HoldRoleDemo.css';
 import { installPublicHoldDemo } from './public-demo';
+import { PUBLIC_MARKETING_ROUTE_PATHS } from '@workspace/shared/app-routes';
 
 const basePath = new URL(
   import.meta.env.BASE_URL,
@@ -10,12 +11,13 @@ const basePath = new URL(
 const path = window.location.pathname.startsWith(`${basePath}/`)
   ? window.location.pathname.slice(basePath.length)
   : window.location.pathname;
-const isStaticPublicPage = ['/', '/faq', '/compare', '/llms.txt'].includes(
-  path.replace(/\/+$/, '') || '/',
-);
+const normalizedPath = path.replace(/\/+$/, '') || '/';
+const isStaticPublicPage =
+  normalizedPath === '/llms.txt' ||
+  PUBLIC_MARKETING_ROUTE_PATHS.some((route) => route === normalizedPath);
 
 if (isStaticPublicPage) {
-  if ((path.replace(/\/+$/, '') || '/') === '/') installPublicHoldDemo();
+  if (normalizedPath === '/') installPublicHoldDemo();
 } else {
   document.getElementById('static-home')?.remove();
   void (async () => {

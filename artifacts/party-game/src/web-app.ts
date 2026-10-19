@@ -1,7 +1,11 @@
 import express from 'express';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { APP_ROUTE_PATHS, isAppShellRoute } from '@workspace/shared/app-routes';
+import {
+  APP_ROUTE_PATHS,
+  isAppShellRoute,
+  PUBLIC_MARKETING_ROUTE_PATHS,
+} from '@workspace/shared/app-routes';
 import { createNonce, securityHeaders } from '@workspace/security';
 import {
   deploymentMode,
@@ -31,15 +35,46 @@ export function createWebApp(
     }
     next();
   });
-  app.get([APP_ROUTE_PATHS.faq, APP_ROUTE_PATHS.compare], async (req, res) => {
-    const html = await readFile(
-      path.join(publicDirectory, req.path.slice(1), 'index.html'),
-      'utf8',
-    );
-    res
-      .type('html')
-      .send(html.replaceAll('__RESPONSE_NONCE__', res.locals.nonce as string));
-  });
+  app.get(
+    PUBLIC_MARKETING_ROUTE_PATHS.filter(
+      (route) => route !== APP_ROUTE_PATHS.home,
+    ),
+    async (req, res) => {
+      const pagePath = req.path.replace(/^\/+|\/+$/g, '');
+      let html: string;
+      try {
+        html = await readFile(
+          path.join(publicDirectory, pagePath, 'index.html'),
+          'utf8',
+        );
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        try {
+          html = await readFile(
+            path.resolve(
+              publicDirectory,
+              '..',
+              'static-public',
+              pagePath,
+              'index.html',
+            ),
+            'utf8',
+          );
+        } catch (fallbackError) {
+          if ((fallbackError as NodeJS.ErrnoException).code !== 'ENOENT') {
+            throw fallbackError;
+          }
+          res.status(404).send('Not found');
+          return;
+        }
+      }
+      res
+        .type('html')
+        .send(
+          html.replaceAll('__RESPONSE_NONCE__', res.locals.nonce as string),
+        );
+    },
+  );
   app.use(
     express.static(publicDirectory, {
       index: false,

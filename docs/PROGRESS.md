@@ -1,14 +1,23 @@
 # Status for reviewer
 
-**Verify #150:** Failed jobs: `static-checks`, `unit`, `property`, `integration`, `scenarios (0, 6)` through `scenarios (5, 6)`, `merge-scenario-reports`, and `required-checks`. `coordinatorUndo` was missing from the shared view allow-list and several typed fixtures. The allow-list and fixtures were corrected; Verify #152 on `5491fe8` is green.
+**Baseline:** Verify #154 is green on `dd7c38a`. The RN5/RN6 rename and guard are green. Verify #150's failures were fixed in #152; #153's integration false positive was fixed in #154.
 
-**Verify #153:** `integration` failed and `required-checks` followed. The public-log PIN scan matched random seat-ID digits; it now asserts the reset event shape and checks PIN absence in all non-metadata event payloads. The targeted integration test passes locally; corrective push pending.
+**LP-8 local status:** All six static pages and coming-soon rules are implemented. Targeted unit tests, typecheck, lint, format, production build, static build, desktop Chromium, Pixel Chromium and local Firefox pass. Lighthouse scores are 1.00 for all required categories on all six public pages. iPhone/iPad WebKit cannot launch locally because this Nix container lacks Playwright's WebKit host libraries; Verify installs WebKit with its system dependencies. LP-8 Verify is pending.
 
-**Phase A rename:** RN1 inventory recorded 383 matches across tests (153), docs/agents (125), UI (30), locale (15), server/shared (15), workflows (5), config/metadata (9), brand text (7) and attachments (24). RN2–RN4 are pushed in `af976f1`; RN5/RN6 are pushed in `4a15a9d`, but Verify #153 is red. LP-8 is gated until a green Verify.
+| Route          | Purpose                          | Indexing                                                            | Canonical      | Links                                                                       |
+| -------------- | -------------------------------- | ------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------- |
+| `/`            | Coming-soon landing page         | Yes                                                                 | `/`            | About, How to play, FAQ, Compare, Stackstone Consulting                     |
+| `/about`       | About and independence statement | Yes                                                                 | `/about`       | Home, About, How to play, FAQ, Compare, Stackstone Consulting               |
+| `/how-to-play` | Play guide                       | Yes                                                                 | `/how-to-play` | Home, About, How to play, FAQ, Compare, Stackstone Consulting               |
+| `/faq`         | Frequently asked questions       | Yes                                                                 | `/faq`         | Home, About, How to play, FAQ, Compare, Stackstone Consulting               |
+| `/compare`     | Game-format comparison           | Yes                                                                 | `/compare`     | Home, About, How to play, FAQ, Compare, Stackstone Consulting               |
+| `/coming-soon` | Reachable fallback page          | No separate index; canonical `/`, omitted from sitemap and llms.txt | `/`            | Home, About, How to play, FAQ, Compare, Stackstone Consulting, Back to home |
 
-**Owner actions:** Create `OATHSTONE_GITHUB_TOKEN` in Replit Secrets and `OATHSTONE_PROMOTION_ENABLED` in GitHub Actions Variables with the existing matching values, update their consumers, then remove the old names. Preserve repository URL `https://github.com/WhisperingSquirrel-TD/Turnstone`.
+`app-shell.html` and `404.html` are noindex, have no canonical or structured data, and link back to Home. Verify does not run Firefox: its browser matrix is desktop Chromium, Pixel Chromium, iPhone WebKit and iPad WebKit. `playwright.public-firefox.config.ts` adds the six-page desktop Firefox check; both tests pass locally.
 
-**Exclusions:** Keep historical verification and past release records unchanged. Preserve the 12 attachment originals locally while removing them from Git tracking; keep newer attachments out of commits.
+**Owner actions:** Rename `TURNSTONE_GITHUB_TOKEN` to `OATHSTONE_GITHUB_TOKEN` in Replit Secrets and `TURNSTONE_PROMOTION_ENABLED` to `OATHSTONE_PROMOTION_ENABLED` in GitHub Actions Variables, update consumers, then remove the old names. Preserve repository URL `https://github.com/WhisperingSquirrel-TD/Turnstone`.
+
+**Exclusions:** Historical verification and release records retain the old name. Attachment files remain untracked and out of commits.
 
 **Hard stops:** No publish, deployment, domain, DNS, production-secret or paid-service changes.
 

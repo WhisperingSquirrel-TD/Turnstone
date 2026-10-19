@@ -50,8 +50,15 @@ export function renderPublicAppShellHtml(basePath = '/'): string {
     </header>`;
 }
 
-function renderPublicHeader(basePath: string): string {
+function renderPublicHeader(
+  basePath: string,
+  mode: DeploymentMode = deploymentMode,
+): string {
+  const playLink = mode.comingSoonMode
+    ? ''
+    : `<a href="${escapeHtml(`${basePath}play`)}">${escapeHtml(en.nav.play)}</a>`;
   return `
+    <a class="public-skip-link" href="#main">Skip to content</a>
     <header class="public-home-brand">
       ${renderOathstoneWordmark(basePath)}
       <nav class="public-home-nav" aria-label="${escapeHtml(en.nav.label)}">
@@ -60,7 +67,7 @@ function renderPublicHeader(basePath: string): string {
         <a href="${escapeHtml(`${basePath}how-to-play`)}">${escapeHtml(en.publicSite.howToPlayHeading)}</a>
         <a href="${escapeHtml(`${basePath}faq`)}">${escapeHtml(en.publicSite.faqHeading)}</a>
         <a href="${escapeHtml(`${basePath}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a>
-        <a href="${escapeHtml(`${basePath}play`)}">${escapeHtml(en.nav.play)}</a>
+        ${playLink}
       </nav>
       <details class="public-home-menu">
         <summary>${escapeHtml(en.nav.menu)}</summary>
@@ -70,7 +77,7 @@ function renderPublicHeader(basePath: string): string {
           <a href="${escapeHtml(`${basePath}how-to-play`)}">${escapeHtml(en.publicSite.howToPlayHeading)}</a>
           <a href="${escapeHtml(`${basePath}faq`)}">${escapeHtml(en.publicSite.faqHeading)}</a>
           <a href="${escapeHtml(`${basePath}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a>
-          <a href="${escapeHtml(`${basePath}play`)}">${escapeHtml(en.nav.play)}</a>
+          ${playLink}
         </div>
       </details>
     </header>
@@ -231,9 +238,11 @@ export function structuredPublicData({
 
 export function renderPublicHomeHtml(
   basePath = '/',
-  options: { staticOnly?: boolean } = {},
+  options: { staticOnly?: boolean; mode?: DeploymentMode } = {},
 ): string {
   const base = normaliseBasePath(basePath);
+  const mode = options.mode ?? deploymentMode;
+  const comingSoon = mode.comingSoonMode;
   const firstPart = config.appName.slice(
     0,
     config.appName.length - config.wordmarkAccentSuffix.length,
@@ -255,9 +264,10 @@ export function renderPublicHomeHtml(
     )
     .join('');
   const questions = renderFaqDetails(en.publicSite.faq);
-  const demo = options.staticOnly
-    ? ''
-    : `<section class="home-role-demo public-home-demo" aria-label="${escapeHtml(en.publicSite.demoHeading)}">
+  const demo =
+    options.staticOnly || comingSoon
+      ? ''
+      : `<section class="home-role-demo public-home-demo" aria-label="${escapeHtml(en.publicSite.demoHeading)}">
           <h2 id="home-demo-heading">${escapeHtml(en.publicSite.demoHeading)}</h2>
           <p>${escapeHtml(en.publicSite.demoDescription)}</p>
           <button class="home-role-seal" type="button" aria-labelledby="home-demo-heading home-demo-seal-label" data-public-role-demo data-demo-prompt="${escapeHtml(en.publicSite.demoPrompt)}" data-traitor-label="${escapeHtml(en.game.roleTraitor)}" data-faithful-label="${escapeHtml(en.game.roleFaithful)}"><span aria-hidden="true" class="home-role-seal-ring"></span><span id="home-demo-seal-label" class="home-role-label" aria-live="polite" aria-atomic="true">${escapeHtml(en.publicSite.demoPrompt)}</span></button>
@@ -265,18 +275,22 @@ export function renderPublicHomeHtml(
         </section>`;
 
   return `
-    ${renderPublicHeader(base)}
+    ${renderPublicHeader(base, mode)}
     <main id="main" class="public-home-content">
       <section class="public-home-hero" aria-labelledby="public-home-title">
         <div class="public-home-hero-copy">
           <h1 id="public-home-title" class="public-home-wordmark"><span>${escapeHtml(firstPart)}</span><span class="text-gilt">${escapeHtml(config.wordmarkAccentSuffix)}</span></h1>
           <p class="public-home-subtitle">${escapeHtml(en.entry.subtitle)}</p>
           <p class="public-home-byline">${escapeHtml(en.entry.welcomeDescription)}</p>
-          <nav class="public-home-actions" aria-label="Get started">
+          ${
+            comingSoon
+              ? `<p>${escapeHtml(en.publicSite.comingSoonBody)}</p><p>${escapeHtml(en.publicSite.comingSoonByline)}</p>`
+              : `<nav class="public-home-actions" aria-label="Get started">
             <a class="primary-action no-underline" href="${escapeHtml(playUrl)}">${escapeHtml(en.publicSite.play)}</a>
             <a class="secondary-action no-underline" href="${escapeHtml(joinUrl)}">${escapeHtml(en.publicSite.joinGame)}</a>
             <a class="quiet-action no-underline" href="${escapeHtml(practiseUrl)}">${escapeHtml(en.publicSite.practiseAlone)}</a>
-          </nav>
+          </nav>`
+          }
         </div>
         ${demo}
       </section>
@@ -303,10 +317,13 @@ export function renderPublicHomeHtml(
   `;
 }
 
-export function renderPublicFaqHtml(basePath = '/'): string {
+export function renderPublicFaqHtml(
+  basePath = '/',
+  mode: DeploymentMode = deploymentMode,
+): string {
   const base = normaliseBasePath(basePath);
   return `
-    ${renderPublicHeader(base)}
+    ${renderPublicHeader(base, mode)}
     <main id="main" class="public-home-content">
       <section class="public-home-section" aria-labelledby="public-faq-heading">
         <h1 id="public-faq-heading">${escapeHtml(en.publicSite.faqHeading)}</h1>
@@ -319,7 +336,10 @@ export function renderPublicFaqHtml(basePath = '/'): string {
   `;
 }
 
-export function renderPublicCompareHtml(basePath = '/'): string {
+export function renderPublicCompareHtml(
+  basePath = '/',
+  mode: DeploymentMode = deploymentMode,
+): string {
   const base = normaliseBasePath(basePath);
   const categories = en.publicSite.comparisonCategories
     .map(
@@ -328,7 +348,7 @@ export function renderPublicCompareHtml(basePath = '/'): string {
     )
     .join('');
   return `
-    ${renderPublicHeader(base)}
+    ${renderPublicHeader(base, mode)}
     <main id="main" class="public-home-content">
       <section class="public-home-section" aria-labelledby="public-compare-heading">
         <h1 id="public-compare-heading">${escapeHtml(en.publicSite.compareHeading)}</h1>
@@ -348,10 +368,13 @@ export function renderPublicCompareHtml(basePath = '/'): string {
   `;
 }
 
-export function renderPublicAboutHtml(basePath = '/'): string {
+export function renderPublicAboutHtml(
+  basePath = '/',
+  mode: DeploymentMode = deploymentMode,
+): string {
   const base = normaliseBasePath(basePath);
   return `
-    ${renderPublicHeader(base)}
+    ${renderPublicHeader(base, mode)}
     <main id="main" class="public-home-content">
       <section class="public-home-section" aria-labelledby="public-about-heading">
         <h1 id="public-about-heading">${escapeHtml(en.publicSite.aboutHeading)}</h1>
@@ -363,7 +386,10 @@ export function renderPublicAboutHtml(basePath = '/'): string {
   `;
 }
 
-export function renderPublicHowToPlayHtml(basePath = '/'): string {
+export function renderPublicHowToPlayHtml(
+  basePath = '/',
+  mode: DeploymentMode = deploymentMode,
+): string {
   const base = normaliseBasePath(basePath);
   const steps = en.publicSite.howItWorks
     .map(
@@ -372,7 +398,7 @@ export function renderPublicHowToPlayHtml(basePath = '/'): string {
     )
     .join('');
   return `
-    ${renderPublicHeader(base)}
+    ${renderPublicHeader(base, mode)}
     <main id="main" class="public-home-content">
       <section class="public-home-section" aria-labelledby="public-how-to-play-heading">
         <h1 id="public-how-to-play-heading">${escapeHtml(en.publicSite.howToPlayHeading)}</h1>
@@ -384,14 +410,17 @@ export function renderPublicHowToPlayHtml(basePath = '/'): string {
   `;
 }
 
-export function renderPublicComingSoonHtml(basePath = '/'): string {
+export function renderPublicComingSoonHtml(
+  basePath = '/',
+  mode: DeploymentMode = deploymentMode,
+): string {
   const base = normaliseBasePath(basePath);
   const firstPart = config.appName.slice(
     0,
     config.appName.length - config.wordmarkAccentSuffix.length,
   );
   return `
-    ${renderPublicHeader(base)}
+    ${renderPublicHeader(base, mode)}
     <main id="main" class="public-home-content">
       <section class="public-home-hero" aria-labelledby="coming-soon-title">
         <div class="public-home-hero-copy">
@@ -400,6 +429,7 @@ export function renderPublicComingSoonHtml(basePath = '/'): string {
           <p class="public-home-byline">${escapeHtml(en.entry.welcomeDescription)}</p>
           <p>${escapeHtml(en.publicSite.comingSoonBody)}</p>
           <p>${escapeHtml(en.publicSite.comingSoonByline)}</p>
+          <p><a class="public-page-link" href="${escapeHtml(base)}">Back to home</a></p>
         </div>
       </section>
     </main>
@@ -419,10 +449,14 @@ export function renderLlmsTxt(): string {
     [APP_ROUTE_PATHS.compare]: en.publicSite.compareHeading,
     [APP_ROUTE_PATHS.comingSoon]: en.publicSite.comingSoonPageTitle,
   };
-  const pages = PUBLIC_MARKETING_ROUTE_PATHS.map(
-    (route) =>
-      `- [${pageLabels[route]}](${new URL(route, config.siteOrigin).href})`,
-  ).join('\n');
+  const pages = PUBLIC_MARKETING_ROUTE_PATHS.filter(
+    (route) => route !== APP_ROUTE_PATHS.comingSoon,
+  )
+    .map(
+      (route) =>
+        `- [${pageLabels[route]}](${new URL(route, config.siteOrigin).href})`,
+    )
+    .join('\n');
   const facts = getPublicFacts()
     .map((fact) => `- ${fact.label}: ${fact.value}`)
     .join('\n');
@@ -454,10 +488,14 @@ ${questions}
 }
 
 export function renderSitemapXml(): string {
-  const entries = PUBLIC_MARKETING_ROUTE_PATHS.map(
-    (route) =>
-      `  <url><loc>${escapeHtml(new URL(route, config.siteOrigin).href)}</loc></url>`,
-  ).join('\n');
+  const entries = PUBLIC_MARKETING_ROUTE_PATHS.filter(
+    (route) => route !== APP_ROUTE_PATHS.comingSoon,
+  )
+    .map(
+      (route) =>
+        `  <url><loc>${escapeHtml(new URL(route, config.siteOrigin).href)}</loc></url>`,
+    )
+    .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries}
@@ -577,12 +615,12 @@ export function renderPublicPageDocument({
     'coming-soon': en.publicSite.comingSoonDescription,
   }[page];
   const content = {
-    home: renderPublicHomeHtml(basePath, { staticOnly: true }),
-    about: renderPublicAboutHtml(basePath),
-    'how-to-play': renderPublicHowToPlayHtml(basePath),
-    faq: renderPublicFaqHtml(basePath),
-    compare: renderPublicCompareHtml(basePath),
-    'coming-soon': renderPublicComingSoonHtml(basePath),
+    home: renderPublicHomeHtml(basePath, { staticOnly: true, mode }),
+    about: renderPublicAboutHtml(basePath, mode),
+    'how-to-play': renderPublicHowToPlayHtml(basePath, mode),
+    faq: renderPublicFaqHtml(basePath, mode),
+    compare: renderPublicCompareHtml(basePath, mode),
+    'coming-soon': renderPublicComingSoonHtml(basePath, mode),
   }[page];
 
   return renderPublicStaticDocument({
@@ -591,7 +629,10 @@ export function renderPublicPageDocument({
     description,
     canonicalUrl:
       canonicalUrl === undefined
-        ? new URL(route, config.siteOrigin).href
+        ? new URL(
+            page === 'coming-soon' ? APP_ROUTE_PATHS.home : route,
+            config.siteOrigin,
+          ).href
         : canonicalUrl,
     basePath,
     stylesheetHrefs,
