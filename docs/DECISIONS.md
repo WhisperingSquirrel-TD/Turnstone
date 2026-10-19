@@ -1,5 +1,11 @@
 # Decisions and open choices — complete specification
 
+## 19 October 2026 — Milestone 5 acceptance
+
+The owner accepted the Milestone 5 real-phone rehearsal and authorized work on Milestone 6. This clears the Milestone 5 review gate only; it does not approve publishing, paid services, production secrets, domain or DNS changes.
+
+**Why:** The Milestone 6 plan was explicitly gated on the owner's hands-on rehearsal acceptance.
+
 ## 17 October 2026 — queued server preparation after green Round 5
 
 Round 5 is green at `f61ff58` / Verify #126 (all 19 jobs). Follow the owner's queued order: completed M5 plan housekeeping, Replit-only M4b server work and the owner's checklist. This permission is server preparation only: no publishing, paid services, production secrets, domain or DNS changes; Milestone 6 still waits for explicit Milestone 5 phone acceptance.

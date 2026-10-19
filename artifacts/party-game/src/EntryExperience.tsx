@@ -180,6 +180,7 @@ export interface EntryExperienceProps {
   screen?: EntryScreen;
   inviteMode?: boolean;
   lateJoinMode?: boolean;
+  coordinatorPanel?: ReactNode;
   inputs: EntryExperienceInputs;
   onInputChange: (field: EntryInputKey, value: string | number) => void;
   options: EntryExperienceOptions;
@@ -235,6 +236,7 @@ export function EntryExperience({
   screen: controlledScreen,
   inviteMode = false,
   lateJoinMode = false,
+  coordinatorPanel,
   inputs,
   onInputChange,
   options,
@@ -1085,7 +1087,8 @@ export function EntryExperience({
           </section>
         )}
 
-        {screen === 'lobby' && (
+        {screen === 'lobby' && coordinatorPanel}
+        {screen === 'lobby' && !coordinatorPanel && (
           <section className="entry-lobby enter" aria-labelledby="entry-title">
             <h1 id="entry-title" className="entry-heading">
               {lateJoinMode ? copy.lateInviteHeading : copy.lobbyHeading}

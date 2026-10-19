@@ -1,9 +1,10 @@
 # Status for reviewer
 
-- **Waiting for owner: Milestone 5 acceptance. Round 5 is green (R5 1–35).** Updated: 17 October 2026, 10:55 UTC. Owner can retry a fresh phone rehearsal; 170 review images are in `docs/screens/round-5/`.
-- Last verified implementation: `5654db3`, [Verify #127](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39026343438) **Success**, all 19 jobs. M4b server preparation/checklist complete; this push records CI evidence only.
-- Content skipped: eight owner source files absent. No publishing, paid service, domain, DNS or production-secret changes. Milestone 6 remains blocked on phone acceptance.
-- Risks: production peak capacity unproven; older development snapshots need compatibility work (data preserved). The development API now starts correctly; failed binds no longer start its worker.
+- **Milestone 5 real-phone rehearsal accepted by the owner on 19 October 2026; Milestone 6 is in progress.** Updated: 19 October 2026, 05:34 UTC.
+- Last verified commit: `e9dc9d5`, [Verify #128](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39026730917) **Success**. M6 console work is not yet pushed; local typecheck, lint, 4 unit tests, and Pixel/iPhone screen E2E passed.
+- M6 first slice: active-game controls, aggregate-only progress, server-clock countdown, pause/resume, 1/5/15-minute extensions, confirmations before advancing/ending, and return to play. The browser E2E uses mocked HTTP for this screen.
+- Content skipped: eight owner source files absent. No publishing, paid service, domain, DNS or production-secret changes.
+- Risks: production peak capacity unproven; older development snapshots need compatibility work (data preserved).
 
 ## Previous verification history
 

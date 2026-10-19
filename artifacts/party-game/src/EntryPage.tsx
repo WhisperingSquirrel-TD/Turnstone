@@ -41,6 +41,7 @@ import {
   type EntryExperienceOptions,
   type EntryScreen,
 } from './EntryExperience';
+import type { CoordinatorCommand } from './CoordinatorConsole';
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
 import { lobbyCodeJoinUrl, parseLobbyCodeFragment } from './lobby-code-url';
 import { recoverSeat } from './recovery-client';
@@ -48,6 +49,11 @@ import {
   EntryActionError,
   type EntryFailureMessage,
 } from './entry-action-error';
+
+const LazyCoordinatorConsole = lazy(async () => {
+  const module = await import('./CoordinatorConsole');
+  return { default: module.CoordinatorConsole };
+});
 
 const QRCode = lazy(async () => {
   const module = await import('qrcode.react');
@@ -251,6 +257,9 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
   );
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [coordinatorView, setCoordinatorView] = useState<FullView | null>(null);
+  const [coordinatorServerNow, setCoordinatorServerNow] = useState<
+    number | null
+  >(null);
   const [joinCode, setJoinCode] = useState('');
   const [shareUrl, setShareUrl] = useState('');
   const [invitationKind, setInvitationKind] = useState<'lobby' | 'late' | null>(
@@ -355,7 +364,10 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     );
     if (!isFullView(response.view))
       throw new Error('coordinator-view-unavailable');
-    if (mounted.current) setCoordinatorView(response.view);
+    if (mounted.current) {
+      setCoordinatorView(response.view);
+      setCoordinatorServerNow(response.serverNow);
+    }
     return response.view;
   }, []);
 
@@ -414,7 +426,10 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       socket as unknown as GameRealtimeSocket,
       coordinatorGameId,
       (response) => {
-        if (isFullView(response.view)) setCoordinatorView(response.view);
+        if (isFullView(response.view)) {
+          setCoordinatorView(response.view);
+          setCoordinatorServerNow(response.serverNow);
+        }
         void loadPendingJoiners(coordinatorGameId);
       },
     );
@@ -703,6 +718,30 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     }
   }
 
+  async function runCoordinatorCommand(
+    action: CoordinatorCommand,
+  ): Promise<void> {
+    if (!coordinatorGameId || !coordinatorView) {
+      throw new Error('coordinator-view-unavailable');
+    }
+    try {
+      await postJson(
+        `/games/${encodeURIComponent(coordinatorGameId)}/commands`,
+        commandSchema.parse({
+          ...action,
+          expectedVersion: coordinatorView.version,
+          idempotencyKey: crypto.randomUUID(),
+        }),
+        gameViewResponseSchema,
+        csrfToken,
+      );
+      await loadCoordinatorView(coordinatorGameId);
+    } catch (error) {
+      await loadCoordinatorView(coordinatorGameId).catch(() => undefined);
+      throw error;
+    }
+  }
+
   async function startGame(): Promise<void> {
     if (!coordinatorGameId || !coordinatorView) return;
     if (lateJoinMode) {
@@ -805,6 +844,24 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     : '';
   const visibleShareUrl =
     lateJoinMode && invitationKind !== 'late' ? '' : shareUrl;
+  const coordinatorPanel =
+    mode === 'coordinate' &&
+    coordinatorView &&
+    coordinatorServerNow !== null &&
+    !['DRAFT', 'LOBBY'].includes(coordinatorView.phase) ? (
+      <Suspense fallback={<p role="status">{en.coordinator.loading}</p>}>
+        <LazyCoordinatorConsole
+          view={{ ...coordinatorView, serverNow: coordinatorServerNow }}
+          onCommand={runCoordinatorCommand}
+          onReturnToGame={() => {
+            if (coordinatorGameId)
+              navigate(
+                webPath(`/game/${encodeURIComponent(coordinatorGameId)}`),
+              );
+          }}
+        />
+      </Suspense>
+    ) : undefined;
   const qrUrl = lateJoinMode ? visibleShareUrl : lobbyCodeUrl;
   const qrCode = qrUrl ? (
     <Suspense fallback={<span aria-label={en.entry.qrPreparing}>…</span>}>
@@ -822,6 +879,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       }}
       screen={screen}
       lateJoinMode={lateJoinMode}
+      coordinatorPanel={coordinatorPanel}
       inviteMode={Boolean(inviteToken)}
       inputs={inputs}
       onInputChange={updateInput}

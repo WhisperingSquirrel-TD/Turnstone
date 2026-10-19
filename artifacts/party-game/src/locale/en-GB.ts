@@ -20,6 +20,33 @@ export const en = {
     brandName: 'Stackstone Consulting',
     brandLink: 'Visit Stackstone Consulting',
   },
+  coordinator: {
+    heading: 'Game controls',
+    loading: 'Loading game controls…',
+    currentStep: 'Current step',
+    timeLeft: 'Time left',
+    privateProgress: 'Private progress',
+    progress: (done: number, total: number) => `${done} of ${total} done`,
+    noTimer: 'No timer',
+    paused: 'Paused',
+    movingOn: 'Moving on...',
+    pause: 'Pause game',
+    resume: 'Resume game',
+    extend: 'Extend time',
+    addMinute: 'Add 1 minute',
+    addMinutes: (minutes: 5 | 15) => `Add ${minutes} minutes`,
+    endEarly: 'End game early',
+    moveConfirmation: (unfinished: number) =>
+      unfinished === 1
+        ? "1 player hasn't finished. Move everyone on anyway?"
+        : `${unfinished} players haven't finished. Move everyone on anyway?`,
+    moveAnyway: 'Move everyone on anyway',
+    endConfirmation: 'End this game early? Everyone will see the final result.',
+    endNow: 'End game now',
+    cancel: 'Cancel',
+    keepPlaying: 'Keep playing',
+    error: 'The change could not be saved. Check the connection and try again.',
+  },
   home: {
     eyebrow: 'A game for everyone',
     heading: 'A game of traitors and faithful.',
