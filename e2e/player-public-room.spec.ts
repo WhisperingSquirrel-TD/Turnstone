@@ -535,6 +535,12 @@ test('coordinator creates a fresh late invitation without reopening the room cod
       json: pendingJoinRequestsResponseSchema.parse({ requests: pending }),
     }),
   );
+  await page.route(`**/api/games/${gameId}/coordinator/delegates`, (route) =>
+    route.fulfill({ json: { limit: 1, seatIds: [] } }),
+  );
+  await page.route(`**/api/games/${gameId}/coordinator/presence`, (route) =>
+    route.fulfill({ json: { status: 'online' } }),
+  );
   await page.route(`**/api/games/${gameId}/invites`, (route) => {
     lobbyInviteRequests += 1;
     return route.fulfill({ status: 409, json: { error: 'Command rejected' } });

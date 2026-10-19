@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- Updated: 19 October 2026, 09:02 UTC. **M6-1:** takeover storage/API, rotating logistics-only capability, setup/coordinator UI and regression tests are implemented; local gates are green, ready to push.
-- Last green: Verify #139 **Success** on `327dfa1`; current M6-1 changes are not pushed yet.
+- Updated: 19 October 2026, 09:16 UTC. **M6-1:** Verify #140 failed in browser profiles; root cause was missing coordinator-access mocks in the late-invite E2E setup. Added them and reproduced the fix locally.
+- Last push: `6131639`; Verify #140 **Failure**. The affected E2E passes on desktop, iPad, Pixel and iPhone locally; fix commit pending.
 - Q3 remains provisional: designated seats, or a strict majority of living players when none are designated. No SPEC §3 change.
-- Risks: none identified in M6-1. Eight supplied content files remain untracked and unintegrated; no deployment or production changes.
+- Risks: no app behavior change in this browser-test fix. Eight supplied content files remain untracked and unintegrated; no deployment or production changes.
 
 ## Previous verification history
 
