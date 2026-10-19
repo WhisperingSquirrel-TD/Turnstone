@@ -196,7 +196,7 @@ describe('owner-approved delivery policy', () => {
     expect(values['X-Robots-Tag']).toBe('noindex, nofollow');
     expect(values['Strict-Transport-Security']).toContain('max-age=31536000');
     expect(values['Content-Security-Policy']).toBe(
-      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://live.turnstone.stackstoneconsulting.co.uk wss://live.turnstone.stackstoneconsulting.co.uk; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
+      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://live.oathstone.stackstoneconsulting.co.uk wss://live.oathstone.stackstoneconsulting.co.uk; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'",
     );
     expect(values['Referrer-Policy']).toBe('no-referrer');
     expect(values['X-Content-Type-Options']).toBe('nosniff');

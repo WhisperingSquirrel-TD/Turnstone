@@ -311,7 +311,7 @@ function Shell({
         <Link
           to={config.routes.home}
           aria-label={config.appName}
-          className="turnstone-wordmark"
+          className="oathstone-wordmark"
         >
           <span>
             {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
@@ -656,7 +656,7 @@ function webPath(path: string): string {
   return `${base}${path}`;
 }
 
-function TurnstonePlayerHeader() {
+function OathstonePlayerHeader() {
   return (
     <header
       className="entry-brand"
@@ -665,7 +665,7 @@ function TurnstonePlayerHeader() {
     >
       <Link
         to={config.routes.home}
-        className="turnstone-wordmark"
+        className="oathstone-wordmark"
         aria-label={config.appName}
         data-testid="text-entry-brand"
       >
@@ -2683,7 +2683,7 @@ function PlayerGame() {
             aria-modal="true"
             aria-labelledby="organiser-confirm-title"
           >
-            <TurnstonePlayerHeader />
+            <OathstonePlayerHeader />
             <div className="mx-auto my-auto w-full max-w-[480px] border border-stone bg-hearth p-6">
               <h2
                 className="display text-2xl text-candle"
@@ -2723,7 +2723,7 @@ function PlayerGame() {
             aria-labelledby="rehearsal-guide-title"
             data-testid="rehearsal-explainer"
           >
-            <TurnstonePlayerHeader />
+            <OathstonePlayerHeader />
             <div className="mx-auto my-auto w-full max-w-[480px]">
               <h2
                 className="display text-3xl text-candle"
@@ -2765,7 +2765,7 @@ function PlayerGame() {
               clearPrivate();
               setNotesOpen(false);
             }}
-            header={<TurnstonePlayerHeader />}
+            header={<OathstonePlayerHeader />}
             footer={
               <BrandFooter
                 context="game"

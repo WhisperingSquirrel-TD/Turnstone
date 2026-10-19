@@ -1,15 +1,15 @@
 # Good-faith naming record
 
-**Chosen name:** Turnstone
+**Chosen name:** Oathstone
 
 **Chosen by:** the owner
 
-**Date chosen:** 12 October 2026
+**Date chosen:** 19 October 2026
 
 ## Preliminary checks
 
-- **Web search:** the owner reports that a preliminary web search found no existing game of that name. Search queries, scope and result links were not supplied; this record does not claim an independent search by the agent.
-- **Trade mark register:** pending with the owner.
+- **Trade mark screen:** the owner reports an identical registration for the former name in an adjacent class and that Oathstone is clear. This is the owner's report, not independent legal clearance.
+- **Web search:** the earlier preliminary search and its limitations are retained as historical context; it did not establish clearance for the current name.
 - **Domain:** pending with the owner; no production domain confirmed or registered here.
 - **Handles:** pending with the owner; no social handles confirmed or registered here.
 

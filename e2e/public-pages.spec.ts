@@ -3,7 +3,7 @@ import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
 
 const requiredQuestions = [
   'Is there a free alternative to the WhatsApp traitors game?',
-  'Is Turnstone the official game from the TV show?',
+  'Is Oathstone the official game from the TV show?',
   'Do I need WhatsApp or an app?',
 ];
 
@@ -21,7 +21,7 @@ test('FAQ, comparison and llms.txt are public, complete and pre-launch noindex',
   const faqResponse = await request.get('/faq');
   const faqHtml = await faqResponse.text();
   for (const question of requiredQuestions) expect(faqHtml).toContain(question);
-  expect(faqHtml).toContain('Turnstone is an independent game');
+  expect(faqHtml).toContain('Oathstone is an independent game');
   for (const fact of [
     '5 to 40 players',
     'One hour to two weeks',
@@ -41,7 +41,7 @@ test('FAQ, comparison and llms.txt are public, complete and pre-launch noindex',
     'Single-player apps',
     'Werewolf apps with a moderator',
     'Do-it-yourself games',
-    'Turnstone',
+    'Oathstone',
   ]) {
     expect(compareHtml).toContain(category);
   }
@@ -218,7 +218,7 @@ test('home and app first paint stay styled with JavaScript disabled', async ({
   const homeResponse = await page.goto('/');
   expect(homeResponse?.status()).toBe(200);
   const homeBrand = page.locator(
-    '#static-home header.public-home-brand .turnstone-wordmark',
+    '#static-home header.public-home-brand .oathstone-wordmark',
   );
   await expect(homeBrand).toBeVisible();
   await expect(
@@ -239,11 +239,11 @@ test('home and app first paint stay styled with JavaScript disabled', async ({
   const playResponse = await page.goto('/play');
   expect(playResponse?.status()).toBe(200);
   const appBrand = page.locator(
-    '#static-home header.public-home-brand.public-shell-header .turnstone-wordmark',
+    '#static-home header.public-home-brand.public-shell-header .oathstone-wordmark',
   );
   await expect(appBrand).toBeVisible();
   await expect(appBrand.locator('.text-gilt')).toBeVisible();
-  expect((await appBrand.innerText()).replace(/\s+/g, '')).toBe('Turnstone');
+  expect((await appBrand.innerText()).replace(/\s+/g, '')).toBe('Oathstone');
   const appShellText = await page.locator('#static-home').innerText();
   expect(appShellText).not.toContain('Start a new game');
   expect(appShellText).not.toContain('A game of traitors and faithful.');

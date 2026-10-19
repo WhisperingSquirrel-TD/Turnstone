@@ -8,7 +8,7 @@ describe('API URL routing', () => {
 
   it('uses the configured sibling API origin when it is available', () => {
     expect(
-      apiUrl('/csrf', 'https://live.turnstone.stackstoneconsulting.co.uk/'),
-    ).toBe('https://live.turnstone.stackstoneconsulting.co.uk/api/csrf');
+      apiUrl('/csrf', 'https://live.oathstone.stackstoneconsulting.co.uk/'),
+    ).toBe('https://live.oathstone.stackstoneconsulting.co.uk/api/csrf');
   });
 });

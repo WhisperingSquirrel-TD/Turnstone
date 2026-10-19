@@ -20,7 +20,7 @@ describe('Replit artifact identity and realtime routing', () => {
     expect(artifactTitle(webArtifact)).toBe(config.appName);
   });
 
-  it('labels the API artifact as part of the Turnstone product', () => {
+  it('labels the API artifact as part of the Oathstone product', () => {
     expect(artifactTitle(apiArtifact)).toBe(`${config.appName} API`);
   });
 

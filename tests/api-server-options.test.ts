@@ -5,7 +5,7 @@ import { parseEnvironment } from '../artifacts/api-server/src/config/env';
 it('wires the configured public origin into invite links and credentialed CORS', () => {
   const environment = {
     NODE_ENV: 'production' as const,
-    APP_BASE_URL: 'https://turnstone.stackstoneconsulting.co.uk',
+    APP_BASE_URL: 'https://oathstone.stackstoneconsulting.co.uk',
     SESSION_SECRET: 'a'.repeat(32),
     PIN_PEPPER: 'test-only-pin-pepper-secret-0123456789abcdef',
     PIN_PEPPER_VERSION: 1,
@@ -38,12 +38,12 @@ it('wires the configured public origin into invite links and credentialed CORS',
 
 it('uses the managed Replit dev domain as the development origin when no base URL is configured', () => {
   const environment = parseEnvironment({
-    DATABASE_URL: 'postgresql://localhost/turnstone',
+    DATABASE_URL: 'postgresql://localhost/oathstone',
     SESSION_SECRET: 's'.repeat(32),
     PIN_PEPPER: 'test-only-pin-pepper-secret-0123456789abcdef',
     PORT: '8080',
     NODE_ENV: 'development',
-    REPLIT_DEV_DOMAIN: 'turnstone.replit.dev',
+    REPLIT_DEV_DOMAIN: 'oathstone.replit.dev',
   });
   const options = createServerAppOptions({
     environment,
@@ -52,6 +52,6 @@ it('uses the managed Replit dev domain as the development origin when no base UR
     countActiveGames: async () => 0,
   });
 
-  expect(options.allowedOrigins).toEqual(['https://turnstone.replit.dev']);
-  expect(options.publicBaseUrl).toBe('https://turnstone.replit.dev');
+  expect(options.allowedOrigins).toEqual(['https://oathstone.replit.dev']);
+  expect(options.publicBaseUrl).toBe('https://oathstone.replit.dev');
 });

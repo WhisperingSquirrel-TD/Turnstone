@@ -7,17 +7,17 @@ import {
 it('puts a lobby code only in the fragment of a join URL', () => {
   expect(
     lobbyCodeJoinUrl({
-      origin: 'https://turnstone.example',
+      origin: 'https://oathstone.example',
       joinPath: '/party-game/join',
       code: 'ABC234',
     }),
-  ).toBe('https://turnstone.example/party-game/join#code=ABC234');
+  ).toBe('https://oathstone.example/party-game/join#code=ABC234');
 });
 
 it('rejects invalid lobby codes before making a QR URL', () => {
   expect(() =>
     lobbyCodeJoinUrl({
-      origin: 'https://turnstone.example',
+      origin: 'https://oathstone.example',
       joinPath: '/party-game/join',
       code: 'ABCI01',
     }),
@@ -27,7 +27,7 @@ it('rejects invalid lobby codes before making a QR URL', () => {
 it('reads a QR code fragment without putting the code in the request path', () => {
   const url = new URL(
     lobbyCodeJoinUrl({
-      origin: 'https://turnstone.example',
+      origin: 'https://oathstone.example',
       joinPath: '/party-game/join',
       code: 'ABC234',
     }),

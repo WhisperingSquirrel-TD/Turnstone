@@ -450,7 +450,11 @@ export async function readGameUndoWindow(
   gameId: string,
   currentVersion: number,
   now: number,
-): Promise<{ actionVersion: number; state: unknown; expiresAt: number } | null> {
+): Promise<{
+  actionVersion: number;
+  state: unknown;
+  expiresAt: number;
+} | null> {
   const [window] = await db
     .select()
     .from(gameUndoWindows)

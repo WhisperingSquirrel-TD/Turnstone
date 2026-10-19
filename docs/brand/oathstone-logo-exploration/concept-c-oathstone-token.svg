@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" class="theme-dark" role="img" aria-labelledby="title desc">
-  <title id="title">The turnstone token emblem</title>
+  <title id="title">The oathstone token emblem</title>
   <desc id="desc">Three equal rounded stones step around a central pivot, forming a compact circular token.</desc>
   <style>
     .theme-dark { --ink: #FAFAF5; --accent: #C8944A; }

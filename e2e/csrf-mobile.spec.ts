@@ -166,7 +166,7 @@ test('mobile join and rehearsal stay enabled after the same-origin CSRF handshak
   expect(csrfResponse.ok()).toBe(true);
   expect(csrfResponse.headers()['content-type']).toContain('application/json');
   const csrfCookie = (await page.context().cookies()).find(
-    (cookie) => cookie.name === 'turnstone-csrf',
+    (cookie) => cookie.name === 'oathstone-csrf',
   );
   expect(csrfCookie?.httpOnly).toBe(true);
   expect(csrfCookie?.sameSite).toBe('Strict');

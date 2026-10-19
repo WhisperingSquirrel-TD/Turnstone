@@ -19,7 +19,7 @@ afterEach(async () => {
 async function fixture(
   html = '<style>html{background:#2e2b29}</style><script type="module" src="/assets/main-abcdef12.js"></script>',
 ) {
-  root = await mkdtemp(join(tmpdir(), 'turnstone-precompress-'));
+  root = await mkdtemp(join(tmpdir(), 'oathstone-precompress-'));
   await mkdir(join(root, 'assets'));
   await writeFile(join(root, 'index.html'), html);
   await writeFile(join(root, 'app-shell.html'), html);

@@ -2,7 +2,7 @@
 
 ## Approved direction
 
-On 14 October 2026 the owner chose one Replit Reserved VM deployment for Turnstone. After separate launch approval, that one deployment will serve the public pages, app shell/PWA, API, Socket.IO and durable scheduler from `https://turnstone.stackstoneconsulting.co.uk`. There is no Vercel deployment and no `live.` subdomain. Stackstone Consulting's company site stays separate and is expected to redirect `stackstoneconsulting.co.uk/turnstone` to Turnstone.
+On 14 October 2026 the owner chose one Replit Reserved VM deployment for Oathstone. After separate launch approval, that one deployment will serve the public pages, app shell/PWA, API, Socket.IO and durable scheduler from `https://oathstone.stackstoneconsulting.co.uk`. There is no Vercel deployment and no `live.` subdomain. Stackstone Consulting's company site stays separate and is expected to redirect `stackstoneconsulting.co.uk/oathstone` to Oathstone.
 
 The public shell and game server release together; no N-1 compatibility between independently deployed shell and server versions is required. The client uses relative same-origin `/api` and `/socket.io` paths and does not bake in an API host.
 
@@ -50,9 +50,9 @@ Production mode serves `artifacts/party-game/dist/public` from the existing Node
 - Startup fails if the client build is absent/unprepared or crawling is enabled without explicit `COMING_SOON_MODE`; app/game/API routes remain noindex.
 - The scheduler starts only after HTTP binds successfully. A port conflict closes realtime/database resources rather than leaving an unreachable background worker alive; `tests/server-startup.test.ts` exercises real successful/occupied sockets.
 
-Build with `pnpm run build:turnstone`: frontend, server, then offline client preparation. The last step extracts critical CSS and creates compression sidecars; do not omit it. The build wrapper supplies a build-only `PORT` default and `BASE_PATH=/`.
+Build with `pnpm run build:oathstone`: frontend, server, then offline client preparation. The last step extracts critical CSS and creates compression sidecars; do not omit it. The build wrapper supplies a build-only `PORT` default and `BASE_PATH=/`.
 
-The eventual run command is `pnpm run start:turnstone`; it uses production mode, the platform's `PORT` and the existing documented thread-pool default. These commands are instructions only, not an enabled deployment.
+The eventual run command is `pnpm run start:oathstone`; it uses production mode, the platform's `PORT` and the existing documented thread-pool default. These commands are instructions only, not an enabled deployment.
 
 Evidence: `tests/production-client.test.ts`, `tests/client-build.test.ts` and `e2e/production-server.spec.ts` cover the built output, cache/encoding/security policy, real Pixel/iPhone hydration and JavaScript-disabled first paint. The existing complete 5-/40-seat HTTP/socket fault tests now also check static shell/health availability across a running-game restart and still compare the resulting game to its recorded trace.
 
@@ -69,7 +69,7 @@ Release only an exact green-Verify commit; see [RELEASES.md](RELEASES.md). No de
 - [ ] Approve a VM size and its displayed fixed charge. A **pilot-only candidate** is 0.5 vCPU / 2 GiB; do not treat this as capacity approval for §20. The accepted [CAPACITY.md](CAPACITY.md) measurements do not establish production peak capacity; benchmark before selecting Christmas capacity or making throughput claims.
 - [ ] After explicit approval, create separate production `PIN_PEPPER` and session secrets in Publishing's production secrets settings; preserve any required previous pepper during a planned rotation. Never copy development values into documents/Git or ask the owner to paste secrets into chat. Confirm the production database, migrations, HTTPS origin and secure-cookie configuration without printing values.
 - [ ] Confirm the build/run commands above, the coming-soon public/app indexing split, health/readiness, HTTPS, socket reconnect and running-game restart on the chosen exact green commit. Record owner approval and any eventual release in `RELEASES.md`.
-- [ ] At 123-reg, add the **A record for the `turnstone` subdomain** using the IP shown by Replit, and the **TXT verification record using the exact hostname/value shown by Replit**. Values are not available until the approved publishing flow; do not invent them. Retain the TXT record for certificate renewal. Review conflicting A/AAAA/CNAME records before changing anything; leave the company's root website untouched.
+- [ ] At 123-reg, add the **A record for the `oathstone` subdomain** using the IP shown by Replit, and the **TXT verification record using the exact hostname/value shown by Replit**. Values are not available until the approved publishing flow; do not invent them. Retain the TXT record for certificate renewal. Review conflicting A/AAAA/CNAME records before changing anything; leave the company's root website untouched.
 - [ ] Approve a usage spending limit **and a separate Reserved VM budget**. Replit's usage cap does not cap the VM's fixed charge. Confirm actual prices and resize billing in the Publishing panel before spending; no automatic paid scale-up has been configured.
 - [ ] **23 December 2026:** with approval, scale up to the measured/approved peak size, allow for a restart and check readiness/socket resync. **27 December 2026:** with approval, scale back to the agreed pilot size and repeat those checks. Choose the actual peak size and bill before either action.
 

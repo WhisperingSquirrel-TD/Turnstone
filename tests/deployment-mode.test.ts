@@ -18,7 +18,7 @@ describe('coming-soon crawl boundaries', () => {
   let directory: string;
 
   beforeAll(async () => {
-    directory = await mkdtemp(join(tmpdir(), 'turnstone-coming-soon-'));
+    directory = await mkdtemp(join(tmpdir(), 'oathstone-coming-soon-'));
     await mkdir(join(directory, 'faq'));
     await mkdir(join(directory, 'compare'));
     await writeFile(join(directory, 'index.html'), '<main>Public home</main>');

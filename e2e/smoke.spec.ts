@@ -141,6 +141,7 @@ test('private role is requested only during a hold and is removed on release', a
     publicAnnouncement: null,
     private: null,
     publicLog: [],
+    coordinatorUndo: null,
     coordinatorAlerts: [],
     fairness: null,
   };
@@ -149,7 +150,7 @@ test('private role is requested only during a hold and is removed on release', a
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -202,7 +203,7 @@ test('private role is requested only during a hold and is removed on release', a
   const shieldButton = shieldDialog.getByRole('button');
   await expect(shieldButton).toBeVisible();
   await expect(
-    shieldDialog.getByText('Turnstone', { exact: true }),
+    shieldDialog.getByText('Oathstone', { exact: true }),
   ).toBeVisible();
   await expect(shieldDialog).toBeVisible();
   await expect(shieldButton).toHaveText('Ready in 3');
@@ -253,7 +254,7 @@ test('private role is requested only during a hold and is removed on release', a
       session: JSON.stringify(sessionStorage),
     })),
   ).toEqual({
-    title: 'Turnstone',
+    title: 'Oathstone',
     url: expect.stringContaining(`/game/${gameId}`),
     local: '{}',
     session: '{}',
@@ -294,6 +295,7 @@ test('notes show one privacy line without nested scrolling or excess top space',
     publicAnnouncement: null,
     private: null,
     publicLog: [],
+    coordinatorUndo: null,
     coordinatorAlerts: [],
     fairness: null,
   };
@@ -302,7 +304,7 @@ test('notes show one privacy line without nested scrolling or excess top space',
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -447,6 +449,7 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     publicAnnouncement: null,
     private: null,
     publicLog: [],
+    coordinatorUndo: null,
     coordinatorAlerts: [],
     fairness: null,
   };
@@ -455,7 +458,7 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -541,7 +544,7 @@ test('private role, seal and footer stay inside small phone viewports', async ({
       { text: 'stone', color: 'color(srgb 0.391765 0.312745 0.206078)' },
     ]);
     const shellBrandVisual = await page
-      .locator('header.public-shell-header .turnstone-wordmark')
+      .locator('header.public-shell-header .oathstone-wordmark')
       .evaluate((element) => ({
         fontFamily: getComputedStyle(element).fontFamily,
         fontSize: getComputedStyle(element).fontSize,
@@ -551,7 +554,7 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     const [shieldBrandBounds, shellBrandBounds] = await Promise.all([
       brand.boundingBox(),
       page
-        .locator('header.public-shell-header .turnstone-wordmark')
+        .locator('header.public-shell-header .oathstone-wordmark')
         .boundingBox(),
     ]);
     if (!shieldBrandBounds || !shellBrandBounds) {
@@ -685,6 +688,7 @@ test('game wordmark stays top-left and the action banner stays above the footer'
     publicAnnouncement: null,
     private: null,
     publicLog: [],
+    coordinatorUndo: null,
     coordinatorAlerts: [],
     fairness: null,
   };
@@ -693,7 +697,7 @@ test('game wordmark stays top-left and the action banner stays above the footer'
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -721,7 +725,7 @@ test('game wordmark stays top-left and the action banner stays above the footer'
       guideFooter.boundingBox(),
       guide.getByTestId('text-entry-brand').boundingBox(),
       page
-        .locator('header.public-shell-header .turnstone-wordmark')
+        .locator('header.public-shell-header .oathstone-wordmark')
         .boundingBox(),
     ]);
   if (!guideFooterBounds || !guideWordmarkBounds || !shellWordmarkBounds) {
@@ -754,7 +758,7 @@ test('game wordmark stays top-left and the action banner stays above the footer'
   const actionBar = page.getByTestId('rehearsal-action-bar');
   const footer = page.getByTestId('brand-footer-shell');
   const wordmark = page.locator(
-    'header.public-shell-header .turnstone-wordmark',
+    'header.public-shell-header .oathstone-wordmark',
   );
   await expect(actionBar).toBeVisible();
   await expect(footer).toBeVisible();

@@ -98,7 +98,7 @@ export async function buildStaticPublicSite({
         .map((match) => match[1])
         .filter((href): href is string => Boolean(href))
         .map((href) =>
-          basename(new URL(href, 'https://turnstone.invalid').pathname),
+          basename(new URL(href, 'https://oathstone.invalid').pathname),
         )
         .filter((file) => file.endsWith('.css')),
     ),

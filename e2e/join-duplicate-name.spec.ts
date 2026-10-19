@@ -36,6 +36,7 @@ const recoveredView: FullView = {
   publicAnnouncement: null,
   private: null,
   publicLog: [],
+  coordinatorUndo: null,
   coordinatorAlerts: [],
   fairness: null,
 };

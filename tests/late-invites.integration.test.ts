@@ -104,7 +104,7 @@ async function startedGame(
       if (options.bypassRateLimits) return true;
       return consumeRateLimit(bucket, limit, window, now + 1000);
     },
-    publicBaseUrl: 'https://turnstone.test',
+    publicBaseUrl: 'https://oathstone.test',
     secureCookies: true,
     testOnlyNow: () => now + 1000,
   });
@@ -292,7 +292,7 @@ it('admits an always-Faithful late seat by fresh link only, with approval and jo
     });
     const setCookie = pending.headers['set-cookie'];
     const cookies = Array.isArray(setCookie) ? setCookie : [setCookie ?? ''];
-    expect(cookies.some((cookie) => cookie.startsWith('turnstone-seat-'))).toBe(
+    expect(cookies.some((cookie) => cookie.startsWith('oathstone-seat-'))).toBe(
       false,
     );
     expect(replay(await readGameEvents(gameId)).seats).toHaveLength(5);

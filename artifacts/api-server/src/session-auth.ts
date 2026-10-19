@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import type { Viewer } from '@workspace/engine';
 
-const seatCookiePrefix = 'turnstone-seat-';
-const coordinatorCookiePrefix = 'turnstone-coordinator-';
+const seatCookiePrefix = 'oathstone-seat-';
+const coordinatorCookiePrefix = 'oathstone-coordinator-';
 const opaqueTokenPattern = /^[A-Za-z0-9_-]{43}$/;
 
 export type SeatSessionRecord = {
@@ -55,14 +55,14 @@ export function cookieNameForCoordinatorGame(gameId: string): string {
 }
 
 export function cookieNameForPresenterGame(gameId: string): string {
-  return `turnstone-presenter-${createHash('sha256')
+  return `oathstone-presenter-${createHash('sha256')
     .update(gameId)
     .digest('hex')
     .slice(0, 24)}`;
 }
 
 export function cookieNameForJoinRequest(requestId: string): string {
-  return `turnstone-join-${createHash('sha256')
+  return `oathstone-join-${createHash('sha256')
     .update(requestId)
     .digest('hex')
     .slice(0, 24)}`;

@@ -16,7 +16,7 @@ test.describe('built client through the real Node server', () => {
   let server: Server;
   let origin: string;
   test.beforeAll(async () => {
-    directory = await mkdtemp(join(tmpdir(), 'turnstone-production-browser-'));
+    directory = await mkdtemp(join(tmpdir(), 'oathstone-production-browser-'));
     await promisify(execFile)(
       'pnpm',
       [
@@ -100,10 +100,10 @@ test.describe('built client through the real Node server', () => {
           'rgb(46, 43, 41)',
         );
         await expect(
-          plain.getByRole('link', { name: 'Turnstone', exact: true }).first(),
+          plain.getByRole('link', { name: 'Oathstone', exact: true }).first(),
         ).toBeVisible();
         await expect(
-          plain.getByRole('link', { name: 'Turnstone', exact: true }).first(),
+          plain.getByRole('link', { name: 'Oathstone', exact: true }).first(),
         ).toHaveCSS('font-family', /Playfair Display/);
         if (path === '/play')
           expect(await response!.text()).not.toContain(

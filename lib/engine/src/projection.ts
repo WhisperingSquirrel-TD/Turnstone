@@ -51,6 +51,7 @@ export const VIEW_ALLOW_LIST = [
   'publicAnnouncement',
   'private',
   'publicLog',
+  'coordinatorUndo',
   'coordinatorAlerts',
   'fairness',
 ] as const;

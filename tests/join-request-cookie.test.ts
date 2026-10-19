@@ -6,7 +6,7 @@ describe('join request cookie names', () => {
     const requestId = 'join-request-private-id';
     const cookieName = cookieNameForJoinRequest(requestId);
 
-    expect(cookieName).toMatch(/^turnstone-join-[a-f0-9]{24}$/);
+    expect(cookieName).toMatch(/^oathstone-join-[a-f0-9]{24}$/);
     expect(cookieName).not.toContain(requestId);
     expect(cookieNameForJoinRequest(requestId)).toBe(cookieName);
     expect(cookieNameForJoinRequest('another-request')).not.toBe(cookieName);

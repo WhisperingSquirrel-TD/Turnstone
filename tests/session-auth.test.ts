@@ -75,7 +75,7 @@ describe('game-scoped seat session authentication', () => {
 
   it('uses deterministic cookie names that do not reveal the game identifier', () => {
     const cookieName = cookieNameForGame('sensitive-game-id');
-    expect(cookieName).toMatch(/^turnstone-seat-[a-f0-9]{24}$/);
+    expect(cookieName).toMatch(/^oathstone-seat-[a-f0-9]{24}$/);
     expect(cookieName).toBe(cookieNameForGame('sensitive-game-id'));
     expect(cookieName).not.toContain('sensitive-game-id');
   });

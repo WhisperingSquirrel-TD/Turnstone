@@ -2,10 +2,10 @@
 import { deploymentMode } from '@workspace/security/deployment';
 import { APP_ROUTE_PATHS } from '@workspace/shared/app-routes';
 
-const appName = 'Turnstone';
+const appName = 'Oathstone';
 const builder = 'Stackstone Consulting';
 const byline = `made by ${builder}`;
-const siteOrigin = 'https://turnstone.stackstoneconsulting.co.uk';
+const siteOrigin = 'https://oathstone.stackstoneconsulting.co.uk';
 
 export function resolveApiOrigin(
   legacyConfiguredOrigin: string | undefined,
@@ -19,7 +19,7 @@ const configuredApiOrigin = resolveApiOrigin(undefined);
 export const config = {
   appName,
   wordmarkAccentSuffix: 'stone',
-  tagline: `${appName}: the traitor game where everyone plays.`,
+  tagline: 'A game of traitors and faithful.',
   byline,
   builder,
   siteOrigin,

@@ -121,7 +121,7 @@ export type AppOptions = {
   deploymentMode?: DeploymentMode;
 };
 
-const csrfCookieName = 'turnstone-csrf';
+const csrfCookieName = 'oathstone-csrf';
 const seatSessionDurationMs = 30 * 24 * 60 * 60 * 1_000;
 const coordinatorHandoffDurationMs = 5 * 60 * 1_000;
 const coordinatorTakeoverRequestDurationMs = 5 * 60_000;
@@ -549,7 +549,7 @@ export function createApp(
         sendError(
           response,
           503,
-          'Game creation is closed while Turnstone is coming soon.',
+          'Game creation is closed while Oathstone is coming soon.',
         );
         return;
       }
@@ -661,7 +661,7 @@ export function createApp(
         sendError(
           response,
           503,
-          'Game creation is closed while Turnstone is coming soon.',
+          'Game creation is closed while Oathstone is coming soon.',
         );
         return;
       }
@@ -689,10 +689,10 @@ export function createApp(
       }
 
       const { gameId, idempotencyKey, name, playerCount, speed } = parsed.data;
-      const idSecret = options.rateLimitSecret ?? 'turnstone-rehearsal-local';
+      const idSecret = options.rateLimitSecret ?? 'oathstone-rehearsal-local';
       const deterministicSeatId = (label: string) =>
         createHmac('sha256', idSecret)
-          .update(`turnstone-rehearsal\u0000${gameId}\u0000${label}`)
+          .update(`oathstone-rehearsal\u0000${gameId}\u0000${label}`)
           .digest('hex')
           .slice(0, 32);
       const humanSeatId = deterministicSeatId('human');
@@ -1050,18 +1050,18 @@ export function createApp(
       getSeatAccess,
     } = await import('@workspace/db/seat-access-store');
     const requestId = createHmac('sha256', secret)
-      .update(`turnstone-request-id\u0000${gameId}\u0000${data.idempotencyKey}`)
+      .update(`oathstone-request-id\u0000${gameId}\u0000${data.idempotencyKey}`)
       .digest('hex')
       .slice(0, 32);
     const seatId = createHmac('sha256', secret)
       .update(
-        `turnstone-request-seat\u0000${gameId}\u0000${data.idempotencyKey}`,
+        `oathstone-request-seat\u0000${gameId}\u0000${data.idempotencyKey}`,
       )
       .digest('hex')
       .slice(0, 32);
     const requestToken = createHmac('sha256', secret)
       .update(
-        `turnstone-request-token\u0000${gameId}\u0000${data.idempotencyKey}`,
+        `oathstone-request-token\u0000${gameId}\u0000${data.idempotencyKey}`,
       )
       .digest('base64url');
     let access = await getSeatAccess(gameId, seatId);
@@ -1722,7 +1722,7 @@ export function createApp(
       }
       const seatId = createHmac('sha256', options.rateLimitSecret)
         .update(
-          `turnstone-seat\u0000${gameId}\u0000${parsed.data.idempotencyKey}`,
+          `oathstone-seat\u0000${gameId}\u0000${parsed.data.idempotencyKey}`,
         )
         .digest('hex')
         .slice(0, 32);
@@ -2834,11 +2834,7 @@ export function createApp(
         idempotencyKey: parsed.data.idempotencyKey,
         requestHash: requestHash(parsed.data),
       };
-      const {
-        appendGameEvents,
-        readGameCommandResult,
-        readGameUndoWindow,
-      } =
+      const { appendGameEvents, readGameCommandResult, readGameUndoWindow } =
         await import('@workspace/db/game-store');
       const previous = await readGameCommandResult(idempotency);
       if (previous && !previous.ok) {
@@ -2853,11 +2849,7 @@ export function createApp(
       }
       if (!previous && parsed.data.type === 'UndoCoordinatorAction') {
         const now = options.testOnlyNow?.() ?? Date.now();
-        const undoWindow = await readGameUndoWindow(
-          gameId,
-          state.version,
-          now,
-        );
+        const undoWindow = await readGameUndoWindow(gameId, state.version, now);
         if (!undoWindow) {
           sendError(
             response,

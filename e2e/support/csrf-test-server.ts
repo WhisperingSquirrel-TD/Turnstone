@@ -6,7 +6,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error('Invalid CSRF test server port');
 }
 
-const csrfCookieName = 'turnstone-csrf';
+const csrfCookieName = 'oathstone-csrf';
 const csrfToken = randomBytes(32).toString('base64url');
 
 function cookieValue(header: string | undefined): string | null {

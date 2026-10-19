@@ -34,7 +34,7 @@ describe('actual built production website', () => {
       expect(response.text).toContain(
         '<header class="public-home-brand public-shell-header',
       );
-      expect(response.text).toContain('class="turnstone-wordmark"');
+      expect(response.text).toContain('class="oathstone-wordmark"');
       expect(response.text).toMatch(/<link\b[^>]*rel="stylesheet"/);
       expect(response.text).not.toContain('Start a new game');
       expect(response.text).not.toContain('A game of traitors and faithful.');
@@ -42,7 +42,7 @@ describe('actual built production website', () => {
       expect(response.text).not.toContain('application/ld+json');
     }
 
-    expect((await request(app).get('/not-a-turnstone-route')).status).toBe(404);
+    expect((await request(app).get('/not-a-oathstone-route')).status).toBe(404);
   });
 
   it('serves external-only scripts with fresh CSP nonces and strict headers on both routes', async () => {

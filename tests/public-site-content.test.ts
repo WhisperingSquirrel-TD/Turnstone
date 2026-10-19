@@ -31,7 +31,7 @@ describe('public-site shared content', () => {
   it('contains the exact answer-first copy and all required FAQ questions', () => {
     const html = renderPublicHomeHtml();
     expect(html).toContain(
-      'Turnstone is a free game of traitors and faithful for 5 to 40 players, played on everyone’s own phone, where the host plays too.',
+      'Oathstone is a free game of traitors and faithful for 5 to 40 players, played on everyone’s own phone, where the host plays too.',
     );
     for (const question of [
       'How do we play a traitor game at home with 15 people?',
@@ -60,7 +60,7 @@ describe('public-site shared content', () => {
 
   it('builds the required title and WebApplication and Game structured data', () => {
     expect(getPublicTitle()).toBe(
-      'Turnstone: a free game of traitors and faithful for 5 to 40 players',
+      'Oathstone: a free game of traitors and faithful for 5 to 40 players',
     );
     expect(structuredPublicData()).toEqual(
       expect.arrayContaining([
@@ -86,17 +86,17 @@ describe('public-site shared content', () => {
       {
         question: 'Is there a free alternative to the WhatsApp traitors game?',
         answer:
-          'Yes. Chat versions play out as messages over a week, charge per player and limit numbers. Turnstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight.',
+          'Yes. Chat versions play out as messages over a week, charge per player and limit numbers. Oathstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight.',
       },
       {
-        question: 'Is Turnstone the official game from the TV show?',
+        question: 'Is Oathstone the official game from the TV show?',
         answer:
-          'No. Turnstone is an independent game made by Stackstone Consulting. It is not affiliated with, or endorsed by, any TV programme or its producers.',
+          'No. Oathstone is an independent game made by Stackstone Consulting. It is not affiliated with, or endorsed by, any TV programme or its producers.',
       },
       {
         question: 'Do I need WhatsApp or an app?',
         answer:
-          'No. Turnstone runs in any modern phone or tablet browser. You can add it to your Home Screen if you like, but you never have to.',
+          'No. Oathstone runs in any modern phone or tablet browser. You can add it to your Home Screen if you like, but you never have to.',
       },
     ];
     const html = renderPublicHomeHtml();

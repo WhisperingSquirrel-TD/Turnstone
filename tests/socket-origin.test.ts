@@ -2,18 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { isAllowedSocketOrigin } from '../artifacts/api-server/src/socket-origin';
 
 describe('Socket.IO origin validation', () => {
-  const allowedOrigins = ['https://turnstone.example', 'http://127.0.0.1:3111'];
+  const allowedOrigins = ['https://oathstone.example', 'http://127.0.0.1:3111'];
 
   it('requires exact allow-list membership when Origin is present', () => {
     expect(
       isAllowedSocketOrigin(
-        { origin: 'https://turnstone.example', host: 'attacker.example' },
+        { origin: 'https://oathstone.example', host: 'attacker.example' },
         allowedOrigins,
       ),
     ).toBe(true);
     expect(
       isAllowedSocketOrigin(
-        { origin: 'https://attacker.example', host: 'turnstone.example' },
+        { origin: 'https://attacker.example', host: 'oathstone.example' },
         allowedOrigins,
       ),
     ).toBe(false);
@@ -21,7 +21,7 @@ describe('Socket.IO origin validation', () => {
 
   it('accepts same-origin polling when Origin is omitted and Host is allow-listed', () => {
     expect(
-      isAllowedSocketOrigin({ host: 'turnstone.example' }, allowedOrigins),
+      isAllowedSocketOrigin({ host: 'oathstone.example' }, allowedOrigins),
     ).toBe(true);
     expect(
       isAllowedSocketOrigin({ host: '127.0.0.1:3111' }, allowedOrigins),
@@ -33,7 +33,7 @@ describe('Socket.IO origin validation', () => {
       isAllowedSocketOrigin({ host: 'attacker.example' }, allowedOrigins),
     ).toBe(false);
     expect(isAllowedSocketOrigin({}, allowedOrigins)).toBe(false);
-    expect(isAllowedSocketOrigin({ host: 'turnstone.example' }, [])).toBe(
+    expect(isAllowedSocketOrigin({ host: 'oathstone.example' }, [])).toBe(
       false,
     );
   });

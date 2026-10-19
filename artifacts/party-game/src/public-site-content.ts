@@ -32,13 +32,13 @@ function normaliseBasePath(basePath: string): string {
   return basePath.endsWith('/') ? basePath : `${basePath}/`;
 }
 
-function renderTurnstoneWordmark(basePath: string): string {
+function renderOathstoneWordmark(basePath: string): string {
   const firstPart = config.appName.slice(
     0,
     config.appName.length - config.wordmarkAccentSuffix.length,
   );
   return `
-      <a class="turnstone-wordmark" href="${escapeHtml(basePath)}" aria-label="${escapeHtml(config.appName)}">
+      <a class="oathstone-wordmark" href="${escapeHtml(basePath)}" aria-label="${escapeHtml(config.appName)}">
         <span>${escapeHtml(firstPart)}</span><span class="text-gilt">${escapeHtml(config.wordmarkAccentSuffix)}</span>
       </a>`;
 }
@@ -46,14 +46,14 @@ function renderTurnstoneWordmark(basePath: string): string {
 export function renderPublicAppShellHtml(basePath = '/'): string {
   return `
     <header class="public-home-brand public-shell-header player-shell-header">
-      ${renderTurnstoneWordmark(basePath)}
+      ${renderOathstoneWordmark(basePath)}
     </header>`;
 }
 
 function renderPublicHeader(basePath: string): string {
   return `
     <header class="public-home-brand">
-      ${renderTurnstoneWordmark(basePath)}
+      ${renderOathstoneWordmark(basePath)}
       <nav class="public-home-nav" aria-label="${escapeHtml(en.nav.label)}">
         <a href="${escapeHtml(basePath)}">${escapeHtml(en.nav.home)}</a>
         <a href="${escapeHtml(`${basePath}about`)}">${escapeHtml(en.publicSite.aboutHeading)}</a>

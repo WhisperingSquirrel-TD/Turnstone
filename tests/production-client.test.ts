@@ -8,18 +8,18 @@ import { APP_SHELL_ROUTE_BASES } from '../lib/shared/src/app-routes';
 import { createApp } from '../artifacts/api-server/src/app';
 
 let directory: string;
-const script = 'window.turnstoneTest = true;';
+const script = 'window.oathstoneTest = true;';
 beforeAll(async () => {
-  directory = await mkdtemp(join(tmpdir(), 'turnstone-client-'));
+  directory = await mkdtemp(join(tmpdir(), 'oathstone-client-'));
   await mkdir(join(directory, 'assets'));
   await mkdir(join(directory, 'faq'));
   await mkdir(join(directory, 'compare'));
   for (const [name, text] of Object.entries({
     'index.html': '<main>Public home</main>',
-    'app-shell.html': '<main>Turnstone shell</main>',
+    'app-shell.html': '<main>Oathstone shell</main>',
     'faq/index.html': '<main>Questions</main>',
     'compare/index.html': '<main>Comparison</main>',
-    'manifest.webmanifest': '{"name":"Turnstone"}',
+    'manifest.webmanifest': '{"name":"Oathstone"}',
     'sw.js': 'self.addEventListener("fetch", () => {});',
     'robots.txt': 'User-agent: *\nDisallow: /\n',
     'assets/app-abcdef12.js': script,
@@ -54,7 +54,7 @@ describe('single-origin production client', () => {
       for (const suffix of ['', '/example']) {
         const response = await request(server).get(route + suffix);
         expect(response.status).toBe(200);
-        expect(response.text).toBe('<main>Turnstone shell</main>');
+        expect(response.text).toBe('<main>Oathstone shell</main>');
         expect(response.headers['cache-control']).toBe('no-cache');
       }
     }

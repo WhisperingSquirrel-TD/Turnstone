@@ -21,15 +21,15 @@ describe('environment validation', () => {
       parseEnvironment({
         ...valid,
         NODE_ENV: 'production',
-        APP_BASE_URL: 'https://turnstone.stackstoneconsulting.co.uk',
+        APP_BASE_URL: 'https://oathstone.stackstoneconsulting.co.uk',
         MAX_ACTIVE_GAMES: '1000',
       }).APP_BASE_URL,
-    ).toBe('https://turnstone.stackstoneconsulting.co.uk');
+    ).toBe('https://oathstone.stackstoneconsulting.co.uk');
     expect(() =>
       parseEnvironment({
         ...valid,
         NODE_ENV: 'production',
-        APP_BASE_URL: 'https://turnstone.stackstoneconsulting.co.uk',
+        APP_BASE_URL: 'https://oathstone.stackstoneconsulting.co.uk',
       }),
     ).toThrow('MAX_ACTIVE_GAMES');
   });

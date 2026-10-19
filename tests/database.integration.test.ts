@@ -119,11 +119,11 @@ it('creates a game with a hashed, game-scoped coordinator capability cookie', as
     expect(response.body.view.fairness).toBeNull();
 
     const coordinatorCookie = cookieValues(response.headers['set-cookie']).find(
-      (cookie) => cookie.startsWith('turnstone-coordinator-'),
+      (cookie) => cookie.startsWith('oathstone-coordinator-'),
     );
     expect(coordinatorCookie).toBeDefined();
     expect(coordinatorCookie).toMatch(
-      /^turnstone-coordinator-[a-f0-9]{24}=[A-Za-z0-9_-]{43}; /,
+      /^oathstone-coordinator-[a-f0-9]{24}=[A-Za-z0-9_-]{43}; /,
     );
     expect(coordinatorCookie).toContain('Path=/');
     expect(coordinatorCookie).toContain('Max-Age=');
@@ -202,7 +202,7 @@ it('transfers coordinator capability once to an authenticated target seat', asyn
         idempotencyKey: randomUUID(),
       });
     const coordinatorCookie = cookieValues(created.headers['set-cookie']).find(
-      (cookie) => cookie.startsWith('turnstone-coordinator-'),
+      (cookie) => cookie.startsWith('oathstone-coordinator-'),
     );
     expect(created.status).toBe(201);
     expect(coordinatorCookie).toBeDefined();
@@ -275,7 +275,7 @@ it('transfers coordinator capability once to an authenticated target seat', asyn
     const coordinatorCsrf = await request(app).get('/api/csrf');
     const coordinatorCsrfCookie = cookieValues(
       coordinatorCsrf.headers['set-cookie'],
-    ).find((cookie) => cookie.startsWith('turnstone-csrf='));
+    ).find((cookie) => cookie.startsWith('oathstone-csrf='));
     const coordinatorCookiePair = coordinatorCookie!.split(';')[0]!;
     const coordinatorRequestCookie = `${coordinatorCookiePair}; ${coordinatorCsrfCookie!.split(';')[0]}`;
     await request(app)
@@ -313,7 +313,7 @@ it('transfers coordinator capability once to an authenticated target seat', asyn
       .set('Cookie', seatCookie);
     const recipientCsrfCookie = cookieValues(
       recipientCsrf.headers['set-cookie'],
-    ).find((cookie) => cookie.startsWith('turnstone-csrf='));
+    ).find((cookie) => cookie.startsWith('oathstone-csrf='));
     const recipientCookie = `${seatCookie}; ${recipientCsrfCookie!.split(';')[0]}`;
     const claim = await request(app)
       .post('/api/coordinator-handoffs/claim')
@@ -322,7 +322,7 @@ it('transfers coordinator capability once to an authenticated target seat', asyn
       .send({ gameId, code: handoffCode });
     expect(claim.status).toBe(200);
     const newCoordinatorCookie = cookieValues(claim.headers['set-cookie']).find(
-      (cookie) => cookie.startsWith('turnstone-coordinator-'),
+      (cookie) => cookie.startsWith('oathstone-coordinator-'),
     );
     expect(newCoordinatorCookie).toBeDefined();
     expect(claim.body.code).toBeUndefined();
@@ -489,7 +489,7 @@ it('supports designated and majority logistics takeovers without exposing secret
     },
   );
   const seatCookie = (seatIndex: number) =>
-    `${cookieNameForGame(gameId)}=${seats[seatIndex]!.token}; turnstone-csrf=${csrfToken}`;
+    `${cookieNameForGame(gameId)}=${seats[seatIndex]!.token}; oathstone-csrf=${csrfToken}`;
   const postHeaders = (seatIndex: number) => ({
     Cookie: seatCookie(seatIndex),
     'X-CSRF-Token': csrfToken,
@@ -547,14 +547,14 @@ it('supports designated and majority logistics takeovers without exposing secret
     }
     const originalCoordinatorCookie = cookieValues(
       created.headers['set-cookie'],
-    ).find((cookie) => cookie.startsWith('turnstone-coordinator-'));
+    ).find((cookie) => cookie.startsWith('oathstone-coordinator-'));
     expect(originalCoordinatorCookie).toBeDefined();
 
     const delegateSelection = await request(app)
       .put(`/api/games/${gameId}/coordinator/delegates`)
       .set(
         'Cookie',
-        `${originalCoordinatorCookie!.split(';')[0]}; turnstone-csrf=${csrfToken}`,
+        `${originalCoordinatorCookie!.split(';')[0]}; oathstone-csrf=${csrfToken}`,
       )
       .set('X-CSRF-Token', csrfToken)
       .send({ seatIds: [seats[1]!.id] });
@@ -601,7 +601,7 @@ it('supports designated and majority logistics takeovers without exposing secret
     expect(delegateClaim.status).toBe(200);
     const delegatedCoordinatorCookie = cookieValues(
       delegateClaim.headers['set-cookie'],
-    ).find((cookie) => cookie.startsWith('turnstone-coordinator-'));
+    ).find((cookie) => cookie.startsWith('oathstone-coordinator-'));
     expect(delegatedCoordinatorCookie).toBeDefined();
     expect(delegateClaim.body).toEqual({ status: 'transferred' });
     expect(JSON.stringify(delegateClaim.body)).not.toMatch(/token|secret/i);
@@ -610,7 +610,7 @@ it('supports designated and majority logistics takeovers without exposing secret
       .put(`/api/games/${gameId}/coordinator/delegates`)
       .set(
         'Cookie',
-        `${delegatedCoordinatorCookie!.split(';')[0]}; turnstone-csrf=${csrfToken}`,
+        `${delegatedCoordinatorCookie!.split(';')[0]}; oathstone-csrf=${csrfToken}`,
       )
       .set('X-CSRF-Token', csrfToken)
       .send({ seatIds: [] });
@@ -666,14 +666,14 @@ it('supports designated and majority logistics takeovers without exposing secret
     expect(majorityClaim.status).toBe(200);
     const majorityCoordinatorCookie = cookieValues(
       majorityClaim.headers['set-cookie'],
-    ).find((cookie) => cookie.startsWith('turnstone-coordinator-'));
+    ).find((cookie) => cookie.startsWith('oathstone-coordinator-'));
     expect(majorityCoordinatorCookie).toBeDefined();
 
     const formerDelegate = await request(app)
       .get(`/api/games/${gameId}/coordinator/delegates`)
       .set(
         'Cookie',
-        `${delegatedCoordinatorCookie!.split(';')[0]}; turnstone-csrf=${csrfToken}`,
+        `${delegatedCoordinatorCookie!.split(';')[0]}; oathstone-csrf=${csrfToken}`,
       );
     expect(formerDelegate.status).toBe(401);
     const blindCoordinatorView = await request(app)
@@ -697,7 +697,7 @@ it('rejects malformed, unauthorised, rate-limited and failing coordinator handof
   const createUrl = '/api/games/test-game/coordinator-handoffs';
   await request(visitor)
     .post(createUrl)
-    .set('Origin', 'https://turnstone.example')
+    .set('Origin', 'https://oathstone.example')
     .send({ targetSeatId: randomUUID() })
     .expect(403, { error: 'Invalid request' });
   await request(visitor)
@@ -712,7 +712,7 @@ it('rejects malformed, unauthorised, rate-limited and failing coordinator handof
   const resetUrl = `/api/games/test-game/seats/${randomUUID()}/pin/reset`;
   await request(visitor)
     .post(resetUrl)
-    .set('Origin', 'https://turnstone.example')
+    .set('Origin', 'https://oathstone.example')
     .send({ expectedVersion: 0, newPin: '8642' })
     .expect(403, { error: 'Invalid request' });
   await request(visitor)
@@ -752,7 +752,7 @@ it('rejects malformed, unauthorised, rate-limited and failing coordinator handof
     .expect(503, { error: 'Service unavailable' });
   await request(visitor)
     .post('/api/coordinator-handoffs/claim')
-    .set('Origin', 'https://turnstone.example')
+    .set('Origin', 'https://oathstone.example')
     .send({
       gameId: randomUUID(),
       code: randomBytes(32).toString('base64url'),
@@ -1138,7 +1138,7 @@ it('clears readable invite codes when the lobby closes or a game ends', async ()
         resolveViewer: () => ({ kind: 'coordinator' }),
         resolveCoordinatorViewer: () => ({ kind: 'coordinator' }),
         rateLimitSecret: 'integration-test-rate-limit-secret',
-        publicBaseUrl: 'https://turnstone.test',
+        publicBaseUrl: 'https://oathstone.test',
         secureCookies: false,
       });
       const response = await request(app)
@@ -1415,7 +1415,7 @@ it('persists, invalidates, and atomically consumes coordinator undo windows', as
     expect(coordinatorView.body.view.private).toBeNull();
     const csrf = await request(coordinatorApp).get('/api/csrf');
     const csrfCookie = cookieValues(csrf.headers['set-cookie']).find((cookie) =>
-      cookie.startsWith('turnstone-csrf='),
+      cookie.startsWith('oathstone-csrf='),
     );
     const undoResponse = await request(coordinatorApp)
       .post(`/api/games/${gameId}/commands`)
@@ -1442,7 +1442,10 @@ it('persists, invalidates, and atomically consumes coordinator undo windows', as
       type: 'CoordinatorActionUndone',
       restoreState: undoneState,
     });
-    const routeUndoState = evolve(evolve(undoneState, finalEvent), routeUndoEvent);
+    const routeUndoState = evolve(
+      evolve(undoneState, finalEvent),
+      routeUndoEvent,
+    );
     const lastPhaseEvent = eventSchema.parse({
       seq: 8,
       at: now + 11,
@@ -1984,7 +1987,7 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
   const seatResolver = createSeatViewerResolver({
     findSession: findViewerSession,
   });
-  const origin = 'https://turnstone.test';
+  const origin = 'https://oathstone.test';
   const app = createApp(async () => {}, {
     secureCookies: true,
     allowedOrigins: [origin],
@@ -2013,7 +2016,7 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
     expect(created.body.view.canAdvancePhase).toBe(true);
     expect(created.body.view.progress.done).toBe(5);
     const initialSeatCookie = cookieValues(created.headers['set-cookie']).find(
-      (cookie) => cookie.startsWith('turnstone-seat-'),
+      (cookie) => cookie.startsWith('oathstone-seat-'),
     );
     expect(initialSeatCookie).toBeDefined();
     const seatCookiePair = initialSeatCookie!.split(';')[0]!;
@@ -2024,7 +2027,7 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
       .expect(200);
     const resumeCsrfCookie = cookieValues(
       resumeCsrf.headers['set-cookie'],
-    ).find((cookie) => cookie.startsWith('turnstone-csrf='));
+    ).find((cookie) => cookie.startsWith('oathstone-csrf='));
     expect(resumeCsrfCookie).toBeDefined();
     const authenticatedCookie = `${seatCookiePair}; ${resumeCsrfCookie!.split(';')[0]!}`;
     const rehearsalRequest = {
@@ -2075,7 +2078,7 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
     expect(recoveredGames).toContain(gameId);
 
     const seatCookie = cookieValues(created.headers['set-cookie']).find(
-      (cookie) => cookie.startsWith('turnstone-seat-'),
+      (cookie) => cookie.startsWith('oathstone-seat-'),
     );
     expect(seatCookie).toContain('HttpOnly');
     expect(seatCookie).toContain('Secure');
@@ -2091,7 +2094,7 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
 
     const csrf = await request(app).get('/api/csrf');
     const csrfToken = csrf.body.csrfToken as string;
-    const shieldedCookie = `${cookie}; turnstone-csrf=${csrfToken}`;
+    const shieldedCookie = `${cookie}; oathstone-csrf=${csrfToken}`;
     const prematureReveal = await request(app)
       .post(`/api/games/${gameId}/private-view`)
       .set('Cookie', shieldedCookie)
@@ -2885,7 +2888,7 @@ it.each([5, 40])(
 it('rejects websocket handshakes from an untrusted origin and from visitors', async () => {
   const httpServer = createServer(createApp(async () => {}));
   const realtime = await attachRealtime(httpServer, {
-    allowedOrigins: ['https://turnstone.stackstoneconsulting.co.uk'],
+    allowedOrigins: ['https://oathstone.stackstoneconsulting.co.uk'],
     resolveViewer: () => ({ kind: 'visitor' }),
   });
   let client: ClientSocket | undefined;
@@ -3269,7 +3272,7 @@ it('creates a private invite and gives a joining guest a seat session', async ()
     const app = createApp(async () => {}, {
       resolveViewer: () => ({ kind: 'coordinator' }),
       rateLimitSecret: 'integration-test-rate-limit-secret',
-      publicBaseUrl: 'https://turnstone.test',
+      publicBaseUrl: 'https://oathstone.test',
       secureCookies: true,
       consumeRateLimit: async (_bucketHash, limit) => {
         rateLimitsUsed.push(limit);
@@ -3293,7 +3296,7 @@ it('creates a private invite and gives a joining guest a seat session', async ()
     );
     const joinUrl = new URL(
       inviteResponse.body.joinUrl,
-      'https://turnstone.test',
+      'https://oathstone.test',
     );
     expect(joinUrl.pathname).toBe(`/join/${gameId}`);
     const inviteToken = joinUrl.hash.slice(1);
@@ -3398,7 +3401,7 @@ it('creates a private invite and gives a joining guest a seat session', async ()
     });
     const oldSeatCookie =
       setCookie
-        .find((cookie) => cookie.startsWith('turnstone-seat-'))
+        .find((cookie) => cookie.startsWith('oathstone-seat-'))
         ?.split(';')[0] ?? '';
     const oldSessionToken = oldSeatCookie.split('=').slice(1).join('=');
     const wrongNameRecovery = await request(app).post('/api/recover').send({
@@ -3453,7 +3456,7 @@ it('creates a private invite and gives a joining guest a seat session', async ()
       : [recoveryCookieHeader ?? ''];
     const newSeatCookie =
       recoveryCookies
-        .find((cookie) => cookie.startsWith('turnstone-seat-'))
+        .find((cookie) => cookie.startsWith('oathstone-seat-'))
         ?.split(';')[0] ?? '';
     const newSessionToken = newSeatCookie.split('=').slice(1).join('=');
     expect(oldSessionToken.length > 0).toBe(true);
@@ -3530,7 +3533,7 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
       },
       resolveViewer: () => ({ kind: 'coordinator' }),
       rateLimitSecret: 'integration-test-rate-limit-secret',
-      publicBaseUrl: 'https://turnstone.test',
+      publicBaseUrl: 'https://oathstone.test',
       secureCookies: true,
     });
     const invite = await request(app)
@@ -3565,7 +3568,7 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
       ? cookieHeader
       : [cookieHeader ?? ''];
     const joinCookie = cookieLines.find((cookie) =>
-      cookie.startsWith('turnstone-join-'),
+      cookie.startsWith('oathstone-join-'),
     );
     expect(typeof joinCookie).toBe('string');
     expect(Boolean(joinCookie?.includes('HttpOnly'))).toBe(true);
@@ -3604,7 +3607,7 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
       ? sessionCookieHeader
       : [sessionCookieHeader ?? ''];
     expect(
-      sessionCookies.some((cookie) => cookie.startsWith('turnstone-seat-')),
+      sessionCookies.some((cookie) => cookie.startsWith('oathstone-seat-')),
     ).toBe(true);
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
@@ -3652,7 +3655,7 @@ it('locks PIN recovery after five failed attempts without exposing whether the n
     const app = createApp(async () => {}, {
       resolveViewer: () => ({ kind: 'coordinator' }),
       rateLimitSecret: 'integration-test-rate-limit-secret',
-      publicBaseUrl: 'https://turnstone.test',
+      publicBaseUrl: 'https://oathstone.test',
       secureCookies: true,
       consumeRateLimit: async () => true,
     });
@@ -3980,7 +3983,7 @@ it('rejects a short-code join without exposing more than its decision status', a
     const app = createApp(async () => {}, {
       resolveViewer: () => ({ kind: 'coordinator' }),
       rateLimitSecret: 'integration-test-rate-limit-secret',
-      publicBaseUrl: 'https://turnstone.test',
+      publicBaseUrl: 'https://oathstone.test',
       secureCookies: true,
       consumeRateLimit: async () => true,
     });
@@ -4002,7 +4005,7 @@ it('rejects a short-code join without exposing more than its decision status', a
       ? cookieHeader
       : [cookieHeader ?? ''];
     const joinCookie = cookies.find((cookie) =>
-      cookie.startsWith('turnstone-join-'),
+      cookie.startsWith('oathstone-join-'),
     );
     expect(joinCookie).toBeTruthy();
 
@@ -4036,7 +4039,7 @@ it('rejects a short-code join without exposing more than its decision status', a
       ? finalCookies
       : [finalCookies ?? ''];
     expect(
-      clearedCookies.some((cookie) => cookie.startsWith('turnstone-join-')),
+      clearedCookies.some((cookie) => cookie.startsWith('oathstone-join-')),
     ).toBe(true);
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
@@ -4109,7 +4112,7 @@ it('enforces viewer authorization and handles malformed or unconfigured guest re
   const visitorApp = createApp(async () => {}, {
     resolveViewer: () => ({ kind: 'visitor' }),
     rateLimitSecret: 'integration-test-rate-limit-secret',
-    publicBaseUrl: 'https://turnstone.test',
+    publicBaseUrl: 'https://oathstone.test',
     consumeRateLimit: async () => true,
   });
   const coordinatorWithoutSecret = createApp(async () => {}, {
@@ -4248,7 +4251,7 @@ it('applies rate limits before reading or mutating game data on every write rout
   const app = createApp(async () => {}, {
     resolveViewer: () => ({ kind: 'coordinator' }),
     rateLimitSecret: 'integration-test-rate-limit-secret',
-    publicBaseUrl: 'https://turnstone.test',
+    publicBaseUrl: 'https://oathstone.test',
     consumeRateLimit: async () => false,
   });
   const createCommand = {
@@ -4315,7 +4318,7 @@ it('rejects cookie-authenticated writes without a matching CSRF token', async ()
   const app = createApp(async () => {}, {
     resolveViewer: () => ({ kind: 'coordinator' }),
     rateLimitSecret: 'integration-test-rate-limit-secret',
-    publicBaseUrl: 'https://turnstone.test',
+    publicBaseUrl: 'https://oathstone.test',
     consumeRateLimit: async () => true,
   });
   const csrfHeaders = { Origin: 'https://attacker.invalid' };
@@ -4374,7 +4377,7 @@ it('issues a fresh CSRF token for malformed cookies and validates matching token
     ? cookieHeader
     : [cookieHeader ?? ''];
   const csrfCookie = cookies.find((cookie) =>
-    cookie.startsWith('turnstone-csrf='),
+    cookie.startsWith('oathstone-csrf='),
   );
   const token = csrf.body.csrfToken as string;
   expect(token).toHaveLength(43);
@@ -4443,7 +4446,7 @@ it('pairs a presenter using a single-use game-scoped code stored only as a hash'
       ? cookieHeader
       : [cookieHeader ?? ''];
     const presenterCookie = cookies.find((cookie) =>
-      cookie.startsWith('turnstone-presenter-'),
+      cookie.startsWith('oathstone-presenter-'),
     );
     expect(presenterCookie).toContain('HttpOnly');
     expect(presenterCookie).toContain('Secure');
@@ -4630,7 +4633,7 @@ it.each([5, 40])(
     const commands = simulation.commands;
     if (!commands) throw new Error('Scenario command trace was not captured');
     const gameId = `scenario-${seed}`;
-    const publicOrigin = 'https://turnstone.stackstoneconsulting.co.uk';
+    const publicOrigin = 'https://oathstone.stackstoneconsulting.co.uk';
     await db.execute(sql`delete from games where id = ${gameId}`);
     const statesByVersion = new Map<
       number,
@@ -4664,13 +4667,13 @@ it.each([5, 40])(
     const { join } = await import('node:path');
     const { tmpdir } = await import('node:os');
     const clientDirectory = await staticFiles.mkdtemp(
-      join(tmpdir(), 'turnstone-restart-'),
+      join(tmpdir(), 'oathstone-restart-'),
     );
     await Promise.all(
       ['index.html', 'app-shell.html'].map((file) =>
         staticFiles.writeFile(
           join(clientDirectory, file),
-          '<main>Turnstone restart shell</main>',
+          '<main>Oathstone restart shell</main>',
         ),
       ),
     );
@@ -4822,11 +4825,11 @@ it.each([5, 40])(
       const csrfToken = csrfResponse.body.csrfToken as string;
       const browserHeaders = {
         Origin: publicOrigin,
-        Cookie: `turnstone-csrf=${csrfToken}`,
+        Cookie: `oathstone-csrf=${csrfToken}`,
         'X-CSRF-Token': csrfToken,
       };
       expect((await request(runtime.url).get('/play')).text).toBe(
-        '<main>Turnstone restart shell</main>',
+        '<main>Oathstone restart shell</main>',
       );
       for (let index = 0; index < commands.length; index++) {
         const entry = commands[index]!;
@@ -4837,7 +4840,7 @@ it.each([5, 40])(
           await closeRuntime(runtime);
           runtime = await createRuntime();
           expect((await request(runtime.url).get(`/game/${gameId}`)).text).toBe(
-            '<main>Turnstone restart shell</main>',
+            '<main>Oathstone restart shell</main>',
           );
           expect((await request(runtime.url).get('/readyz')).status).toBe(200);
           await connectPlayers(runtime);
@@ -4877,6 +4880,13 @@ it.each([5, 40])(
             ? { kind: 'player' as const, seatId: entry.actor.seatId }
             : { kind: 'coordinator' as const };
         const expectedView = engine.viewFor(viewer, expected!);
+        if (entry.actor.kind === 'coordinator') {
+          expectedView.coordinatorUndo = await getGameUndoStatus(
+            gameId,
+            expected!.version,
+            now,
+          );
+        }
         if (canonicalJson(response.body.view) !== canonicalJson(expectedView)) {
           const persisted = await readGameEvents(gameId);
           const difference = persisted.findIndex(

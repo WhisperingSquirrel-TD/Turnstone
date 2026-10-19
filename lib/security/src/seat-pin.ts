@@ -49,7 +49,7 @@ function validatePepperConfig(config: PinPepperConfig): void {
 function pepperPin(pin: string, pepper: PinPepperKey): Buffer {
   validatePepperKey(pepper);
   return createHmac('sha256', pepper.secret)
-    .update('turnstone-seat-pin-v1\0')
+    .update('oathstone-seat-pin-v1\0')
     .update(pin)
     .digest();
 }

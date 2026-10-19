@@ -17,9 +17,9 @@ content_type = "image/svg+xml"
 
 [[outputs]]
 id = "MP4vFgQejdzQdr5pgO1XF"
-uri = "file://docs/brand/turnstone-logo-exploration/index.html"
+uri = "file://docs/brand/oathstone-logo-exploration/index.html"
 type = "html"
-title = "Turnstone logo concepts"
+title = "Oathstone logo concepts"
 description = "Three role-neutral logo directions based on the Stackstone stone mark, shown on dark and light backgrounds with 32 px and one-colour checks."
 logical_id = "0e560851-7e69-41c7-bfde-874c13b0b864"
 content_hash = "sha256:c861a5e5ceced186bb9c0f83ac0485d9ca1e3b417b22e16297cdc665542b0b0b"
@@ -31,9 +31,9 @@ content_type = "text/html"
 
 [[outputs]]
 id = "JfcsnaHeWWrEvd7AH2qUa"
-uri = "file://assets/brand/turnstone/turnstone-emblem-preview.png"
+uri = "file://assets/brand/oathstone/oathstone-emblem-preview.png"
 type = "image"
-title = "Turnstone emblem — corrected PNG"
+title = "Oathstone emblem — corrected PNG"
 description = "Clean two-background preview with equal-sized stones and the gold stone at about 1:30."
 logical_id = "ca0ca273-1185-4bc4-9811-c4ea1f19123c"
 content_hash = "sha256:a8a83e4b247159e54ce647ff9d870fdce2563909bff3ea90b27d8a6830b13a1e"

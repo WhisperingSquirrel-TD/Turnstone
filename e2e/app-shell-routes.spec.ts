@@ -11,14 +11,14 @@ test('the dev server serves the shared first-paint shell only on app routes', as
       });
       expect(response.status(), path).toBe(200);
       const html = await response.text();
-      expect(html, path).toContain('class="turnstone-wordmark"');
+      expect(html, path).toContain('class="oathstone-wordmark"');
       expect(html, path).toContain('<link rel="stylesheet"');
       expect(html, path).not.toContain('Start a new game');
       expect(html, path).not.toContain('A game of traitors and faithful.');
     }
   }
 
-  const unknownRoute = await request.get('/not-a-turnstone-route', {
+  const unknownRoute = await request.get('/not-a-oathstone-route', {
     headers: { accept: 'text/html' },
   });
   expect(unknownRoute.status()).toBe(404);

@@ -70,7 +70,7 @@ export async function attachRealtime(
   httpServer: HttpServer,
   options: RealtimeOptions,
 ) {
-  const notificationChannel = 'turnstone_game_changed';
+  const notificationChannel = 'oathstone_game_changed';
   const instanceId = randomUUID();
   let notificationClient: PoolClient | null = null;
   let notificationErrorHandler: (() => void) | null = null;

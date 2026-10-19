@@ -1,5 +1,5 @@
 :root {
-  /* Turnstone's approved Stackstone talk-style palette. */
+  /* Oathstone's approved Stackstone talk-style palette. */
   --charcoal: #3d3a38;
   --hearth: #2e2b29;
   --stone: #55504b;
@@ -89,7 +89,7 @@
   color: var(--candle);
 }
 
-.game-shell[data-game-theme='day'] :is(h1, h2, .turnstone-wordmark) .text-gilt {
+.game-shell[data-game-theme='day'] :is(h1, h2, .oathstone-wordmark) .text-gilt {
   color: var(--gilt);
 }
 

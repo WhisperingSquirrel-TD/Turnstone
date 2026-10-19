@@ -201,9 +201,7 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await expect(page.getByTestId('coordinator-time-left')).toContainText(
     'Time left:',
   );
-  await expect(
-    page.getByTestId('button-coordinator-undo'),
-  ).toBeVisible();
+  await expect(page.getByTestId('button-coordinator-undo')).toBeVisible();
   await page.getByTestId('button-coordinator-undo').click();
   await expect(page.getByTestId('button-coordinator-undo')).toHaveCount(0);
   expect(commands.at(-1)?.type).toBe('UndoCoordinatorAction');

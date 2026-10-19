@@ -41,7 +41,7 @@ async function listFiles(
 }
 
 it('builds public pages and an app fallback without scripts or game assets', async () => {
-  tempDirectory = await mkdtemp(join(tmpdir(), 'turnstone-static-public-'));
+  tempDirectory = await mkdtemp(join(tmpdir(), 'oathstone-static-public-'));
   const sourceDirectory = join(tempDirectory, 'source');
   const outputDirectory = join(tempDirectory, 'output');
   await mkdir(join(sourceDirectory, 'assets'), { recursive: true });

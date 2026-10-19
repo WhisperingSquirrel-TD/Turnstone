@@ -34,30 +34,30 @@ describe('service worker static cache policy', () => {
       shouldCache!(
         {
           method: 'GET',
-          url: 'https://turnstone.example/assets/player.js',
+          url: 'https://oathstone.example/assets/player.js',
           destination: 'script',
         },
-        'https://turnstone.example',
+        'https://oathstone.example',
       ),
     ).toBe(true);
     expect(
       shouldCache!(
         {
           method: 'GET',
-          url: 'https://turnstone.example/api/games/abc/view',
+          url: 'https://oathstone.example/api/games/abc/view',
           destination: '',
         },
-        'https://turnstone.example',
+        'https://oathstone.example',
       ),
     ).toBe(false);
     expect(
       shouldCache!(
         {
           method: 'GET',
-          url: 'https://turnstone.example/socket.io/?EIO=4',
+          url: 'https://oathstone.example/socket.io/?EIO=4',
           destination: '',
         },
-        'https://turnstone.example',
+        'https://oathstone.example',
       ),
     ).toBe(false);
     expect(
@@ -67,27 +67,27 @@ describe('service worker static cache policy', () => {
           url: 'https://third-party.example/font.woff2',
           destination: 'font',
         },
-        'https://turnstone.example',
+        'https://oathstone.example',
       ),
     ).toBe(false);
     expect(
       shouldCache!(
         {
           method: 'GET',
-          url: 'https://turnstone.example/game/abc',
+          url: 'https://oathstone.example/game/abc',
           destination: 'document',
         },
-        'https://turnstone.example',
+        'https://oathstone.example',
       ),
     ).toBe(false);
     expect(
       shouldCache!(
         {
           method: 'POST',
-          url: 'https://turnstone.example/assets/player.js',
+          url: 'https://oathstone.example/assets/player.js',
           destination: 'script',
         },
-        'https://turnstone.example',
+        'https://oathstone.example',
       ),
     ).toBe(false);
   });

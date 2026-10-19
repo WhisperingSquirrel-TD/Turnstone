@@ -17,7 +17,7 @@ const render = (path: string) =>
 describe('routes', () => {
   it('renders the answer-first public home and byline', () => {
     const html = render('/');
-    expect(html).toContain('Turnstone is a free game of traitors and faithful');
+    expect(html).toContain('Oathstone is a free game of traitors and faithful');
     expect(html).toContain('How it works');
     expect(html).toContain(
       'How do we play a traitor game at home with 15 people?',
@@ -37,21 +37,21 @@ describe('routes', () => {
     expect(html).not.toContain('not available yet');
     expect(html).toContain('made by Stackstone Consulting');
   });
-  it('uses clean, in-bounds stone geometry in the Turnstone SVG exports', () => {
+  it('uses clean, in-bounds stone geometry in the Oathstone SVG exports', () => {
     const darkEmblem = readFileSync(
       new URL(
-        '../../../assets/brand/turnstone/turnstone-emblem-dark.svg',
+        '../../../assets/brand/oathstone/oathstone-emblem-dark.svg',
         import.meta.url,
       ),
       'utf8',
     );
     const favicon = readFileSync(
-      new URL('../../../assets/brand/turnstone/favicon.svg', import.meta.url),
+      new URL('../../../assets/brand/oathstone/favicon.svg', import.meta.url),
       'utf8',
     );
     const lightEmblem = readFileSync(
       new URL(
-        '../../../assets/brand/turnstone/turnstone-emblem-light.svg',
+        '../../../assets/brand/oathstone/oathstone-emblem-light.svg',
         import.meta.url,
       ),
       'utf8',
@@ -72,7 +72,7 @@ describe('routes', () => {
 
     expect(
       existsSync(
-        new URL('../public/brand/turnstone-emblem-dark.svg', import.meta.url),
+        new URL('../public/brand/oathstone-emblem-dark.svg', import.meta.url),
       ),
     ).toBe(false);
     expect(config.appIconPath).toBe('brand/stackstone-icon-dark-outlined.svg');
@@ -145,7 +145,7 @@ describe('routes', () => {
     expect(playerFooter).toContain('target="_blank"');
     expect(playerFooter).toContain('rel="noopener noreferrer"');
   });
-  it('keeps public headers Turnstone-only and links to Stackstone in the footer', () => {
+  it('keeps public headers Oathstone-only and links to Stackstone in the footer', () => {
     const publicHtml = render('/');
     const header =
       publicHtml.match(
@@ -176,7 +176,7 @@ describe('routes', () => {
     );
     expect(staticFooter).toContain('/brand/stackstone-icon-dark-outlined.svg');
   });
-  it('uses one Turnstone wordmark and puts the Stackstone credit and logo in every footer', () => {
+  it('uses one Oathstone wordmark and puts the Stackstone credit and logo in every footer', () => {
     for (const path of [
       '/',
       '/faq',
@@ -194,7 +194,7 @@ describe('routes', () => {
     const playerHtml = render('/game/rehearsal-id');
     expect(
       playerHtml.match(
-        /(?:class="turnstone-wordmark"|data-testid="text-entry-brand")/g,
+        /(?:class="oathstone-wordmark"|data-testid="text-entry-brand")/g,
       ) ?? [],
     ).toHaveLength(1);
     const playerHeader =

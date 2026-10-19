@@ -54,6 +54,7 @@ function createPublicView(gameId: string): FullView {
         name: 'Morgan',
       },
     ],
+    coordinatorUndo: null,
     coordinatorAlerts: [],
     fairness: null,
   } as FullView;
@@ -82,7 +83,7 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
   await expect(shell).toHaveAttribute('data-game-theme', 'night');
   expect(
     await shell
-      .locator('.turnstone-wordmark > span')
+      .locator('.oathstone-wordmark > span')
       .evaluateAll((parts) =>
         parts.map((part) => getComputedStyle(part).color),
       ),
@@ -550,7 +551,7 @@ test('coordinator creates a fresh late invitation without reopening the room cod
       status: 201,
       json: {
         gameId,
-        joinUrl: `https://turnstone.test/join/${gameId}#${'i'.repeat(43)}`,
+        joinUrl: `https://oathstone.test/join/${gameId}#${'i'.repeat(43)}`,
       },
     }),
   );
@@ -633,7 +634,7 @@ test('organiser can start with five players while one planned seat has not joine
       json: {
         gameId,
         shortCode: 'ABC234',
-        joinUrl: `https://turnstone.test/join/${gameId}#${'i'.repeat(43)}`,
+        joinUrl: `https://oathstone.test/join/${gameId}#${'i'.repeat(43)}`,
       },
     }),
   );
@@ -657,7 +658,7 @@ async function revealNotes(
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -769,7 +770,7 @@ test('phone room shows public game state without a presenter', async ({
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -872,7 +873,7 @@ test('shows Moving on instead of a frozen zero when a deadline passes', async ({
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -910,7 +911,7 @@ test('uses server time when the device clock is two minutes fast or slow', async
         route.fulfill({
           status: 200,
           headers: {
-            'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+            'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
           },
           json: { csrfToken: 'test-csrf' },
         }),
@@ -964,7 +965,7 @@ test('rehearsal player can move on from public and voting screens', async ({
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -1204,7 +1205,7 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -1398,7 +1399,7 @@ for (const role of ['faithful', 'traitor'] as const) {
         route.fulfill({
           status: 200,
           headers: {
-            'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+            'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
           },
           json: { csrfToken: 'test-csrf' },
         }),
@@ -1656,7 +1657,7 @@ test('banishment votes are alphabetical while night choices stay shuffled per se
       route.fulfill({
         status: 200,
         headers: {
-          'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+          'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
         },
         json: { csrfToken: 'test-csrf' },
       }),
@@ -1809,7 +1810,7 @@ test('private Notes hide after background and idle, then return with one tap', a
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -1902,7 +1903,7 @@ test('held role text stays above the seal in compact phone viewports', async ({
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -2024,7 +2025,7 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),
@@ -2157,7 +2158,7 @@ test('the lobby code and join QR are shared on each seated player phone', async 
     route.fulfill({
       status: 200,
       headers: {
-        'Set-Cookie': 'turnstone-csrf=test-csrf; Path=/; SameSite=Strict',
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
       },
       json: { csrfToken: 'test-csrf' },
     }),

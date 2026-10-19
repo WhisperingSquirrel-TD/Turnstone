@@ -340,7 +340,7 @@ body:has(.game-fullscreen-overlay) {
   margin-inline: auto;
   flex-shrink: 0;
 }
-.game-fullscreen-overlay .entry-brand > .turnstone-wordmark {
+.game-fullscreen-overlay .entry-brand > .oathstone-wordmark {
   min-height: 44px;
 }
 .private-action-content {
@@ -384,7 +384,7 @@ body:has(.game-fullscreen-overlay) {
   color: var(--candle);
   background: var(--hearth);
 }
-.privacy-shield .entry-brand > .turnstone-wordmark {
+.privacy-shield .entry-brand > .oathstone-wordmark {
   min-height: 44px;
 }
 .privacy-shield .entry-brand {

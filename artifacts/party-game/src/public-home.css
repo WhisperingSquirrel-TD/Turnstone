@@ -1,4 +1,4 @@
-.turnstone-wordmark {
+.oathstone-wordmark {
   display: inline-flex;
   align-items: baseline;
   color: var(--candle);
@@ -61,7 +61,7 @@
   text-decoration-thickness: 1px;
 }
 
-.public-home-brand > .turnstone-wordmark {
+.public-home-brand > .oathstone-wordmark {
   min-height: 44px;
 }
 

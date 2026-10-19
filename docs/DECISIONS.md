@@ -593,7 +593,7 @@ Each entry uses context, options, choice and consequence. **Pending** means no a
 
 **Options:** Keep placeholders; or use values explicitly confirmed by the owner.
 
-**Choice:** The owner selected Turnstone, tagline “Turnstone: the traitor game where everyone plays.” and byline “A Stackstone game”. Amendment 5 supplies the organisation site/location and SVG brand assets; Amendment 6 resolves the canonical site and production passkey RP ID. Section 25 resolves the dark visual direction. Keep system fonts and the 30-day retention default. Leave unconfirmed:
+**Choice:** The owner selected Oathstone, tagline “A game of traitors and faithful.” and byline “A Stackstone game”. Amendment 5 supplies the organisation site/location and SVG brand assets; Amendment 6 resolves the canonical site and production passkey RP ID. Section 25 resolves the dark visual direction. Keep system fonts and the 30-day retention default. Leave unconfirmed:
 
 - Crawler policy (implement the specified configurable default only when authorised).
 - Change-freeze dates.
@@ -613,7 +613,7 @@ Each entry uses context, options, choice and consequence. **Pending** means no a
 
 ## D18 — Push and secret scanning after each green milestone (resolved)
 
-**Context:** The owner connected the Turnstone repository and requires each green milestone to be pushed when this Repl has push access; GitHub CI provides the approved WebKit environment.
+**Context:** The owner connected the Oathstone repository and requires each green milestone to be pushed when this Repl has push access; GitHub CI provides the approved WebKit environment.
 
 **Options:** Rely on local verification alone; or scan and push the exact green milestone commit to `origin/main`, leaving owner Sync as the fallback when credentials do not permit push.
 
@@ -986,7 +986,7 @@ unindexable pre-launch preview. The normal production-header and robots tests
 remain mandatory; no deployment or indexing change is authorised. Q1 is
 resolved.
 
-## D67 — Turnstone symbol-only logo (resolved)
+## D67 — Oathstone symbol-only logo (resolved)
 
 **Context:** The owner selected the shared-table direction and clarified that the logo should contain only the symbol. The product title will always be rendered as text, matching the supplied reference image.
 
@@ -996,21 +996,21 @@ resolved.
 
 **Consequence:** The product title remains independent from the logo artwork, and future logo exports must not include the name or a separate separator dot.
 
-## D68 — Turnstone emblem in game headers (superseded)
+## D68 — Oathstone emblem in game headers (superseded)
 
-**Context:** The owner approved the symbol-only Turnstone emblem for use in the product and clarified from the public-home screenshot that every top-right site and game header should identify Turnstone, not Stackstone Consulting.
+**Context:** The owner approved the symbol-only Oathstone emblem for use in the product and clarified from the public-home screenshot that every top-right site and game header should identify Oathstone, not Stackstone Consulting.
 
-**Choice:** Use the Turnstone emblem in public-site, game and entry headers, linking internally to Turnstone home. Keep Stackstone marks for Stackstone Consulting links in footers and other explicit builder links; those links continue to target `https://stackstoneconsulting.co.uk/`. Public-site Stackstone links open in the same tab; in-game Stackstone links open a new tab with `noopener noreferrer`.
+**Choice:** Use the Oathstone emblem in public-site, game and entry headers, linking internally to Oathstone home. Keep Stackstone marks for Stackstone Consulting links in footers and other explicit builder links; those links continue to target `https://stackstoneconsulting.co.uk/`. Public-site Stackstone links open in the same tab; in-game Stackstone links open a new tab with `noopener noreferrer`.
 
-**Consequence:** The product emblem and builder mark have separate assets and destinations. The Turnstone favicon, app icon and all top-right headers use the game emblem; Stackstone footer links retain their original website destination.
+**Consequence:** The product emblem and builder mark have separate assets and destinations. The Oathstone favicon, app icon and all top-right headers use the game emblem; Stackstone footer links retain their original website destination.
 
-## D69 — Keep the Turnstone emblem staged until app approval (resolved)
+## D69 — Keep the Oathstone emblem staged until app approval (resolved)
 
-**Context:** The owner clarified that the new Turnstone emblem should be saved in the repository but not used in the app until separately approved. After initially allowing the ZIP, the owner directed that it be removed from the upcoming push.
+**Context:** The owner clarified that the new Oathstone emblem should be saved in the repository but not used in the app until separately approved. After initially allowing the ZIP, the owner directed that it be removed from the upcoming push.
 
-**Choice:** D68 is superseded. Keep the existing Stackstone mark in the app icon, favicon, and public/game headers. Move the Turnstone SVG, PNG, and favicon assets to `assets/brand/turnstone/` as source files only; exclude the ZIP from the upcoming push. Continue rendering the Turnstone product name as text. Stackstone marks link to the Stackstone website: same tab on public pages and a new tab with `noopener noreferrer` in game screens.
+**Choice:** D68 is superseded. Keep the existing Stackstone mark in the app icon, favicon, and public/game headers. Move the Oathstone SVG, PNG, and favicon assets to `assets/brand/oathstone/` as source files only; exclude the ZIP from the upcoming push. Continue rendering the Oathstone product name as text. Stackstone marks link to the Stackstone website: same tab on public pages and a new tab with `noopener noreferrer` in game screens.
 
-**Consequence:** The source emblem is preserved without appearing in the product. Changing the app to the Turnstone emblem requires a later owner approval.
+**Consequence:** The source emblem is preserved without appearing in the product. Changing the app to the Oathstone emblem requires a later owner approval.
 
 ## D70 — Lobby code visibility and QR joins (resolved)
 
@@ -1024,9 +1024,9 @@ resolved.
 
 **Context:** The owner replaced the earlier Vercel/sibling-server direction with one Replit deployment and specified relative API/socket paths. The current hosting files and plan contained conflicting Vercel and `live.`-subdomain instructions.
 
-**Options:** Keep a Vercel static shell with a sibling game server; deploy everything on Vercel; or serve Turnstone's public pages, app shell, API, sockets and scheduler together from one Replit Reserved VM.
+**Options:** Keep a Vercel static shell with a sibling game server; deploy everything on Vercel; or serve Oathstone's public pages, app shell, API, sockets and scheduler together from one Replit Reserved VM.
 
-**Choice:** Use the single-origin Replit architecture at `https://turnstone.stackstoneconsulting.co.uk` after separate owner launch approval. The Stackstone company site remains separate. Remove API-host selection from the client and use relative `/api` and `/socket.io` paths. Release the shell and server together; do not require N-1 compatibility. Retain existing Vercel files only as unused repository files and record deferred M4b work in `docs/HOSTING.md`.
+**Choice:** Use the single-origin Replit architecture at `https://oathstone.stackstoneconsulting.co.uk` after separate owner launch approval. The Stackstone company site remains separate. Remove API-host selection from the client and use relative `/api` and `/socket.io` paths. Release the shell and server together; do not require N-1 compatibility. Retain existing Vercel files only as unused repository files and record deferred M4b work in `docs/HOSTING.md`.
 
 **Consequence:** This decision selects the intended host but does not authorise deployment, domain connection, DNS changes, production secrets, or paid services. No hosting code work beyond same-origin paths is authorised before Milestone 5 acceptance. The owner checklist must be presented before any launch action.
 
@@ -1227,13 +1227,13 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 
 **Consequence:** Duplicate-name recovery uses the existing seat PIN, lockout and device-revocation rules; the player can instead choose a distinct name.
 
-### D37 — Explicit join and recovery failures; one Turnstone header wordmark
+### D37 — Explicit join and recovery failures; one Oathstone header wordmark
 
-**Context:** The owner reported silent or unclear join/recovery failures and a duplicated Turnstone wordmark.
+**Context:** The owner reported silent or unclear join/recovery failures and a duplicated Oathstone wordmark.
 
 **Options:** Keep generic failure states and repeated branding; or provide a specific next step for every failed entry operation and retain one wordmark in the shared header.
 
-**Choice:** Every failed join or recovery shows a plain-English reason and a next step. The shared header displays the Turnstone wordmark once.
+**Choice:** Every failed join or recovery shows a plain-English reason and a next step. The shared header displays the Oathstone wordmark once.
 
 **Consequence:** Entry failures are actionable without weakening rate limits or exposing seat details, and the header remains clear.
 
@@ -1257,11 +1257,11 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 
 **Consequence:** This owner ruling supersedes the hold-during-choice and hold-to-confirm details in section 10. Choice screens rely on the player following the shield prompt; a selected name is visible on that player's device while they choose. Hold-only role reveal remains unchanged.
 
-### D40 — Text-only Turnstone header and Stackstone footer (resolved)
+### D40 — Text-only Oathstone header and Stackstone footer (resolved)
 
-**Context:** The owner found duplicate Turnstone wording and icons in the game header and clarified that the new Turnstone emblem should wait. They want the Stackstone cairn mark and website link on every screen, but only in the footer.
+**Context:** The owner found duplicate Oathstone wording and icons in the game header and clarified that the new Oathstone emblem should wait. They want the Stackstone cairn mark and website link on every screen, but only in the footer.
 
-**Choice:** Show a single text-only Turnstone wordmark in Candle and Gilt in every header. Put the exact credit “made by Stackstone Consulting” and the Stackstone cairn mark linked to `https://stackstoneconsulting.co.uk/` in every screen's footer, including private moments. Public footer links open in the same tab; game links use a safe new tab. Do not use the approved Turnstone emblem yet.
+**Choice:** Show a single text-only Oathstone wordmark in Candle and Gilt in every header. Put the exact credit “made by Stackstone Consulting” and the Stackstone cairn mark linked to `https://stackstoneconsulting.co.uk/` in every screen's footer, including private moments. Public footer links open in the same tab; game links use a safe new tab. Do not use the approved Oathstone emblem yet.
 
 **Consequence:** The Stackstone builder name remains sourced from the shared identity config. One shared footer component is used for app screens, with matching markup in prerendered public pages; the cairn cannot appear as a role-specific tell.
 
@@ -1269,7 +1269,7 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 
 **Context:** The owner reported inconsistent wordmark positions, a page that scrolls behind fixed game controls, and an in-game footer divider narrower than the public-site divider.
 
-**Choice:** On every game screen, keep the Turnstone wordmark at the same safe-area top-left inset. Lock the game shell to the viewport; use available main height before allowing scroll, never create an independent scroll box for a choice list, and show no scrollbar when content fits. If content genuinely exceeds the viewport, only the main region may scroll. Full-screen overlays lock the background and scroll only when their own content exceeds the viewport. Keep the “made by Stackstone Consulting” footer at the viewport bottom, safe-area-aware and visible on every game screen. Its divider must match the public-site footer width. No action bar, alert or content may cover the footer; full-screen overlays include a matching footer of their own.
+**Choice:** On every game screen, keep the Oathstone wordmark at the same safe-area top-left inset. Lock the game shell to the viewport; use available main height before allowing scroll, never create an independent scroll box for a choice list, and show no scrollbar when content fits. If content genuinely exceeds the viewport, only the main region may scroll. Full-screen overlays lock the background and scroll only when their own content exceeds the viewport. Keep the “made by Stackstone Consulting” footer at the viewport bottom, safe-area-aware and visible on every game screen. Its divider must match the public-site footer width. No action bar, alert or content may cover the footer; full-screen overlays include a matching footer of their own.
 
 **Consequence:** The shared player shell reserves the footer and action areas, controls and alerts remain above them, and all footer contexts use the same maximum-width token. Shield, rehearsal and confirmation overlays follow the same placement and lock background scrolling.
 
@@ -1285,7 +1285,7 @@ clock for its real rate limiter and deadlines, with persisted timestamp checks.
 
 **Context:** The Round 4 review found that app routes briefly exposed the prerendered home page and appeared unstyled when JavaScript was delayed or blocked.
 
-**Choice:** Only `/`, `/faq` and `/compare` may contain prerendered public copy. App and game routes use a minimal Turnstone shell with stylesheets linked in the document head, including on Vercel's static output. Keep those routes `noindex`; preserve the public content and structured data only on the public pages.
+**Choice:** Only `/`, `/faq` and `/compare` may contain prerendered public copy. App and game routes use a minimal Oathstone shell with stylesheets linked in the document head, including on Vercel's static output. Keep those routes `noindex`; preserve the public content and structured data only on the public pages.
 
 **Consequence:** JavaScript-disabled first paint remains styled without showing the public hero on private app routes. CI tests the Vite development response and built production routes; static hosting rewrites app paths to the generated shell.
 
@@ -1381,7 +1381,7 @@ Commentary is derived only from public game state, never a player's private choi
 
 The shared public phase selects the palette: entry/lobby and night remain dark; day steps use Candle backgrounds, Ash panels and Charcoal text. “Always dark” is an off-by-default local display override. No role enters the theme decision. Night/morning transitions respect reduced motion.
 
-The canonical Stackstone palette is unchanged. The day button mixes 12% Candle into Gilt so Charcoal labels meet 4.5:1; the original Gilt/Charcoal pair does not. Small day text uses dark ink, with a darker Gilt shade for headings, focus and the wordmark accent. The existing Cairn is rendered dark on light surfaces, not replaced by the unapproved Turnstone emblem.
+The canonical Stackstone palette is unchanged. The day button mixes 12% Candle into Gilt so Charcoal labels meet 4.5:1; the original Gilt/Charcoal pair does not. Small day text uses dark ink, with a darker Gilt shade for headings, focus and the wordmark accent. The existing Cairn is rendered dark on light surfaces, not replaced by the unapproved Oathstone emblem.
 
 **Why:** R5 17–20 require both themes to stay legible and identical across roles. Root-palette tests now explicitly read `:root`, while separate scoped-palette and browser checks cover the day overrides; the original exact-colour assertions remain.
 
@@ -1410,3 +1410,11 @@ The canonical Stackstone palette is unchanged. The day button mixes 12% Candle i
 **Choice:** Store the pre-action snapshot server-side for 60 seconds. Offer undo only while the game remains at the action's resulting version; any later game event or private-view release invalidates it. Actions that reveal roles or close joining are not undoable. Record a generic public undo event, but never include the stored snapshot in coordinator, co-coordinator or presenter views.
 
 **Consequence:** Undo works across process restarts and concurrent instances, and cannot silently erase later player actions. The window is consumed atomically with the undo event.
+
+## D91 — Product renamed to Oathstone (owner decision, 19 October 2026)
+
+**Context:** The owner chose Oathstone after a trade mark screen found an identical registration for the former product name in an adjacent class. The owner reports Oathstone is clear. Nothing has been published and no DNS has been set.
+
+**Choice:** Use Oathstone throughout product copy, code identifiers, storage and cookie names, metadata, tests, documentation and asset paths. Keep the tagline “A game of traitors and faithful.”, second line “Everyone plays. Even the host.” and byline “A Stackstone game.” The canonical hostname is `oathstone.stackstoneconsulting.co.uk`, and the company-site redirect path is `/oathstone`. Do not change the currently used app icon or create new artwork; the owner will approve a new emblem and logo set.
+
+**Exclusions and owner actions:** Keep the repository path `WhisperingSquirrel-TD/Turnstone`. Leave `TURNSTONE_GITHUB_TOKEN` in Replit Secrets until the owner creates `OATHSTONE_GITHUB_TOKEN` with the matching private value and updates its consumer; never send or display the value. Leave `TURNSTONE_PROMOTION_ENABLED` in GitHub Actions until the owner creates `OATHSTONE_PROMOTION_ENABLED` with the matching value and authorizes updating the workflow. Keep historical verification entries and past release records unchanged. Leave all `attached_assets/` files untouched: 43 are currently tracked despite the brief describing them as untracked; 12 contain 24 former-name text matches. The two current untracked images remain excluded. The owner can separately decide whether to untrack the 43 existing files.

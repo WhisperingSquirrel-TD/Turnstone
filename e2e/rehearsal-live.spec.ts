@@ -694,7 +694,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         const cookieHeader = headers.cookie ?? '';
         const seatCookiePresent = cookieHeader
           .split(';')
-          .some((cookie) => cookie.trim().startsWith('turnstone-seat-'));
+          .some((cookie) => cookie.trim().startsWith('oathstone-seat-'));
         socketSeatCookieSeen ||= seatCookiePresent;
         const origin = headers.origin;
         const originStatus = !origin
@@ -928,7 +928,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         watchModePhases.add(phase);
       }
       await expect(
-        page.locator('header.public-shell-header .turnstone-wordmark'),
+        page.locator('header.public-shell-header .oathstone-wordmark'),
       ).toHaveCount(1);
       await expect(page.getByTestId('brand-footer-shell')).toContainText(
         'made by Stackstone Consulting',
@@ -1508,7 +1508,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(
       page.getByRole('button', { name: 'Back to start', exact: true }),
     ).toBeVisible({ timeout: 5_000 });
-    await page.locator('.player-shell-header .turnstone-wordmark').click();
+    await page.locator('.player-shell-header .oathstone-wordmark').click();
     await expect(
       page.getByRole('link', { name: 'Start a new game', exact: true }),
     ).toBeVisible();

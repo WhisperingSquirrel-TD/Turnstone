@@ -164,13 +164,13 @@ describe('health and readiness', () => {
 
   it('allows credentialed browser requests only from the configured app origin', async () => {
     const app = createApp(async () => {}, {
-      allowedOrigins: ['https://turnstone.stackstoneconsulting.co.uk'],
+      allowedOrigins: ['https://oathstone.stackstoneconsulting.co.uk'],
     });
     const allowed = await request(app)
       .get('/api/healthz')
-      .set('Origin', 'https://turnstone.stackstoneconsulting.co.uk');
+      .set('Origin', 'https://oathstone.stackstoneconsulting.co.uk');
     expect(allowed.headers['access-control-allow-origin']).toBe(
-      'https://turnstone.stackstoneconsulting.co.uk',
+      'https://oathstone.stackstoneconsulting.co.uk',
     );
     expect(allowed.headers['access-control-allow-credentials']).toBe('true');
 
@@ -211,7 +211,7 @@ describe('health and readiness', () => {
   });
 
   it('rate-limits rehearsal starts and rejects them before capacity is exceeded', async () => {
-    const origin = 'https://turnstone.stackstoneconsulting.co.uk';
+    const origin = 'https://oathstone.stackstoneconsulting.co.uk';
     const payload = {
       gameId: 'practice-game',
       idempotencyKey: 'practice-request',
@@ -258,7 +258,7 @@ describe('health and readiness', () => {
     };
     const app = createApp(async () => {}, { deploymentMode });
     const closedMessage =
-      'Game creation is closed while Turnstone is coming soon.';
+      'Game creation is closed while Oathstone is coming soon.';
     expect(
       (await request(app).get('/api/healthz')).headers['x-robots-tag'],
     ).toBe('noindex, nofollow');
@@ -286,7 +286,7 @@ describe('health and readiness', () => {
   });
 
   it('issues a host-only CSRF cookie and requires its token on browser mutations', async () => {
-    const origin = 'https://turnstone.stackstoneconsulting.co.uk';
+    const origin = 'https://oathstone.stackstoneconsulting.co.uk';
     const app = createApp(async () => {}, {
       allowedOrigins: [origin],
       secureCookies: true,
@@ -301,7 +301,7 @@ describe('health and readiness', () => {
     expect(setCookie).not.toContain('Domain=');
     const reusedToken = await request(app)
       .get('/api/csrf')
-      .set('Cookie', `turnstone-csrf=${tokenResponse.body.csrfToken}`);
+      .set('Cookie', `oathstone-csrf=${tokenResponse.body.csrfToken}`);
     expect(reusedToken.body.csrfToken).toBe(tokenResponse.body.csrfToken);
 
     const denied = await request(app)
@@ -352,7 +352,7 @@ describe('health and readiness', () => {
     for (const path of paths) {
       const response = await request(app)
         .post(path)
-        .set('Origin', 'https://turnstone.stackstoneconsulting.co.uk')
+        .set('Origin', 'https://oathstone.stackstoneconsulting.co.uk')
         .send({});
       expect(response.status, path).toBe(403);
       expect(response.body, path).toEqual({
@@ -378,7 +378,7 @@ describe('health and readiness', () => {
     for (const path of ['/api/recover', '/api/join', '/api/presenter/pair']) {
       const response = await request(app)
         .post(path)
-        .set('Origin', 'https://turnstone.stackstoneconsulting.co.uk')
+        .set('Origin', 'https://oathstone.stackstoneconsulting.co.uk')
         .set('Cookie', cookie)
         .set('X-CSRF-Token', token)
         .send({});
@@ -395,7 +395,7 @@ describe('health and readiness', () => {
   });
 
   it('does not allow CreateGame through a game-scoped command route', async () => {
-    const origin = 'https://turnstone.stackstoneconsulting.co.uk';
+    const origin = 'https://oathstone.stackstoneconsulting.co.uk';
     const app = createApp(async () => {}, {
       allowedOrigins: [origin],
     });
