@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- **Milestone 5 rehearsal accepted; Milestone 6 is in progress.** Updated: 19 October 2026, 06:52 UTC.
-- Verify #136 failed only on a 5-second timeout while listing every browser test. Commit `c0f5795` narrows that smoke check to two representative mocked specs; targeted test now passes in 1.32s.
-- Presenter code is pushed in `df56591`; local typecheck, lint, 8 unit tests and Pixel/iPhone setup, coordinator and presenter E2E pass. Latest CI remains #136 **Failure** until the fix is verified.
-- Next: rerun CI, then remaining coordinator controls. Eight owner content attachments remain unprocessed and uncommitted; no publishing, paid service, domain, DNS or production-secret changes.
+- **Milestone 5 rehearsal accepted; Milestone 6 is in progress.** Updated: 19 October 2026, 07:01 UTC.
+- Verify #137 **Success** on `e5edc05`; its focused mock-browser listing check fixed the #136 timeout. Current commit `2103efb` adds a server-synchronised presenter countdown; pending Verify.
+- Local typecheck, lint, 8 unit tests and Pixel/iPhone setup, coordinator and presenter E2E pass, including a device clock two minutes fast. Presenter pairing, public lobby, verdict/log view and hidden private ballots are verified.
+- Next: continue Task 6 coordinator/presenter requirements. Eight owner content attachments remain unprocessed and uncommitted; no publishing, paid service, domain, DNS or production-secret changes.
 
 ## Previous verification history
 
