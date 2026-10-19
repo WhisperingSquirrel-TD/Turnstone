@@ -4,8 +4,8 @@ Status: PASS — engine scenarios
 
 Mode: sample
 Seed: 20261013
-Started: 2026-10-19T08:53:56.103Z
-Duration: 151168 ms
+Started: 2026-10-19T11:17:30.794Z
+Duration: 148274 ms
 
 ## Executed
 
@@ -27,42 +27,42 @@ Duration: 151168 ms
 
 Per-seat-count timings include deterministic decision logic, projections, replay checks and the independent oracle.
 
-- 5 seats: 359 games, 10 ms/game (0.41 ms/player²; max 103.06501600000047 ms)
-- 6 seats: 18 games, 53 ms/game (1.48 ms/player²; max 182.22565700000268 ms)
-- 7 seats: 21 games, 25 ms/game (0.51 ms/player²; max 91.7135780000026 ms)
-- 8 seats: 24 games, 32 ms/game (0.51 ms/player²; max 150.4827069999992 ms)
-- 9 seats: 27 games, 30 ms/game (0.38 ms/player²; max 74.02343199999814 ms)
-- 10 seats: 27 games, 37 ms/game (0.37 ms/player²; max 99.5740930000029 ms)
-- 11 seats: 27 games, 39 ms/game (0.32 ms/player²; max 111.54252799999813 ms)
-- 12 seats: 27 games, 54 ms/game (0.37 ms/player²; max 383.3016150000003 ms)
-- 13 seats: 27 games, 104 ms/game (0.61 ms/player²; max 401.38235599999825 ms)
-- 14 seats: 27 games, 49 ms/game (0.25 ms/player²; max 109.31362499999886 ms)
-- 15 seats: 356 games, 96 ms/game (0.43 ms/player²; max 459.26921199999924 ms)
-- 16 seats: 27 games, 75 ms/game (0.29 ms/player²; max 155.3318999999974 ms)
-- 17 seats: 27 games, 105 ms/game (0.36 ms/player²; max 451.97645100000227 ms)
-- 18 seats: 27 games, 199 ms/game (0.61 ms/player²; max 580.8854089999986 ms)
-- 19 seats: 27 games, 105 ms/game (0.29 ms/player²; max 171.57001100000343 ms)
-- 20 seats: 27 games, 137 ms/game (0.34 ms/player²; max 235.03985699999612 ms)
-- 21 seats: 27 games, 152 ms/game (0.35 ms/player²; max 245.87983199999871 ms)
-- 22 seats: 27 games, 150 ms/game (0.31 ms/player²; max 241.73874400000204 ms)
-- 23 seats: 27 games, 185 ms/game (0.35 ms/player²; max 381.17954199999804 ms)
-- 24 seats: 27 games, 207 ms/game (0.36 ms/player²; max 383.10864500000025 ms)
-- 25 seats: 27 games, 216 ms/game (0.35 ms/player²; max 466.29963500000304 ms)
-- 26 seats: 27 games, 231 ms/game (0.34 ms/player²; max 356.61471999999776 ms)
-- 27 seats: 27 games, 242 ms/game (0.33 ms/player²; max 422.92246100000193 ms)
-- 28 seats: 27 games, 244 ms/game (0.31 ms/player²; max 426.2389820000026 ms)
-- 29 seats: 27 games, 297 ms/game (0.35 ms/player²; max 433.240300999998 ms)
-- 30 seats: 101 games, 472 ms/game (0.52 ms/player²; max 1468.7887929999997 ms)
-- 31 seats: 99 games, 438 ms/game (0.46 ms/player²; max 1284.5998399999953 ms)
-- 32 seats: 100 games, 470 ms/game (0.46 ms/player²; max 1458.2029049999983 ms)
-- 33 seats: 98 games, 435 ms/game (0.40 ms/player²; max 1328.4655499999935 ms)
-- 34 seats: 99 games, 517 ms/game (0.45 ms/player²; max 1683.7261690000014 ms)
-- 35 seats: 103 games, 639 ms/game (0.52 ms/player²; max 2223.3077439999906 ms)
-- 36 seats: 100 games, 700 ms/game (0.54 ms/player²; max 3050.9169790000014 ms)
-- 37 seats: 97 games, 669 ms/game (0.49 ms/player²; max 1661.946987000003 ms)
-- 38 seats: 97 games, 678 ms/game (0.47 ms/player²; max 2151.718811999992 ms)
-- 39 seats: 97 games, 806 ms/game (0.53 ms/player²; max 2507.6408829999855 ms)
-- 40 seats: 213 games, 891 ms/game (0.56 ms/player²; max 3186.472001999995 ms)
+- 5 seats: 359 games, 11 ms/game (0.42 ms/player²; max 183.71288400000049 ms)
+- 6 seats: 18 games, 34 ms/game (0.93 ms/player²; max 69.14400999999998 ms)
+- 7 seats: 21 games, 34 ms/game (0.69 ms/player²; max 128.3044549999977 ms)
+- 8 seats: 24 games, 36 ms/game (0.56 ms/player²; max 153.0860169999978 ms)
+- 9 seats: 27 games, 38 ms/game (0.47 ms/player²; max 129.2624680000008 ms)
+- 10 seats: 27 games, 32 ms/game (0.32 ms/player²; max 90.03798800000004 ms)
+- 11 seats: 27 games, 40 ms/game (0.33 ms/player²; max 100.55885600000329 ms)
+- 12 seats: 27 games, 56 ms/game (0.39 ms/player²; max 141.61617500000284 ms)
+- 13 seats: 27 games, 103 ms/game (0.61 ms/player²; max 345.3272040000011 ms)
+- 14 seats: 27 games, 68 ms/game (0.35 ms/player²; max 265.2654829999956 ms)
+- 15 seats: 356 games, 91 ms/game (0.40 ms/player²; max 511.92207100000087 ms)
+- 16 seats: 27 games, 71 ms/game (0.28 ms/player²; max 152.01085199999943 ms)
+- 17 seats: 27 games, 122 ms/game (0.42 ms/player²; max 415.13284099999873 ms)
+- 18 seats: 27 games, 157 ms/game (0.48 ms/player²; max 586.7670380000054 ms)
+- 19 seats: 27 games, 130 ms/game (0.36 ms/player²; max 334.58952399999544 ms)
+- 20 seats: 27 games, 121 ms/game (0.30 ms/player²; max 206.27510600000096 ms)
+- 21 seats: 27 games, 141 ms/game (0.32 ms/player²; max 259.7395059999981 ms)
+- 22 seats: 27 games, 156 ms/game (0.32 ms/player²; max 288.503647000005 ms)
+- 23 seats: 27 games, 187 ms/game (0.35 ms/player²; max 350.58033799999976 ms)
+- 24 seats: 27 games, 214 ms/game (0.37 ms/player²; max 334.2759029999943 ms)
+- 25 seats: 27 games, 196 ms/game (0.31 ms/player²; max 351.45532799999637 ms)
+- 26 seats: 27 games, 238 ms/game (0.35 ms/player²; max 345.36423900000227 ms)
+- 27 seats: 27 games, 242 ms/game (0.33 ms/player²; max 401.8881840000031 ms)
+- 28 seats: 27 games, 233 ms/game (0.30 ms/player²; max 395.724629999997 ms)
+- 29 seats: 27 games, 286 ms/game (0.34 ms/player²; max 422.52649199999723 ms)
+- 30 seats: 101 games, 485 ms/game (0.54 ms/player²; max 1480.5486820000078 ms)
+- 31 seats: 99 games, 466 ms/game (0.48 ms/player²; max 1264.867532999997 ms)
+- 32 seats: 100 games, 504 ms/game (0.49 ms/player²; max 1447.4891510000016 ms)
+- 33 seats: 98 games, 428 ms/game (0.39 ms/player²; max 1446.9416540000093 ms)
+- 34 seats: 99 games, 513 ms/game (0.44 ms/player²; max 1509.5832010000013 ms)
+- 35 seats: 103 games, 620 ms/game (0.51 ms/player²; max 1873.3073109999968 ms)
+- 36 seats: 100 games, 644 ms/game (0.50 ms/player²; max 2521.5904690000025 ms)
+- 37 seats: 97 games, 630 ms/game (0.46 ms/player²; max 1586.7145350000064 ms)
+- 38 seats: 97 games, 637 ms/game (0.44 ms/player²; max 2138.3655160000053 ms)
+- 39 seats: 97 games, 747 ms/game (0.49 ms/player²; max 2325.6765310000046 ms)
+- 40 seats: 213 games, 876 ms/game (0.55 ms/player²; max 3132.5520930000057 ms)
 
 ## Results
 

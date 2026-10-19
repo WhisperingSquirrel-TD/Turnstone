@@ -393,6 +393,16 @@ export function evolve(previous: State | null, input: unknown): State {
             seatId: event.seatId,
           },
         ];
+      } else if (event.reason === 'departed') {
+        state.publicLog = [
+          ...state.publicLog,
+          {
+            seq: event.seq,
+            at: event.at,
+            action: 'seat_departed',
+            seatId: event.seatId,
+          },
+        ];
       }
       state.taskAssignments = previous.taskAssignments.map((task) =>
         task.seatId === event.seatId && task.status === 'assigned'

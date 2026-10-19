@@ -72,6 +72,12 @@ describe('CoordinatorConsole', () => {
         action: 'banishment',
         seat: { id: 'seat-casey', name: 'Casey' },
       },
+      {
+        seq: 5,
+        at: 1_800_000_000_000,
+        action: 'seat_departed',
+        seat: { id: 'seat-jordan', name: 'Jordan' },
+      },
     ];
     const html = renderToString(
       <CoordinatorConsole
@@ -91,6 +97,7 @@ describe('CoordinatorConsole', () => {
     expect(html).toContain(en.game.latestUpdates);
     expect(html).toContain(en.game.publicLogBanishment('Casey'));
     expect(html).toContain(en.game.publicLogScheduleShift(5));
+    expect(html).toContain(en.game.publicLogSeatDeparted('Jordan'));
     expect(html).not.toContain('Morgan');
   });
 
@@ -125,6 +132,36 @@ describe('CoordinatorConsole', () => {
     expect(html).toContain(en.coordinator.pinLockoutsHeading);
     expect(html).toContain('Alex is locked out after too many PIN attempts');
     expect(html).not.toContain('1234');
+  });
+
+  it('shows seat status and offers departure only for active seats', () => {
+    const html = renderToString(
+      <CoordinatorConsole
+        view={{
+          ...view,
+          seats: [
+            { id: 'seat-active', name: 'Alex', status: 'alive' },
+            { id: 'seat-departed', name: 'Sam', status: 'departed' },
+          ],
+        }}
+        presenterPath="/tv/test"
+        onCreatePresenterPairing={async () => ({
+          code: 'A'.repeat(43),
+          expiresAt: 1_800_000_600_000,
+        })}
+        onCommand={async () => {}}
+        onLoadCoordinatorDelegates={onLoadCoordinatorDelegates}
+        onSaveCoordinatorDelegates={onSaveCoordinatorDelegates}
+        onHeartbeat={onHeartbeat}
+      />,
+    );
+
+    expect(html).toContain('Manage seats');
+    expect(html).toContain('Alex');
+    expect(html).toContain('Mark as departed');
+    expect(html).toContain('Sam');
+    expect(html).toContain('Departed');
+    expect(html).not.toContain('button-mark-departed-seat-departed');
   });
 
   it('asks before moving on when some players have not finished', () => {

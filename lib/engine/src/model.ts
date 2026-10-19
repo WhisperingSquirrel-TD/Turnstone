@@ -131,6 +131,12 @@ export type State = {
     | {
         seq: number;
         at: number;
+        action: 'seat_departed';
+        seatId: string;
+      }
+    | {
+        seq: number;
+        at: number;
         action: 'no_votes';
       }
     | {

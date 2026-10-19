@@ -281,6 +281,17 @@ export function viewFor(
               state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
           },
         };
+      if (entry.action === 'seat_departed')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          seat: {
+            id: entry.seatId,
+            name:
+              state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
+          },
+        };
       if (entry.action === 'schedule_shift')
         return {
           seq: entry.seq,

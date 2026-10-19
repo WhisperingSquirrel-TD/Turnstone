@@ -1,8 +1,11 @@
 # Status for reviewer
 
-- Updated: 19 October 2026, 10:58 UTC. **Phase A:** LA-1 #142, LA-2 #144, LA-3 #145, LA-4 #146 and LA-5 #147 are green; LA-6 research and LA-7 docs are complete locally.
-- Last push: `cd55665`, Verify #147 Success. Open platform unknowns: Reserved VM proration and Autoscale WebSocket affinity (Q4–Q5); canonical origin is configured but not live.
-- Next: push Phase A documentation; after green, record “Waiting for owner: Phase A deployment approval” and resume M6. No publish, domain, DNS, secrets or paid services; eight attachments remain untracked.
+Waiting for owner: Phase A deployment approval.
+
+- Updated: 19 October 2026, 11:17 UTC. **Phase A LA-1–LA-7:** Verify #142, #144–#148 green; last push `377ab28`.
+- **M6:** takeover remains green in Verify #141. M6-2 seat controls and role-safe departure log pass tests locally; safe undo is next.
+- Local server-coverage tests pass, but their 85% line threshold reports 81.71% in unchanged API files; this script is not a Verify workflow job.
+- No deployment is active. No publish, domain, DNS, secrets or paid services; eight content attachments remain untracked.
 
 ## Previous verification history
 

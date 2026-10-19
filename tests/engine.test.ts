@@ -44,6 +44,29 @@ describe('Milestone 1 deterministic engine', () => {
         .publicLog,
     ).toContainEqual(expected);
   });
+  it('publicly records a seat departure without revealing the player role', () => {
+    const game = fixture(5);
+    command(game, { type: 'StartGame' });
+    const departed = game.state.seats[0]!;
+
+    command(game, { type: 'MarkDeparted', seatId: departed.id }, true, {
+      kind: 'coordinator',
+    });
+
+    const presenterView = viewFor({ kind: 'presenter' }, game.state);
+    const departureEvent = game.events.find(
+      (event) => event.type === 'SeatRemoved' && event.reason === 'departed',
+    );
+    expect(departureEvent).toBeDefined();
+    expect(presenterView.publicLog.at(-1)).toEqual({
+      seq: departureEvent!.seq,
+      at: game.context.now,
+      action: 'seat_departed',
+      seat: { id: departed.id, name: departed.name },
+    });
+    expect(presenterView.publicLog.at(-1)).not.toHaveProperty('role');
+    expect(replay(game.events)).toEqual(game.state);
+  });
   it('has validated owner defaults and rejects removed/Could/unsafe settings', () => {
     const config = gameConfigSchema.parse({});
     expect(config.basics.labels).toEqual({

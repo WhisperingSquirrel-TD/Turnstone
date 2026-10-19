@@ -69,6 +69,16 @@ export const en = {
     pinLockoutsHeading: 'PIN lockouts',
     seatPinLocked: (name: string, time: string) =>
       `${name} is locked out after too many PIN attempts, until ${time}.`,
+    manageSeats: 'Manage seats',
+    markDeparted: 'Mark as departed',
+    confirmDeparted: (name: string) =>
+      `Mark ${name} as departed? They will no longer take part.`,
+    seatStatus: (status: 'alive' | 'banished' | 'murdered' | 'departed') => {
+      if (status === 'alive') return 'Playing';
+      if (status === 'murdered') return 'Taken';
+      return status === 'banished' ? 'Banished' : 'Departed';
+    },
+    noSeats: 'No seats are available.',
     presenterHeading: 'Presenter screen (optional)',
     presenterDescription:
       'Use a shared display for public updates. This one-time pairing code is not the six-character game code.',
@@ -554,6 +564,7 @@ export const en = {
         ? victims.map((name) => `${name} was taken in the night.`).join(' ')
         : 'No one was taken.',
     publicLogBanishment: (name: string) => `${name} was banished.`,
+    publicLogSeatDeparted: (name: string) => `${name} was marked as departed.`,
     publicLogScheduleShift: (minutes: number) =>
       `The schedule has been shifted by ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
     publicLogFinished: (winner: 'traitor' | 'faithful') =>

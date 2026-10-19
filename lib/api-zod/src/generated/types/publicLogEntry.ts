@@ -54,6 +54,16 @@ export type PublicLogEntry = {
   seq: number;
   /** @minimum 0 */
   at: number;
+  action: 'seat_departed';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
   action: 'schedule_shift';
   /** @minimum 1 */
   minutes: number;
