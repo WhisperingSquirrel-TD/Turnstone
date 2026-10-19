@@ -194,13 +194,13 @@
 .public-home-hero::before {
   position: absolute;
   z-index: 0;
-  inset: 8% 12%;
+  inset: 0;
   content: '';
   pointer-events: none;
   background: radial-gradient(
-    ellipse 48% 62% at 24% 50%,
+    ellipse 65% 58% at 50% 45%,
     rgb(200 148 74 / 0.13) 0%,
-    rgb(200 148 74 / 0.055) 44%,
+    rgb(200 148 74 / 0.055) 38%,
     transparent 72%
   );
 }
@@ -429,6 +429,20 @@
   line-height: 1.65;
 }
 
+@media (max-width: 900px) {
+  .public-home-brand:not(.player-shell-header) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .public-home-brand:not(.player-shell-header) .public-home-nav {
+    display: none;
+  }
+
+  .public-home-brand:not(.player-shell-header) .public-home-menu {
+    display: block;
+  }
+}
+
 @media (max-width: 760px) {
   .public-home-hero {
     min-height: 0;
@@ -438,11 +452,14 @@
   }
 
   .public-home-hero-copy {
+    align-items: center;
     min-height: calc(100svh - 7rem);
     padding-block: clamp(1.25rem, 4vh, 2.5rem);
+    text-align: center;
   }
 
   .public-home-actions {
+    margin-inline: auto;
     margin-top: auto;
     padding-top: 1.5rem;
   }
