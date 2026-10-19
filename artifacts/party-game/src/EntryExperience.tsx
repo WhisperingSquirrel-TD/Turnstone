@@ -138,6 +138,8 @@ export interface EntryExperienceCopy {
   createOrganiserHeading: string;
   organiserNameLabel: string;
   organiserPinLabel: string;
+  presenterToggleLabel: string;
+  presenterToggleDescription: string;
   createButton: string;
   createPending: string;
   lobbyHeading: string;
@@ -215,6 +217,7 @@ export interface EntryExperienceProps {
     playerCount: number;
     organiserName: string;
     organiserPin: string;
+    presenterEnabled: boolean;
   }) => void | Promise<void>;
   onApproveJoiner: (joinerId: string) => void | Promise<void>;
   onStartGame: () => void | Promise<void>;
@@ -267,6 +270,7 @@ export function EntryExperience({
   const [internalScreen, setInternalScreen] = useState<EntryScreen>('welcome');
   const [localError, setLocalError] = useState('');
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [presenterEnabled, setPresenterEnabled] = useState(false);
   const [duplicateName, setDuplicateName] = useState<string | null>(null);
   const [recoveringSeat, setRecoveringSeat] = useState(false);
   const codeRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -436,8 +440,10 @@ export function EntryExperience({
         playerCount: inputs.createPlayerCount,
         organiserName,
         organiserPin,
+        presenterEnabled,
       });
       onInputChange('organiserPin', '');
+      setPresenterEnabled(false);
       onClearSensitiveValues();
       moveTo('lobby');
     } catch {
@@ -1051,6 +1057,28 @@ export function EntryExperience({
                   )
                 }
               />
+              <label
+                className="entry-presenter-option"
+                htmlFor="entry-presenter-enabled"
+              >
+                <input
+                  id="entry-presenter-enabled"
+                  data-testid="toggle-presenter"
+                  type="checkbox"
+                  checked={presenterEnabled}
+                  onChange={(event) =>
+                    setPresenterEnabled(event.target.checked)
+                  }
+                />
+                <span>
+                  <span className="entry-label">
+                    {copy.presenterToggleLabel}
+                  </span>
+                  <span className="entry-help">
+                    {copy.presenterToggleDescription}
+                  </span>
+                </span>
+              </label>
               <button
                 className="entry-primary-action"
                 data-testid="button-create-submit"

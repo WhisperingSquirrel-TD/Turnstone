@@ -293,6 +293,9 @@ export const en = {
     createOrganiserHeading: 'Your name and PIN',
     organiserNameLabel: 'Your first name',
     organiserPinLabel: 'Choose a 4-digit PIN',
+    presenterToggleLabel: 'Use an optional TV presenter screen',
+    presenterToggleDescription:
+      'Shows public updates on a shared display. Everyone can still use their own phone.',
     createButton: 'Create game',
     createPending: 'Creating game…',
     lobbyHeading: 'Your game lobby',

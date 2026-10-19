@@ -12,7 +12,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   commandSchema,
   entryFailureMessages,
-  gameConfigSchema,
   gameInviteResponseSchema,
   lateGameInviteResponseSchema,
   gameViewResponseSchema,
@@ -45,6 +44,7 @@ import type { CoordinatorCommand } from './CoordinatorConsole';
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
 import { lobbyCodeJoinUrl, parseLobbyCodeFragment } from './lobby-code-url';
 import { recoverSeat } from './recovery-client';
+import { buildNewGameConfig } from './new-game-config';
 import {
   EntryActionError,
   type EntryFailureMessage,
@@ -583,19 +583,17 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     playerCount: number;
     organiserName: string;
     organiserPin: string;
+    presenterEnabled: boolean;
   }): Promise<void> {
     setErrors({});
     setBusy((current) => ({ ...current, create: true }));
     try {
       if (!csrfToken) throw new Error('security-not-ready');
       const id = crypto.randomUUID();
-      const configValue = gameConfigSchema.parse({
-        basics: {
-          gameName: data.gameName,
-          coordinatorPlays: true,
-          coCoordinators: 0,
-        },
-        players: { count: data.playerCount },
+      const configValue = buildNewGameConfig({
+        gameName: data.gameName,
+        playerCount: data.playerCount,
+        presenterEnabled: data.presenterEnabled,
       });
       const command = commandSchema.parse({
         type: 'CreateGame',
