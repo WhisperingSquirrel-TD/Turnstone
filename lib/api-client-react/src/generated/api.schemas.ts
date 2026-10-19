@@ -375,6 +375,12 @@ export type PublicLogEntry = {
   seq: number;
   /** @minimum 0 */
   at: number;
+  action: 'coordinator_undo';
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
   action: 'finished';
   winner: Role;
 };
@@ -481,6 +487,11 @@ export interface FairnessView {
   murderSlots: FairnessViewMurderSlotsItem[];
 }
 
+export type FullViewCoordinatorUndo = {
+  /** @minimum 0 */
+  expiresAt: number;
+} | null;
+
 export type FullViewProgress = {
   /** @minimum 0 */
   done: number;
@@ -531,6 +542,7 @@ export interface FullView {
      */
   id: string;
   canAdvancePhase: boolean;
+  coordinatorUndo: FullViewCoordinatorUndo;
   /**
      * @minLength 1
      * @maxLength 128
@@ -776,3 +788,4 @@ export const CoordinatorTakeoverClaimResponseValue = {
   status: 'transferred',
 } as const;
 export type CoordinatorTakeoverClaimResponse = typeof CoordinatorTakeoverClaimResponseValue;
+

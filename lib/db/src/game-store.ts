@@ -8,6 +8,7 @@ import {
   gameEvents,
   gameIdempotency,
   gameSnapshots,
+  gameUndoWindows,
   games,
 } from './schema/game-runtime';
 import {
@@ -30,7 +31,8 @@ export type GameStoreResult =
         | 'GAME_NOT_FOUND'
         | 'IDEMPOTENCY_CONFLICT'
         | 'VERSION_CONFLICT'
-        | 'SEAT_ACCESS_NOT_FOUND';
+        | 'SEAT_ACCESS_NOT_FOUND'
+        | 'UNDO_NOT_AVAILABLE';
       currentVersion?: number;
     };
 
@@ -81,6 +83,8 @@ type AppendEventsInput = IdempotencyInput & {
     expiresAt: number;
     revokedAt: number;
   };
+  undoCapture?: { state: unknown; expiresAt: number };
+  undoConsume?: { actionVersion: number; now: number };
 };
 
 async function findIdempotency(
@@ -278,6 +282,23 @@ export async function appendGameEvents(
         code: 'VERSION_CONFLICT',
         currentVersion: game.version,
       };
+    if (input.undoConsume) {
+      const [undoWindow] = await transaction
+        .select()
+        .from(gameUndoWindows)
+        .where(eq(gameUndoWindows.gameId, input.gameId))
+        .for('update')
+        .limit(1);
+      if (
+        !undoWindow ||
+        undoWindow.actionVersion !== input.undoConsume.actionVersion ||
+        undoWindow.actionVersion !== input.expectedVersion ||
+        undoWindow.invalidatedAt !== null ||
+        undoWindow.expiresAt.getTime() <= input.undoConsume.now
+      ) {
+        return { ok: false, code: 'UNDO_NOT_AVAILABLE' };
+      }
+    }
     if (input.seatPinUpdate) {
       const [seatAccess] = await transaction
         .select({ seatId: gameSeatAccess.seatId })
@@ -384,9 +405,118 @@ export async function appendGameEvents(
           : {}),
       })
       .where(eq(games.id, input.gameId));
+    if (input.undoCapture) {
+      await transaction
+        .insert(gameUndoWindows)
+        .values({
+          gameId: input.gameId,
+          actionVersion: version,
+          state: input.undoCapture.state,
+          expiresAt: new Date(input.undoCapture.expiresAt),
+          invalidatedAt: null,
+        })
+        .onConflictDoUpdate({
+          target: gameUndoWindows.gameId,
+          set: {
+            actionVersion: version,
+            state: input.undoCapture.state,
+            expiresAt: new Date(input.undoCapture.expiresAt),
+            invalidatedAt: null,
+          },
+        });
+    } else if (input.undoConsume) {
+      await transaction
+        .update(gameUndoWindows)
+        .set({ invalidatedAt: new Date(input.undoConsume.now) })
+        .where(eq(gameUndoWindows.gameId, input.gameId));
+    } else {
+      await transaction
+        .update(gameUndoWindows)
+        .set({ invalidatedAt: new Date(events.at(-1)!.at) })
+        .where(
+          and(
+            eq(gameUndoWindows.gameId, input.gameId),
+            isNull(gameUndoWindows.invalidatedAt),
+          ),
+        );
+    }
     await insertSnapshot(transaction, input.gameId, input.snapshot);
     await replaceDeadline(transaction, input.gameId, version, input.deadline);
     return recordSuccess(transaction, input, version);
+  });
+}
+
+export async function readGameUndoWindow(
+  gameId: string,
+  currentVersion: number,
+  now: number,
+): Promise<{ actionVersion: number; state: unknown; expiresAt: number } | null> {
+  const [window] = await db
+    .select()
+    .from(gameUndoWindows)
+    .where(eq(gameUndoWindows.gameId, gameId))
+    .limit(1);
+  if (
+    !window ||
+    window.actionVersion !== currentVersion ||
+    window.invalidatedAt !== null ||
+    window.expiresAt.getTime() <= now
+  )
+    return null;
+  return {
+    actionVersion: window.actionVersion,
+    state: window.state,
+    expiresAt: window.expiresAt.getTime(),
+  };
+}
+
+export async function getGameUndoStatus(
+  gameId: string,
+  currentVersion: number,
+  now: number,
+): Promise<{ expiresAt: number } | null> {
+  const [window] = await db
+    .select({
+      actionVersion: gameUndoWindows.actionVersion,
+      expiresAt: gameUndoWindows.expiresAt,
+      invalidatedAt: gameUndoWindows.invalidatedAt,
+    })
+    .from(gameUndoWindows)
+    .where(eq(gameUndoWindows.gameId, gameId))
+    .limit(1);
+  if (
+    !window ||
+    window.actionVersion !== currentVersion ||
+    window.invalidatedAt !== null ||
+    window.expiresAt.getTime() <= now
+  )
+    return null;
+  return { expiresAt: window.expiresAt.getTime() };
+}
+
+export async function invalidateGameUndoWindow(
+  gameId: string,
+  expectedVersion: number,
+  now: number,
+): Promise<boolean> {
+  return db.transaction(async (transaction) => {
+    const [game] = await transaction
+      .select({ version: games.version })
+      .from(games)
+      .where(eq(games.id, gameId))
+      .for('update')
+      .limit(1);
+    if (!game || game.version !== expectedVersion) return false;
+    await transaction
+      .update(gameUndoWindows)
+      .set({ invalidatedAt: new Date(now) })
+      .where(
+        and(
+          eq(gameUndoWindows.gameId, gameId),
+          isNull(gameUndoWindows.invalidatedAt),
+        ),
+      );
+    return true;
   });
 }
 

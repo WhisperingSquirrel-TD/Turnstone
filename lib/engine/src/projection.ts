@@ -299,6 +299,12 @@ export function viewFor(
           action: entry.action,
           minutes: entry.minutes,
         };
+      if (entry.action === 'coordinator_undo')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+        };
       return {
         seq: entry.seq,
         at: entry.at,

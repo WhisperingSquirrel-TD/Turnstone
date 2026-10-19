@@ -25,6 +25,9 @@ import {
   readGameCommandResult,
   readGameEvents,
   readLatestGameSnapshot,
+  getGameUndoStatus,
+  invalidateGameUndoWindow,
+  readGameUndoWindow,
   claimDueGameDeadlines,
   completeGameDeadline,
   releaseGameDeadline,
@@ -1265,6 +1268,203 @@ it('appends versioned events transactionally and deduplicates idempotent retries
     );
     expect(count.rows[0]?.count).toBe(2);
     expect(await readGameEvents(gameId)).toEqual([createdEvent, joinedEvent]);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('persists, invalidates, and atomically consumes coordinator undo windows', async () => {
+  const gameId = randomUUID();
+  const now = 1_800_000_100_000;
+  const createdEvent = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+  const initialState = replay([createdEvent]);
+  try {
+    await createGameWithEvent({
+      event: createdEvent,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'undo-create',
+      requestHash: 'undo-create',
+    });
+    const phaseEvent = eventSchema.parse({
+      seq: 2,
+      at: now + 1,
+      schemaVersion: 1,
+      type: 'PhaseChanged',
+      phase: 'LOBBY',
+      deadline: null,
+      shadowEndAt: null,
+      cycle: 0,
+    });
+    const lobbyState = evolve(initialState, phaseEvent);
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'undo-window-one',
+      requestHash: 'undo-window-one',
+      events: [phaseEvent],
+      undoCapture: { state: initialState, expiresAt: now + 60_000 },
+    });
+    expect(await getGameUndoStatus(gameId, 2, now + 2)).toEqual({
+      expiresAt: now + 60_000,
+    });
+    expect(await readGameUndoWindow(gameId, 2, now + 2)).toMatchObject({
+      actionVersion: 2,
+      state: initialState,
+      expiresAt: now + 60_000,
+    });
+
+    const joinedEvent = eventSchema.parse({
+      seq: 3,
+      at: now + 3,
+      schemaVersion: 1,
+      type: 'SeatJoined',
+      seatId: randomUUID(),
+      name: 'A player',
+    });
+    const joinedState = evolve(lobbyState, joinedEvent);
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 2,
+      actorId: 'seat:test',
+      idempotencyKey: 'undo-intervening-player-action',
+      requestHash: 'undo-intervening-player-action',
+      events: [joinedEvent],
+    });
+    expect(await getGameUndoStatus(gameId, 3, now + 4)).toBeNull();
+
+    const nextPhaseEvent = eventSchema.parse({
+      seq: 4,
+      at: now + 5,
+      schemaVersion: 1,
+      type: 'PhaseChanged',
+      phase: 'DEAL',
+      deadline: null,
+      shadowEndAt: null,
+      cycle: 0,
+    });
+    const nextPhaseState = evolve(joinedState, nextPhaseEvent);
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 3,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'undo-window-two',
+      requestHash: 'undo-window-two',
+      events: [nextPhaseEvent],
+      undoCapture: { state: joinedState, expiresAt: now + 60_000 },
+    });
+    const undoEvent = eventSchema.parse({
+      seq: 5,
+      at: now + 6,
+      schemaVersion: 1,
+      type: 'CoordinatorActionUndone',
+      restoreState: joinedState,
+    });
+    const undoneState = evolve(nextPhaseState, undoEvent);
+    const consumed = await appendGameEvents({
+      gameId,
+      expectedVersion: 4,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'undo-window-consume',
+      requestHash: 'undo-window-consume',
+      events: [undoEvent],
+      snapshot: { seq: 5, state: undoneState },
+      undoConsume: { actionVersion: 4, now: now + 6 },
+    });
+    expect(consumed).toEqual({ ok: true, version: 5, duplicate: false });
+    expect(await getGameUndoStatus(gameId, 5, now + 7)).toBeNull();
+
+    const finalEvent = eventSchema.parse({
+      seq: 6,
+      at: now + 8,
+      schemaVersion: 1,
+      type: 'PhaseChanged',
+      phase: 'MISSION',
+      deadline: null,
+      shadowEndAt: null,
+      cycle: 1,
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 5,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'undo-window-three',
+      requestHash: 'undo-window-three',
+      events: [finalEvent],
+      undoCapture: { state: undoneState, expiresAt: now + 60_000 },
+    });
+    const coordinatorApp = createApp(async () => {}, {
+      resolveViewer: async () => ({ kind: 'coordinator' }),
+    });
+    const coordinatorView = await request(coordinatorApp)
+      .get(`/api/games/${gameId}/view`)
+      .expect(200);
+    expect(coordinatorView.body.view.coordinatorUndo).toEqual({
+      expiresAt: now + 60_000,
+    });
+    expect(coordinatorView.body.view.coordinatorUndo).not.toHaveProperty(
+      'state',
+    );
+    expect(coordinatorView.body.view.private).toBeNull();
+    const csrf = await request(coordinatorApp).get('/api/csrf');
+    const csrfCookie = cookieValues(csrf.headers['set-cookie']).find((cookie) =>
+      cookie.startsWith('turnstone-csrf='),
+    );
+    const undoResponse = await request(coordinatorApp)
+      .post(`/api/games/${gameId}/commands`)
+      .set('Cookie', csrfCookie!.split(';')[0]!)
+      .set('X-CSRF-Token', csrf.body.csrfToken)
+      .send({
+        type: 'UndoCoordinatorAction',
+        idempotencyKey: 'undo-through-api',
+        expectedVersion: 6,
+      })
+      .expect(200);
+    expect(undoResponse.body.version).toBe(7);
+    expect(undoResponse.body.view.coordinatorUndo).toBeNull();
+    expect(undoResponse.body.view.private).toBeNull();
+    expect(undoResponse.body.view.publicLog.at(-1)).toMatchObject({
+      action: 'coordinator_undo',
+    });
+    expect(undoResponse.body.view).not.toHaveProperty('restoreState');
+
+    const routeUndoEvent = eventSchema.parse({
+      seq: 7,
+      at: now + 10,
+      schemaVersion: 1,
+      type: 'CoordinatorActionUndone',
+      restoreState: undoneState,
+    });
+    const routeUndoState = evolve(evolve(undoneState, finalEvent), routeUndoEvent);
+    const lastPhaseEvent = eventSchema.parse({
+      seq: 8,
+      at: now + 11,
+      schemaVersion: 1,
+      type: 'PhaseChanged',
+      phase: 'DEAL',
+      deadline: null,
+      shadowEndAt: null,
+      cycle: 0,
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 7,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'undo-window-four',
+      requestHash: 'undo-window-four',
+      events: [lastPhaseEvent],
+      undoCapture: { state: routeUndoState, expiresAt: now + 60_000 },
+    });
+    expect(await invalidateGameUndoWindow(gameId, 8, now + 12)).toBe(true);
+    expect(await getGameUndoStatus(gameId, 8, now + 13)).toBeNull();
+    expect(await invalidateGameUndoWindow(gameId, 7, now + 14)).toBe(false);
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }

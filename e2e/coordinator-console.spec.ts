@@ -9,6 +9,7 @@ function createView(): FullView {
     id: 'coordinator-console-test',
     viewerSeatId: 'seat-morgan',
     canAdvancePhase: false,
+    coordinatorUndo: { expiresAt: Date.now() + 60_000 },
     gameName: 'Coordinator test',
     version: 12,
     phase: 'VOTE',
@@ -125,6 +126,9 @@ test('coordinator can pause, extend and safely advance an active game', async ({
         : {}),
       ...(command.type === 'AdvancePhase' ? { phase: 'VERDICT' } : {}),
       ...(command.type === 'EndGameEarly' ? { phase: 'FINISHED' } : {}),
+      ...(command.type === 'UndoCoordinatorAction'
+        ? { coordinatorUndo: null }
+        : {}),
     } as FullView;
     await route.fulfill({
       json: { serverNow: Date.now(), version: view.version, view },
@@ -197,6 +201,12 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await expect(page.getByTestId('coordinator-time-left')).toContainText(
     'Time left:',
   );
+  await expect(
+    page.getByTestId('button-coordinator-undo'),
+  ).toBeVisible();
+  await page.getByTestId('button-coordinator-undo').click();
+  await expect(page.getByTestId('button-coordinator-undo')).toHaveCount(0);
+  expect(commands.at(-1)?.type).toBe('UndoCoordinatorAction');
 
   await page.getByTestId('button-coordinator-move-on').click();
   await expect(
@@ -206,6 +216,7 @@ test('coordinator can pause, extend and safely advance an active game', async ({
     'Pause',
     'Resume',
     'ExtendPhase',
+    'UndoCoordinatorAction',
   ]);
   await page.getByRole('button', { name: 'Move everyone on anyway' }).click();
   await expect(page.getByTestId('coordinator-current-step')).toHaveText(

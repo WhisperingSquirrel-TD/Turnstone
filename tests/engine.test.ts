@@ -7,7 +7,7 @@ import {
   viewFor,
   commitment,
 } from '../lib/engine/src/index';
-import { gameConfigSchema } from '../lib/shared/src/index';
+import { eventSchema, gameConfigSchema } from '../lib/shared/src/index';
 import { fixture, command, advance } from './support/engine';
 
 describe('Milestone 1 deterministic engine', () => {
@@ -16,6 +16,31 @@ describe('Milestone 1 deterministic engine', () => {
     expect(commitment('g', roles, 'salt', 'b')).not.toBe(
       commitment('g', roles, 'salt', 'c'),
     );
+  });
+  it('replays a coordinator undo without exposing its private restore state', () => {
+    const game = fixture(5);
+    command(game, { type: 'StartGame' }, true, { kind: 'coordinator' });
+    const priorState = structuredClone(game.state);
+    command(game, { type: 'Pause' }, true, { kind: 'coordinator' });
+
+    const undoEvent = eventSchema.parse({
+      schemaVersion: 1,
+      seq: game.state.version + 1,
+      at: game.state.phaseStarted + 1,
+      type: 'CoordinatorActionUndone',
+      restoreState: priorState,
+    });
+    const restored = replayFrom(game.state, [undoEvent]);
+
+    expect(restored.phase).toBe(priorState.phase);
+    expect(restored.paused).toBe(priorState.paused);
+    expect(restored.version).toBe(undoEvent.seq);
+    expect(restored.publicLog.at(-1)).toEqual({
+      seq: undoEvent.seq,
+      at: undoEvent.at,
+      action: 'coordinator_undo',
+    });
+    expect(restored).not.toHaveProperty('restoreState');
   });
   it('announces schedule extensions in every public game view', () => {
     const game = fixture(5);

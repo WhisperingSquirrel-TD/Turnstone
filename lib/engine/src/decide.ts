@@ -27,6 +27,7 @@ const coordinatorCommands = new Set([
   'Resume',
   'ExtendPhase',
   'EndGameEarly',
+  'UndoCoordinatorAction',
 ]);
 
 export function isCoordinatorCommand(commandType: string): boolean {
@@ -550,6 +551,8 @@ export function decide(
         reason: 'ended-early',
       });
       break;
+    case 'UndoCoordinatorAction':
+      return error('UNDO_REQUIRES_SERVER');
     case 'AdvancePhase': {
       if (
         ['DEAL', 'SHADOW', 'VOTE', 'FINAL_VOTE', 'FINAL_BANISH'].includes(

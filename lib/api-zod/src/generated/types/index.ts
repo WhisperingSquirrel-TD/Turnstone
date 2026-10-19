@@ -33,6 +33,7 @@ export * from './fairnessViewTasksItem';
 export * from './fairnessViewTasksItemReport';
 export * from './fullView';
 export * from './fullViewBallots';
+export * from './fullViewCoordinatorUndo';
 export * from './fullViewEndRule';
 export * from './fullViewProgress';
 export * from './fullViewPublicAnnouncement';

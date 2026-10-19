@@ -148,6 +148,11 @@ export type State = {
     | {
         seq: number;
         at: number;
+        action: 'coordinator_undo';
+      }
+    | {
+        seq: number;
+        at: number;
         action: 'dawn';
         victimIds: string[];
       }

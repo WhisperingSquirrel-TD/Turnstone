@@ -2578,9 +2578,11 @@ function PlayerGame() {
                                         ? en.game.publicLogScheduleShift(
                                             entry.minutes,
                                           )
-                                        : en.game.publicLogFinished(
-                                            entry.winner,
-                                          )}
+                                        : entry.action === 'coordinator_undo'
+                                          ? en.game.publicLogCoordinatorUndo
+                                          : en.game.publicLogFinished(
+                                              entry.winner,
+                                            )}
                         </li>
                       ))}
                     {full.publicLog.length === 0 && (

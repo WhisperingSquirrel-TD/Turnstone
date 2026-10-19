@@ -80,6 +80,8 @@ function publicUpdate(entry: FullView['publicLog'][number]): string {
     return en.game.publicLogSeatDeparted(entry.seat.name);
   if (entry.action === 'schedule_shift')
     return en.game.publicLogScheduleShift(entry.minutes);
+  if (entry.action === 'coordinator_undo')
+    return en.game.publicLogCoordinatorUndo;
   return en.game.publicLogFinished(entry.winner);
 }
 

@@ -56,6 +56,8 @@ export const startRehearsalResponseViewOneSeatCountMin = 0;
 
 export const startRehearsalResponseViewTwoIdMax = 128;
 
+export const startRehearsalResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
+
 export const startRehearsalResponseViewTwoViewerSeatIdMax = 128;
 
 export const startRehearsalResponseViewTwoGameNameMax = 60;
@@ -124,6 +126,9 @@ export const startRehearsalResponseViewTwoPublicLogItemSevenAtMin = 0;
 export const startRehearsalResponseViewTwoPublicLogItemEightAtMin = 0;
 
 
+export const startRehearsalResponseViewTwoPublicLogItemNineAtMin = 0;
+
+
 export const startRehearsalResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
 export const startRehearsalResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
@@ -144,6 +149,9 @@ export const StartRehearsalResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(startRehearsalResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorUndo": zod.union([zod.object({
+  "expiresAt": zod.number().int().min(startRehearsalResponseViewTwoCoordinatorUndoOneExpiresAtMin)
+}),zod.null()]),
   "viewerSeatId": zod.string().min(1).max(startRehearsalResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(startRehearsalResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(startRehearsalResponseViewTwoLobbyCodeRegExp).optional(),
@@ -280,6 +288,10 @@ export const StartRehearsalResponse = zod.object({
 }),zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(startRehearsalResponseViewTwoPublicLogItemEightAtMin),
+  "action": zod.literal("coordinator_undo")
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(startRehearsalResponseViewTwoPublicLogItemNineAtMin),
   "action": zod.literal("finished"),
   "winner": zod.enum(['traitor', 'faithful'])
 })])),
@@ -328,6 +340,8 @@ export const StartRehearsalResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Create a game and issue the coordinator capability cookie
  */
@@ -349,6 +363,8 @@ export const createGameResponseVersionMin = 0;
 export const createGameResponseViewOneSeatCountMin = 0;
 
 export const createGameResponseViewTwoIdMax = 128;
+
+export const createGameResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
 
 export const createGameResponseViewTwoViewerSeatIdMax = 128;
 
@@ -418,6 +434,9 @@ export const createGameResponseViewTwoPublicLogItemSevenAtMin = 0;
 export const createGameResponseViewTwoPublicLogItemEightAtMin = 0;
 
 
+export const createGameResponseViewTwoPublicLogItemNineAtMin = 0;
+
+
 export const createGameResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
 export const createGameResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
@@ -438,6 +457,9 @@ export const CreateGameResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(createGameResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorUndo": zod.union([zod.object({
+  "expiresAt": zod.number().int().min(createGameResponseViewTwoCoordinatorUndoOneExpiresAtMin)
+}),zod.null()]),
   "viewerSeatId": zod.string().min(1).max(createGameResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(createGameResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(createGameResponseViewTwoLobbyCodeRegExp).optional(),
@@ -574,6 +596,10 @@ export const CreateGameResponse = zod.object({
 }),zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(createGameResponseViewTwoPublicLogItemEightAtMin),
+  "action": zod.literal("coordinator_undo")
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(createGameResponseViewTwoPublicLogItemNineAtMin),
   "action": zod.literal("finished"),
   "winner": zod.enum(['traitor', 'faithful'])
 })])),
@@ -622,6 +648,8 @@ export const CreateGameResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Create a short code and private join link
  */
@@ -791,6 +819,8 @@ export const getJoinRequestStatusResponseThreeGameViewOneSeatCountMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoIdMax = 128;
 
+export const getJoinRequestStatusResponseThreeGameViewTwoCoordinatorUndoOneExpiresAtMin = 0;
+
 export const getJoinRequestStatusResponseThreeGameViewTwoViewerSeatIdMax = 128;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoGameNameMax = 60;
@@ -859,6 +889,9 @@ export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemSevenAtMin
 export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemEightAtMin = 0;
 
 
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemNineAtMin = 0;
+
+
 export const getJoinRequestStatusResponseThreeGameViewTwoCoordinatorAlertsItemAtMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
@@ -885,6 +918,9 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorUndo": zod.union([zod.object({
+  "expiresAt": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoCoordinatorUndoOneExpiresAtMin)
+}),zod.null()]),
   "viewerSeatId": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(getJoinRequestStatusResponseThreeGameViewTwoLobbyCodeRegExp).optional(),
@@ -1021,6 +1057,10 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
 }),zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemEightAtMin),
+  "action": zod.literal("coordinator_undo")
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemNineAtMin),
   "action": zod.literal("finished"),
   "winner": zod.enum(['traitor', 'faithful'])
 })])),
@@ -1314,6 +1354,8 @@ export const getGameViewResponseViewOneSeatCountMin = 0;
 
 export const getGameViewResponseViewTwoIdMax = 128;
 
+export const getGameViewResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
+
 export const getGameViewResponseViewTwoViewerSeatIdMax = 128;
 
 export const getGameViewResponseViewTwoGameNameMax = 60;
@@ -1382,6 +1424,9 @@ export const getGameViewResponseViewTwoPublicLogItemSevenAtMin = 0;
 export const getGameViewResponseViewTwoPublicLogItemEightAtMin = 0;
 
 
+export const getGameViewResponseViewTwoPublicLogItemNineAtMin = 0;
+
+
 export const getGameViewResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
 export const getGameViewResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
@@ -1402,6 +1447,9 @@ export const GetGameViewResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(getGameViewResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorUndo": zod.union([zod.object({
+  "expiresAt": zod.number().int().min(getGameViewResponseViewTwoCoordinatorUndoOneExpiresAtMin)
+}),zod.null()]),
   "viewerSeatId": zod.string().min(1).max(getGameViewResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(getGameViewResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(getGameViewResponseViewTwoLobbyCodeRegExp).optional(),
@@ -1538,6 +1586,10 @@ export const GetGameViewResponse = zod.object({
 }),zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(getGameViewResponseViewTwoPublicLogItemEightAtMin),
+  "action": zod.literal("coordinator_undo")
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(getGameViewResponseViewTwoPublicLogItemNineAtMin),
   "action": zod.literal("finished"),
   "winner": zod.enum(['traitor', 'faithful'])
 })])),
@@ -1586,6 +1638,8 @@ export const GetGameViewResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Request the current player's private projection while holding
  */
@@ -1610,6 +1664,8 @@ export const revealPrivateViewResponseVersionMin = 0;
 export const revealPrivateViewResponseViewOneSeatCountMin = 0;
 
 export const revealPrivateViewResponseViewTwoIdMax = 128;
+
+export const revealPrivateViewResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
 
 export const revealPrivateViewResponseViewTwoViewerSeatIdMax = 128;
 
@@ -1679,6 +1735,9 @@ export const revealPrivateViewResponseViewTwoPublicLogItemSevenAtMin = 0;
 export const revealPrivateViewResponseViewTwoPublicLogItemEightAtMin = 0;
 
 
+export const revealPrivateViewResponseViewTwoPublicLogItemNineAtMin = 0;
+
+
 export const revealPrivateViewResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
 export const revealPrivateViewResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
@@ -1699,6 +1758,9 @@ export const RevealPrivateViewResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(revealPrivateViewResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorUndo": zod.union([zod.object({
+  "expiresAt": zod.number().int().min(revealPrivateViewResponseViewTwoCoordinatorUndoOneExpiresAtMin)
+}),zod.null()]),
   "viewerSeatId": zod.string().min(1).max(revealPrivateViewResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(revealPrivateViewResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(revealPrivateViewResponseViewTwoLobbyCodeRegExp).optional(),
@@ -1835,6 +1897,10 @@ export const RevealPrivateViewResponse = zod.object({
 }),zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(revealPrivateViewResponseViewTwoPublicLogItemEightAtMin),
+  "action": zod.literal("coordinator_undo")
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(revealPrivateViewResponseViewTwoPublicLogItemNineAtMin),
   "action": zod.literal("finished"),
   "winner": zod.enum(['traitor', 'faithful'])
 })])),
@@ -1883,6 +1949,8 @@ export const RevealPrivateViewResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+
 /**
  * @summary Submit an idempotent game command
  */
@@ -1912,6 +1980,8 @@ export const submitGameCommandResponseVersionMin = 0;
 export const submitGameCommandResponseViewOneSeatCountMin = 0;
 
 export const submitGameCommandResponseViewTwoIdMax = 128;
+
+export const submitGameCommandResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
 
 export const submitGameCommandResponseViewTwoViewerSeatIdMax = 128;
 
@@ -1981,6 +2051,9 @@ export const submitGameCommandResponseViewTwoPublicLogItemSevenAtMin = 0;
 export const submitGameCommandResponseViewTwoPublicLogItemEightAtMin = 0;
 
 
+export const submitGameCommandResponseViewTwoPublicLogItemNineAtMin = 0;
+
+
 export const submitGameCommandResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
 export const submitGameCommandResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
@@ -2001,6 +2074,9 @@ export const SubmitGameCommandResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(submitGameCommandResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorUndo": zod.union([zod.object({
+  "expiresAt": zod.number().int().min(submitGameCommandResponseViewTwoCoordinatorUndoOneExpiresAtMin)
+}),zod.null()]),
   "viewerSeatId": zod.string().min(1).max(submitGameCommandResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(submitGameCommandResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(submitGameCommandResponseViewTwoLobbyCodeRegExp).optional(),
@@ -2137,6 +2213,10 @@ export const SubmitGameCommandResponse = zod.object({
 }),zod.object({
   "seq": zod.number().int().min(1),
   "at": zod.number().int().min(submitGameCommandResponseViewTwoPublicLogItemEightAtMin),
+  "action": zod.literal("coordinator_undo")
+}),zod.object({
+  "seq": zod.number().int().min(1),
+  "at": zod.number().int().min(submitGameCommandResponseViewTwoPublicLogItemNineAtMin),
   "action": zod.literal("finished"),
   "winner": zod.enum(['traitor', 'faithful'])
 })])),
@@ -2185,3 +2265,5 @@ export const SubmitGameCommandResponse = zod.object({
 }),zod.null()])
 })])
 })
+
+

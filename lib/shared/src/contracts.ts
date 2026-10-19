@@ -62,6 +62,7 @@ export const commandSchema = z.union([
     minutes: z.union([z.literal(1), z.literal(5), z.literal(15)]),
   }),
   command('EndGameEarly'),
+  command('UndoCoordinatorAction'),
 ]);
 export const rehearsalStartRequestSchema = z
   .object({
@@ -209,6 +210,9 @@ export const eventSchema = z.discriminatedUnion('type', [
   event('TraitorMessage', { seatId: id, text: z.string() }),
   event('EndgameVote', { seatId: id, choice: z.enum(['end', 'continue']) }),
   event('GameFinished', { winner: roleSchema, reason: z.string() }),
+  event('CoordinatorActionUndone', {
+    restoreState: z.record(z.string(), z.unknown()),
+  }),
 ]);
 export type Event = z.infer<typeof eventSchema>;
 export const privateViewSchema = z
@@ -310,6 +314,13 @@ const publicLogEntrySchema = z.discriminatedUnion('action', [
     .object({
       seq: z.number().int().positive(),
       at: z.number().int().nonnegative(),
+      action: z.literal('coordinator_undo'),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
       action: z.literal('finished'),
       winner: roleSchema,
     })
@@ -320,6 +331,11 @@ export const fullViewSchema = z
     id,
     viewerSeatId: id.optional(),
     canAdvancePhase: z.boolean(),
+    coordinatorUndo: z
+      .object({ expiresAt: z.number().int().nonnegative() })
+      .strict()
+      .nullable()
+      .default(null),
     gameName: z.string().trim().min(1).max(60).optional(),
     lobbyCode: z
       .string()

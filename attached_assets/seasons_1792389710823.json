@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "date": "2026-10-15",
+  "language": "en-GB",
+  "licence": "Original writing for Turnstone by Stackstone Consulting; admin-editable reference data.",
+  "seasons": [
+    {
+      "id": "halloween",
+      "label": "Halloween",
+      "window": {
+        "from": "10-01",
+        "to": "11-02"
+      }
+    },
+    {
+      "id": "christmas",
+      "label": "Christmas",
+      "window": {
+        "from": "12-01",
+        "to": "01-06"
+      }
+    }
+  ]
+}

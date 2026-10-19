@@ -19,6 +19,7 @@ const view: CoordinatorConsoleView = {
   seats: [],
   publicLog: [],
   coordinatorAlerts: [],
+  coordinatorUndo: null,
 };
 
 const onLoadCoordinatorDelegates = async () => ({ limit: 0, seatIds: [] });
@@ -78,6 +79,11 @@ describe('CoordinatorConsole', () => {
         action: 'seat_departed',
         seat: { id: 'seat-jordan', name: 'Jordan' },
       },
+      {
+        seq: 6,
+        at: 1_800_000_000_000,
+        action: 'coordinator_undo',
+      },
     ];
     const html = renderToString(
       <CoordinatorConsole
@@ -98,7 +104,34 @@ describe('CoordinatorConsole', () => {
     expect(html).toContain(en.game.publicLogBanishment('Casey'));
     expect(html).toContain(en.game.publicLogScheduleShift(5));
     expect(html).toContain(en.game.publicLogSeatDeparted('Jordan'));
+    expect(html).toContain(en.game.publicLogCoordinatorUndo);
     expect(html).not.toContain('Morgan');
+  });
+
+  it('shows undo only as a coordinator action without exposing the saved state', () => {
+    const html = renderToString(
+      <CoordinatorConsole
+        view={{
+          ...view,
+          coordinatorUndo: { expiresAt: 1_800_000_060_000 },
+        }}
+        presenterPath="/tv/test"
+        onCreatePresenterPairing={async () => ({
+          code: 'A'.repeat(43),
+          expiresAt: 1_800_000_600_000,
+        })}
+        onCommand={async () => {}}
+        onLoadCoordinatorDelegates={onLoadCoordinatorDelegates}
+        onSaveCoordinatorDelegates={onSaveCoordinatorDelegates}
+        onHeartbeat={onHeartbeat}
+      />,
+    );
+
+    expect(html).toContain('Undo last action');
+    expect(html).toContain('button-coordinator-undo');
+    expect(html).not.toContain('restoreState');
+    expect(html).not.toContain('Faithful');
+    expect(html).not.toContain('Traitor');
   });
 
   it('shows PIN lockout alerts only when the coordinator has one', () => {

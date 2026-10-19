@@ -1402,3 +1402,11 @@ The canonical Stackstone palette is unchanged. The day button mixes 12% Candle i
 **Choice:** Phase A is a static coming-soon site. Phase B may use a 1–2 vCPU Reserved VM for Halloween week, practice-first and real games only if ready. Phase C returns to static by default through 22 December unless an approved pilot remains open. Phase D, 23–27 December, uses a peak VM size selected by load testing; scale down after 27 December. Weekly resizing is rejected, and scale-to-zero for the game server remains a later experiment limited to one instance.
 
 **Consequence:** The usage cap does not cap a continuously billed Reserved VM. Static hosting is preferred for Phase A; no publishing, deployment, domain, DNS, production-secret or paid-service change is authorized by this plan. The Phase A checklist and researched costs belong in `docs/HOSTING.md`.
+
+## D90 — Coordinator undo is server-stored and version-bound
+
+**Context:** Milestone 6 needs a safe, restart-safe window to reverse a coordinator logistics action without exposing private game state or discarding player input.
+
+**Choice:** Store the pre-action snapshot server-side for 60 seconds. Offer undo only while the game remains at the action's resulting version; any later game event or private-view release invalidates it. Actions that reveal roles or close joining are not undoable. Record a generic public undo event, but never include the stored snapshot in coordinator, co-coordinator or presenter views.
+
+**Consequence:** Undo works across process restarts and concurrent instances, and cannot silently erase later player actions. The window is consumed atomically with the undo event.

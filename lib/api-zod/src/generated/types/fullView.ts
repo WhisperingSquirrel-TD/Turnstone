@@ -8,6 +8,7 @@
 import type { CoordinatorAlert } from './coordinatorAlert';
 import type { FairnessView } from './fairnessView';
 import type { FullViewBallots } from './fullViewBallots';
+import type { FullViewCoordinatorUndo } from './fullViewCoordinatorUndo';
 import type { FullViewEndRule } from './fullViewEndRule';
 import type { FullViewProgress } from './fullViewProgress';
 import type { FullViewPublicAnnouncement } from './fullViewPublicAnnouncement';
@@ -24,6 +25,7 @@ export interface FullView {
      */
   id: string;
   canAdvancePhase: boolean;
+  coordinatorUndo: FullViewCoordinatorUndo;
   /**
      * @minLength 1
      * @maxLength 128

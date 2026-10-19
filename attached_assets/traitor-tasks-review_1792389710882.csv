@@ -1,0 +1,47 @@
+﻿id,text,tags,minimumAge,difficulty
+task-001,"Get two different people to say the word ""umbrella"" before the next vote. You may not say it first.",family; seated; remote-friendly,10,medium
+task-002,Move a cushion from one room to another before the next vote without anyone seeing you do it.,family,8,medium
+task-003,Steer a conversation onto the subject of dinosaurs and keep it there for at least a minute.,family; seated; remote-friendly,8,easy
+task-004,Sit in a different seat at the next gathering and stay there until the vote is over.,family,8,easy
+task-005,"Make someone laugh out loud during the next conversation, before any votes are cast.",family; seated; remote-friendly,8,medium
+task-006,"Use the phrase ""as luck would have it"" twice in conversation before the next vote.",family; seated; remote-friendly,10,easy
+task-007,Get someone to ask you what time it is.,family; seated; remote-friendly,8,medium
+task-008,Get three different people to tell you their favourite biscuit before the next vote.,family; seated; remote-friendly,8,easy
+task-009,Pay the same person three compliments before the next vote without anyone noticing a pattern.,family; seated; remote-friendly,10,medium
+task-010,Get someone to hum or sing a few notes of any song.,family; seated; remote-friendly,8,medium
+task-011,Start a conversation about the best holiday you have ever had and get at least two others to join in.,family; seated; remote-friendly,10,easy
+task-012,Get someone to hand you an object without asking them for it directly.,family; seated,8,hard
+task-013,"Agree warmly with the next three opinions you hear, whatever they are.",family; seated; remote-friendly,10,easy
+task-014,Get two people to swap seats with each other before the next vote.,family,10,hard
+task-015,"Get someone to say the word ""pineapple"" during the next conversation.",family; seated; remote-friendly,8,medium
+task-016,"Ask three different people which superpower they would choose, and remember all three answers.",family; seated; remote-friendly,8,easy
+task-017,"Offer to help someone with something before the next vote, without being asked, and get them to accept.",family,10,easy
+task-018,Get someone to show you a photo on their phone.,family; seated; remote-friendly,10,medium
+task-019,Fold a small paper shape and leave it where someone will find it before the next vote. Do not get caught placing it.,family; seated,8,medium
+task-020,"Get someone to use the word ""brilliant"" to describe something.",family; seated; remote-friendly,8,easy
+task-021,"Tell a short story that includes a llama, a lighthouse and a lost sock, and get someone to ask a question about it.",family; seated; remote-friendly,10,hard
+task-022,Get someone to suggest taking a group photo.,family; remote-friendly,10,hard
+task-023,Rearrange three objects on a table or shelf before the next vote without anyone noticing you did it.,family,10,medium
+task-024,Get two different people to tell you about the first concert or show they ever went to.,family; seated; remote-friendly,12,easy
+task-025,Get someone to stand up and stretch with you.,family,8,medium
+task-026,Mention the weather in three separate conversations without anyone pointing it out.,family; seated; remote-friendly,10,easy
+task-027,"Get someone to explain, step by step, how they make a cup of tea.",family; seated; remote-friendly,8,medium
+task-028,"Keep a pen, coin or similar small object in your hand for the whole conversation without anyone asking about it.",family; seated,8,medium
+task-029,Get someone to change the subject to food without mentioning food yourself first.,family; seated; remote-friendly,10,hard
+task-030,Speak only in questions for one full minute during the next conversation without anyone noticing.,family; seated; remote-friendly,12,hard
+task-031,Get someone to give you a high five.,family,8,easy
+task-032,Get someone to repeat what they just said by pretending you did not quite hear it.,family; seated; remote-friendly,10,easy
+task-033,"Get two people to debate, playfully, whether a hot dog counts as a sandwich.",family; seated; remote-friendly,10,medium
+task-034,Get a colleague to mention a spreadsheet in a conversation that has nothing to do with work.,office; seated; remote-friendly,16,medium
+task-035,"Use the phrase ""let's circle back"" before the next vote and get someone to reply to it.",office; seated; remote-friendly,16,easy
+task-036,Get someone to tell you what their very first job was.,office; seated; remote-friendly,16,easy
+task-037,"During the next conversation, get someone to draw something for you, such as a quick map or diagram.",office; seated,16,hard
+task-038,Get someone to tell you about a meeting they wish they had skipped.,office; seated; remote-friendly,16,medium
+task-039,"On the call, get someone to unmute and say the word ""marmalade"".",remote-friendly; family,10,medium
+task-040,Get someone on the call to hold an object up to their camera.,remote-friendly; family,8,easy
+task-041,Change your video background or camera angle twice before the next vote without anyone commenting.,remote-friendly,10,medium
+task-042,Get two people to name the cocktail they would order if money were no object.,adults-only; seated; remote-friendly,18,easy
+task-043,"Steer a conversation onto mortgages, pensions or tax and keep it going for a full minute.",adults-only; seated; remote-friendly,18,medium
+task-044,Get someone to recommend an 18-rated film before you name one yourself.,adults-only; seated; remote-friendly,18,medium
+task-045,"Get the whole group to clap or cheer at the same moment, for any reason, before the next vote.",family; remote-friendly,10,hard
+task-046,Teach someone a simple hand game or trick and get them to try it.,family; seated,8,medium

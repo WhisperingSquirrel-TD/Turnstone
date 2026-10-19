@@ -1813,3 +1813,4 @@ export const useSubmitGameCommand = <TError = ErrorType<ApiError>,
       > => {
       return useMutation(getSubmitGameCommandMutationOptions(options));
     }
+

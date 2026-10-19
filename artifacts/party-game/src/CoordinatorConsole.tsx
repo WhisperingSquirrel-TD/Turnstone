@@ -9,7 +9,8 @@ export type CoordinatorCommand =
   | { type: 'Resume' }
   | { type: 'ExtendPhase'; minutes: 1 | 5 | 15 }
   | { type: 'MarkDeparted'; seatId: string }
-  | { type: 'EndGameEarly' };
+  | { type: 'EndGameEarly' }
+  | { type: 'UndoCoordinatorAction' };
 
 export interface CoordinatorConsoleView {
   phase: FullView['phase'];
@@ -21,6 +22,7 @@ export interface CoordinatorConsoleView {
   seats: FullView['seats'];
   publicLog: FullView['publicLog'];
   coordinatorAlerts: FullView['coordinatorAlerts'];
+  coordinatorUndo: FullView['coordinatorUndo'];
 }
 
 function formatPublicUpdate(entry: FullView['publicLog'][number]): string {
@@ -37,6 +39,8 @@ function formatPublicUpdate(entry: FullView['publicLog'][number]): string {
     return en.game.publicLogSeatDeparted(entry.seat.name);
   if (entry.action === 'schedule_shift')
     return en.game.publicLogScheduleShift(entry.minutes);
+  if (entry.action === 'coordinator_undo')
+    return en.game.publicLogCoordinatorUndo;
   return en.game.publicLogFinished(entry.winner);
 }
 
@@ -522,6 +526,17 @@ export function CoordinatorConsole({
       )}
       {active && (
         <div className="grid gap-3">
+          {view.coordinatorUndo && (
+            <button
+              className="entry-secondary-action"
+              data-testid="button-coordinator-undo"
+              type="button"
+              disabled={busy}
+              onClick={() => void run({ type: 'UndoCoordinatorAction' })}
+            >
+              {en.coordinator.undoLastAction}
+            </button>
+          )}
           <button
             className="entry-secondary-action"
             data-testid="button-coordinator-pause"

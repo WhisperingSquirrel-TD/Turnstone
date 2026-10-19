@@ -238,6 +238,14 @@ async function projectState(state: State, viewer: Viewer) {
     viewer.kind === 'visitor'
       ? viewFor({ kind: 'visitor' }, state)
       : viewFor(viewer, state, { lobbyCode });
+  if (viewer.kind === 'coordinator' && 'id' in view) {
+    const { getGameUndoStatus } = await import('@workspace/db/game-store');
+    view.coordinatorUndo = await getGameUndoStatus(
+      state.id,
+      state.version,
+      serverNow,
+    );
+  }
   return gameViewResponseSchema.parse({
     serverNow,
     version: state.version,
@@ -2546,6 +2554,22 @@ export function createApp(
         sendError(response, 409, 'Private view unavailable');
         return;
       }
+      const undoInvalidated = await import('@workspace/db/game-store').then(
+        ({ invalidateGameUndoWindow }) =>
+          invalidateGameUndoWindow(
+            gameId,
+            state.version,
+            options.testOnlyNow?.() ?? Date.now(),
+          ),
+      );
+      if (!undoInvalidated) {
+        sendError(
+          response,
+          409,
+          'The game changed while opening the private screen. Refresh and try again.',
+        );
+        return;
+      }
       response.json(
         await projectState(state, {
           kind: 'player',
@@ -2810,7 +2834,11 @@ export function createApp(
         idempotencyKey: parsed.data.idempotencyKey,
         requestHash: requestHash(parsed.data),
       };
-      const { appendGameEvents, readGameCommandResult } =
+      const {
+        appendGameEvents,
+        readGameCommandResult,
+        readGameUndoWindow,
+      } =
         await import('@workspace/db/game-store');
       const previous = await readGameCommandResult(idempotency);
       if (previous && !previous.ok) {
@@ -2823,12 +2851,56 @@ export function createApp(
         sendError(response, 404, 'Not found');
         return;
       }
-      if (!previous) {
+      if (!previous && parsed.data.type === 'UndoCoordinatorAction') {
+        const now = options.testOnlyNow?.() ?? Date.now();
+        const undoWindow = await readGameUndoWindow(
+          gameId,
+          state.version,
+          now,
+        );
+        if (!undoWindow) {
+          sendError(
+            response,
+            409,
+            'The undo window has closed or the game has changed. No changes were made.',
+          );
+          return;
+        }
+        const undoEvent = eventSchema.parse({
+          seq: state.version + 1,
+          at: now,
+          schemaVersion: 1,
+          type: 'CoordinatorActionUndone',
+          restoreState: undoWindow.state,
+        });
+        const nextState = replayFrom(state, [undoEvent]);
+        const stored = await appendGameEvents({
+          ...idempotency,
+          expectedVersion: state.version,
+          events: [undoEvent],
+          snapshot: { seq: nextState.version, state: nextState },
+          deadline: {
+            kind: nextState.phase,
+            dueAt: nextState.deadline,
+          },
+          undoConsume: { actionVersion: undoWindow.actionVersion, now },
+        });
+        if (!stored.ok) {
+          sendError(
+            response,
+            409,
+            'The undo window has closed or the game has changed. No changes were made.',
+          );
+          return;
+        }
+        await publishGame(gameId);
+      } else if (!previous) {
         const attempts = parsed.data.type === 'AcknowledgePrivate' ? 4 : 1;
         let committed = false;
         for (let attempt = 0; attempt < attempts; attempt += 1) {
+          const now = options.testOnlyNow?.() ?? Date.now();
           const result = decide(state, parsed.data, {
-            now: options.testOnlyNow?.() ?? Date.now(),
+            now,
             actor,
             random: options.testOnlyRandom ?? gameRandom,
           });
@@ -2852,6 +2924,17 @@ export function createApp(
               kind: nextState.phase,
               dueAt: nextState.deadline,
             },
+            ...(viewer.kind === 'coordinator' &&
+            !rehearsalSeatId &&
+            parsed.data.type !== 'EndGameEarly' &&
+            !result.events.some(
+              (event) =>
+                event.type === 'GameFinished' ||
+                (event.type === 'PhaseChanged' &&
+                  ['DEAL', 'FINISHED', 'ARCHIVED'].includes(event.phase)),
+            )
+              ? { undoCapture: { state, expiresAt: now + 60_000 } }
+              : {}),
           });
           if (stored.ok) {
             await publishGame(gameId);

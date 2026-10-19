@@ -1,0 +1,489 @@
+{
+  "version": 2,
+  "date": "2026-10-15",
+  "language": "en-GB",
+  "licence": "Original writing for Turnstone by Stackstone Consulting; admin-editable reference data.",
+  "tasks": [
+    {
+      "id": "task-001",
+      "text": "Get two different people to say the word \"umbrella\" before the next vote. You may not say it first.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-002",
+      "text": "Move a cushion from one room to another before the next vote without anyone seeing you do it.",
+      "tags": [
+        "family"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-003",
+      "text": "Steer a conversation onto the subject of dinosaurs and keep it there for at least a minute.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 8,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-004",
+      "text": "Sit in a different seat at the next gathering and stay there until the vote is over.",
+      "tags": [
+        "family"
+      ],
+      "minimumAge": 8,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-005",
+      "text": "Make someone laugh out loud during the next conversation, before any votes are cast.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-006",
+      "text": "Use the phrase \"as luck would have it\" twice in conversation before the next vote.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-007",
+      "text": "Get someone to ask you what time it is.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-008",
+      "text": "Get three different people to tell you their favourite biscuit before the next vote.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 8,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-009",
+      "text": "Pay the same person three compliments before the next vote without anyone noticing a pattern.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-010",
+      "text": "Get someone to hum or sing a few notes of any song.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-011",
+      "text": "Start a conversation about the best holiday you have ever had and get at least two others to join in.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-012",
+      "text": "Get someone to hand you an object without asking them for it directly.",
+      "tags": [
+        "family",
+        "seated"
+      ],
+      "minimumAge": 8,
+      "difficulty": "hard"
+    },
+    {
+      "id": "task-013",
+      "text": "Agree warmly with the next three opinions you hear, whatever they are.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-014",
+      "text": "Get two people to swap seats with each other before the next vote.",
+      "tags": [
+        "family"
+      ],
+      "minimumAge": 10,
+      "difficulty": "hard"
+    },
+    {
+      "id": "task-015",
+      "text": "Get someone to say the word \"pineapple\" during the next conversation.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-016",
+      "text": "Ask three different people which superpower they would choose, and remember all three answers.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 8,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-017",
+      "text": "Offer to help someone with something before the next vote, without being asked, and get them to accept.",
+      "tags": [
+        "family"
+      ],
+      "minimumAge": 10,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-018",
+      "text": "Get someone to show you a photo on their phone.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-019",
+      "text": "Fold a small paper shape and leave it where someone will find it before the next vote. Do not get caught placing it.",
+      "tags": [
+        "family",
+        "seated"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-020",
+      "text": "Get someone to use the word \"brilliant\" to describe something.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 8,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-021",
+      "text": "Tell a short story that includes a llama, a lighthouse and a lost sock, and get someone to ask a question about it.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "hard"
+    },
+    {
+      "id": "task-022",
+      "text": "Get someone to suggest taking a group photo.",
+      "tags": [
+        "family",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "hard"
+    },
+    {
+      "id": "task-023",
+      "text": "Rearrange three objects on a table or shelf before the next vote without anyone noticing you did it.",
+      "tags": [
+        "family"
+      ],
+      "minimumAge": 10,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-024",
+      "text": "Get two different people to tell you about the first concert or show they ever went to.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 12,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-025",
+      "text": "Get someone to stand up and stretch with you.",
+      "tags": [
+        "family"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-026",
+      "text": "Mention the weather in three separate conversations without anyone pointing it out.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-027",
+      "text": "Get someone to explain, step by step, how they make a cup of tea.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-028",
+      "text": "Keep a pen, coin or similar small object in your hand for the whole conversation without anyone asking about it.",
+      "tags": [
+        "family",
+        "seated"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-029",
+      "text": "Get someone to change the subject to food without mentioning food yourself first.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "hard"
+    },
+    {
+      "id": "task-030",
+      "text": "Speak only in questions for one full minute during the next conversation without anyone noticing.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 12,
+      "difficulty": "hard"
+    },
+    {
+      "id": "task-031",
+      "text": "Get someone to give you a high five.",
+      "tags": [
+        "family"
+      ],
+      "minimumAge": 8,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-032",
+      "text": "Get someone to repeat what they just said by pretending you did not quite hear it.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-033",
+      "text": "Get two people to debate, playfully, whether a hot dog counts as a sandwich.",
+      "tags": [
+        "family",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-034",
+      "text": "Get a colleague to mention a spreadsheet in a conversation that has nothing to do with work.",
+      "tags": [
+        "office",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 16,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-035",
+      "text": "Use the phrase \"let's circle back\" before the next vote and get someone to reply to it.",
+      "tags": [
+        "office",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 16,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-036",
+      "text": "Get someone to tell you what their very first job was.",
+      "tags": [
+        "office",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 16,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-037",
+      "text": "During the next conversation, get someone to draw something for you, such as a quick map or diagram.",
+      "tags": [
+        "office",
+        "seated"
+      ],
+      "minimumAge": 16,
+      "difficulty": "hard"
+    },
+    {
+      "id": "task-038",
+      "text": "Get someone to tell you about a meeting they wish they had skipped.",
+      "tags": [
+        "office",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 16,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-039",
+      "text": "On the call, get someone to unmute and say the word \"marmalade\".",
+      "tags": [
+        "remote-friendly",
+        "family"
+      ],
+      "minimumAge": 10,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-040",
+      "text": "Get someone on the call to hold an object up to their camera.",
+      "tags": [
+        "remote-friendly",
+        "family"
+      ],
+      "minimumAge": 8,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-041",
+      "text": "Change your video background or camera angle twice before the next vote without anyone commenting.",
+      "tags": [
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-042",
+      "text": "Get two people to name the cocktail they would order if money were no object.",
+      "tags": [
+        "adults-only",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 18,
+      "difficulty": "easy"
+    },
+    {
+      "id": "task-043",
+      "text": "Steer a conversation onto mortgages, pensions or tax and keep it going for a full minute.",
+      "tags": [
+        "adults-only",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 18,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-044",
+      "text": "Get someone to recommend an 18-rated film before you name one yourself.",
+      "tags": [
+        "adults-only",
+        "seated",
+        "remote-friendly"
+      ],
+      "minimumAge": 18,
+      "difficulty": "medium"
+    },
+    {
+      "id": "task-045",
+      "text": "Get the whole group to clap or cheer at the same moment, for any reason, before the next vote.",
+      "tags": [
+        "family",
+        "remote-friendly"
+      ],
+      "minimumAge": 10,
+      "difficulty": "hard"
+    },
+    {
+      "id": "task-046",
+      "text": "Teach someone a simple hand game or trick and get them to try it.",
+      "tags": [
+        "family",
+        "seated"
+      ],
+      "minimumAge": 8,
+      "difficulty": "medium"
+    }
+  ]
+}

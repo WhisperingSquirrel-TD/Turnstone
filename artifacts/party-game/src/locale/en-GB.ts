@@ -101,6 +101,7 @@ export const en = {
         ? "1 player hasn't finished. Move everyone on anyway?"
         : `${unfinished} players haven't finished. Move everyone on anyway?`,
     moveAnyway: 'Move everyone on anyway',
+    undoLastAction: 'Undo last action',
     endConfirmation: 'End this game early? Everyone will see the final result.',
     endNow: 'End game now',
     cancel: 'Cancel',
@@ -567,6 +568,7 @@ export const en = {
     publicLogSeatDeparted: (name: string) => `${name} was marked as departed.`,
     publicLogScheduleShift: (minutes: number) =>
       `The schedule has been shifted by ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
+    publicLogCoordinatorUndo: 'The coordinator reversed the last action.',
     publicLogFinished: (winner: 'traitor' | 'faithful') =>
       `The ${winner === 'traitor' ? 'Traitors' : 'Faithful'} won.`,
     rehearseAgain: 'Practise again',

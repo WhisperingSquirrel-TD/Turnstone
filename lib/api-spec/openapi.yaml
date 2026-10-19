@@ -1026,6 +1026,7 @@ components:
       required:
         - id
         - canAdvancePhase
+        - coordinatorUndo
         - version
         - phase
         - paused
@@ -1060,6 +1061,14 @@ components:
           maxLength: 128
         canAdvancePhase:
           type: boolean
+        coordinatorUndo:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [expiresAt]
+              properties:
+                expiresAt: { type: integer, minimum: 0 }
+            - type: 'null'
         viewerSeatId:
           type: string
           minLength: 1
@@ -1411,6 +1420,13 @@ components:
             at: { type: integer, minimum: 0 }
             action: { type: string, const: schedule_shift }
             minutes: { type: integer, minimum: 1 }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: coordinator_undo }
         - type: object
           additionalProperties: false
           required: [seq, at, action, winner]

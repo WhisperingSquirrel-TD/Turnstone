@@ -520,6 +520,23 @@ export function evolve(previous: State | null, input: unknown): State {
       state.shadowEndAt = null;
       state.paused = false;
       break;
+    case 'CoordinatorActionUndone': {
+      const restored = normalizeSnapshot(event.restoreState as State);
+      if (restored.id !== previous.id || restored.version >= event.seq)
+        throw new Error('Invalid coordinator undo state');
+      return {
+        ...restored,
+        version: event.seq,
+        publicLog: [
+          ...restored.publicLog,
+          {
+            seq: event.seq,
+            at: event.at,
+            action: 'coordinator_undo',
+          },
+        ],
+      };
+    }
   }
   return state;
 }

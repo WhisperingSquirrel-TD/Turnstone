@@ -1,0 +1,1542 @@
+{
+  "version": 2,
+  "date": "2026-10-15",
+  "language": "en-GB",
+  "licence": "Original writing for Turnstone by Stackstone Consulting; admin-editable reference data.",
+  "missions": [
+    {
+      "id": "blind-build",
+      "title": "Blind build",
+      "category": "general-party",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 15,
+      "minimumAge": 8,
+      "materials": [
+        "Two identical sets of 5 to 8 everyday objects per team, such as cups, spoons and books"
+      ],
+      "setUp": "Out of sight, the organiser arranges one set into a simple structure. Each team gets a matching loose set and chooses one describer.",
+      "rules": "The describer may look at the structure as often as they like but may not touch anything or point. They describe it in words while the builders copy it. Each team has three minutes.",
+      "scoring": "20 points to the pot for each team whose copy matches exactly; 10 for a near match, judged by the organiser.",
+      "winner": "The team with the closest copy.",
+      "maxPot": 100,
+      "accessibility": "Describing suits players who prefer not to move. Builders can work seated at a table.",
+      "summary": "One teammate describes a hidden structure; the rest rebuild it.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "just-before",
+      "seated": true,
+      "teamSize": {
+        "min": 3,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Teams whose copy matched exactly",
+            "pointsEach": 20
+          },
+          {
+            "question": "Teams with a near match",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "straight-face",
+      "title": "Straight face",
+      "category": "general-party",
+      "format": "individuals",
+      "players": {
+        "min": 5,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 10,
+      "materials": [
+        "None; players may read a joke from their phone"
+      ],
+      "setUp": "Everyone thinks of the worst joke they know. Sit in a circle.",
+      "rules": "Each player tells their joke without smiling or laughing. Listeners may laugh as much as they like. A smile, smirk or giggle from the teller ends their turn.",
+      "scoring": "10 points to the pot for each teller who keeps a straight face, up to the maximum.",
+      "winner": "Among the straight-faced tellers, the joke that got the biggest laugh, by show of hands.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Players can pass and act as judges instead.",
+      "summary": "Tell a terrible joke without cracking a smile.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "none",
+      "seated": true,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Tellers who kept a straight face",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "charades-relay",
+      "title": "Charades relay",
+      "category": "general-party",
+      "format": "teams",
+      "players": {
+        "min": 6,
+        "max": 40
+      },
+      "durationMinutes": 20,
+      "minimumAge": 8,
+      "materials": [
+        "About 30 slips of paper with film, book or song titles",
+        "A bowl",
+        "A timer"
+      ],
+      "setUp": "The organiser writes the titles, folds the slips into the bowl and splits the room into two to four teams.",
+      "rules": "Teams take turns. Players act out titles to their own team one after another without speaking, handing over after each correct guess. Each team gets two turns of two minutes.",
+      "scoring": "5 points to the pot for every title guessed.",
+      "winner": "The team that guessed the most titles.",
+      "maxPot": 150,
+      "accessibility": "Players who prefer not to act can draw the title instead, or keep time.",
+      "summary": "Act out as many titles as your team can guess against the clock.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "ahead",
+      "seated": false,
+      "teamSize": {
+        "min": 3,
+        "max": 10
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Titles guessed in total",
+            "pointsEach": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "spoon-pass",
+      "title": "Spoon pass",
+      "category": "general-party",
+      "format": "teams",
+      "players": {
+        "min": 6,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "A spoon for every player",
+        "One small unbreakable object per team, such as a cork or ping-pong ball"
+      ],
+      "setUp": "Teams stand or sit in lines, each player holding a spoon by the handle.",
+      "rules": "Pass the object from spoon to spoon down the line and back without using hands. If it drops, it goes back to the start. Each team has three runs.",
+      "scoring": "10 points to the pot for each run completed within one minute, up to the maximum.",
+      "winner": "The team with the fastest single run.",
+      "maxPot": 100,
+      "accessibility": "Works seated. Large serving spoons make it easier.",
+      "summary": "Pass a small object down the line using only spoons.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "just-before",
+      "seated": true,
+      "teamSize": {
+        "min": 4,
+        "max": 10
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Runs finished within one minute",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "memory-tray",
+      "title": "Memory tray",
+      "category": "general-party",
+      "format": "whole-group",
+      "players": {
+        "min": 3,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 5,
+      "materials": [
+        "A tray",
+        "20 small household objects",
+        "A tea towel to cover them"
+      ],
+      "setUp": "Arrange the objects on the tray out of sight.",
+      "rules": "Uncover the tray for 30 seconds while everyone studies it, then cover it. Together, the group has three minutes to list as many objects as it can remember.",
+      "scoring": "5 points to the pot for each object correctly listed.",
+      "winner": "None; the whole group earns the pot.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Players with low vision can handle the objects before the tray is covered.",
+      "summary": "Study 20 objects for 30 seconds, then list them together.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Objects listed correctly",
+            "pointsEach": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "hum-that-tune",
+      "title": "Hum that tune",
+      "category": "general-party",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 15,
+      "minimumAge": 6,
+      "materials": [
+        "A list of well-known tunes, such as nursery rhymes, carols and theme tunes"
+      ],
+      "setUp": "The organiser prepares the list and splits the room into teams.",
+      "rules": "A player silently reads a tune from the list and hums it without words. Their team has 30 seconds to name it. Teams take turns until the list runs out.",
+      "scoring": "10 points to the pot for each tune named.",
+      "winner": "The team that named the most tunes.",
+      "maxPot": 100,
+      "accessibility": "Players can tap the rhythm instead of humming. Guessers can write answers down.",
+      "summary": "Hum a well-known tune for your team to name.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "teamSize": {
+        "min": 3,
+        "max": 10
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Tunes named",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "one-word-story",
+      "title": "One-word story",
+      "category": "general-party",
+      "format": "whole-group",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 8,
+      "materials": [
+        "None"
+      ],
+      "setUp": "Sit in a circle. The organiser starts the story with the word 'Once'.",
+      "rules": "Going round the circle, each player adds one word. A pause of more than three seconds, or a word that makes no sense, ends the story. The group has two attempts.",
+      "scoring": "2 points to the pot for each word in the longer story, up to the maximum.",
+      "winner": "None; the whole group earns the pot.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Players can type their word and have a neighbour read it out.",
+      "summary": "Build the longest story you can, one word each.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "none",
+      "seated": true,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Words in the longer story",
+            "pointsEach": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "taste-detective",
+      "title": "Taste detective",
+      "category": "general-party",
+      "format": "individuals",
+      "players": {
+        "min": 3,
+        "max": 20
+      },
+      "durationMinutes": 15,
+      "minimumAge": 8,
+      "materials": [
+        "6 to 10 small portions of familiar foods agreed in advance",
+        "Blindfolds, or eyes closed",
+        "Clean spoons"
+      ],
+      "setUp": "First ask everyone about allergies and dietary needs, and use only foods every taster has agreed to. Tasting is entirely optional.",
+      "rules": "Volunteer tasters close their eyes and try a small portion of each food, then name it. Anyone may stop at any time. Non-tasters keep score.",
+      "scoring": "10 points to the pot for each food correctly named.",
+      "winner": "The taster with the most correct answers.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Nobody is ever pressured to taste anything.",
+      "summary": "Volunteers name foods with their eyes closed.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "locationNotes": {
+        "outdoor": "Keep the food covered until it is tasted."
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Foods named correctly",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "silent-line-up",
+      "title": "Silent line-up",
+      "category": "general-party",
+      "format": "whole-group",
+      "players": {
+        "min": 6,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 8,
+      "materials": [
+        "None"
+      ],
+      "setUp": "Clear a space for one long line.",
+      "rules": "Without speaking or writing, the whole group lines up in birthday order, January to December. Gestures are allowed. After three minutes, everyone says their birthday aloud to check.",
+      "scoring": "100 points if the order is perfect, minus 10 for each person out of place.",
+      "winner": "None; the whole group earns the pot.",
+      "maxPot": 100,
+      "accessibility": "Players who cannot stand stay seated while others form the line around them. Use alphabetical order of first names if birthdays are private.",
+      "summary": "Line up in birthday order without saying a word.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "none",
+      "seated": false,
+      "potEntry": {
+        "base": 100,
+        "counters": [
+          {
+            "question": "People out of place",
+            "pointsEach": -10
+          }
+        ]
+      }
+    },
+    {
+      "id": "truth-hunt",
+      "title": "Truth hunt",
+      "category": "office",
+      "format": "whole-group",
+      "players": {
+        "min": 5,
+        "max": 30
+      },
+      "durationMinutes": 20,
+      "minimumAge": 16,
+      "materials": [
+        "None"
+      ],
+      "setUp": "Each player privately prepares three short statements about themselves: two true, one false.",
+      "rules": "Players take turns saying their three statements. The group discusses briefly and agrees which one is false.",
+      "scoring": "10 points to the pot each time the group spots the false statement, up to the maximum.",
+      "winner": "The player whose false statement fooled the group most convincingly, by show of hands.",
+      "maxPot": 150,
+      "accessibility": "Fully seated. Players choose what to share; nobody has to reveal anything personal.",
+      "summary": "Spot the false statement among each player's three.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "none",
+      "seated": true,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "False statements spotted",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "pitch-it",
+      "title": "Pitch it",
+      "category": "office",
+      "format": "teams",
+      "players": {
+        "min": 6,
+        "max": 40
+      },
+      "durationMinutes": 20,
+      "minimumAge": 14,
+      "materials": [
+        "Paper and pens",
+        "One random everyday object per team"
+      ],
+      "setUp": "Split into teams of three to six. The organiser hands each team an object as its product.",
+      "rules": "Teams have five minutes to invent a new and ridiculous use for their object, then give a 60-second pitch to the room.",
+      "scoring": "The organiser awards each pitch up to 25 points for the pot, up to the maximum.",
+      "winner": "The team the room votes best; nobody votes for their own team.",
+      "maxPot": 100,
+      "accessibility": "Teams choose who speaks; nobody has to present.",
+      "summary": "Invent and pitch a ridiculous new use for an everyday object.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "just-before",
+      "seated": true,
+      "teamSize": {
+        "min": 3,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Points you awarded across all pitches",
+            "pointsEach": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "paperclip-chain",
+      "title": "Paperclip chain",
+      "category": "office",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 10,
+      "materials": [
+        "A box of paperclips per team",
+        "A timer"
+      ],
+      "setUp": "Give each team its box.",
+      "rules": "Teams have three minutes to make the longest chain of linked paperclips. A chain only counts if it holds together when lifted by one end.",
+      "scoring": "1 point to the pot for every paperclip in the longest chain, up to the maximum.",
+      "winner": "The team with the longest chain.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Larger clips help anyone with limited dexterity.",
+      "summary": "Make the longest paperclip chain in three minutes.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "teamSize": {
+        "min": 2,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Paperclips in the longest chain",
+            "pointsEach": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "desk-hunt",
+      "title": "Desk hunt",
+      "category": "office",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 15,
+      "minimumAge": 14,
+      "materials": [
+        "A list of 10 everyday items, such as a stapler, a sticky note and a red pen"
+      ],
+      "setUp": "Agree the boundaries: shared areas only, and nobody takes anything from a colleague's desk without asking.",
+      "rules": "Teams have five minutes to bring back one of each item on the list. Everything goes back where it came from afterwards.",
+      "scoring": "10 points to the pot for each item on the list found by at least one team.",
+      "winner": "The team that brings back the most items first.",
+      "maxPot": 100,
+      "accessibility": "One team member can stay seated as the collector and checker.",
+      "summary": "Find ten everyday office items before time runs out.",
+      "location": [
+        "indoor"
+      ],
+      "prep": "ahead",
+      "seated": false,
+      "teamSize": {
+        "min": 2,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "List items found",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "target-toss",
+      "title": "Target toss",
+      "category": "outdoor",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 15,
+      "minimumAge": 6,
+      "materials": [
+        "Three buckets or boxes",
+        "Beanbags or rolled-up pairs of socks"
+      ],
+      "setUp": "Place the buckets three, five and seven metres from a throwing line.",
+      "rules": "Each player throws three times. Landing in the near bucket scores 1, the middle 2 and the far 3.",
+      "scoring": "Add the winning team's total to the pot, up to the maximum.",
+      "winner": "The team with the highest total.",
+      "maxPot": 100,
+      "accessibility": "Players can throw seated, or move the throwing line closer.",
+      "summary": "Throw beanbags into buckets at three distances.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "just-before",
+      "seated": true,
+      "locationNotes": {
+        "indoor": "Use rolled-up socks, set the buckets two, three and four metres away, and clear away anything breakable."
+      },
+      "teamSize": {
+        "min": 2,
+        "max": 8
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "The winning team's total",
+            "pointsEach": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "scavenger-hunt",
+      "title": "Scavenger hunt",
+      "category": "outdoor",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 15,
+      "minimumAge": 6,
+      "materials": [
+        "A list of 10 things to find, such as something round, something rough, something yellow and something older than you"
+      ],
+      "setUp": "Agree boundaries everyone understands. Photograph anything that cannot or should not be moved.",
+      "rules": "Teams have ten minutes to collect or photograph one example of everything on the list.",
+      "scoring": "10 points to the pot for each list item found by at least one team.",
+      "winner": "The team that finds the most items.",
+      "maxPot": 100,
+      "accessibility": "Keep to level ground or one floor. A team member can stay at base to check finds.",
+      "summary": "Find or photograph ten things on a list.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "ahead",
+      "seated": false,
+      "locationNotes": {
+        "indoor": "Agree which rooms are allowed. Private drawers, bags and bedrooms stay off limits.",
+        "outdoor": "Add natural finds such as a fallen leaf or a smooth stone. Living plants stay where they are."
+      },
+      "teamSize": {
+        "min": 2,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "List items found",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "potato-relay",
+      "title": "Potato and spoon relay",
+      "category": "outdoor",
+      "format": "teams",
+      "players": {
+        "min": 6,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "A tablespoon and a potato per team",
+        "Two markers 10 metres apart"
+      ],
+      "setUp": "Teams line up behind the first marker.",
+      "rules": "Each player carries the potato on the spoon to the far marker and back, then hands over. If it drops, pick it up and carry on from that spot. Everyone goes once.",
+      "scoring": "20 points to the pot for each team that finishes, up to the maximum.",
+      "winner": "The first team to finish.",
+      "maxPot": 100,
+      "accessibility": "Players can walk, use a bigger spoon, or roll the potato with a stick instead.",
+      "summary": "Carry a potato on a spoon there and back, one runner at a time.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "just-before",
+      "seated": false,
+      "locationNotes": {
+        "indoor": "Use a hallway or cleared room with markers five metres apart, and clear the floor of trip hazards."
+      },
+      "teamSize": {
+        "min": 3,
+        "max": 10
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Teams that finished",
+            "pointsEach": 20
+          }
+        ]
+      }
+    },
+    {
+      "id": "sound-guess",
+      "title": "Sound guess",
+      "category": "seated-accessible",
+      "format": "whole-group",
+      "players": {
+        "min": 3,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "Ten everyday objects with a distinctive sound, such as keys, foil, a zip and a bell"
+      ],
+      "setUp": "The organiser sits out of sight, behind a screen or in a doorway.",
+      "rules": "The organiser makes each sound twice. Players write down or agree an answer for each one.",
+      "scoring": "10 points to the pot for each sound correctly named.",
+      "winner": "For an individual award, the player with the most correct written answers.",
+      "maxPot": 100,
+      "accessibility": "Players who are deaf or hard of hearing can be the sound-maker or scorer.",
+      "summary": "Name everyday objects from their sound alone.",
+      "location": [
+        "indoor",
+        "remote"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Sounds named correctly",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "feel-the-bag",
+      "title": "Feel the bag",
+      "category": "seated-accessible",
+      "format": "individuals",
+      "players": {
+        "min": 3,
+        "max": 30
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "A cloth bag",
+        "10 small, safe objects with different shapes; nothing sharp"
+      ],
+      "setUp": "Put one object in the bag at a time, out of sight.",
+      "rules": "The bag goes round. Each player reaches in without looking, feels the object for 15 seconds and writes down a guess. Repeat for every object.",
+      "scoring": "10 points to the pot for each object identified by at least half the players.",
+      "winner": "The player with the most correct answers.",
+      "maxPot": 100,
+      "accessibility": "Fully seated, and works well for players with low vision.",
+      "summary": "Identify objects in a bag by touch.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Objects identified by at least half the players",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "word-chain",
+      "title": "Word chain",
+      "category": "seated-accessible",
+      "format": "individuals",
+      "players": {
+        "min": 3,
+        "max": 30
+      },
+      "durationMinutes": 10,
+      "minimumAge": 8,
+      "materials": [
+        "None"
+      ],
+      "setUp": "Pick a category, such as animals or food.",
+      "rules": "Going round the circle, each player names something in the category that starts with the last letter of the previous word. Five seconds per turn and no repeats. A player who misses sits out until the next round. Play three rounds.",
+      "scoring": "2 points to the pot for each valid word, up to the maximum.",
+      "winner": "The player who stays in longest across the three rounds.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Players can write their word if speaking is difficult.",
+      "summary": "Each word starts with the last letter of the one before.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "none",
+      "seated": true,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Valid words said in total",
+            "pointsEach": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "twenty-questions",
+      "title": "Twenty questions",
+      "category": "seated-accessible",
+      "format": "whole-group",
+      "players": {
+        "min": 3,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "A list of everyday objects for the organiser to choose from"
+      ],
+      "setUp": "The organiser secretly picks an object from the list.",
+      "rules": "The group asks up to 20 yes-or-no questions, one at a time, then makes a final guess. Play three rounds.",
+      "scoring": "Each round: 40 points if solved within 10 questions, 20 if within 20, otherwise none.",
+      "winner": "None; the whole group earns the pot.",
+      "maxPot": 120,
+      "accessibility": "Fully seated and needs no equipment.",
+      "summary": "Guess the secret object in 20 yes-or-no questions.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "none",
+      "seated": true,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Rounds solved within 10 questions",
+            "pointsEach": 40
+          },
+          {
+            "question": "Rounds solved with 11 to 20 questions",
+            "pointsEach": 20
+          }
+        ]
+      }
+    },
+    {
+      "id": "fetch-it",
+      "title": "Fetch it",
+      "category": "remote-friendly",
+      "format": "individuals",
+      "players": {
+        "min": 3,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "None; players use whatever is around them"
+      ],
+      "setUp": "If playing on a call, everyone keeps their camera on.",
+      "rules": "The organiser names an item, such as something blue or a wooden spoon. Players have 30 seconds to fetch it and show it. Play ten rounds.",
+      "scoring": "10 points to the pot for each round in which at least one player shows the item in time.",
+      "winner": "The player who was first most often.",
+      "maxPot": 100,
+      "accessibility": "Players who cannot move easily may use any matching item within reach.",
+      "summary": "Race to find and show a named item.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "none",
+      "seated": false,
+      "locationNotes": {
+        "indoor": "Agree which rooms are allowed. Players bring the item back to the group.",
+        "outdoor": "Agree the boundary. Players bring the item back to the group.",
+        "remote": "Players show the item on camera."
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Rounds where someone showed the item in time",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "zoom-in",
+      "title": "Zoom in",
+      "category": "remote-friendly",
+      "format": "whole-group",
+      "players": {
+        "min": 3,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 8,
+      "materials": [
+        "Ten close-up photos of everyday objects, prepared by the organiser"
+      ],
+      "setUp": "The organiser shares their screen.",
+      "rules": "Show each photo zoomed right in, then zoom out slowly. Players type guesses in the chat.",
+      "scoring": "10 points to the pot for each object the group identifies before the full picture is shown.",
+      "winner": "The player with the most first correct guesses.",
+      "maxPot": 100,
+      "accessibility": "Describe each photo aloud for anyone with low vision.",
+      "summary": "Guess everyday objects from extreme close-ups.",
+      "location": [
+        "remote"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Objects identified before the full picture",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "quickfire-quiz",
+      "title": "Quickfire quiz",
+      "category": "remote-friendly",
+      "format": "teams",
+      "players": {
+        "min": 3,
+        "max": 40
+      },
+      "durationMinutes": 15,
+      "minimumAge": 10,
+      "materials": [
+        "Ten general-knowledge questions with answers, prepared by the organiser"
+      ],
+      "setUp": "Split into teams, each with its own chat or call.",
+      "rules": "Read each question once. Teams agree an answer and send it to the organiser within 30 seconds.",
+      "scoring": "5 points to the pot for each correct team answer, up to the maximum.",
+      "winner": "The team with the most correct answers.",
+      "maxPot": 100,
+      "accessibility": "Read questions aloud and show them in writing.",
+      "summary": "Ten quick questions, answered as a team.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "teamSize": {
+        "min": 2,
+        "max": 8
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Correct team answers in total",
+            "pointsEach": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "animal-parade",
+      "title": "Animal parade",
+      "category": "children",
+      "format": "individuals",
+      "players": {
+        "min": 3,
+        "max": 30
+      },
+      "durationMinutes": 10,
+      "minimumAge": 5,
+      "materials": [
+        "None"
+      ],
+      "setUp": "Sit in a circle with space in the middle.",
+      "rules": "Each child silently chooses an animal and acts it out without words. Everyone else guesses.",
+      "scoring": "10 points to the pot for each animal guessed within 30 seconds.",
+      "winner": "The child whose animal was guessed fastest.",
+      "maxPot": 100,
+      "accessibility": "Children can draw their animal instead of acting it out.",
+      "summary": "Act out an animal for everyone to guess.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "none",
+      "seated": false,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Animals guessed within 30 seconds",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "treasure-trail",
+      "title": "Treasure trail",
+      "category": "children",
+      "format": "teams",
+      "players": {
+        "min": 3,
+        "max": 30
+      },
+      "durationMinutes": 10,
+      "minimumAge": 5,
+      "materials": [
+        "10 small paper stars or similar tokens"
+      ],
+      "setUp": "An adult hides the tokens in one room or a garden, where every child can reach them safely. Nothing near ovens, stairs or electrics.",
+      "rules": "Children have five minutes to find all the tokens.",
+      "scoring": "10 points to the pot for each token found.",
+      "winner": "The team that finds the most tokens.",
+      "maxPot": 100,
+      "accessibility": "Hide some tokens at seated height so everyone can join in.",
+      "summary": "Find ten hidden tokens in one room or garden.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "just-before",
+      "seated": false,
+      "locationNotes": {
+        "outdoor": "Stay inside the garden boundary, and weigh the tokens down or peg them so they cannot blow away."
+      },
+      "teamSize": {
+        "min": 2,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Tokens found",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "musical-statues",
+      "title": "Musical statues",
+      "category": "children",
+      "format": "individuals",
+      "players": {
+        "min": 5,
+        "max": 30
+      },
+      "durationMinutes": 10,
+      "minimumAge": 5,
+      "materials": [
+        "Something to play music on"
+      ],
+      "setUp": "Clear a safe space to dance.",
+      "rules": "Everyone dances while the music plays and freezes when it stops. Anyone who moves sits out. Play until one dancer is left.",
+      "scoring": "10 points to the pot for each round played, up to the maximum.",
+      "winner": "The last dancer standing.",
+      "maxPot": 80,
+      "accessibility": "Children can play seated, freezing their arms and faces.",
+      "summary": "Dance, then freeze when the music stops.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "none",
+      "seated": false,
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Rounds played",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "wrap-race",
+      "title": "Wrap race",
+      "category": "seasonal",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 10,
+      "materials": [
+        "Wrapping paper, sticky tape and scissors per team",
+        "One awkward object per team, such as a football"
+      ],
+      "setUp": "An adult handles the scissors for younger players.",
+      "rules": "Teams have two minutes to wrap their object so that no part of it shows.",
+      "scoring": "25 points to the pot for each fully wrapped object, up to the maximum.",
+      "winner": "The neatest fully wrapped object, chosen by the organiser.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. One player can hold while others tape.",
+      "summary": "Wrap an awkward object completely in two minutes.",
+      "location": [
+        "indoor"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "season": "christmas",
+      "teamSize": {
+        "min": 2,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Objects fully wrapped",
+            "pointsEach": 25
+          }
+        ]
+      }
+    },
+    {
+      "id": "carol-scramble",
+      "title": "Carol scramble",
+      "category": "seasonal",
+      "format": "teams",
+      "players": {
+        "min": 3,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 8,
+      "materials": [
+        "Ten traditional carol titles with each word's letters scrambled, written out by the organiser (for example 'Lisent Thign' for 'Silent Night')"
+      ],
+      "setUp": "Give each team a copy of the scrambled titles.",
+      "rules": "Teams have four minutes to unscramble as many titles as they can.",
+      "scoring": "10 points to the pot for each title solved by at least one team.",
+      "winner": "The team that solves the most titles.",
+      "maxPot": 100,
+      "accessibility": "Titles can be read aloud letter by letter.",
+      "summary": "Unscramble the titles of traditional carols.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "season": "christmas",
+      "teamSize": {
+        "min": 2,
+        "max": 8
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Titles solved",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "christmas-list",
+      "title": "Christmas list",
+      "category": "seasonal",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 8,
+      "materials": [
+        "Paper and pens",
+        "A timer"
+      ],
+      "setUp": "Split into teams, each with a writer.",
+      "rules": "The organiser names a category, such as things on a Christmas tree. Teams have 60 seconds to write as many answers as they can. Play four categories.",
+      "scoring": "5 points to the pot for each answer no other team wrote, up to the maximum.",
+      "winner": "The team with the most unique answers.",
+      "maxPot": 100,
+      "accessibility": "One player writes while the others call out.",
+      "summary": "List as many festive answers as you can in 60 seconds.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "just-before",
+      "seated": true,
+      "season": "christmas",
+      "teamSize": {
+        "min": 2,
+        "max": 8
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Unique answers in total",
+            "pointsEach": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "paper-chain",
+      "title": "Paper chain",
+      "category": "seasonal",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "Strips of coloured paper",
+        "Glue sticks or tape"
+      ],
+      "setUp": "Give each team a pile of strips.",
+      "rules": "Teams have five minutes to make the longest paper chain. Every link must be closed.",
+      "scoring": "1 point to the pot for every link in the longest chain, up to the maximum.",
+      "winner": "The team with the longest chain.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Pre-cut strips help players with limited dexterity.",
+      "summary": "Make the longest paper chain in five minutes.",
+      "location": [
+        "indoor"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "season": "christmas",
+      "teamSize": {
+        "min": 2,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Links in the longest chain",
+            "pointsEach": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "mummy-wrap",
+      "title": "Mummy wrap",
+      "category": "seasonal",
+      "format": "teams",
+      "players": {
+        "min": 6,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "Two or three rolls of toilet paper per team"
+      ],
+      "setUp": "Each team chooses one volunteer to be the mummy. Only someone happy to be wrapped should volunteer.",
+      "rules": "Teams have two minutes to wrap their mummy from shoulders to ankles. Faces, mouths and noses stay uncovered, and the mummy can call a stop at any time.",
+      "scoring": "25 points to the pot for each mummy fully wrapped from shoulders to ankles, up to the maximum.",
+      "winner": "The best-wrapped mummy, chosen by the organiser.",
+      "maxPot": 100,
+      "accessibility": "The mummy can sit throughout. Teams can wrap a chair or coat stand instead of a person.",
+      "summary": "Wrap a volunteer mummy in toilet paper in two minutes.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "ahead",
+      "seated": false,
+      "locationNotes": {
+        "outdoor": "Only on a still day, and collect every scrap of paper afterwards."
+      },
+      "season": "halloween",
+      "teamSize": {
+        "min": 3,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Mummies fully wrapped",
+            "pointsEach": 25
+          }
+        ]
+      }
+    },
+    {
+      "id": "pumpkin-roll",
+      "title": "Pumpkin roll",
+      "category": "seasonal",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "One small pumpkin or orange per team",
+        "A broom or rolled-up newspaper per team",
+        "Two markers"
+      ],
+      "setUp": "Set the markers five metres apart and clear the floor.",
+      "rules": "Each player steers the pumpkin with the broom to the far marker and back, then hands over. Pumpkins are rolled, never lifted or kicked. Everyone goes once.",
+      "scoring": "20 points to the pot for each team that finishes, up to the maximum.",
+      "winner": "The first team to finish.",
+      "maxPot": 100,
+      "accessibility": "Players can steer seated with a longer broom, or push the pumpkin by hand.",
+      "summary": "Steer a pumpkin there and back with a broom, relay style.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "just-before",
+      "seated": false,
+      "locationNotes": {
+        "outdoor": "Use flat grass or a path, with the markers ten metres apart."
+      },
+      "season": "halloween",
+      "teamSize": {
+        "min": 3,
+        "max": 10
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Teams that finished",
+            "pointsEach": 20
+          }
+        ]
+      }
+    },
+    {
+      "id": "mystery-cauldron",
+      "title": "Mystery cauldron",
+      "category": "seasonal",
+      "format": "individuals",
+      "players": {
+        "min": 3,
+        "max": 30
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "A large bowl or pot with a cloth over it",
+        "Five things that feel strange, such as peeled grapes, cold cooked spaghetti, jelly, a damp sponge and dried pasta",
+        "Wipes"
+      ],
+      "setUp": "Prepare the cauldron out of sight. Check for allergies first, even though nothing is eaten.",
+      "rules": "Players take turns feeling inside the cauldron without looking, while the organiser describes each item as something spooky, such as eyeballs or worms. Everyone writes down what they think each item really is.",
+      "scoring": "10 points to the pot for each item that at least half the players identify correctly.",
+      "winner": "The player with the most correct answers.",
+      "maxPot": 50,
+      "accessibility": "Fully seated. Anyone who would rather not touch can be the spooky describer.",
+      "summary": "Feel the cauldron's spooky contents and guess what they really are.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "just-before",
+      "seated": true,
+      "season": "halloween",
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Items identified by at least half the players",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "mask-makers",
+      "title": "Mask makers",
+      "category": "seasonal",
+      "format": "teams",
+      "players": {
+        "min": 4,
+        "max": 40
+      },
+      "durationMinutes": 15,
+      "minimumAge": 6,
+      "materials": [
+        "Paper plates or card",
+        "Felt-tip pens",
+        "String or tape",
+        "Child-safe scissors"
+      ],
+      "setUp": "Give each team a pile of materials. An adult handles any sharp scissors.",
+      "rules": "Teams have eight minutes to make spooky masks for at least two of their members, then model them for the room.",
+      "scoring": "10 points to the pot for each finished mask, up to the maximum.",
+      "winner": "The team whose masks the room votes spookiest; nobody votes for their own team.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Masks can be held up on a stick instead of worn.",
+      "summary": "Make spooky masks from paper plates, then model them.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "locationNotes": {
+        "outdoor": "Only on a still day, or weigh the materials down."
+      },
+      "season": "halloween",
+      "teamSize": {
+        "min": 2,
+        "max": 6
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Masks finished",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "night-sounds",
+      "title": "Night sounds",
+      "category": "seasonal",
+      "format": "individuals",
+      "players": {
+        "min": 3,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 5,
+      "materials": [
+        "Slips of paper, each naming a spooky sound, such as a creaking door, a hooting owl, a howling wolf, a cackling witch or rattling chains"
+      ],
+      "setUp": "The organiser writes the slips and folds them into a bowl.",
+      "rules": "Players take turns drawing a slip and making the sound with their voice alone. Everyone else has 20 seconds to guess it.",
+      "scoring": "10 points to the pot for each sound guessed in time, up to the maximum.",
+      "winner": "The player whose sound was guessed fastest, by show of hands.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Players who prefer not to perform can mime the sound or keep time.",
+      "summary": "Make a spooky sound with your voice for everyone to guess.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "locationNotes": {
+        "remote": "The organiser sends each player their sound in a private message."
+      },
+      "season": "halloween",
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Sounds guessed in time",
+            "pointsEach": 10
+          }
+        ]
+      }
+    },
+    {
+      "id": "spooky-spelling",
+      "title": "Spooky spelling",
+      "category": "seasonal",
+      "format": "teams",
+      "players": {
+        "min": 3,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 7,
+      "materials": [
+        "A list of 15 Halloween words, such as cauldron, skeleton, haunted and broomstick, from easy to hard"
+      ],
+      "setUp": "Split into teams, mixing younger and older players.",
+      "rules": "The organiser reads a word aloud. The team whose turn it is has 30 seconds to spell it letter by letter. A mistake passes the word to the next team.",
+      "scoring": "5 points to the pot for each word spelt correctly, up to the maximum.",
+      "winner": "The team that spells the most words.",
+      "maxPot": 75,
+      "accessibility": "Fully seated. Teams can write the spelling down instead of saying it.",
+      "summary": "Spell Halloween words letter by letter against the clock.",
+      "location": [
+        "indoor",
+        "outdoor",
+        "remote"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "season": "halloween",
+      "teamSize": {
+        "min": 2,
+        "max": 8
+      },
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Words spelt correctly",
+            "pointsEach": 5
+          }
+        ]
+      }
+    },
+    {
+      "id": "haunted-whispers",
+      "title": "Haunted whispers",
+      "category": "seasonal",
+      "format": "whole-group",
+      "players": {
+        "min": 6,
+        "max": 40
+      },
+      "durationMinutes": 10,
+      "minimumAge": 6,
+      "materials": [
+        "Five spooky sentences written on slips, such as 'The old owl hid seven silver keys under the creaking stairs'"
+      ],
+      "setUp": "Everyone sits or stands in a line or circle.",
+      "rules": "The organiser whispers a sentence to the first player, who whispers it once to the next, and so on. The last player says it aloud. Play all five sentences.",
+      "scoring": "2 points to the pot for each word the last player gets right, up to the maximum.",
+      "winner": "None; the whole group earns the pot.",
+      "maxPot": 100,
+      "accessibility": "Fully seated. Players who are hard of hearing can be the checker who compares the final sentence with the slip.",
+      "summary": "Pass a spooky sentence down the line in whispers.",
+      "location": [
+        "indoor",
+        "outdoor"
+      ],
+      "prep": "ahead",
+      "seated": true,
+      "season": "halloween",
+      "potEntry": {
+        "base": 0,
+        "counters": [
+          {
+            "question": "Words the last player got right",
+            "pointsEach": 2
+          }
+        ]
+      }
+    }
+  ]
+}

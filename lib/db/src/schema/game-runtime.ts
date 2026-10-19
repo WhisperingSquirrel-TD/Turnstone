@@ -22,6 +22,16 @@ export const games = pgTable('games', {
     .defaultNow(),
 });
 
+export const gameUndoWindows = pgTable('game_undo_windows', {
+  gameId: text('game_id')
+    .primaryKey()
+    .references(() => games.id, { onDelete: 'cascade' }),
+  actionVersion: integer('action_version').notNull(),
+  state: jsonb('state').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  invalidatedAt: timestamp('invalidated_at', { withTimezone: true }),
+});
+
 export const gameEvents = pgTable(
   'game_events',
   {
