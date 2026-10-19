@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green:** Verify #167 (`da8464e`) passed all 19 jobs, including desktop and Pixel Chromium, iPhone and iPad WebKit, and `required-checks`.
+**Latest green:** Verify #168 (`3f2574c`) passed all 19 jobs, including desktop and Pixel Chromium, iPhone and iPad WebKit, and `required-checks`.
 
 **Verify #165 (`05bddae`): RED, corrected in #166.** Failed jobs were `unit`, all four browser profiles and dependent `required-checks`. The route tests rendered a lazy fallback; game-header CSS was only loaded by the lazy entry route; and presenter content overflowed at 200% text. Streaming SSR tests, shared static header CSS and wrapping presenter styles fixed these without weakening checks.
 
@@ -8,9 +8,11 @@
 
 **M6-3 presenter:** Owner-approved follow-up exposes a banished role only through the public verdict announcement when `publicRole` is true, and the winner only through the public finish announcement. Per-seat roles, ballots, voter/candidate IDs, night choices, tasks, shields, fairness and private data remain excluded. Green in #167; full unit (443), server coverage (85.92% lines), 2,571 scenario games, typecheck, lint, format, build and Pixel/desktop presenter tests pass locally.
 
-**M6-4 accessibility:** Main automated checks are green in #166. Added axe checks to presenter verdict and results screens; Pixel/desktop pass locally, Verify pending. VoiceOver/TalkBack manual checks remain unperformed.
+**M6-4 accessibility:** Main automated checks are green in #166; presenter verdict/results axe checks are green in #168 and locally on Pixel/desktop. VoiceOver/TalkBack manual checks remain unperformed.
 
-**Next:** Wait for the M6-4 follow-up Verify; then finish M6-5.
+**M6-5 exit checks:** Targeted takeover/secrecy integration, schedule-shift engine and Pixel/desktop coordinator tests pass locally; Verify #168 is green. Remaining Task 6 checklist items are still open in `PLAN.md`.
+
+**Next:** Continue the open Task 6 work; stop for reviewer only when the full exit criteria are met.
 
 ## Earlier milestone results
 
