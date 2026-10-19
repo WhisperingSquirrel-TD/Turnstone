@@ -1,13 +1,14 @@
 # Status for reviewer
 
-**Phase A rename:** RN2–RN4 are in `af976f1`; Verify #142 (run `39266490173`) failed on three stale test expectations. Their corrections pass targeted local checks; corrective push pending. RN5/RN6 have not started. No publish, deployment, domain, DNS, production-secret or paid-service change.
+**Verify #150:** Failed jobs: `static-checks`, `unit`, `property`, `integration`, `scenarios (0, 6)` through `scenarios (5, 6)`, `merge-scenario-reports`, and `required-checks`. `coordinatorUndo` was missing from the shared view allow-list and several typed fixtures. The allow-list and fixtures were corrected; Verify #152 on `5491fe8` is green.
 
-- RN1 baseline: 383 tracked text matches — tests 153, docs/agents 125, UI 30, locale 15, server/shared 15, workflows 5, config/metadata 9, brand text 7, attachments 24; 15 old-name paths. No raster logo contains name text; concept-C SVG title metadata and asset paths are renamed, artwork unchanged.
-- Protected owner actions: rename `TURNSTONE_GITHUB_TOKEN` to `OATHSTONE_GITHUB_TOKEN` in Replit Secrets and `TURNSTONE_PROMOTION_ENABLED` to `OATHSTONE_PROMOTION_ENABLED` in GitHub Actions Variables, preserve matching values, update consumers, then remove old names; keep repository path `WhisperingSquirrel-TD/Turnstone`.
-- Attachments: owner approved preserving originals locally and untracking the 12 tracked files with 24 old-name text matches after Verify is green. The two new screenshots remain untracked.
-- Local corrective checks: 4 unit tests; typecheck, test typecheck, lint and format passed. Seven targeted browser checks passed across Pixel, iPhone, iPad and desktop (one expected skip); the 375×667 home screenshot issue did not reproduce.
-- Latest confirmed green: Verify #141 on `9b94e46`. The lookup for `9b12ac4` used an abbreviated SHA and found no run, so it is not counted as a result.
-- M6 safe-undo work is preserved locally and paused until the rename is green.
+**Phase A rename:** RN1 inventory recorded 383 matches across tests (153), docs/agents (125), UI (30), locale (15), server/shared (15), workflows (5), config/metadata (9), brand text (7) and attachments (24). RN2–RN4 are pushed in `af976f1`; RN5 guard and 12 approved attachment untracks are ready, and RN6 copy/host/metadata/static-output tests pass locally. This commit is awaiting Verify.
+
+**Owner actions:** Create `OATHSTONE_GITHUB_TOKEN` in Replit Secrets and `OATHSTONE_PROMOTION_ENABLED` in GitHub Actions Variables with the existing matching values, update their consumers, then remove the old names. Preserve repository URL `https://github.com/WhisperingSquirrel-TD/Turnstone`.
+
+**Exclusions:** Keep historical verification and past release records unchanged. Preserve the 12 attachment originals locally while removing them from Git tracking; keep newer attachments out of commits.
+
+**Hard stops:** No publish, deployment, domain, DNS, production-secret or paid-service changes.
 
 ## Previous verification history
 

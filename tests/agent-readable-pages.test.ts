@@ -41,6 +41,12 @@ function publicDocument(slug: PublicPageSlug): string {
 describe('agent-readable public pages', () => {
   it('uses the owner-approved coming-soon copy without a date or signup form', () => {
     const html = publicDocument('coming-soon');
+    expect(config.siteOrigin).toBe(
+      'https://oathstone.stackstoneconsulting.co.uk',
+    );
+    expect(html).toMatch(
+      /<h1 id="coming-soon-title" class="public-home-wordmark"><span>Oath<\/span><span class="text-gilt">stone<\/span><\/h1>/,
+    );
     expect(html).toContain('A game of traitors and faithful.');
     expect(html).toContain('Everyone plays. Even the host.');
     expect(html).toContain(
@@ -82,6 +88,8 @@ describe('agent-readable public pages', () => {
 
   it('exposes public pages and required FAQ content to language models', () => {
     const text = renderLlmsTxt();
+    expect(text).toContain('Oathstone');
+    expect(text).toContain(config.siteOrigin);
     for (const route of PUBLIC_MARKETING_ROUTE_PATHS) {
       expect(text).toContain(new URL(route, config.siteOrigin).href);
     }
@@ -100,6 +108,9 @@ describe('agent-readable public pages', () => {
     expect(locations).toEqual(
       pages.map(({ route }) => new URL(route, config.siteOrigin).href),
     );
+    expect(
+      new Set(locations.map((location) => new URL(location!).origin)),
+    ).toEqual(new Set([config.siteOrigin]));
     expect(sitemap).not.toContain('/play');
     expect(sitemap).not.toContain('/api');
   });
@@ -124,12 +135,17 @@ describe('agent-readable public pages', () => {
       expect(robots).toContain(`Disallow: ${route}`);
     }
     expect(robots).toContain(`Sitemap: ${sitemapUrl}`);
+    expect(robots).toContain('oathstone.stackstoneconsulting.co.uk');
     expect(robots).not.toContain('Disallow: /faq');
     expect(robots).not.toContain('Disallow: /compare');
   });
 
   it('publishes organization, website and game schemas, with FAQ schema only on FAQ', () => {
-    const globalTypes = structuredPublicData().map((entry) => entry['@type']);
+    const data = structuredPublicData();
+    const serialized = JSON.stringify(data);
+    const globalTypes = data.map((entry) => entry['@type']);
+    expect(serialized).toContain('Oathstone');
+    expect(serialized).toContain(config.siteOrigin);
     expect(globalTypes).toEqual(
       expect.arrayContaining([
         'Organization',

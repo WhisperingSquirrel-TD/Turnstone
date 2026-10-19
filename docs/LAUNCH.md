@@ -2,7 +2,7 @@
 
 ## Owner's one-off repository and hosting steps
 
-1. The source of truth is `WhisperingSquirrel-TD/Turnstone`, branch `main`. Push verified commits through the owner-authorised Replit flow; never put credentials in the repository, a commit, or a log.
+1. The source of truth is [the GitHub repository](https://github.com/WhisperingSquirrel-TD/Turnstone), branch `main`. Push verified commits through the owner-authorised Replit flow; never put credentials in the repository, a commit, or a log.
 2. Enable the repository's Actions and let **Verify** complete successfully, including iPhone/iPad WebKit, Pixel/desktop, axe, Lighthouse and all other gates. Only that first fully green run finally accepts Milestone 0; local verification is provisional.
 3. The owner has chosen one Replit Reserved VM serving the public pages, app shell and game server from `https://oathstone.stackstoneconsulting.co.uk`. Do not import or deploy this repository through Vercel.
 4. No domain or DNS work is authorised yet. Before any launch action, present the checklist in `docs/HOSTING.md` and wait for the owner's explicit approval; do not guess or change DNS records.

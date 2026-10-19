@@ -736,7 +736,7 @@ Patched transitive overrides recorded previously: `proxy-addr`, `source-map-js`,
 
 ## D39 — Owner-authorised GitHub push via GIT_URL (rejected)
 
-**Context:** The owner authorised a push to `WhisperingSquirrel-TD/Turnstone` using the Replit secret named `GIT_URL`, superseding the earlier workflow-scope workaround. A presence-only check returned `GIT_URL present`.
+**Context:** The owner authorised a push to `https://github.com/WhisperingSquirrel-TD/Turnstone` using the Replit secret named `GIT_URL`, superseding the earlier workflow-scope workaround. A presence-only check returned `GIT_URL present`.
 
 **Options:** Inspect and persist the credential; use it only by reference in the push command; or use Replit's Git connection or an owner-operated push.
 
@@ -746,7 +746,7 @@ Patched transitive overrides recorded previously: `proxy-addr`, `source-map-js`,
 
 ## D40 — Fine-grained repository token for Git pushes (resolved)
 
-**Context:** The owner created a fine-grained token restricted to `WhisperingSquirrel-TD/Turnstone`, with Contents and Workflows read/write permission and a 90-day expiry, stored as the Replit secret `TURNSTONE_GITHUB_TOKEN`.
+**Context:** The owner created a fine-grained token restricted to `https://github.com/WhisperingSquirrel-TD/Turnstone`, with Contents and Workflows read/write permission and a 90-day expiry, stored as the Replit secret `TURNSTONE_GITHUB_TOKEN`.
 
 **Options:** Continue using the rejected `GIT_URL`; use the new token only through a one-off credential helper; or rely on Replit Sync.
 
@@ -1417,4 +1417,4 @@ The canonical Stackstone palette is unchanged. The day button mixes 12% Candle i
 
 **Choice:** Use Oathstone throughout product copy, code identifiers, storage and cookie names, metadata, tests, documentation and asset paths. Keep the tagline “A game of traitors and faithful.”, second line “Everyone plays. Even the host.” and byline “A Stackstone game.” The canonical hostname is `oathstone.stackstoneconsulting.co.uk`, and the company-site redirect path is `/oathstone`. Do not change the currently used app icon or create new artwork; the owner will approve a new emblem and logo set.
 
-**Exclusions and owner actions:** Keep the repository path `WhisperingSquirrel-TD/Turnstone`. Leave `TURNSTONE_GITHUB_TOKEN` in Replit Secrets until the owner creates `OATHSTONE_GITHUB_TOKEN` with the matching private value and updates its consumer; never send or display the value. Leave `TURNSTONE_PROMOTION_ENABLED` in GitHub Actions until the owner creates `OATHSTONE_PROMOTION_ENABLED` with the matching value and authorizes updating the workflow. Keep historical verification entries and past release records unchanged. Leave all `attached_assets/` files untouched: 43 are currently tracked despite the brief describing them as untracked; 12 contain 24 former-name text matches. The two current untracked images remain excluded. The owner can separately decide whether to untrack the 43 existing files.
+**Exclusions and owner actions:** Keep the GitHub repository URL `https://github.com/WhisperingSquirrel-TD/Turnstone`. Leave `TURNSTONE_GITHUB_TOKEN` in Replit Secrets until the owner creates `OATHSTONE_GITHUB_TOKEN` with the matching private value and updates its consumer; never send or display the value. Leave `TURNSTONE_PROMOTION_ENABLED` in GitHub Actions until the owner creates `OATHSTONE_PROMOTION_ENABLED` with the matching value and authorizes updating the workflow. Keep historical verification entries and past release records unchanged. Preserve the originals of the 12 tracked attachment files with former-name text, but remove those 12 files from Git tracking; leave all other attachments and the new untracked screenshots alone.
