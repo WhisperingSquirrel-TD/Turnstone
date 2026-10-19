@@ -353,6 +353,8 @@ describe('owner-approved delivery policy', () => {
         '--grep-invert',
         '@rehearsal-live',
         '--list',
+        'e2e/create-presenter-option.spec.ts',
+        'e2e/presenter-pairing.spec.ts',
       ],
       { encoding: 'utf8', env, timeout: 15_000 },
     );
@@ -361,6 +363,8 @@ describe('owner-approved delivery policy', () => {
     expect(result.error).toBeUndefined();
     expect(result.status).toBe(0);
     expect(output).toContain('Listing tests:');
+    expect(output).toContain('create-presenter-option.spec.ts');
+    expect(output).toContain('presenter-pairing.spec.ts');
     expect(output).not.toContain('DATABASE_URL must be set');
     expect(output).not.toContain('rehearsal-live.spec.ts');
   });
