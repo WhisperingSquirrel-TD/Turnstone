@@ -23,6 +23,18 @@
   --brand-footer-max-width: 72rem;
 }
 
+.entry-brand {
+  position: absolute;
+  z-index: 2;
+  top: max(1rem, env(safe-area-inset-top));
+  left: max(1rem, env(safe-area-inset-left));
+  right: max(1rem, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.5rem;
+}
+
 @font-face {
   font-family: 'Playfair Display';
   src: url('./fonts/playfair-display-latin-400-normal.woff2') format('woff2');

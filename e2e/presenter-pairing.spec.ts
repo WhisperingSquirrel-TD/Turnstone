@@ -97,11 +97,37 @@ test('presenter pairs with a one-time code and receives only the public lobby vi
   await page.evaluate(() => {
     document.documentElement.style.fontSize = '200%';
   });
+  const enlargedTextLayout = await page.evaluate(() => {
+    const viewportWidth = window.innerWidth;
+    const overflowingElements = Array.from(
+      document.querySelectorAll<HTMLElement>('body *'),
+    )
+      .map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          tag: element.tagName,
+          className: element.className,
+          left: Math.round(bounds.left),
+          right: Math.round(bounds.right),
+          width: Math.round(bounds.width),
+        };
+      })
+      .filter(
+        (element) =>
+          element.width > 0 &&
+          (element.left < -1 || element.right > viewportWidth + 1),
+      )
+      .slice(0, 8);
+    return {
+      scrollWidth: document.documentElement.scrollWidth,
+      viewportWidth,
+      overflowingElements,
+    };
+  });
   expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
+    enlargedTextLayout.scrollWidth,
+    JSON.stringify(enlargedTextLayout),
+  ).toBeLessThanOrEqual(enlargedTextLayout.viewportWidth);
   await page.evaluate(() => {
     document.documentElement.style.removeProperty('font-size');
   });

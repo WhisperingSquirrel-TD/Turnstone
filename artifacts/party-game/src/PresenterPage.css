@@ -21,10 +21,13 @@
 
 .presenter-header {
   display: flex;
+  flex-wrap: wrap;
   min-height: 72px;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  column-gap: 1rem;
+  row-gap: 0.5rem;
+  padding-block: 0.5rem;
   border-bottom: 1px solid rgb(255 255 255 / 12%);
 }
 
@@ -144,10 +147,19 @@
 
 .presenter-pair-card {
   width: min(100%, 520px);
+  min-width: 0;
+  max-width: 100%;
   margin: clamp(2rem, 10vh, 6rem) auto;
   padding: clamp(1.25rem, 4vw, 2rem);
   border: 1px solid var(--entry-stone, #625d57);
   background: rgb(20 18 17 / 34%);
+  overflow-wrap: anywhere;
+}
+
+.presenter-pair-card form,
+.presenter-pair-card :is(input, button) {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .presenter-pair-card h1 {
@@ -179,10 +191,12 @@
   padding-inline: 1.2rem;
   border: 0;
   border-radius: 12px;
+  white-space: normal;
   color: #211f1d;
   background: var(--entry-gilt, #c99a52);
   font-size: 1.05rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .presenter-primary-action:disabled {

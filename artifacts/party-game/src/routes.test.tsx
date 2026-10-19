@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { renderToString } from 'react-dom/server';
+import { PassThrough } from 'node:stream';
+import { renderToPipeableStream } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { AppRoutes } from '@/App';
@@ -8,15 +9,29 @@ import { en } from '@/locale/en-GB';
 import { renderPublicHomeHtml } from '@/public-site-content';
 
 const render = (path: string) =>
-  renderToString(
-    <MemoryRouter initialEntries={[path]}>
-      <AppRoutes />
-    </MemoryRouter>,
-  );
+  new Promise<string>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    const destination = new PassThrough();
+    destination.on('data', (chunk: Buffer) => chunks.push(chunk));
+    destination.on('end', () =>
+      resolve(Buffer.concat(chunks).toString('utf8')),
+    );
+    destination.on('error', reject);
+    const stream = renderToPipeableStream(
+      <MemoryRouter initialEntries={[path]}>
+        <AppRoutes />
+      </MemoryRouter>,
+      {
+        onAllReady: () => stream.pipe(destination),
+        onShellError: reject,
+        onError: reject,
+      },
+    );
+  });
 
 describe('routes', () => {
-  it('renders the answer-first public home and byline', () => {
-    const html = render('/');
+  it('renders the answer-first public home and byline', async () => {
+    const html = await render('/');
     expect(html).toContain('Oathstone is a free game of traitors and faithful');
     expect(html).toContain('How it works');
     expect(html).toContain(
@@ -24,8 +39,8 @@ describe('routes', () => {
     );
     expect(html).toContain('made by Stackstone Consulting');
   });
-  it('starts with the E1 title card and keeps all entry actions enabled without fields', () => {
-    const html = render('/play');
+  it('starts with the E1 title card and keeps all entry actions enabled without fields', async () => {
+    const html = await render('/play');
     expect(html).toContain('A game of traitors and faithful.');
     expect(html).toContain('Everyone plays. Even the host.');
     expect(html).toContain('Start a new game');
@@ -84,14 +99,14 @@ describe('routes', () => {
       expect(source).toContain('rotate(315 28 28)');
     }
   });
-  it('routes player links to a private-first loading screen', () => {
-    const html = render('/game/rehearsal-id');
+  it('routes player links to a private-first loading screen', async () => {
+    const html = await render('/game/rehearsal-id');
     expect(html).toContain('Loading your game');
     expect(html).not.toContain('Faithful');
     expect(html).not.toContain('Traitor');
   });
-  it('keeps the Stackstone mark and link in the footer, not in game headers', () => {
-    const entryHtml = render('/play');
+  it('keeps the Stackstone mark and link in the footer, not in game headers', async () => {
+    const entryHtml = await render('/play');
     const entryHeader =
       entryHtml.match(/<header class="entry-brand"[\s\S]*?<\/header>/)?.[0] ??
       '';
@@ -108,7 +123,7 @@ describe('routes', () => {
     expect(entryFooter).toContain('target="_blank"');
     expect(entryFooter).toContain('rel="noopener noreferrer"');
 
-    const playerHtml = render('/game/rehearsal-id');
+    const playerHtml = await render('/game/rehearsal-id');
     const playerHeader =
       playerHtml.match(
         /<header class="public-home-brand public-shell-header[\s\S]*?<\/header>/,
@@ -128,9 +143,9 @@ describe('routes', () => {
     expect(playerFooter).toContain('rel="noopener noreferrer"');
     expect(playerHtml).toContain('href="https://stackstoneconsulting.co.uk/"');
   });
-  it('links the Stackstone mark externally, opening a new tab only in the player app', () => {
-    const publicHtml = render('/');
-    const playerHtml = render('/game/rehearsal-id');
+  it('links the Stackstone mark externally, opening a new tab only in the player app', async () => {
+    const publicHtml = await render('/');
+    const playerHtml = await render('/game/rehearsal-id');
     const publicFooter =
       publicHtml.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
     const playerFooter =
@@ -145,8 +160,8 @@ describe('routes', () => {
     expect(playerFooter).toContain('target="_blank"');
     expect(playerFooter).toContain('rel="noopener noreferrer"');
   });
-  it('keeps public headers Oathstone-only and links to Stackstone in the footer', () => {
-    const publicHtml = render('/');
+  it('keeps public headers Oathstone-only and links to Stackstone in the footer', async () => {
+    const publicHtml = await render('/');
     const header =
       publicHtml.match(
         /<header class="public-home-brand public-shell-header[\s\S]*?<\/header>/,
@@ -176,7 +191,7 @@ describe('routes', () => {
     );
     expect(staticFooter).toContain('/brand/stackstone-icon-dark-outlined.svg');
   });
-  it('uses one Oathstone wordmark and puts the Stackstone credit and logo in every footer', () => {
+  it('uses one Oathstone wordmark and puts the Stackstone credit and logo in every footer', async () => {
     for (const path of [
       '/',
       '/faq',
@@ -184,14 +199,14 @@ describe('routes', () => {
       '/play',
       '/game/rehearsal-id',
     ]) {
-      const html = render(path);
+      const html = await render(path);
       const footer = html.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
       expect(footer).toContain('made by Stackstone Consulting');
       expect(footer).toContain('href="https://stackstoneconsulting.co.uk/"');
       expect(footer).toContain('/brand/stackstone-icon-dark-outlined.svg');
     }
 
-    const playerHtml = render('/game/rehearsal-id');
+    const playerHtml = await render('/game/rehearsal-id');
     expect(
       playerHtml.match(
         /(?:class="oathstone-wordmark"|data-testid="text-entry-brand")/g,
@@ -204,14 +219,14 @@ describe('routes', () => {
     expect(playerHeader).not.toContain('stackstoneconsulting.co.uk');
     expect(playerHeader).not.toContain('stackstone-icon-dark-outlined.svg');
 
-    const entryHtml = render('/play');
+    const entryHtml = await render('/play');
     const entryHeader =
       entryHtml.match(/<header class="entry-brand"[\s\S]*?<\/header>/)?.[0] ??
       '';
     expect(entryHeader).not.toContain('stackstoneconsulting.co.uk');
     expect(entryHeader).not.toContain('stackstone-icon-dark-outlined.svg');
 
-    const publicHtml = render('/');
+    const publicHtml = await render('/');
     const publicHeader =
       publicHtml.match(
         /<header class="public-home-brand public-shell-header[\s\S]*?<\/header>/,
@@ -235,8 +250,8 @@ describe('routes', () => {
     expect(staticFooter).toContain('/brand/stackstone-icon-dark-outlined.svg');
   });
 
-  it('renders accessible 404', () => {
-    const html = render('/nope');
+  it('renders accessible 404', async () => {
+    const html = await render('/nope');
     expect(html).toContain(en.notFound.heading);
     expect(html).toContain('<main');
   });

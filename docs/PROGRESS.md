@@ -2,13 +2,15 @@
 
 **Latest green:** Verify #164 (`abc5584`) succeeded, including iPhone and iPad WebKit.
 
+**Verify #165 (`05bddae`): RED.** Failed jobs: `unit`, `browsers (desktop, chromium)`, `browsers (Pixel, chromium)`, `browsers (iPhone, webkit)`, `browsers (iPad, webkit)` and dependent `required-checks`. Other jobs passed.
+
 **M6-2 safe undo:** Expiry, invalidation and role-reveal boundaries are covered; green in #163.
 
 **M6-3 presenter:** Public projection omits ballots, voter/candidate IDs, per-seat roles, endgame winner and fairness data; aggregate progress and result copy are role-neutral. Green in #164.
 
-**M6-4 local:** Axe, keyboard focus, 320px/4K layout, 200% text, reduced motion, wake-lock fallback, route chunks and the 250 KB gzip budget pass. Typecheck, lint, build and targeted Pixel browser checks pass. Verify pending; VoiceOver/TalkBack manual checks remain unperformed.
+**M6-4 fix:** Unit route rendering now waits for lazy content; shared brand styles load on every route; the presenter header wraps at 200% text size. No tests or thresholds were weakened. Routes/bundles (11), typecheck, lint, build and targeted Pixel/desktop browser checks pass locally. WebKit cannot launch here because its host libraries are missing. Fresh Verify pending; VoiceOver/TalkBack manual checks remain unperformed.
 
-**Next:** Wait for M6-4 Verify; then M6-5 and CP-1.
+**Next:** Wait for the M6-4 fix Verify; do not advance before green.
 
 ## Earlier milestone results
 
