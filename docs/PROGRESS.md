@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green:** Verify #157 (`f8ff971`), including the attachment-cleanup commit. The RN5/RN6 rename and guard are green; Verify #150's failures were fixed in #152, and #153's integration false positive in #154.
+**Latest green:** Verify #159 (`f01aa72`), 19/19 jobs green. That commit contains only the accepted coverage-step patch; the owner will apply it in GitHub, so Verify does not enforce server coverage yet.
 
 **LP-8 Verify #156 (`3704b3d`): GREEN (19/19).** `audit`, `browsers (desktop, chromium)`, `browsers (Pixel, chromium)`, `browsers (iPhone, webkit)`, `browsers (iPad, webkit)`, `integration`, `property`, `unit`, `static-checks`, `lighthouse`, `rehearsal-live`, `merge-scenario-reports`, `required-checks` and all six scenario shards succeeded.
 
@@ -10,7 +10,9 @@
 
 **Server coverage:** Started at 81.59% lines (1,206/1,478) with all 94 selected tests passing, but the 85% coverage command correctly exited red. Added integration coverage for coordinator delegate, presence and takeover paths plus departed-seat restrictions. It now passes at 85.79% (1,268/1,478), with all 94 tests passing and the threshold unchanged. The standalone GitHub Verify workflow does not run this coverage command; `pnpm run verify` does.
 
-**Next queue:** Report the Ubuntu 24.04 pin review; add the read-only Phase A publish checklist; continue M6-3 to M6-5 starting with safe undo; then apply CP-1 only after those items and M6-5 are green.
+**Ubuntu runner review (19 October):** 12 jobs use `ubuntu-24.04` (11 Verify, one promote); no change recommended. GitHub refreshes the image behind this label, so OS packages can drift.
+
+**Next queue:** Add the read-only Phase A publish checklist; continue M6-3 to M6-5 starting with safe undo; then apply CP-1 only after those items and M6-5 are green.
 
 **LP-8 local status:** All six static pages and coming-soon rules are implemented. Targeted unit tests, typecheck, lint, format, production build, static build, desktop Chromium, Pixel Chromium and local Firefox pass. Lighthouse scores are 1.00 for all required categories on all six public pages. iPhone/iPad WebKit cannot launch locally because this Nix container lacks Playwright's WebKit host libraries; Verify installs WebKit with its system dependencies.
 
@@ -44,6 +46,10 @@ Current uncovered executable lines from the passing server-coverage report:
 - `artifacts/api-server/src/middlewares/security.ts`: none.
 
 The initial 81.59% report included substantial uncovered coordinator-takeover handling in `app.ts`: 93 lines traced to the takeover implementation commit, alongside older API error paths. New tests exercise the coordinator routes and now leave 31 lines from that commit uncovered; most remaining uncovered app lines are older routes and error handling. The server's departed-seat guard is explicitly tested. Engine/reducer departure code is not part of this script's configured server-file include list, so this report does not measure its coverage.
+
+## Ubuntu 24.04 runner review — 19 October 2026
+
+All 11 jobs in `verify.yml` and the one job in `promote.yml` select `ubuntu-24.04`; neither uses `ubuntu-latest`. No runner change is recommended: this keeps the workflow on the supported Ubuntu 24.04 line rather than switching to an unpinned latest label. The label is not an immutable image version, so GitHub's image refreshes can change preinstalled OS packages and tools. The workflows pin Actions by full commit SHA, Node to major 24, pnpm to 10.26.1, and application dependencies through the lockfile; system-image drift remains the residual risk. Verify #159 passed all 19 jobs.
 
 ## Previous verification history
 
