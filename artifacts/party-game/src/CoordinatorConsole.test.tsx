@@ -16,9 +16,17 @@ const view: CoordinatorConsoleView = {
   deadline: 1_800_000_030_000,
   serverNow: 1_800_000_000_000,
   progress: { done: 3, total: 8 },
+  seats: [],
   publicLog: [],
   coordinatorAlerts: [],
 };
+
+const onLoadCoordinatorDelegates = async () => ({ limit: 0, seatIds: [] });
+const onSaveCoordinatorDelegates = async (seatIds: string[]) => ({
+  limit: 0,
+  seatIds,
+});
+const onHeartbeat = async () => {};
 
 describe('CoordinatorConsole', () => {
   it('shows phase, server-clock countdown, aggregate progress and logistics controls', () => {
@@ -31,6 +39,9 @@ describe('CoordinatorConsole', () => {
           expiresAt: 1_800_000_600_000,
         })}
         onCommand={async () => {}}
+        onLoadCoordinatorDelegates={onLoadCoordinatorDelegates}
+        onSaveCoordinatorDelegates={onSaveCoordinatorDelegates}
+        onHeartbeat={onHeartbeat}
       />,
     );
 
@@ -71,6 +82,9 @@ describe('CoordinatorConsole', () => {
           expiresAt: 1_800_000_600_000,
         })}
         onCommand={async () => {}}
+        onLoadCoordinatorDelegates={onLoadCoordinatorDelegates}
+        onSaveCoordinatorDelegates={onSaveCoordinatorDelegates}
+        onHeartbeat={onHeartbeat}
       />,
     );
 
@@ -102,6 +116,9 @@ describe('CoordinatorConsole', () => {
           expiresAt: 1_800_000_600_000,
         })}
         onCommand={async () => {}}
+        onLoadCoordinatorDelegates={onLoadCoordinatorDelegates}
+        onSaveCoordinatorDelegates={onSaveCoordinatorDelegates}
+        onHeartbeat={onHeartbeat}
       />,
     );
 

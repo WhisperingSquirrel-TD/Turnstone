@@ -17,6 +17,7 @@ export interface CoordinatorConsoleView {
   deadline: number | null;
   serverNow: number;
   progress: FullView['progress'];
+  seats: FullView['seats'];
   publicLog: FullView['publicLog'];
   coordinatorAlerts: FullView['coordinatorAlerts'];
 }
@@ -99,6 +100,9 @@ export function CoordinatorConsole({
   onCommand,
   presenterPath,
   onCreatePresenterPairing,
+  onLoadCoordinatorDelegates,
+  onSaveCoordinatorDelegates,
+  onHeartbeat,
 }: {
   view: CoordinatorConsoleView;
   onCommand: (command: CoordinatorCommand) => Promise<void>;
@@ -107,6 +111,15 @@ export function CoordinatorConsole({
     code: string;
     expiresAt: number;
   }>;
+  onLoadCoordinatorDelegates: () => Promise<{
+    limit: number;
+    seatIds: string[];
+  }>;
+  onSaveCoordinatorDelegates: (seatIds: string[]) => Promise<{
+    limit: number;
+    seatIds: string[];
+  }>;
+  onHeartbeat: () => Promise<void>;
 }) {
   const [localNow, setLocalNow] = useState(() => Date.now());
   const [confirmMove, setConfirmMove] = useState(false);
@@ -119,7 +132,38 @@ export function CoordinatorConsole({
   } | null>(null);
   const [pairingBusy, setPairingBusy] = useState(false);
   const [pairingError, setPairingError] = useState('');
+  const [delegateLimit, setDelegateLimit] = useState(0);
+  const [selectedDelegateIds, setSelectedDelegateIds] = useState<string[]>([]);
+  const [delegateSelectionDirty, setDelegateSelectionDirty] = useState(false);
+  const [delegateBusy, setDelegateBusy] = useState(false);
+  const [delegateError, setDelegateError] = useState('');
+  const [delegateSaved, setDelegateSaved] = useState(false);
   const active = !nonActivePhases.has(view.phase);
+
+  useEffect(() => {
+    let mounted = true;
+    async function refreshCoordinatorAccess() {
+      try {
+        await onHeartbeat();
+        const result = await onLoadCoordinatorDelegates();
+        if (!mounted) return;
+        setDelegateLimit(result.limit);
+        if (!delegateSelectionDirty) setSelectedDelegateIds(result.seatIds);
+        setDelegateError('');
+      } catch {
+        if (mounted) setDelegateError(en.coordinator.coCoordinatorError);
+      }
+    }
+    void refreshCoordinatorAccess();
+    const interval = window.setInterval(
+      () => void refreshCoordinatorAccess(),
+      30_000,
+    );
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [delegateSelectionDirty, onHeartbeat, onLoadCoordinatorDelegates]);
 
   useEffect(() => {
     if (!active || view.paused || view.deadline === null) return;
@@ -163,6 +207,24 @@ export function CoordinatorConsole({
     }
   }
 
+  async function saveCoordinatorDelegates() {
+    if (delegateBusy) return;
+    setDelegateBusy(true);
+    setDelegateError('');
+    setDelegateSaved(false);
+    try {
+      const result = await onSaveCoordinatorDelegates(selectedDelegateIds);
+      setDelegateLimit(result.limit);
+      setSelectedDelegateIds(result.seatIds);
+      setDelegateSelectionDirty(false);
+      setDelegateSaved(true);
+    } catch {
+      setDelegateError(en.coordinator.coCoordinatorError);
+    } finally {
+      setDelegateBusy(false);
+    }
+  }
+
   return (
     <section
       className="entry-lobby enter coordinator-console"
@@ -172,6 +234,80 @@ export function CoordinatorConsole({
       <h1 className="entry-heading" id="coordinator-console-title">
         {en.coordinator.heading}
       </h1>
+      <section
+        className="mt-6 grid gap-3 border-b border-stone pb-6"
+        aria-labelledby="coordinator-delegates-heading"
+        data-testid="coordinator-delegates"
+      >
+        <h2 className="display text-2xl" id="coordinator-delegates-heading">
+          {en.coordinator.coCoordinatorHeading}
+        </h2>
+        <p className="text-ash">
+          {delegateLimit > 0
+            ? en.coordinator.coCoordinatorDescription
+            : en.coordinator.coCoordinatorMajority}
+        </p>
+        {delegateLimit > 0 && (
+          <>
+            <p className="text-sm text-ash">
+              {en.coordinator.coCoordinatorLimit(delegateLimit)}
+            </p>
+            <fieldset className="grid gap-2">
+              <legend className="sr-only">
+                {en.coordinator.coCoordinatorHeading}
+              </legend>
+              {view.seats
+                .filter((seat) => seat.status === 'alive')
+                .map((seat) => (
+                  <label
+                    key={seat.id}
+                    className="flex min-h-11 items-center gap-3 border-b border-stone py-2"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedDelegateIds.includes(seat.id)}
+                      disabled={
+                        delegateBusy ||
+                        (!selectedDelegateIds.includes(seat.id) &&
+                          selectedDelegateIds.length >= delegateLimit)
+                      }
+                      onChange={(event) => {
+                        setDelegateSaved(false);
+                        setDelegateSelectionDirty(true);
+                        setSelectedDelegateIds((current) =>
+                          event.target.checked
+                            ? [...current, seat.id]
+                            : current.filter((id) => id !== seat.id),
+                        );
+                      }}
+                    />
+                    <span>{seat.name}</span>
+                  </label>
+                ))}
+            </fieldset>
+            <button
+              className="entry-secondary-action"
+              type="button"
+              disabled={delegateBusy}
+              onClick={() => void saveCoordinatorDelegates()}
+            >
+              {delegateBusy
+                ? en.coordinator.presenterPairingPending
+                : en.coordinator.coCoordinatorSave}
+            </button>
+            {delegateSaved && (
+              <p role="status" className="text-sm text-ash">
+                {en.coordinator.coCoordinatorSaved}
+              </p>
+            )}
+          </>
+        )}
+        {delegateError && (
+          <p role="alert" className="entry-error">
+            {delegateError}
+          </p>
+        )}
+      </section>
       <dl className="coordinator-console-summary">
         <div className="flex justify-between border-b border-stone py-3">
           <dt>{en.coordinator.currentStep}</dt>

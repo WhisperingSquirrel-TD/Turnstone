@@ -28,6 +28,41 @@ export const en = {
     timeLeft: 'Time left',
     privateProgress: 'Private progress',
     progress: (done: number, total: number) => `${done} of ${total} done`,
+    coCoordinatorHeading: 'Co-coordinator takeover',
+    coCoordinatorCountLabel: 'Co-coordinator seats',
+    coCoordinatorDecrease: 'Decrease co-coordinator seats',
+    coCoordinatorIncrease: 'Increase co-coordinator seats',
+    coCoordinatorSetupHelp:
+      'Choose up to three players who can take over logistics if your phone is unavailable. They never see private game information.',
+    coCoordinatorDescription:
+      'Choose living players who can take over logistics if your phone is unavailable. They will not see private roles, votes or choices.',
+    coCoordinatorLimit: (limit: number) =>
+      `Choose up to ${limit} ${limit === 1 ? 'co-coordinator' : 'co-coordinators'}.`,
+    coCoordinatorMajority:
+      'No co-coordinator is configured. If your phone is unavailable when action is needed, a majority of living players can approve a logistics-only takeover.',
+    coCoordinatorSave: 'Save co-coordinators',
+    coCoordinatorSaved: 'Co-coordinators saved.',
+    coCoordinatorError:
+      'Co-coordinators could not be saved. Check the connection and try again.',
+    takeoverHeading: 'Coordinator takeover',
+    takeoverPrompt:
+      'The organiser has been unavailable for at least two minutes. You can take over game logistics, but you will not see private roles, votes or choices.',
+    takeoverRequestHelp:
+      'The organiser has been unavailable for at least two minutes. A majority of living players must approve a logistics-only takeover.',
+    takeoverRequest: 'Request a logistics takeover',
+    takeoverRequested: 'Request sent. Waiting for the living players.',
+    takeoverApprovalPrompt: (name: string) =>
+      `${name} has requested a coordinator takeover.`,
+    takeoverVotes: (yes: number, no: number, required: number) =>
+      `${yes} approve, ${no} decline; ${required} approvals are needed.`,
+    takeoverApproved:
+      'The takeover is approved. The requester can now claim coordinator controls.',
+    takeoverApprove: 'Approve',
+    takeoverDecline: 'Decline',
+    takeoverClaim: 'Take over game logistics',
+    takeoverPending: 'Submitting…',
+    takeoverError:
+      'Coordinator takeover could not be checked or completed. Try again; if it continues, ask the organiser to reconnect.',
     pinLockoutsHeading: 'PIN lockouts',
     seatPinLocked: (name: string, time: string) =>
       `${name} is locked out after too many PIN attempts, until ${time}.`,

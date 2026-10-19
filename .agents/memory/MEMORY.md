@@ -4,6 +4,7 @@
 - [GitHub Actions inspection](github-actions-inspection.md) — use the configured GitHub App connection when public REST run or log access is rate-limited.
 - [Scenario RNG isolation](scenario-rng-isolation.md) — keep bot and engine random streams separate so captured full-game traces replay through the server.
 - [Deadline test clock isolation](deadline-test-clock-isolation.md) — use consistent future clocks and serialize shared-database files to avoid global scheduler interference.
+- [Snapshot replay compatibility](snapshot-replay-compatibility.md) — additive state fields must be normalized when older persisted snapshots are replayed.
 - [Vite dev optimizer reload](vite-dev-optimizer.md) — prebundle lazy-route deps; reference transitive deps through their linked workspace parent under pnpm.
 - [Git trace suppression](git-trace-suppression.md) — unset GIT_CURL_VERBOSE; setting it to 0 still enables HTTP diagnostics.
 - [Invite closure and seat recovery](invite-seat-recovery.md) — closed or rotated invitations must not lock out existing seats; recovery still requires name and PIN.

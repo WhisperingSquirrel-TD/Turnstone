@@ -10,6 +10,7 @@ import {
 import { recommended } from '@workspace/shared';
 import { BrandFooter } from './BrandFooter';
 import { EntryActionError } from './entry-action-error';
+import { en } from './locale/en-GB';
 import './EntryExperience.css';
 
 export type EntryScreen =
@@ -30,6 +31,7 @@ export type EntryInputKey =
   | 'joinPin'
   | 'createGameName'
   | 'createPlayerCount'
+  | 'createCoCoordinatorCount'
   | 'organiserName'
   | 'organiserPin'
   | 'rehearsalPlayerCount'
@@ -42,6 +44,7 @@ export interface EntryExperienceInputs {
   joinPin: string;
   createGameName: string;
   createPlayerCount: number;
+  createCoCoordinatorCount: number;
   organiserName: string;
   organiserPin: string;
   rehearsalPlayerCount: number;
@@ -215,6 +218,7 @@ export interface EntryExperienceProps {
   onCreate: (data: {
     gameName: string;
     playerCount: number;
+    coCoordinatorCount: number;
     organiserName: string;
     organiserPin: string;
     presenterEnabled: boolean;
@@ -438,6 +442,10 @@ export function EntryExperience({
       await onCreate({
         gameName: inputs.createGameName.trim() || defaultGameName,
         playerCount: inputs.createPlayerCount,
+        coCoordinatorCount: Math.max(
+          0,
+          Math.min(3, inputs.createCoCoordinatorCount),
+        ),
         organiserName,
         organiserPin,
         presenterEnabled,
@@ -491,6 +499,10 @@ export function EntryExperience({
     .split('');
   while (joinCodeCharacters.length < 6) joinCodeCharacters.push('');
   const createPlayerCount = Math.max(5, Math.min(40, inputs.createPlayerCount));
+  const createCoCoordinatorCount = Math.max(
+    0,
+    Math.min(3, inputs.createCoCoordinatorCount),
+  );
   const pageTitle =
     screen === 'welcome'
       ? copy.brand
@@ -979,6 +991,53 @@ export function EntryExperience({
                 {copy.recommendedTraitors(
                   recommended(createPlayerCount).traitors,
                 )}
+              </p>
+              <p className="entry-label">
+                {en.coordinator.coCoordinatorCountLabel}
+              </p>
+              <div
+                className="entry-stepper"
+                role="group"
+                aria-label={en.coordinator.coCoordinatorCountLabel}
+              >
+                <button
+                  className="entry-stepper-action"
+                  type="button"
+                  aria-label={en.coordinator.coCoordinatorDecrease}
+                  disabled={createCoCoordinatorCount <= 0}
+                  onClick={() =>
+                    onInputChange(
+                      'createCoCoordinatorCount',
+                      createCoCoordinatorCount - 1,
+                    )
+                  }
+                >
+                  −
+                </button>
+                <output
+                  className="entry-stepper-value"
+                  data-testid="text-create-co-coordinator-count"
+                  aria-live="polite"
+                >
+                  {createCoCoordinatorCount}
+                </output>
+                <button
+                  className="entry-stepper-action"
+                  type="button"
+                  aria-label={en.coordinator.coCoordinatorIncrease}
+                  disabled={createCoCoordinatorCount >= 3}
+                  onClick={() =>
+                    onInputChange(
+                      'createCoCoordinatorCount',
+                      createCoCoordinatorCount + 1,
+                    )
+                  }
+                >
+                  +
+                </button>
+              </div>
+              <p className="entry-help">
+                {en.coordinator.coCoordinatorSetupHelp}
               </p>
               <button
                 className="entry-primary-action"

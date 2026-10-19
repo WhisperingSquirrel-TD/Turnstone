@@ -67,6 +67,7 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   const gameId = 'coordinator-console-test';
   let view = createView();
   const commands: Array<Record<string, unknown>> = [];
+  let delegateSeatIds: string[] = [];
   const pairingCode = 'A'.repeat(43);
   const responseSchemaCheck = gameViewResponseSchema.safeParse({
     serverNow: Date.now(),
@@ -87,6 +88,23 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   );
   await page.route(`**/games/${gameId}/join-requests`, (route) =>
     route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(
+    `**/games/${gameId}/coordinator/delegates`,
+    async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({ json: { limit: 1, seatIds: delegateSeatIds } });
+        return;
+      }
+      const body = route.request().postDataJSON() as { seatIds: string[] };
+      delegateSeatIds = body.seatIds;
+      await route.fulfill({
+        json: { limit: 1, seatIds: delegateSeatIds },
+      });
+    },
+  );
+  await page.route(`**/games/${gameId}/coordinator/presence`, (route) =>
+    route.fulfill({ json: { status: 'online' } }),
   );
   await page.route(`**/games/${gameId}/presenter-pairings`, (route) =>
     route.fulfill({
@@ -120,6 +138,22 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await expect(
     page.getByRole('heading', { name: 'Invite a late player' }),
   ).toBeVisible();
+  const delegateSection = coordinatorConsole.getByTestId(
+    'coordinator-delegates',
+  );
+  await expect(
+    delegateSection.getByRole('heading', {
+      name: 'Co-coordinator takeover',
+    }),
+  ).toBeVisible();
+  await delegateSection.getByLabel('Alex').check();
+  await delegateSection
+    .getByRole('button', { name: /save co-coordinators/i })
+    .click();
+  await expect(delegateSection.getByRole('status')).toHaveText(
+    'Co-coordinators saved.',
+  );
+  expect(delegateSeatIds).toEqual(['seat-alex']);
   await expect(page.getByTestId('coordinator-current-step')).toHaveText(
     'The vote',
   );
@@ -127,7 +161,13 @@ test('coordinator can pause, extend and safely advance an active game', async ({
     '1 of 4 done',
   );
   await expect(
-    coordinatorConsole.getByText('Morgan', { exact: true }),
+    delegateSection.getByText('Morgan', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    coordinatorConsole.getByText('Traitor', { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    coordinatorConsole.getByText('Faithful', { exact: true }),
   ).toHaveCount(0);
   await expect(
     coordinatorConsole
@@ -188,4 +228,72 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   );
   await expect(page.getByTestId('button-coordinator-end-early')).toHaveCount(0);
   expect(commands.at(-1)?.type).toBe('EndGameEarly');
+});
+
+test('a living player can request a blind majority takeover', async ({
+  page,
+}) => {
+  const gameId = 'coordinator-console-test';
+  const view = { ...createView(), phase: 'DEBATE' } as FullView;
+  const status = {
+    eligible: true,
+    mode: 'majority',
+    canRequest: true,
+    canVote: false,
+    canClaim: false,
+    request: null,
+  };
+  let requestCreated = false;
+  await page.route('**/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
+  );
+  await page.route(`**/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/games/${gameId}/takeover`, async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        json: requestCreated
+          ? {
+              ...status,
+              canRequest: false,
+              request: {
+                id: 'takeover-request',
+                requesterName: 'Morgan',
+                status: 'pending',
+                yesVotes: 1,
+                noVotes: 0,
+                requiredVotes: 3,
+                expiresAt: Date.now() + 60_000,
+                viewerVote: true,
+              },
+            }
+          : status,
+      });
+      return;
+    }
+    requestCreated = true;
+    await route.fulfill({
+      status: 201,
+      json: { status: 'pending', requestId: 'takeover-request' },
+    });
+  });
+  await page.route('**/socket.io/**', (route) => route.abort());
+
+  await page.goto(`/game/${gameId}`);
+  const takeover = page.getByTestId('coordinator-takeover');
+  await expect(takeover).toBeVisible();
+  await expect(
+    takeover.getByRole('button', { name: /request/i }),
+  ).toBeVisible();
+  await takeover.getByRole('button', { name: /request/i }).click();
+  const requestStatus = takeover.locator('div[role="status"]');
+  await expect(requestStatus).toContainText('Morgan');
+  await expect(requestStatus).toContainText(
+    '1 approve, 0 decline; 3 approvals',
+  );
+  await expect(takeover.getByText('Traitor', { exact: true })).toHaveCount(0);
+  await expect(takeover.getByText('Faithful', { exact: true })).toHaveCount(0);
 });

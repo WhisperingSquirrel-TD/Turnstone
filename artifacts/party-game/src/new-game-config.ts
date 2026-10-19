@@ -3,6 +3,7 @@ import { gameConfigSchema } from '@workspace/shared';
 export interface NewGameConfigInput {
   gameName: string;
   playerCount: number;
+  coCoordinatorCount: number;
   presenterEnabled: boolean;
 }
 
@@ -11,7 +12,7 @@ export function buildNewGameConfig(input: NewGameConfigInput) {
     basics: {
       gameName: input.gameName,
       coordinatorPlays: true,
-      coCoordinators: 0,
+      coCoordinators: input.coCoordinatorCount,
     },
     players: { count: input.playerCount },
     presenter: { enabled: input.presenterEnabled },

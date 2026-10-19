@@ -66,6 +66,7 @@ import { ShieldCard } from './ShieldCard';
 import { PhaseProgressStatus } from './PhaseProgressStatus';
 import { VoteProgressSummary } from './VoteProgressSummary';
 import { voteCompletionMessage } from './vote-progress';
+import { CoordinatorTakeoverPanel } from './CoordinatorTakeoverPanel';
 import { apiUrl } from './api-url';
 import { en } from '@/locale/en-GB';
 import {
@@ -2763,6 +2764,26 @@ function PlayerGame() {
                 className="game-brand-footer-overlay"
                 testId="brand-footer-overlay"
               />
+            }
+          />
+        )}
+        {hasPlayerSeat && full && (
+          <CoordinatorTakeoverPanel
+            gameId={id}
+            csrfToken={token}
+            hidden={
+              !activeGame ||
+              inPrivateMoment ||
+              held ||
+              showShieldCard ||
+              rehearsalGuideVisible
+            }
+            onTransferred={() =>
+              navigate(
+                webPath(
+                  `${config.routes.coordinate}/${encodeURIComponent(id)}`,
+                ),
+              )
             }
           />
         )}

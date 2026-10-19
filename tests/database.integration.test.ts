@@ -48,7 +48,10 @@ import {
   revokeGameInvite,
   revokeSeatViewerSessions,
 } from '../lib/db/src/seat-access-store';
-import { findCoordinatorSession } from '../lib/db/src/coordinator-access-store';
+import {
+  findCoordinatorSession,
+  getCoordinatorTakeoverRecord,
+} from '../lib/db/src/coordinator-access-store';
 import {
   advance as advanceFixture,
   command as applyFixtureCommand,
@@ -442,6 +445,245 @@ it('transfers coordinator capability once to an authenticated target seat', asyn
       .set('X-CSRF-Token', recipientCsrf.body.csrfToken)
       .send({ gameId, code: handoffCode });
     expect(replayedClaim.status).toBe(401);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('supports designated and majority logistics takeovers without exposing secrets', async () => {
+  const gameId = randomUUID();
+  const fixedNow = Date.now();
+  const seats = Array.from({ length: 5 }, (_, index) => ({
+    id: randomUUID(),
+    name: `Takeover player ${index + 1}`,
+    token: randomBytes(32).toString('base64url'),
+  }));
+  const csrfToken = randomBytes(32).toString('base64url');
+  const coordinatorResolver = createCoordinatorViewerResolver({
+    findSession: findCoordinatorSession,
+  });
+  const seatResolver = createSeatViewerResolver({
+    findSession: findViewerSession,
+    findCoordinatorSession,
+  });
+  const app = createApp(
+    async () => {
+      await db.execute(sql`select version from foundation_meta where id = 1`);
+    },
+    {
+      resolveViewer: (request) =>
+        seatResolver({
+          gameId: requestGameId(request),
+          cookieHeader: request.headers.cookie,
+        }),
+      resolveCoordinatorViewer: (request) =>
+        coordinatorResolver({
+          gameId: requestGameId(request),
+          cookieHeader: request.headers.cookie,
+        }),
+      testOnlyNow: () => fixedNow,
+      consumeRateLimit: async () => true,
+    },
+  );
+  const seatCookie = (seatIndex: number) =>
+    `${cookieNameForGame(gameId)}=${seats[seatIndex]!.token}; turnstone-csrf=${csrfToken}`;
+  const postHeaders = (seatIndex: number) => ({
+    Cookie: seatCookie(seatIndex),
+    'X-CSRF-Token': csrfToken,
+  });
+
+  try {
+    const created = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        id: gameId,
+        config: gameConfigSchema.parse({
+          basics: { coCoordinators: 1 },
+        }),
+        idempotencyKey: randomUUID(),
+      });
+    expect(created.status).toBe(201);
+    let state = replay(await readGameEvents(gameId));
+    expect(state.phase).toBe('DRAFT');
+    const now = fixedNow;
+    for (const seat of seats) {
+      const event = eventSchema.parse({
+        seq: state.version + 1,
+        at: now,
+        schemaVersion: 1,
+        type: 'SeatJoined',
+        seatId: seat.id,
+        name: seat.name,
+      });
+      const nextState = evolve(state, event);
+      const append = await appendGameEvents({
+        gameId,
+        actorId: 'test-coordinator-takeover',
+        idempotencyKey: randomUUID(),
+        requestHash: randomUUID(),
+        expectedVersion: state.version,
+        events: [event],
+        snapshot: { seq: nextState.version, state: nextState },
+        deadline: { kind: nextState.phase, dueAt: nextState.deadline },
+      });
+      expect(append.ok).toBe(true);
+      state = nextState;
+      await createSeatAccess({
+        gameId,
+        seatId: seat.id,
+        pinSalt: 'a'.repeat(32),
+        pinHash: 'b'.repeat(64),
+      });
+      await createViewerSession({
+        tokenHash: createHash('sha256').update(seat.token).digest('hex'),
+        gameId,
+        seatId: seat.id,
+        expiresAt: fixedNow + 60 * 60_000,
+      });
+    }
+    const originalCoordinatorCookie = cookieValues(
+      created.headers['set-cookie'],
+    ).find((cookie) => cookie.startsWith('turnstone-coordinator-'));
+    expect(originalCoordinatorCookie).toBeDefined();
+
+    const delegateSelection = await request(app)
+      .put(`/api/games/${gameId}/coordinator/delegates`)
+      .set(
+        'Cookie',
+        `${originalCoordinatorCookie!.split(';')[0]}; turnstone-csrf=${csrfToken}`,
+      )
+      .set('X-CSRF-Token', csrfToken)
+      .send({ seatIds: [seats[1]!.id] });
+    expect(delegateSelection.status).toBe(200);
+    const storedDelegates = await getCoordinatorTakeoverRecord(
+      gameId,
+      fixedNow,
+    );
+    expect(storedDelegates?.delegateSeatIds).toEqual([seats[1]!.id]);
+    await db.execute(
+      sql`update game_coordinator_capabilities
+          set last_seen_at = ${new Date(fixedNow - 121_000)}
+          where game_id = ${gameId}`,
+    );
+    const coCoordinatorStatus = await request(app)
+      .get(`/api/games/${gameId}/takeover`)
+      .set('Cookie', seatCookie(1));
+    expect(coCoordinatorStatus.status).toBe(200);
+    expect(
+      coCoordinatorStatus.body,
+      JSON.stringify(coCoordinatorStatus.body),
+    ).toMatchObject({
+      eligible: true,
+      mode: 'co-coordinator',
+      canClaim: true,
+    });
+    expect(JSON.stringify(coCoordinatorStatus.body)).not.toMatch(
+      /role|ballot|choice|token|secret/i,
+    );
+    const otherSeatStatus = await request(app)
+      .get(`/api/games/${gameId}/takeover`)
+      .set('Cookie', seatCookie(2));
+    expect(otherSeatStatus.body).toMatchObject({
+      eligible: false,
+      mode: null,
+      canClaim: false,
+    });
+
+    const delegateClaim = await request(app)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', postHeaders(1).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({});
+    expect(delegateClaim.status).toBe(200);
+    const delegatedCoordinatorCookie = cookieValues(
+      delegateClaim.headers['set-cookie'],
+    ).find((cookie) => cookie.startsWith('turnstone-coordinator-'));
+    expect(delegatedCoordinatorCookie).toBeDefined();
+    expect(delegateClaim.body).toEqual({ status: 'transferred' });
+    expect(JSON.stringify(delegateClaim.body)).not.toMatch(/token|secret/i);
+
+    const clearDelegates = await request(app)
+      .put(`/api/games/${gameId}/coordinator/delegates`)
+      .set(
+        'Cookie',
+        `${delegatedCoordinatorCookie!.split(';')[0]}; turnstone-csrf=${csrfToken}`,
+      )
+      .set('X-CSRF-Token', csrfToken)
+      .send({ seatIds: [] });
+    expect(clearDelegates.status).toBe(200);
+    await db.execute(
+      sql`update game_coordinator_capabilities
+          set last_seen_at = ${new Date(fixedNow - 121_000)}
+          where game_id = ${gameId}`,
+    );
+
+    const requested = await request(app)
+      .post(`/api/games/${gameId}/takeover`)
+      .set('Cookie', postHeaders(0).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({});
+    expect(requested.status).toBe(201);
+    const requestId = requested.body.requestId as string;
+    expect(requested.body.status).toBe('pending');
+    const firstApproval = await request(app)
+      .post(`/api/games/${gameId}/takeover/vote`)
+      .set('Cookie', postHeaders(2).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ requestId, approve: true });
+    expect(firstApproval.body.status).toBe('pending');
+    const secondApproval = await request(app)
+      .post(`/api/games/${gameId}/takeover/vote`)
+      .set('Cookie', postHeaders(3).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ requestId, approve: true });
+    expect(secondApproval.body.status).toBe('approved');
+
+    const approvedStatus = await request(app)
+      .get(`/api/games/${gameId}/takeover`)
+      .set('Cookie', postHeaders(0).Cookie);
+    expect(approvedStatus.body).toMatchObject({
+      eligible: true,
+      mode: 'majority',
+      canClaim: true,
+      request: {
+        requesterName: seats[0]!.name,
+        yesVotes: 3,
+        requiredVotes: 3,
+      },
+    });
+    expect(JSON.stringify(approvedStatus.body)).not.toMatch(
+      /role|ballot|choice|token|secret/i,
+    );
+    const majorityClaim = await request(app)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', postHeaders(0).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ requestId });
+    expect(majorityClaim.status).toBe(200);
+    const majorityCoordinatorCookie = cookieValues(
+      majorityClaim.headers['set-cookie'],
+    ).find((cookie) => cookie.startsWith('turnstone-coordinator-'));
+    expect(majorityCoordinatorCookie).toBeDefined();
+
+    const formerDelegate = await request(app)
+      .get(`/api/games/${gameId}/coordinator/delegates`)
+      .set(
+        'Cookie',
+        `${delegatedCoordinatorCookie!.split(';')[0]}; turnstone-csrf=${csrfToken}`,
+      );
+    expect(formerDelegate.status).toBe(401);
+    const blindCoordinatorView = await request(app)
+      .get(`/api/games/${gameId}/view`)
+      .set('Cookie', majorityCoordinatorCookie!.split(';')[0]!);
+    expect(blindCoordinatorView.status).toBe(200);
+    expect(blindCoordinatorView.body.view.private).toBeNull();
+    expect(blindCoordinatorView.body.view.ballots).toEqual({});
+    expect(
+      blindCoordinatorView.body.view.seats.every(
+        (seat: Record<string, unknown>) => !('role' in seat),
+      ),
+    ).toBe(true);
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }

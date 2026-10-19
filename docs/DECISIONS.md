@@ -874,6 +874,16 @@ Owner approval requested for PLAN, with unresolved choices above kept explicit. 
 
 **Consequence:** Coordinator identity is independent of guest seat identity. Handoff codes and raw capabilities never enter URLs or logs; the recipient must prove control of the selected game seat. The cookie/token lifetime follows the existing 30-day session default until the owner changes it.
 
+## D88 — Provisional Milestone 6 takeover designation
+
+**Context:** SPEC §3 requires a co-coordinator prompt after two minutes of organiser inactivity when an organiser action is needed. If no co-coordinator is configured, any living player may request takeover, subject to majority approval.
+
+**Choice:** Provisionally let the organiser designate up to the configured number of living, paired seats. Designated seats receive a takeover prompt only after the server confirms the inactivity and action-needed conditions. With no designated seat, the requester counts as the first approval and a strict majority of living seats must approve. Only the designated seat or approved requester receives the one-use rotated coordinator capability.
+
+**Consequence:** Co-coordinator authority remains logistics-only and does not change any viewer’s secret allow-list. The provisional assignment and majority-counting details are recorded in Q3; they can be revised without changing SPEC §3.
+
+**Why:** The SPEC defines the fallback and security boundary but does not define how a co-coordinator is selected or whether the requester’s vote counts. This is a bounded default using the existing `coCoordinators` setting.
+
 ## D57 — Rehearsal brought forward to Milestone 5 (resolved)
 
 **Context:** The owner wants a playable phone experience as soon as possible.

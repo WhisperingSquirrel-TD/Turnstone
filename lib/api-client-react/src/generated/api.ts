@@ -18,6 +18,14 @@ import type {
 
 import type {
   ApiError,
+  CoordinatorDelegatesInput,
+  CoordinatorDelegatesResponse,
+  CoordinatorPresenceResponse,
+  CoordinatorTakeoverClaimInput,
+  CoordinatorTakeoverClaimResponse,
+  CoordinatorTakeoverRequestResponse,
+  CoordinatorTakeoverStatusResponse,
+  CoordinatorTakeoverVoteInput,
   GameCommandInput,
   GameInviteResponse,
   GameViewResponse,
@@ -1188,6 +1196,738 @@ export const useRequestToJoinGame = <
   TContext
 > => {
   return useMutation(getRequestToJoinGameMutationOptions(options));
+};
+
+export const getGetCoordinatorDelegatesUrl = (id: string) => {
+  return `/api/games/${id}/coordinator/delegates`;
+};
+
+/**
+ * @summary Get configured co-coordinator seats
+ */
+export const getCoordinatorDelegates = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CoordinatorDelegatesResponse> => {
+  return customFetch<CoordinatorDelegatesResponse>(
+    getGetCoordinatorDelegatesUrl(id),
+    {
+      ...options,
+      method: 'GET',
+    },
+  );
+};
+
+export const getGetCoordinatorDelegatesQueryKey = (id: string) => {
+  return [`/api/games/${id}/coordinator/delegates`] as const;
+};
+
+export const getGetCoordinatorDelegatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoordinatorDelegates>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoordinatorDelegates>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoordinatorDelegatesQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoordinatorDelegates>>
+  > = ({ signal }) =>
+    getCoordinatorDelegates(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoordinatorDelegates>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoordinatorDelegatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoordinatorDelegates>>
+>;
+export type GetCoordinatorDelegatesQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get configured co-coordinator seats
+ */
+
+export function useGetCoordinatorDelegates<
+  TData = Awaited<ReturnType<typeof getCoordinatorDelegates>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoordinatorDelegates>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoordinatorDelegatesQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSetCoordinatorDelegatesUrl = (id: string) => {
+  return `/api/games/${id}/coordinator/delegates`;
+};
+
+/**
+ * @summary Set the living seats eligible for coordinator takeover
+ */
+export const setCoordinatorDelegates = async (
+  id: string,
+  coordinatorDelegatesInput: CoordinatorDelegatesInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CoordinatorDelegatesResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<CoordinatorDelegatesResponse>(
+    getSetCoordinatorDelegatesUrl(id),
+    {
+      ...options,
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(coordinatorDelegatesInput),
+    },
+  );
+};
+
+export const getSetCoordinatorDelegatesMutationKey = () =>
+  ['setCoordinatorDelegates'] as const;
+
+export const getSetCoordinatorDelegatesMutationOptions = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setCoordinatorDelegates>>,
+    TError,
+    SetCoordinatorDelegatesMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setCoordinatorDelegates>>,
+  TError,
+  SetCoordinatorDelegatesMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetCoordinatorDelegatesMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setCoordinatorDelegates>>,
+    SetCoordinatorDelegatesMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setCoordinatorDelegates(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetCoordinatorDelegatesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setCoordinatorDelegates>>
+>;
+export type SetCoordinatorDelegatesMutationBody =
+  BodyType<CoordinatorDelegatesInput>;
+export type SetCoordinatorDelegatesMutationError = ErrorType<ApiError>;
+export type SetCoordinatorDelegatesMutationVariables = {
+  id: string;
+  data: BodyType<CoordinatorDelegatesInput>;
+};
+
+/**
+ * @summary Set the living seats eligible for coordinator takeover
+ */
+export const useSetCoordinatorDelegates = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setCoordinatorDelegates>>,
+    TError,
+    SetCoordinatorDelegatesMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof setCoordinatorDelegates>>,
+  TError,
+  SetCoordinatorDelegatesMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetCoordinatorDelegatesMutationOptions(options));
+};
+
+export const getHeartbeatCoordinatorPresenceUrl = (id: string) => {
+  return `/api/games/${id}/coordinator/presence`;
+};
+
+/**
+ * @summary Record authenticated coordinator activity
+ */
+export const heartbeatCoordinatorPresence = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CoordinatorPresenceResponse> => {
+  return customFetch<CoordinatorPresenceResponse>(
+    getHeartbeatCoordinatorPresenceUrl(id),
+    {
+      ...options,
+      method: 'POST',
+    },
+  );
+};
+
+export const getHeartbeatCoordinatorPresenceMutationKey = () =>
+  ['heartbeatCoordinatorPresence'] as const;
+
+export const getHeartbeatCoordinatorPresenceMutationOptions = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof heartbeatCoordinatorPresence>>,
+    TError,
+    HeartbeatCoordinatorPresenceMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof heartbeatCoordinatorPresence>>,
+  TError,
+  HeartbeatCoordinatorPresenceMutationVariables,
+  TContext
+> => {
+  const mutationKey = getHeartbeatCoordinatorPresenceMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof heartbeatCoordinatorPresence>>,
+    HeartbeatCoordinatorPresenceMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return heartbeatCoordinatorPresence(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type HeartbeatCoordinatorPresenceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof heartbeatCoordinatorPresence>>
+>;
+
+export type HeartbeatCoordinatorPresenceMutationError = ErrorType<ApiError>;
+export type HeartbeatCoordinatorPresenceMutationVariables = { id: string };
+
+/**
+ * @summary Record authenticated coordinator activity
+ */
+export const useHeartbeatCoordinatorPresence = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof heartbeatCoordinatorPresence>>,
+    TError,
+    HeartbeatCoordinatorPresenceMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof heartbeatCoordinatorPresence>>,
+  TError,
+  HeartbeatCoordinatorPresenceMutationVariables,
+  TContext
+> => {
+  return useMutation(getHeartbeatCoordinatorPresenceMutationOptions(options));
+};
+
+export const getGetCoordinatorTakeoverStatusUrl = (id: string) => {
+  return `/api/games/${id}/takeover`;
+};
+
+/**
+ * @summary Get the blind, seat-specific coordinator takeover status
+ */
+export const getCoordinatorTakeoverStatus = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CoordinatorTakeoverStatusResponse> => {
+  return customFetch<CoordinatorTakeoverStatusResponse>(
+    getGetCoordinatorTakeoverStatusUrl(id),
+    {
+      ...options,
+      method: 'GET',
+    },
+  );
+};
+
+export const getGetCoordinatorTakeoverStatusQueryKey = (id: string) => {
+  return [`/api/games/${id}/takeover`] as const;
+};
+
+export const getGetCoordinatorTakeoverStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCoordinatorTakeoverStatus>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoordinatorTakeoverStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCoordinatorTakeoverStatusQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCoordinatorTakeoverStatus>>
+  > = ({ signal }) =>
+    getCoordinatorTakeoverStatus(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCoordinatorTakeoverStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCoordinatorTakeoverStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCoordinatorTakeoverStatus>>
+>;
+export type GetCoordinatorTakeoverStatusQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get the blind, seat-specific coordinator takeover status
+ */
+
+export function useGetCoordinatorTakeoverStatus<
+  TData = Awaited<ReturnType<typeof getCoordinatorTakeoverStatus>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCoordinatorTakeoverStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCoordinatorTakeoverStatusQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRequestCoordinatorTakeoverUrl = (id: string) => {
+  return `/api/games/${id}/takeover`;
+};
+
+/**
+ * @summary Request coordinator takeover when no co-coordinator is configured
+ */
+export const requestCoordinatorTakeover = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CoordinatorTakeoverRequestResponse> => {
+  return customFetch<CoordinatorTakeoverRequestResponse>(
+    getRequestCoordinatorTakeoverUrl(id),
+    {
+      ...options,
+      method: 'POST',
+    },
+  );
+};
+
+export const getRequestCoordinatorTakeoverMutationKey = () =>
+  ['requestCoordinatorTakeover'] as const;
+
+export const getRequestCoordinatorTakeoverMutationOptions = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestCoordinatorTakeover>>,
+    TError,
+    RequestCoordinatorTakeoverMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestCoordinatorTakeover>>,
+  TError,
+  RequestCoordinatorTakeoverMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRequestCoordinatorTakeoverMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestCoordinatorTakeover>>,
+    RequestCoordinatorTakeoverMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return requestCoordinatorTakeover(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestCoordinatorTakeoverMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestCoordinatorTakeover>>
+>;
+
+export type RequestCoordinatorTakeoverMutationError = ErrorType<ApiError>;
+export type RequestCoordinatorTakeoverMutationVariables = { id: string };
+
+/**
+ * @summary Request coordinator takeover when no co-coordinator is configured
+ */
+export const useRequestCoordinatorTakeover = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestCoordinatorTakeover>>,
+    TError,
+    RequestCoordinatorTakeoverMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof requestCoordinatorTakeover>>,
+  TError,
+  RequestCoordinatorTakeoverMutationVariables,
+  TContext
+> => {
+  return useMutation(getRequestCoordinatorTakeoverMutationOptions(options));
+};
+
+export const getVoteCoordinatorTakeoverUrl = (id: string) => {
+  return `/api/games/${id}/takeover/vote`;
+};
+
+/**
+ * @summary Approve or decline a pending takeover request
+ */
+export const voteCoordinatorTakeover = async (
+  id: string,
+  coordinatorTakeoverVoteInput: CoordinatorTakeoverVoteInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CoordinatorTakeoverRequestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<CoordinatorTakeoverRequestResponse>(
+    getVoteCoordinatorTakeoverUrl(id),
+    {
+      ...options,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(coordinatorTakeoverVoteInput),
+    },
+  );
+};
+
+export const getVoteCoordinatorTakeoverMutationKey = () =>
+  ['voteCoordinatorTakeover'] as const;
+
+export const getVoteCoordinatorTakeoverMutationOptions = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof voteCoordinatorTakeover>>,
+    TError,
+    VoteCoordinatorTakeoverMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof voteCoordinatorTakeover>>,
+  TError,
+  VoteCoordinatorTakeoverMutationVariables,
+  TContext
+> => {
+  const mutationKey = getVoteCoordinatorTakeoverMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof voteCoordinatorTakeover>>,
+    VoteCoordinatorTakeoverMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return voteCoordinatorTakeover(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VoteCoordinatorTakeoverMutationResult = NonNullable<
+  Awaited<ReturnType<typeof voteCoordinatorTakeover>>
+>;
+export type VoteCoordinatorTakeoverMutationBody =
+  BodyType<CoordinatorTakeoverVoteInput>;
+export type VoteCoordinatorTakeoverMutationError = ErrorType<ApiError>;
+export type VoteCoordinatorTakeoverMutationVariables = {
+  id: string;
+  data: BodyType<CoordinatorTakeoverVoteInput>;
+};
+
+/**
+ * @summary Approve or decline a pending takeover request
+ */
+export const useVoteCoordinatorTakeover = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof voteCoordinatorTakeover>>,
+    TError,
+    VoteCoordinatorTakeoverMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof voteCoordinatorTakeover>>,
+  TError,
+  VoteCoordinatorTakeoverMutationVariables,
+  TContext
+> => {
+  return useMutation(getVoteCoordinatorTakeoverMutationOptions(options));
+};
+
+export const getClaimCoordinatorTakeoverUrl = (id: string) => {
+  return `/api/games/${id}/takeover/claim`;
+};
+
+/**
+ * @summary Claim approved takeover or designated co-coordinator transfer
+ */
+export const claimCoordinatorTakeover = async (
+  id: string,
+  coordinatorTakeoverClaimInput?: CoordinatorTakeoverClaimInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<CoordinatorTakeoverClaimResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit['headers']>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<
+      string | readonly string[] | undefined
+    >(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return customFetch<CoordinatorTakeoverClaimResponse>(
+    getClaimCoordinatorTakeoverUrl(id),
+    {
+      ...options,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(coordinatorTakeoverClaimInput),
+    },
+  );
+};
+
+export const getClaimCoordinatorTakeoverMutationKey = () =>
+  ['claimCoordinatorTakeover'] as const;
+
+export const getClaimCoordinatorTakeoverMutationOptions = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof claimCoordinatorTakeover>>,
+    TError,
+    ClaimCoordinatorTakeoverMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof claimCoordinatorTakeover>>,
+  TError,
+  ClaimCoordinatorTakeoverMutationVariables,
+  TContext
+> => {
+  const mutationKey = getClaimCoordinatorTakeoverMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      'mutationKey' in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof claimCoordinatorTakeover>>,
+    ClaimCoordinatorTakeoverMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return claimCoordinatorTakeover(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClaimCoordinatorTakeoverMutationResult = NonNullable<
+  Awaited<ReturnType<typeof claimCoordinatorTakeover>>
+>;
+export type ClaimCoordinatorTakeoverMutationBody =
+  BodyType<CoordinatorTakeoverClaimInput> | undefined;
+export type ClaimCoordinatorTakeoverMutationError = ErrorType<ApiError>;
+export type ClaimCoordinatorTakeoverMutationVariables = {
+  id: string;
+  data?: BodyType<CoordinatorTakeoverClaimInput>;
+};
+
+/**
+ * @summary Claim approved takeover or designated co-coordinator transfer
+ */
+export const useClaimCoordinatorTakeover = <
+  TError = ErrorType<ApiError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof claimCoordinatorTakeover>>,
+    TError,
+    ClaimCoordinatorTakeoverMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof claimCoordinatorTakeover>>,
+  TError,
+  ClaimCoordinatorTakeoverMutationVariables,
+  TContext
+> => {
+  return useMutation(getClaimCoordinatorTakeoverMutationOptions(options));
 };
 
 export const getGetGameViewUrl = (id: string) => {

@@ -669,3 +669,118 @@ export const PrivateViewRequestPurpose = {
 export interface PrivateViewRequest {
   purpose?: PrivateViewRequestPurpose;
 }
+
+export interface CoordinatorDelegatesInput {
+  /**
+   * @maxItems 3
+   * @items.minLength 1
+   * @items.maxLength 128
+   */
+  seatIds: string[];
+}
+
+export interface CoordinatorDelegatesResponse {
+  /**
+   * @minimum 0
+   * @maximum 3
+   */
+  limit: number;
+  /**
+   * @maxItems 3
+   * @items.minLength 1
+   * @items.maxLength 128
+   */
+  seatIds: string[];
+}
+
+export const CoordinatorPresenceResponseValue = {
+  status: 'online',
+} as const;
+export type CoordinatorPresenceResponse =
+  typeof CoordinatorPresenceResponseValue;
+
+export type CoordinatorTakeoverRequestResponseStatus =
+  (typeof CoordinatorTakeoverRequestResponseStatus)[keyof typeof CoordinatorTakeoverRequestResponseStatus];
+
+export const CoordinatorTakeoverRequestResponseStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  declined: 'declined',
+} as const;
+
+export interface CoordinatorTakeoverRequestResponse {
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  requestId: string;
+  status: CoordinatorTakeoverRequestResponseStatus;
+}
+
+export interface CoordinatorTakeoverVoteInput {
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  requestId: string;
+  approve: boolean;
+}
+
+export interface CoordinatorTakeoverClaimInput {
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  requestId?: string;
+}
+
+export type CoordinatorTakeoverStatusResponseMode =
+  | (typeof CoordinatorTakeoverStatusResponseMode)[keyof typeof CoordinatorTakeoverStatusResponseMode]
+  | null;
+
+export const CoordinatorTakeoverStatusResponseMode = {
+  'co-coordinator': 'co-coordinator',
+  majority: 'majority',
+} as const;
+
+export type CoordinatorTakeoverStatusResponseRequestStatus =
+  (typeof CoordinatorTakeoverStatusResponseRequestStatus)[keyof typeof CoordinatorTakeoverStatusResponseRequestStatus];
+
+export const CoordinatorTakeoverStatusResponseRequestStatus = {
+  pending: 'pending',
+  approved: 'approved',
+} as const;
+
+export type CoordinatorTakeoverStatusResponseRequest = {
+  /**
+   * @minLength 1
+   * @maxLength 128
+   */
+  id: string;
+  requesterName: string;
+  status: CoordinatorTakeoverStatusResponseRequestStatus;
+  /** @minimum 0 */
+  yesVotes: number;
+  /** @minimum 0 */
+  noVotes: number;
+  /** @minimum 1 */
+  requiredVotes: number;
+  /** @minimum 0 */
+  expiresAt: number;
+  viewerVote: boolean | null;
+} | null;
+
+export interface CoordinatorTakeoverStatusResponse {
+  eligible: boolean;
+  mode: CoordinatorTakeoverStatusResponseMode;
+  canRequest: boolean;
+  canVote: boolean;
+  canClaim: boolean;
+  request: CoordinatorTakeoverStatusResponseRequest;
+}
+
+export const CoordinatorTakeoverClaimResponseValue = {
+  status: 'transferred',
+} as const;
+export type CoordinatorTakeoverClaimResponse =
+  typeof CoordinatorTakeoverClaimResponseValue;

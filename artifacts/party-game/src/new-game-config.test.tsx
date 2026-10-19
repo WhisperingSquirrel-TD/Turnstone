@@ -6,6 +6,7 @@ describe('buildNewGameConfig', () => {
     const config = buildNewGameConfig({
       gameName: 'Friday game',
       playerCount: 8,
+      coCoordinatorCount: 0,
       presenterEnabled: false,
     });
 
@@ -16,9 +17,21 @@ describe('buildNewGameConfig', () => {
     const config = buildNewGameConfig({
       gameName: 'Friday game',
       playerCount: 8,
+      coCoordinatorCount: 0,
       presenterEnabled: true,
     });
 
     expect(config.presenter.enabled).toBe(true);
+  });
+
+  it('keeps the co-coordinator count in the game configuration', () => {
+    const config = buildNewGameConfig({
+      gameName: 'Friday game',
+      playerCount: 8,
+      coCoordinatorCount: 2,
+      presenterEnabled: false,
+    });
+
+    expect(config.basics.coCoordinators).toBe(2);
   });
 });

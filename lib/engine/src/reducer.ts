@@ -517,10 +517,22 @@ export function replayFrom(
   snapshot: State | null,
   events: readonly Event[],
 ): State {
-  let state = snapshot;
+  let state = snapshot ? normalizeSnapshot(snapshot) : null;
   for (const event of events) state = evolve(state, event);
   if (!state) throw new Error('Empty event stream');
   return state;
+}
+
+function normalizeSnapshot(snapshot: State): State {
+  const shadowPicks = (
+    snapshot as State & {
+      shadowPicks?: unknown;
+    }
+  ).shadowPicks;
+  if (shadowPicks === undefined) return { ...snapshot, shadowPicks: [] };
+  if (!Array.isArray(shadowPicks))
+    throw new Error('Stored snapshot shadow picks are invalid');
+  return snapshot;
 }
 
 export function replay(events: readonly Event[]): State {

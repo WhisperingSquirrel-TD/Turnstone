@@ -1,5 +1,26 @@
 # Open owner questions
 
+## Q3 — How to designate a co-coordinator for takeover
+
+**Question:** How should the organiser choose the seat that receives the
+co-coordinator takeover prompt, and how should the majority be counted when no
+co-coordinator is designated?
+
+**Recommendation:** The organiser selects up to the configured number of living,
+paired seats in the coordinator console. If none are selected, any living player
+may request takeover after the organiser has been inactive for two minutes while
+an organiser action is needed. The requester counts as the first approval; a
+strict majority of living seats is required. Only the designated seat or
+approved requester receives the rotated coordinator capability.
+
+**Reasoning:** This follows SPEC §3, makes the handoff target explicit, and
+prevents a player from gaining logistics authority without either designation
+or a living-player majority. The capability remains separate from all private
+game information.
+
+**Status:** Provisional for Milestone 6, gated by the existing
+`coCoordinators` setting. No change to SPEC §3.
+
 ## Q2 — How late joiners enter after the lobby invitation closes
 
 **Question:** How does a permitted late joiner enter after the original room

@@ -78,6 +78,13 @@
       "when": 1792179087946,
       "tag": "0010_pin-pepper-version",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792397405786,
+      "tag": "0011_coordinator_takeover",
+      "breakpoints": true
     }
   ]
 }

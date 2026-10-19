@@ -3,6 +3,7 @@ import {
   decide,
   evolve,
   replay,
+  replayFrom,
   viewFor,
   commitment,
 } from '../lib/engine/src/index';
@@ -444,6 +445,34 @@ describe('Milestone 1 deterministic engine', () => {
       }),
     ).toMatchObject({ ok: true });
     expect(game.state.acks).toContain(player.id);
+  });
+  it('replays new shadow choices from legacy snapshots without shadowPicks', () => {
+    const game = fixture(15);
+    command(game, { type: 'StartGame' });
+    advance(game, 'SHADOW');
+    const traitor = game.state.seats.find((seat) => seat.role === 'traitor')!;
+    const target = game.state.seats.find((seat) => seat.role === 'faithful')!;
+    const legacySnapshot = structuredClone(game.state);
+    Reflect.deleteProperty(legacySnapshot, 'shadowPicks');
+
+    const eventIndex = game.events.length;
+    command(game, { type: 'SubmitShadowChoice', choice: target.id }, true, {
+      kind: 'player',
+      seatId: traitor.id,
+    });
+    const choiceEvent = game.events[eventIndex];
+    if (!choiceEvent) throw new Error('The shadow choice event is missing.');
+
+    const replayed = replayFrom(legacySnapshot, [choiceEvent]);
+
+    expect(replayed.shadowPicks).toContainEqual({
+      cycle: legacySnapshot.cycle,
+      slot: 1,
+      round: 1,
+      seatId: traitor.id,
+      choice: target.id,
+      seq: choiceEvent.seq,
+    });
   });
   it('uses the same shadow command shape for decoys and murders, rejects friendly fire and protection', () => {
     const game = fixture(15, {
@@ -1519,7 +1548,16 @@ describe('Milestone 1 deterministic engine', () => {
     });
     expect(decoy.private?.task?.kind).toBe('decoy');
     expect(decoy.private?.task?.instruction).not.toBe(first.text);
-    expect(viewFor({ kind: 'coordinator' }, game.state).private).toBeNull();
+    const blindCoordinator = viewFor(
+      { kind: 'coordinator', reveal: true },
+      game.state,
+    );
+    expect(blindCoordinator.private).toBeNull();
+    expect(blindCoordinator.ballots).toEqual({});
+    expect(blindCoordinator.seats.every((seat) => !('role' in seat))).toBe(
+      true,
+    );
+    expect(JSON.stringify(blindCoordinator)).not.toContain(first.text);
     expect(
       JSON.stringify(viewFor({ kind: 'admin', reveal: true }, game.state)),
     ).not.toContain(first.text);

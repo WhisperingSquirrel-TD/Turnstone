@@ -325,6 +325,196 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+  /games/{id}/coordinator/delegates:
+    get:
+      operationId: getCoordinatorDelegates
+      tags: [games]
+      summary: Get configured co-coordinator seats
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      responses:
+        '200':
+          description: Configured co-coordinator seats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatorDelegatesResponse'
+        '401':
+          description: Coordinator capability required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    put:
+      operationId: setCoordinatorDelegates
+      tags: [games]
+      summary: Set the living seats eligible for coordinator takeover
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoordinatorDelegatesInput'
+      responses:
+        '200':
+          description: Updated co-coordinator seats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatorDelegatesResponse'
+        '400':
+          description: Invalid selection
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '401':
+          description: Coordinator capability required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /games/{id}/coordinator/presence:
+    post:
+      operationId: heartbeatCoordinatorPresence
+      tags: [games]
+      summary: Record authenticated coordinator activity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      responses:
+        '200':
+          description: Presence recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatorPresenceResponse'
+        '401':
+          description: Coordinator capability required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /games/{id}/takeover:
+    get:
+      operationId: getCoordinatorTakeoverStatus
+      tags: [games]
+      summary: Get the blind, seat-specific coordinator takeover status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      responses:
+        '200':
+          description: Takeover status with no hidden game information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatorTakeoverStatusResponse'
+        '401':
+          description: Living seat authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+    post:
+      operationId: requestCoordinatorTakeover
+      tags: [games]
+      summary: Request coordinator takeover when no co-coordinator is configured
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      responses:
+        '201':
+          description: Takeover requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatorTakeoverRequestResponse'
+        '401':
+          description: Living seat authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '409':
+          description: Takeover is not currently available
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /games/{id}/takeover/vote:
+    post:
+      operationId: voteCoordinatorTakeover
+      tags: [games]
+      summary: Approve or decline a pending takeover request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoordinatorTakeoverVoteInput'
+      responses:
+        '200':
+          description: Current takeover decision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatorTakeoverRequestResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '401':
+          description: Living seat authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+  /games/{id}/takeover/claim:
+    post:
+      operationId: claimCoordinatorTakeover
+      tags: [games]
+      summary: Claim approved takeover or designated co-coordinator transfer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoordinatorTakeoverClaimInput'
+      responses:
+        '200':
+          description: Coordinator capability rotated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoordinatorTakeoverClaimResponse'
+        '401':
+          description: Living seat authentication required
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '409':
+          description: Takeover is not approved or available
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
   /games/{id}/view:
     get:
       operationId: getGameView
@@ -694,6 +884,142 @@ components:
         seatCount:
           type: integer
           minimum: 0
+    CoordinatorDelegatesInput:
+      type: object
+      additionalProperties: false
+      required: [seatIds]
+      properties:
+        seatIds:
+          type: array
+          maxItems: 3
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+    CoordinatorDelegatesResponse:
+      type: object
+      additionalProperties: false
+      required: [limit, seatIds]
+      properties:
+        limit:
+          type: integer
+          minimum: 0
+          maximum: 3
+        seatIds:
+          type: array
+          maxItems: 3
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+    CoordinatorPresenceResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: online
+    CoordinatorTakeoverRequestResponse:
+      type: object
+      additionalProperties: false
+      required: [requestId, status]
+      properties:
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        status:
+          type: string
+          enum: [pending, approved, declined]
+    CoordinatorTakeoverVoteInput:
+      type: object
+      additionalProperties: false
+      required: [requestId, approve]
+      properties:
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 128
+        approve:
+          type: boolean
+    CoordinatorTakeoverClaimInput:
+      type: object
+      additionalProperties: false
+      properties:
+        requestId:
+          type: string
+          minLength: 1
+          maxLength: 128
+    CoordinatorTakeoverStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [eligible, mode, canRequest, canVote, canClaim, request]
+      properties:
+        eligible:
+          type: boolean
+        mode:
+          oneOf:
+            - type: string
+              enum: [co-coordinator, majority]
+            - type: 'null'
+        canRequest:
+          type: boolean
+        canVote:
+          type: boolean
+        canClaim:
+          type: boolean
+        request:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required:
+                [
+                  id,
+                  requesterName,
+                  status,
+                  yesVotes,
+                  noVotes,
+                  requiredVotes,
+                  expiresAt,
+                  viewerVote,
+                ]
+              properties:
+                id:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                requesterName:
+                  type: string
+                status:
+                  type: string
+                  enum: [pending, approved]
+                yesVotes:
+                  type: integer
+                  minimum: 0
+                noVotes:
+                  type: integer
+                  minimum: 0
+                requiredVotes:
+                  type: integer
+                  minimum: 1
+                expiresAt:
+                  type: integer
+                  minimum: 0
+                viewerVote:
+                  oneOf:
+                    - type: boolean
+                    - type: 'null'
+            - type: 'null'
+    CoordinatorTakeoverClaimResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: transferred
     FullView:
       type: object
       additionalProperties: false

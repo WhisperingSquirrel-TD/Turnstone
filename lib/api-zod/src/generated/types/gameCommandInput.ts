@@ -10,11 +10,11 @@ export interface GameCommandInput {
   /** @minLength 1 */
   type: string;
   /**
-   * @minLength 1
-   * @maxLength 128
-   */
+     * @minLength 1
+     * @maxLength 128
+     */
   idempotencyKey: string;
   /** For AcknowledgePrivate, true only after the player has finished viewing their role. */
   ready?: boolean;
   [key: string]: unknown;
-}
+ }

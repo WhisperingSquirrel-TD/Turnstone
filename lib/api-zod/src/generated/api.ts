@@ -1656,6 +1656,205 @@ export const RequestToJoinGameResponse = zod.object({
 });
 
 /**
+ * @summary Get configured co-coordinator seats
+ */
+export const getCoordinatorDelegatesPathIdMax = 128;
+
+export const GetCoordinatorDelegatesParams = zod.object({
+  id: zod.coerce.string().min(1).max(getCoordinatorDelegatesPathIdMax),
+});
+
+export const getCoordinatorDelegatesResponseLimitMin = 0;
+export const getCoordinatorDelegatesResponseLimitMax = 3;
+
+export const getCoordinatorDelegatesResponseSeatIdsItemMax = 128;
+
+export const getCoordinatorDelegatesResponseSeatIdsMax = 3;
+
+export const GetCoordinatorDelegatesResponse = zod.object({
+  limit: zod
+    .number()
+    .int()
+    .min(getCoordinatorDelegatesResponseLimitMin)
+    .max(getCoordinatorDelegatesResponseLimitMax),
+  seatIds: zod
+    .array(
+      zod.string().min(1).max(getCoordinatorDelegatesResponseSeatIdsItemMax),
+    )
+    .max(getCoordinatorDelegatesResponseSeatIdsMax),
+});
+
+/**
+ * @summary Set the living seats eligible for coordinator takeover
+ */
+export const setCoordinatorDelegatesPathIdMax = 128;
+
+export const SetCoordinatorDelegatesParams = zod.object({
+  id: zod.coerce.string().min(1).max(setCoordinatorDelegatesPathIdMax),
+});
+
+export const setCoordinatorDelegatesBodySeatIdsItemMax = 128;
+
+export const setCoordinatorDelegatesBodySeatIdsMax = 3;
+
+export const SetCoordinatorDelegatesBody = zod.object({
+  seatIds: zod
+    .array(zod.string().min(1).max(setCoordinatorDelegatesBodySeatIdsItemMax))
+    .max(setCoordinatorDelegatesBodySeatIdsMax),
+});
+
+export const setCoordinatorDelegatesResponseLimitMin = 0;
+export const setCoordinatorDelegatesResponseLimitMax = 3;
+
+export const setCoordinatorDelegatesResponseSeatIdsItemMax = 128;
+
+export const setCoordinatorDelegatesResponseSeatIdsMax = 3;
+
+export const SetCoordinatorDelegatesResponse = zod.object({
+  limit: zod
+    .number()
+    .int()
+    .min(setCoordinatorDelegatesResponseLimitMin)
+    .max(setCoordinatorDelegatesResponseLimitMax),
+  seatIds: zod
+    .array(
+      zod.string().min(1).max(setCoordinatorDelegatesResponseSeatIdsItemMax),
+    )
+    .max(setCoordinatorDelegatesResponseSeatIdsMax),
+});
+
+/**
+ * @summary Record authenticated coordinator activity
+ */
+export const heartbeatCoordinatorPresencePathIdMax = 128;
+
+export const HeartbeatCoordinatorPresenceParams = zod.object({
+  id: zod.coerce.string().min(1).max(heartbeatCoordinatorPresencePathIdMax),
+});
+
+export const HeartbeatCoordinatorPresenceResponse = zod.object({
+  status: zod.literal('online'),
+});
+
+/**
+ * @summary Get the blind, seat-specific coordinator takeover status
+ */
+export const getCoordinatorTakeoverStatusPathIdMax = 128;
+
+export const GetCoordinatorTakeoverStatusParams = zod.object({
+  id: zod.coerce.string().min(1).max(getCoordinatorTakeoverStatusPathIdMax),
+});
+
+export const getCoordinatorTakeoverStatusResponseRequestOneIdMax = 128;
+
+export const getCoordinatorTakeoverStatusResponseRequestOneYesVotesMin = 0;
+
+export const getCoordinatorTakeoverStatusResponseRequestOneNoVotesMin = 0;
+
+export const getCoordinatorTakeoverStatusResponseRequestOneExpiresAtMin = 0;
+
+export const GetCoordinatorTakeoverStatusResponse = zod.object({
+  eligible: zod.boolean(),
+  mode: zod.union([zod.enum(['co-coordinator', 'majority']), zod.null()]),
+  canRequest: zod.boolean(),
+  canVote: zod.boolean(),
+  canClaim: zod.boolean(),
+  request: zod.union([
+    zod.object({
+      id: zod
+        .string()
+        .min(1)
+        .max(getCoordinatorTakeoverStatusResponseRequestOneIdMax),
+      requesterName: zod.string(),
+      status: zod.enum(['pending', 'approved']),
+      yesVotes: zod
+        .number()
+        .int()
+        .min(getCoordinatorTakeoverStatusResponseRequestOneYesVotesMin),
+      noVotes: zod
+        .number()
+        .int()
+        .min(getCoordinatorTakeoverStatusResponseRequestOneNoVotesMin),
+      requiredVotes: zod.number().int().min(1),
+      expiresAt: zod
+        .number()
+        .int()
+        .min(getCoordinatorTakeoverStatusResponseRequestOneExpiresAtMin),
+      viewerVote: zod.union([zod.boolean(), zod.null()]),
+    }),
+    zod.null(),
+  ]),
+});
+
+/**
+ * @summary Request coordinator takeover when no co-coordinator is configured
+ */
+export const requestCoordinatorTakeoverPathIdMax = 128;
+
+export const RequestCoordinatorTakeoverParams = zod.object({
+  id: zod.coerce.string().min(1).max(requestCoordinatorTakeoverPathIdMax),
+});
+
+export const requestCoordinatorTakeoverResponseRequestIdMax = 128;
+
+export const RequestCoordinatorTakeoverResponse = zod.object({
+  requestId: zod
+    .string()
+    .min(1)
+    .max(requestCoordinatorTakeoverResponseRequestIdMax),
+  status: zod.enum(['pending', 'approved', 'declined']),
+});
+
+/**
+ * @summary Approve or decline a pending takeover request
+ */
+export const voteCoordinatorTakeoverPathIdMax = 128;
+
+export const VoteCoordinatorTakeoverParams = zod.object({
+  id: zod.coerce.string().min(1).max(voteCoordinatorTakeoverPathIdMax),
+});
+
+export const voteCoordinatorTakeoverBodyRequestIdMax = 128;
+
+export const VoteCoordinatorTakeoverBody = zod.object({
+  requestId: zod.string().min(1).max(voteCoordinatorTakeoverBodyRequestIdMax),
+  approve: zod.boolean(),
+});
+
+export const voteCoordinatorTakeoverResponseRequestIdMax = 128;
+
+export const VoteCoordinatorTakeoverResponse = zod.object({
+  requestId: zod
+    .string()
+    .min(1)
+    .max(voteCoordinatorTakeoverResponseRequestIdMax),
+  status: zod.enum(['pending', 'approved', 'declined']),
+});
+
+/**
+ * @summary Claim approved takeover or designated co-coordinator transfer
+ */
+export const claimCoordinatorTakeoverPathIdMax = 128;
+
+export const ClaimCoordinatorTakeoverParams = zod.object({
+  id: zod.coerce.string().min(1).max(claimCoordinatorTakeoverPathIdMax),
+});
+
+export const claimCoordinatorTakeoverBodyRequestIdMax = 128;
+
+export const ClaimCoordinatorTakeoverBody = zod.object({
+  requestId: zod
+    .string()
+    .min(1)
+    .max(claimCoordinatorTakeoverBodyRequestIdMax)
+    .optional(),
+});
+
+export const ClaimCoordinatorTakeoverResponse = zod.object({
+  status: zod.literal('transferred'),
+});
+
+/**
  * @summary Get the public projection for the current viewer
  */
 export const getGameViewPathIdMax = 128;

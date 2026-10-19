@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- **Milestone 5 rehearsal accepted; Milestone 6 is in progress.** Updated: 19 October 2026, 07:21 UTC.
-- Verify #138 **Success** on `b9e8e8f`. Current commit `606e523` adds public schedule-shift announcements to player, coordinator and presenter updates; Verify pending.
-- Local: 414 unit tests, typecheck, lint, format, 2,571 scenario games (0 failures), and six Pixel/iPhone coordinator/presenter browser tests pass.
-- Next: continue Task 6. Eight owner content attachments remain unprocessed and uncommitted; no publishing, paid services, domain, DNS or production-secret changes.
+- Updated: 19 October 2026, 09:02 UTC. **M6-1:** takeover storage/API, rotating logistics-only capability, setup/coordinator UI and regression tests are implemented; local gates are green, ready to push.
+- Last green: Verify #139 **Success** on `327dfa1`; current M6-1 changes are not pushed yet.
+- Q3 remains provisional: designated seats, or a strict majority of living players when none are designated. No SPEC §3 change.
+- Risks: none identified in M6-1. Eight supplied content files remain untracked and unintegrated; no deployment or production changes.
 
 ## Previous verification history
 

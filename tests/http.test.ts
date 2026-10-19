@@ -79,6 +79,22 @@ describe('health and readiness', () => {
     });
   });
 
+  it('fails closed on coordinator takeover routes without a seat or coordinator', async () => {
+    const app = createApp(async () => {});
+    await request(app)
+      .get('/api/games/no-session/takeover')
+      .expect(401, { error: 'Authentication required' });
+    await request(app)
+      .post('/api/games/no-session/takeover')
+      .expect(401, { error: 'Authentication required' });
+    await request(app)
+      .post('/api/games/no-session/coordinator/presence')
+      .expect(401, { error: 'Authentication required' });
+    await request(app)
+      .get('/api/games/no-session/coordinator/delegates')
+      .expect(401, { error: 'Authentication required' });
+  });
+
   it('hides authentication dependency errors behind a generic response', async () => {
     const app = createApp(async () => {}, {
       resolveViewer: async () => {

@@ -14,8 +14,18 @@ import express, {
 } from 'express';
 import cors from 'cors';
 import {
+  ClaimCoordinatorTakeoverBody,
+  ClaimCoordinatorTakeoverResponse,
+  GetCoordinatorDelegatesResponse,
+  GetCoordinatorTakeoverStatusResponse,
+  HeartbeatCoordinatorPresenceResponse,
   HealthCheckResponse,
   ReadinessCheckResponse,
+  RequestCoordinatorTakeoverResponse,
+  SetCoordinatorDelegatesBody,
+  SetCoordinatorDelegatesResponse,
+  VoteCoordinatorTakeoverBody,
+  VoteCoordinatorTakeoverResponse,
 } from '@workspace/api-zod';
 import {
   apiErrorResponseSchema,
@@ -77,6 +87,10 @@ import {
 } from './session-auth';
 import { security } from './middlewares/security';
 import { staticClient } from './static-client';
+import {
+  coordinatorInactivityWindowMs,
+  isCoordinatorUnavailableForAction,
+} from './coordinator-takeover-policy';
 
 export type AppOptions = {
   clientDirectory?: string;
@@ -105,6 +119,7 @@ export type AppOptions = {
 const csrfCookieName = 'turnstone-csrf';
 const seatSessionDurationMs = 30 * 24 * 60 * 60 * 1_000;
 const coordinatorHandoffDurationMs = 5 * 60 * 1_000;
+const coordinatorTakeoverRequestDurationMs = 5 * 60_000;
 const joinRequestCookieDurationMs = 30 * 24 * 60 * 60 * 1_000;
 const joinCodeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -148,6 +163,46 @@ function hasValidCsrf(request: Request): boolean {
   if (!request.get('Origin') && !request.headers.cookie) return true;
   if (!cookie || !header || cookie.length !== header.length) return false;
   return timingSafeEqual(Buffer.from(cookie), Buffer.from(header));
+}
+
+function requestCookie(request: Request, name: string): string | null {
+  const cookieHeader = request.headers.cookie;
+  if (!cookieHeader) return null;
+  for (const item of cookieHeader.split(';')) {
+    const separator = item.indexOf('=');
+    if (separator < 0 || item.slice(0, separator).trim() !== name) continue;
+    return item.slice(separator + 1).trim();
+  }
+  return null;
+}
+
+function coordinatorActionNeeded(
+  state: State,
+  now: number,
+  hasPendingJoinRequest: boolean,
+): boolean {
+  if (
+    state.paused ||
+    state.config.rehearsal.enabled ||
+    state.phase === 'FINISHED' ||
+    state.phase === 'ARCHIVED'
+  )
+    return false;
+  if (state.phase === 'DRAFT')
+    return (
+      hasPendingJoinRequest ||
+      state.seats.filter((seat) => seat.status === 'alive').length >= 5
+    );
+  if (state.phase === 'LOBBY')
+    return (
+      hasPendingJoinRequest ||
+      viewFor({ kind: 'coordinator' }, state).canAdvancePhase ||
+      state.seats.filter((seat) => seat.status === 'alive').length >= 5
+    );
+  if (viewFor({ kind: 'coordinator' }, state).canAdvancePhase) return true;
+  const deadline =
+    state.phase === 'SHADOW' ? state.shadowEndAt : state.deadline;
+  return deadline !== null && deadline <= now;
 }
 
 function actorFor(viewer: Viewer): Actor | null {
@@ -1861,6 +1916,517 @@ export function createApp(
         coordinatorHandoffClaimResponseSchema.parse({
           status: 'transferred',
         }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.get('/api/games/:id/coordinator/delegates', async (request, response) => {
+    try {
+      const viewer = await coordinatorViewerForRequest(request);
+      if (viewer.kind !== 'coordinator') {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const state = await loadGameState(gameId);
+      if (!state) {
+        sendError(response, 404, 'Not found');
+        return;
+      }
+      const { listCoordinatorDelegates } =
+        await import('@workspace/db/coordinator-access-store');
+      response.json(
+        GetCoordinatorDelegatesResponse.parse({
+          limit: state.config.basics.coCoordinators,
+          seatIds: await listCoordinatorDelegates(gameId),
+        }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.put('/api/games/:id/coordinator/delegates', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const parsed = SetCoordinatorDelegatesBody.safeParse(request.body);
+      if (!parsed.success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
+      const viewer = await coordinatorViewerForRequest(request);
+      const actor = actorFor(viewer);
+      if (actor?.kind !== 'coordinator') {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const now = options.testOnlyNow?.() ?? Date.now();
+      if (
+        !(await checkRateLimit(
+          request,
+          'coordinator-delegates',
+          actorId(actor),
+          10,
+        ))
+      ) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      const state = await loadGameState(gameId);
+      if (
+        !state ||
+        state.phase === 'ARCHIVED' ||
+        parsed.data.seatIds.length > state.config.basics.coCoordinators
+      ) {
+        sendError(response, 409, 'Selection could not be saved');
+        return;
+      }
+      const livingSeats = new Set(
+        state.seats
+          .filter((seat) => seat.status === 'alive')
+          .map((seat) => seat.id),
+      );
+      if (!parsed.data.seatIds.every((seatId) => livingSeats.has(seatId))) {
+        sendError(response, 409, 'Selection could not be saved');
+        return;
+      }
+      const { getSeatAccess } = await import('@workspace/db/seat-access-store');
+      for (const seatId of parsed.data.seatIds) {
+        if (!(await getSeatAccess(gameId, seatId))) {
+          sendError(response, 409, 'Selection could not be saved');
+          return;
+        }
+      }
+      const capability = requestCookie(
+        request,
+        cookieNameForCoordinatorGame(gameId),
+      );
+      if (!capability) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const { replaceCoordinatorDelegates } =
+        await import('@workspace/db/coordinator-access-store');
+      const updated = await replaceCoordinatorDelegates({
+        gameId,
+        tokenHash: createHash('sha256').update(capability).digest('hex'),
+        seatIds: parsed.data.seatIds,
+        now,
+      });
+      if (!updated) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      response.json(
+        SetCoordinatorDelegatesResponse.parse({
+          limit: state.config.basics.coCoordinators,
+          seatIds: parsed.data.seatIds,
+        }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.post('/api/games/:id/coordinator/presence', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const viewer = await coordinatorViewerForRequest(request);
+      const actor = actorFor(viewer);
+      if (actor?.kind !== 'coordinator') {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const now = options.testOnlyNow?.() ?? Date.now();
+      if (
+        !(await checkRateLimit(
+          request,
+          'coordinator-presence',
+          actorId(actor),
+          8,
+        ))
+      ) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      const capability = requestCookie(
+        request,
+        cookieNameForCoordinatorGame(gameId),
+      );
+      if (!capability) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const { touchCoordinatorPresence } =
+        await import('@workspace/db/coordinator-access-store');
+      const touched = await touchCoordinatorPresence({
+        gameId,
+        tokenHash: createHash('sha256').update(capability).digest('hex'),
+        now,
+        inactiveRequestCutoff: now - coordinatorInactivityWindowMs,
+      });
+      if (!touched) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      response.json(
+        HeartbeatCoordinatorPresenceResponse.parse({ status: 'online' }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.get('/api/games/:id/takeover', async (request, response) => {
+    try {
+      const viewer = await viewerForRequest(request);
+      if (viewer.kind !== 'player' || !viewer.seatId) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const now = options.testOnlyNow?.() ?? Date.now();
+      const state = await loadGameState(gameId);
+      const seat = state?.seats.find(
+        (candidate) =>
+          candidate.id === viewer.seatId && candidate.status === 'alive',
+      );
+      if (!state || !seat) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const { listPendingGameJoinRequests } =
+        await import('@workspace/db/seat-access-store');
+      const hasPendingJoinRequest =
+        (state.phase === 'LOBBY' || state.phase === 'DRAFT') &&
+        (await listPendingGameJoinRequests(gameId)).length > 0;
+      const actionNeeded = coordinatorActionNeeded(
+        state,
+        now,
+        hasPendingJoinRequest,
+      );
+      const { getCoordinatorTakeoverRecord } =
+        await import('@workspace/db/coordinator-access-store');
+      const record = await getCoordinatorTakeoverRecord(gameId, now);
+      if (!record) {
+        sendError(response, 404, 'Not found');
+        return;
+      }
+      const unavailable = isCoordinatorUnavailableForAction({
+        now,
+        lastSeenAt: record.lastSeenAt,
+        actionNeeded,
+      });
+      const coCoordinator = record.delegateSeatIds.includes(seat.id);
+      const mode = !unavailable
+        ? null
+        : record.delegateSeatIds.length > 0
+          ? coCoordinator
+            ? 'co-coordinator'
+            : null
+          : 'majority';
+      const livingSeatIds = state.seats
+        .filter((candidate) => candidate.status === 'alive')
+        .map((candidate) => candidate.id);
+      const requestRecord = record.request;
+      const livingVotes = requestRecord?.votes.filter((vote) =>
+        livingSeatIds.includes(vote.seatId),
+      );
+      const yesVotes = livingVotes?.filter((vote) => vote.approved).length ?? 0;
+      const noVotes = livingVotes?.filter((vote) => !vote.approved).length ?? 0;
+      const viewerVote =
+        livingVotes?.find((vote) => vote.seatId === seat.id)?.approved ?? null;
+      const requiredVotes = Math.floor(livingSeatIds.length / 2) + 1;
+      const effectiveRequestStatus =
+        requestRecord?.status === 'approved' && yesVotes < requiredVotes
+          ? 'pending'
+          : requestRecord?.status;
+      const canClaimDelegate =
+        mode === 'co-coordinator' && requestRecord === null;
+      const canClaimMajority =
+        mode === 'majority' &&
+        effectiveRequestStatus === 'approved' &&
+        requestRecord?.requesterSeatId === seat.id;
+      response.json(
+        GetCoordinatorTakeoverStatusResponse.parse({
+          eligible: mode !== null,
+          mode,
+          canRequest: mode === 'majority' && requestRecord === null,
+          canVote:
+            mode === 'majority' &&
+            effectiveRequestStatus === 'pending' &&
+            viewerVote === null,
+          canClaim: canClaimDelegate || canClaimMajority,
+          request: requestRecord
+            ? {
+                id: requestRecord.id,
+                requesterName:
+                  state.seats.find(
+                    (candidate) =>
+                      candidate.id === requestRecord.requesterSeatId,
+                  )?.name ?? '',
+                status: effectiveRequestStatus,
+                yesVotes,
+                noVotes,
+                requiredVotes,
+                expiresAt: requestRecord.expiresAt,
+                viewerVote,
+              }
+            : null,
+        }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.post('/api/games/:id/takeover', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const viewer = await viewerForRequest(request);
+      if (viewer.kind !== 'player' || !viewer.seatId) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const now = options.testOnlyNow?.() ?? Date.now();
+      if (
+        !(await checkRateLimit(
+          request,
+          'coordinator-takeover-request',
+          actorId({ kind: 'player', seatId: viewer.seatId }),
+          3,
+        ))
+      ) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      const state = await loadGameState(gameId);
+      const seat = state?.seats.find(
+        (candidate) =>
+          candidate.id === viewer.seatId && candidate.status === 'alive',
+      );
+      if (!state || !seat) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const { listPendingGameJoinRequests } =
+        await import('@workspace/db/seat-access-store');
+      const hasPendingJoinRequest =
+        (state.phase === 'LOBBY' || state.phase === 'DRAFT') &&
+        (await listPendingGameJoinRequests(gameId)).length > 0;
+      const { createCoordinatorTakeoverRequest } =
+        await import('@workspace/db/coordinator-access-store');
+      const created = await createCoordinatorTakeoverRequest({
+        id: randomUUID(),
+        gameId,
+        requesterSeatId: seat.id,
+        expiresAt: now + coordinatorTakeoverRequestDurationMs,
+        now,
+        inactiveRequestCutoff: now - coordinatorInactivityWindowMs,
+        actionNeeded: coordinatorActionNeeded(
+          state,
+          now,
+          hasPendingJoinRequest,
+        ),
+      });
+      if (!created) {
+        sendError(response, 409, 'Takeover is not currently available');
+        return;
+      }
+      const record =
+        await import('@workspace/db/coordinator-access-store').then(
+          ({ getCoordinatorTakeoverRecord }) =>
+            getCoordinatorTakeoverRecord(gameId, now),
+        );
+      const requestId = record?.request?.id;
+      if (!requestId) {
+        sendError(response, 503, 'Service unavailable');
+        return;
+      }
+      response.status(201).json(
+        RequestCoordinatorTakeoverResponse.parse({
+          requestId,
+          status: record.request?.status,
+        }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.post('/api/games/:id/takeover/vote', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const parsed = VoteCoordinatorTakeoverBody.safeParse(request.body);
+      if (!parsed.success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
+      const viewer = await viewerForRequest(request);
+      if (viewer.kind !== 'player' || !viewer.seatId) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const now = options.testOnlyNow?.() ?? Date.now();
+      if (
+        !(await checkRateLimit(
+          request,
+          'coordinator-takeover-vote',
+          actorId({ kind: 'player', seatId: viewer.seatId }),
+          8,
+        ))
+      ) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      const state = await loadGameState(gameId);
+      const seat = state?.seats.find(
+        (candidate) =>
+          candidate.id === viewer.seatId && candidate.status === 'alive',
+      );
+      if (!state || !seat) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const { voteCoordinatorTakeover } =
+        await import('@workspace/db/coordinator-access-store');
+      const status = await voteCoordinatorTakeover({
+        requestId: parsed.data.requestId,
+        gameId,
+        seatId: seat.id,
+        approved: parsed.data.approve,
+        livingSeatIds: state.seats
+          .filter((candidate) => candidate.status === 'alive')
+          .map((candidate) => candidate.id),
+        now,
+        inactiveRequestCutoff: now - coordinatorInactivityWindowMs,
+      });
+      if (!status) {
+        sendError(response, 409, 'Takeover is not currently available');
+        return;
+      }
+      response.json(
+        VoteCoordinatorTakeoverResponse.parse({
+          requestId: parsed.data.requestId,
+          status,
+        }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.post('/api/games/:id/takeover/claim', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const parsed = ClaimCoordinatorTakeoverBody.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
+      const viewer = await viewerForRequest(request);
+      if (viewer.kind !== 'player' || !viewer.seatId) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const now = options.testOnlyNow?.() ?? Date.now();
+      if (
+        !(await checkRateLimit(
+          request,
+          'coordinator-takeover-claim',
+          actorId({ kind: 'player', seatId: viewer.seatId }),
+          3,
+        ))
+      ) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      const state = await loadGameState(gameId);
+      const seat = state?.seats.find(
+        (candidate) =>
+          candidate.id === viewer.seatId && candidate.status === 'alive',
+      );
+      if (!state || !seat) {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const { listPendingGameJoinRequests } =
+        await import('@workspace/db/seat-access-store');
+      const hasPendingJoinRequest =
+        (state.phase === 'LOBBY' || state.phase === 'DRAFT') &&
+        (await listPendingGameJoinRequests(gameId)).length > 0;
+      const actionNeeded = coordinatorActionNeeded(
+        state,
+        now,
+        hasPendingJoinRequest,
+      );
+      const { getCoordinatorTakeoverRecord } =
+        await import('@workspace/db/coordinator-access-store');
+      const record = await getCoordinatorTakeoverRecord(gameId, now);
+      if (
+        !record ||
+        !isCoordinatorUnavailableForAction({
+          now,
+          lastSeenAt: record.lastSeenAt,
+          actionNeeded,
+        })
+      ) {
+        sendError(response, 409, 'Takeover is not currently available');
+        return;
+      }
+      const token = randomBytes(32).toString('base64url');
+      const input = {
+        gameId,
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        sessionExpiresAt: now + seatSessionDurationMs,
+        inactiveRequestCutoff: now - coordinatorInactivityWindowMs,
+        now,
+        actionNeeded,
+      };
+      const { claimCoordinatorAsDelegate, claimCoordinatorTakeover } =
+        await import('@workspace/db/coordinator-access-store');
+      const transferred = parsed.data.requestId
+        ? await claimCoordinatorTakeover({
+            ...input,
+            requestId: parsed.data.requestId,
+            requesterSeatId: seat.id,
+            livingSeatIds: state.seats
+              .filter((candidate) => candidate.status === 'alive')
+              .map((candidate) => candidate.id),
+          })
+        : await claimCoordinatorAsDelegate({
+            ...input,
+            seatId: seat.id,
+          });
+      if (!transferred) {
+        sendError(response, 409, 'Takeover is not currently available');
+        return;
+      }
+      response.cookie(cookieNameForCoordinatorGame(gameId), token, {
+        httpOnly: true,
+        secure: options.secureCookies ?? false,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: seatSessionDurationMs,
+      });
+      await publishGame(gameId);
+      response.json(
+        ClaimCoordinatorTakeoverResponse.parse({ status: 'transferred' }),
       );
     } catch {
       sendError(response, 503, 'Service unavailable');

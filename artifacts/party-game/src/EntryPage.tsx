@@ -76,6 +76,42 @@ const QRCode = lazy(async () => {
 
 type Schema<T> = { parse(value: unknown): T };
 type EntryMode = 'play' | 'join' | 'coordinate' | 'waiting';
+type CoordinatorDelegatesResponse = { limit: number; seatIds: string[] };
+
+function parseCoordinatorDelegatesResponse(
+  value: unknown,
+): CoordinatorDelegatesResponse {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('limit' in value) ||
+    !Number.isInteger(value.limit) ||
+    !('seatIds' in value) ||
+    !Array.isArray(value.seatIds) ||
+    !value.seatIds.every((seatId) => typeof seatId === 'string')
+  )
+    throw new Error('Invalid coordinator response');
+  return {
+    limit: value.limit as number,
+    seatIds: value.seatIds as string[],
+  };
+}
+
+const coordinatorDelegatesResponseSchema: Schema<CoordinatorDelegatesResponse> =
+  { parse: parseCoordinatorDelegatesResponse };
+
+const coordinatorPresenceResponseSchema: Schema<{ status: 'online' }> = {
+  parse(value) {
+    if (
+      !value ||
+      typeof value !== 'object' ||
+      !('status' in value) ||
+      value.status !== 'online'
+    )
+      throw new Error('Invalid coordinator response');
+    return { status: 'online' };
+  },
+};
 
 interface EntryPageProps {
   mode: EntryMode;
@@ -245,6 +281,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     joinPin: '',
     createGameName: '',
     createPlayerCount: 15,
+    createCoCoordinatorCount: 0,
     organiserName: '',
     organiserPin: '',
     rehearsalPlayerCount: 8,
@@ -582,6 +619,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
   async function createGame(data: {
     gameName: string;
     playerCount: number;
+    coCoordinatorCount: number;
     organiserName: string;
     organiserPin: string;
     presenterEnabled: boolean;
@@ -594,6 +632,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       const configValue = buildNewGameConfig({
         gameName: data.gameName,
         playerCount: data.playerCount,
+        coCoordinatorCount: data.coCoordinatorCount,
         presenterEnabled: data.presenterEnabled,
       });
       const command = commandSchema.parse({
@@ -754,6 +793,37 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     );
   }
 
+  const loadCoordinatorDelegates = useCallback(async () => {
+    if (!coordinatorGameId) throw new Error('coordinator-view-unavailable');
+    return getJson(
+      `/games/${encodeURIComponent(coordinatorGameId)}/coordinator/delegates`,
+      coordinatorDelegatesResponseSchema,
+    );
+  }, [coordinatorGameId]);
+
+  const saveCoordinatorDelegates = useCallback(
+    async (seatIds: string[]) => {
+      if (!coordinatorGameId) throw new Error('coordinator-view-unavailable');
+      return postJson(
+        `/games/${encodeURIComponent(coordinatorGameId)}/coordinator/delegates`,
+        { seatIds },
+        coordinatorDelegatesResponseSchema,
+        csrfToken,
+      );
+    },
+    [coordinatorGameId, csrfToken],
+  );
+
+  const heartbeatCoordinatorPresence = useCallback(async () => {
+    if (!coordinatorGameId) throw new Error('coordinator-view-unavailable');
+    await postJson(
+      `/games/${encodeURIComponent(coordinatorGameId)}/coordinator/presence`,
+      {},
+      coordinatorPresenceResponseSchema,
+      csrfToken,
+    );
+  }, [coordinatorGameId, csrfToken]);
+
   async function startGame(): Promise<void> {
     if (!coordinatorGameId || !coordinatorView) return;
     if (lateJoinMode) {
@@ -870,6 +940,9 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
             `${config.routes.tv}/${encodeURIComponent(coordinatorGameId)}`,
           )}
           onCreatePresenterPairing={createPresenterPairing}
+          onLoadCoordinatorDelegates={loadCoordinatorDelegates}
+          onSaveCoordinatorDelegates={saveCoordinatorDelegates}
+          onHeartbeat={heartbeatCoordinatorPresence}
         />
       </Suspense>
     ) : undefined;
