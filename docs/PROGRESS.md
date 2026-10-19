@@ -2,9 +2,9 @@
 
 Waiting for owner: Phase A deployment approval.
 
-- Updated: 19 October 2026, 11:17 UTC. **Phase A LA-1–LA-7:** Verify #142, #144–#148 green; last push `377ab28`.
-- **M6:** takeover remains green in Verify #141. M6-2 seat controls and role-safe departure log pass tests locally; safe undo is next.
-- Local server-coverage tests pass, but their 85% line threshold reports 81.71% in unchanged API files; this script is not a Verify workflow job.
+- Updated: 19 October 2026, 13:28 UTC. **Current code commit:** `ac991a0` (public-page responsive fix; Verify pending). Previous green Verify #149: `09a723f`.
+- **Responsive audit:** home, FAQ and compare pass Pixel/iPhone at 320, 375, 390, 414, 768 and 1280 px; no horizontal overflow. Phone hero is centred; tablet navigation collapses.
+- **M6:** safe undo integration and scenario report pass locally (2,571 games). All 94 server-coverage tests pass; its separate 85% threshold reports 81.59%. M6-2 work is not in this push; M6-3–5 remain.
 - No deployment is active. No publish, domain, DNS, secrets or paid services; eight content attachments remain untracked.
 
 ## Previous verification history
