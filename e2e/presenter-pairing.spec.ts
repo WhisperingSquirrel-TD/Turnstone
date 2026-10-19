@@ -174,9 +174,8 @@ test('presenter shows the public verdict without exposing private ballots or a d
   await page.getByLabel('Presenter pairing code').fill(pairingCode);
   await page.getByRole('button', { name: 'Pair this screen' }).click();
 
-  await expect(
-    page.getByText('Sam has been banished. They were Faithful.'),
-  ).toBeVisible();
+  await expect(page.getByText('Sam has been banished.')).toBeVisible();
+  await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Sam was banished.')).toBeVisible();
   await expect(
     page.getByText('The schedule has been shifted by 5 minutes.'),
@@ -184,4 +183,144 @@ test('presenter shows the public verdict without exposing private ballots or a d
   await expect(page.getByTestId('presenter-countdown')).toHaveText(/1:59|2:00/);
   await expect(page.getByText('private-ballot-seat')).toHaveCount(0);
   await expect(page.getByText(/Prize pot:/)).toHaveCount(0);
+});
+
+test('presenter results remain role-neutral even if the payload contains roles', async ({
+  page,
+}) => {
+  const gameId = 'presenter-finished-test';
+  const pairingCode = 'C'.repeat(43);
+  const publicView = {
+    ...presenterView(),
+    id: gameId,
+    version: 4,
+    phase: 'FINISHED',
+    lobbyCode: undefined,
+    seats: [
+      {
+        id: 'seat-one',
+        name: 'Alex',
+        status: 'banished',
+        role: 'traitor',
+      },
+      {
+        id: 'seat-two',
+        name: 'Sam',
+        status: 'alive',
+        role: 'faithful',
+      },
+    ],
+    winner: 'traitor',
+    publicAnnouncement: { kind: 'finished', winner: 'traitor' },
+    publicLog: [
+      { seq: 1, at: Date.now(), action: 'finished', winner: 'traitor' },
+    ],
+  } as unknown as FullView;
+
+  await page.route('**/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'presenter-test-token' } }),
+  );
+  await page.route(`**/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: {
+        serverNow: Date.now(),
+        version: 4,
+        view: {
+          exists: true,
+          phase: 'FINISHED',
+          lobbyOpen: false,
+          seatCount: 2,
+        },
+      },
+    }),
+  );
+  await page.route('**/presenter/pair', async (route) => {
+    const result = presenterPairResponseSchema.parse({
+      game: {
+        serverNow: Date.now(),
+        version: publicView.version,
+        view: publicView,
+      },
+    });
+    await route.fulfill({ json: result });
+  });
+  await page.route('**/socket.io/**', (route) => route.abort());
+
+  await page.goto(`/tv/${gameId}`);
+  await page.getByLabel('Presenter pairing code').fill(pairingCode);
+  await page.getByRole('button', { name: 'Pair this screen' }).click();
+
+  await expect(
+    page.getByRole('heading', { name: 'Game complete' }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('region', { name: 'Results' })
+      .getByText('The game has finished.', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText('Traitor', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Faithful', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Alex: Traitor')).toHaveCount(0);
+  await expect(page.getByText('Sam: Faithful')).toHaveCount(0);
+});
+
+test('presenter vote screen shows aggregate progress without ballot targets', async ({
+  page,
+}) => {
+  const gameId = 'presenter-vote-test';
+  const pairingCode = 'D'.repeat(43);
+  const publicView = {
+    ...presenterView(),
+    id: gameId,
+    version: 4,
+    phase: 'VOTE',
+    lobbyCode: undefined,
+    seats: [
+      { id: 'seat-one', name: 'Alex', status: 'alive' },
+      { id: 'seat-two', name: 'Sam', status: 'alive' },
+    ],
+    progress: { done: 1, total: 2 },
+    votedSeatIds: ['seat-one'],
+    voteCandidates: ['seat-two'],
+    ballots: { 'seat-one': 'seat-two' },
+  } as unknown as FullView;
+
+  await page.route('**/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'presenter-test-token' } }),
+  );
+  await page.route(`**/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: {
+        serverNow: Date.now(),
+        version: 4,
+        view: {
+          exists: true,
+          phase: 'VOTE',
+          lobbyOpen: false,
+          seatCount: 2,
+        },
+      },
+    }),
+  );
+  await page.route('**/presenter/pair', async (route) => {
+    const result = presenterPairResponseSchema.parse({
+      game: {
+        serverNow: Date.now(),
+        version: publicView.version,
+        view: publicView,
+      },
+    });
+    await route.fulfill({ json: result });
+  });
+  await page.route('**/socket.io/**', (route) => route.abort());
+
+  await page.goto(`/tv/${gameId}`);
+  await page.getByLabel('Presenter pairing code').fill(pairingCode);
+  await page.getByRole('button', { name: 'Pair this screen' }).click();
+
+  await expect(
+    page.getByText('1 of 2 have voted.', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText('Sam', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('seat-two', { exact: true })).toHaveCount(0);
 });

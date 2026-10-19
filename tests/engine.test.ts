@@ -425,9 +425,7 @@ describe('Milestone 1 deterministic engine', () => {
     advance(game, 'VERDICT');
     expect(viewFor({ kind: 'presenter' }, game.state).ballots).toEqual({});
     command(game, { type: 'AdvancePhase' });
-    expect(viewFor({ kind: 'presenter' }, game.state).ballots).toEqual({
-      s0: 's2',
-    });
+    expect(viewFor({ kind: 'presenter' }, game.state).ballots).toEqual({});
   });
   it('counts submitted votes without exposing ballot targets', () => {
     const game = fixture(6);
@@ -475,11 +473,57 @@ describe('Milestone 1 deterministic engine', () => {
     expect(game.state.revealed).toContain('s0');
     for (const view of viewers) {
       const projected = viewFor(view, game.state);
-      expect(projected.ballots).toEqual({ 'anonymous-vote-1': 's1' });
+      expect(projected.ballots).toEqual(
+        view.kind === 'presenter' ? {} : { 'anonymous-vote-1': 's1' },
+      );
       expect(
         Object.keys(projected.ballots).some((key) => voters.has(key)),
       ).toBe(false);
     }
+  });
+  it('keeps presenter projections free of role and completion details', () => {
+    const game = fixture(5);
+    command(game, { type: 'StartGame' });
+    const banished = game.state.seats[0]!;
+    banished.publicRole = true;
+    game.state.phase = 'VERDICT';
+    game.state.publicAnnouncement = {
+      kind: 'verdict',
+      cycle: game.state.cycle,
+      seatId: banished.id,
+    };
+
+    const verdict = viewFor({ kind: 'presenter' }, game.state);
+    expect(verdict.seats.every((seat) => seat.role === undefined)).toBe(true);
+    expect(verdict.publicAnnouncement).toMatchObject({
+      kind: 'verdict',
+      seat: { id: banished.id, name: banished.name },
+    });
+    if (verdict.publicAnnouncement?.kind === 'verdict')
+      expect(verdict.publicAnnouncement.seat.role).toBeUndefined();
+    expect(verdict.private).toBeNull();
+
+    game.state.phase = 'FINISHED';
+    game.state.winner = 'faithful';
+    game.state.publicAnnouncement = { kind: 'finished', winner: 'faithful' };
+    game.state.publicLog.push({
+      seq: game.state.version + 1,
+      at: game.state.phaseStarted,
+      action: 'finished',
+      winner: 'faithful',
+    });
+
+    const finished = viewFor({ kind: 'presenter' }, game.state);
+    expect(finished.seats.every((seat) => seat.role === undefined)).toBe(true);
+    expect(finished.winner).toBeNull();
+    expect(finished.publicAnnouncement).toBeNull();
+    expect(finished.publicLog).not.toContainEqual(
+      expect.objectContaining({ action: 'finished' }),
+    );
+    expect(finished.fairness).toBeNull();
+    expect(finished.private).toBeNull();
+    expect(JSON.stringify(finished).toLowerCase()).not.toContain('traitor');
+    expect(JSON.stringify(finished).toLowerCase()).not.toContain('faithful');
   });
   it('requires the shield acknowledgement during private voting', () => {
     const game = fixture(15);

@@ -30,7 +30,7 @@ function isFullView(view: unknown): view is FullView {
 
 function phaseTitle(view: FullView): string {
   if (view.phase === 'LOBBY') return 'The lobby';
-  if (view.phase === 'DEAL') return 'Your roles';
+  if (view.phase === 'DEAL') return 'Role assignment';
   if (view.phase === 'DEBATE') return 'The conversation';
   if (view.phase === 'VOTE') return view.revote ? 'The re-vote' : 'The vote';
   if (view.phase === 'VERDICT') return 'The verdict';
@@ -45,25 +45,38 @@ function phaseTitle(view: FullView): string {
   return 'Game setup';
 }
 
-function roleLabel(role: 'traitor' | 'faithful'): string {
-  return role === 'traitor' ? 'Traitor' : 'Faithful';
-}
-
 function announcementText(view: FullView): string {
   const announcement = view.publicAnnouncement;
   if (!announcement) return '';
   if (announcement.kind === 'no_votes') return en.game.noVotesAnnouncement;
-  if (announcement.kind === 'finished')
-    return en.game.publicLogFinished(announcement.winner);
+  if (announcement.kind === 'finished') return en.presenter.gameComplete;
   if (announcement.kind === 'verdict') {
-    const role = announcement.seat.role;
-    return role
-      ? `${announcement.seat.name} has been banished. They were ${roleLabel(role)}.`
-      : `${announcement.seat.name} has been banished.`;
+    return `${announcement.seat.name} has been banished.`;
   }
   return announcement.victims.length
     ? en.game.publicLogDawn(announcement.victims.map((victim) => victim.name))
     : 'Nobody was taken in the night.';
+}
+
+function phaseCommentary(view: FullView): string | null {
+  const remaining = view.seats.filter((seat) => seat.status === 'alive').length;
+  if (view.phase === 'DEBATE')
+    return en.presenter.dayCommentary(Math.max(1, view.cycle), remaining);
+  if (view.phase === 'VOTE' || view.phase === 'FINAL_BANISH')
+    return en.presenter.voteProgress(view.progress.done, view.progress.total);
+  if (view.phase === 'SHADOW')
+    return en.presenter.nightCommentary(Math.max(1, view.cycle));
+  if (view.phase === 'ENDGAME')
+    return en.presenter.endgameCommentary(
+      remaining,
+      view.endRule === 'unanimous',
+    );
+  if (view.phase === 'FINAL_VOTE')
+    return en.presenter.finalVoteProgress(
+      view.progress.done,
+      view.progress.total,
+    );
+  return null;
 }
 
 function publicUpdate(entry: FullView['publicLog'][number]): string {
@@ -82,7 +95,7 @@ function publicUpdate(entry: FullView['publicLog'][number]): string {
     return en.game.publicLogScheduleShift(entry.minutes);
   if (entry.action === 'coordinator_undo')
     return en.game.publicLogCoordinatorUndo;
-  return en.game.publicLogFinished(entry.winner);
+  return en.presenter.gameComplete;
 }
 
 export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
@@ -252,6 +265,7 @@ export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
       })
     : '';
   const resultLine = announcementText(full);
+  const commentary = phaseCommentary(full);
   const serverTime = clientNow + serverOffset;
   const secondsRemaining =
     full.deadline === null
@@ -275,8 +289,10 @@ export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
                 : `${Math.floor(secondsRemaining / 60)}:${String(secondsRemaining % 60).padStart(2, '0')}`}
           </p>
         )}
-        {full.phase === 'SHADOW' && (
-          <p className="presenter-commentary">{en.presenter.nightPrivate}</p>
+        {commentary && (
+          <p className="presenter-commentary" aria-live="polite">
+            {commentary}
+          </p>
         )}
         {full.missionsEnabled && (
           <p className="presenter-pot">
@@ -324,16 +340,7 @@ export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
         {full.phase === 'FINISHED' && (
           <section aria-labelledby="presenter-results-heading">
             <h2 id="presenter-results-heading">{en.presenter.results}</h2>
-            <ul className="presenter-updates">
-              {full.seats.map(
-                (seat) =>
-                  seat.role && (
-                    <li key={seat.id}>
-                      {en.presenter.role(seat.name, roleLabel(seat.role))}
-                    </li>
-                  ),
-              )}
-            </ul>
+            <p>{en.presenter.gameComplete}</p>
           </section>
         )}
       </main>
@@ -346,7 +353,7 @@ function PresenterHeader({ status }: { status: GameConnectionState }) {
   return (
     <header className="presenter-header">
       <span className="presenter-wordmark">
-        Turn<span>stone</span>
+        Oath<span>stone</span>
       </span>
       <GameConnectionStatus status={status} />
     </header>

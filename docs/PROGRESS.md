@@ -1,8 +1,16 @@
 # Status for reviewer
 
-**Latest green:** Verify #161 (`b456732`), 19/19 jobs green, including iPhone/iPad WebKit and public-page checks. The accepted coverage patch (`f01aa72`) is not applied; the owner will apply it, so Verify does not enforce server coverage yet.
+**Latest green:** Verify #163 (`e727e10`) succeeded.
 
-**Verify #162 (`ff5c85c`): RED.** `static-checks` failed `typecheck:tests` with TS2339 because a parsed event union was accessed as if it always had `seatId`; `required-checks` failed as a consequence. The other 17 jobs passed. The test now uses a separate typed seat ID, preserving all assertions; targeted tests, test typecheck, lint and formatting pass locally. A fresh Verify is pending.
+**Verify #162:** `static-checks` failed test typecheck (TS2339: un-narrowed event union); `required-checks` failed as a consequence. Fixed in #163 with a separate typed seat ID; assertions unchanged.
+
+**M6-2 safe undo:** Expiry, invalidation and role-reveal boundaries are covered; green in #163.
+
+**M6-3 presenter:** Views now omit ballots, voter/candidate IDs, per-seat roles, endgame winner and fairness data; show aggregate vote progress and neutral result copy. Unit, server, Pixel, typecheck, lint and build pass. Local iPhone WebKit remains blocked after Nix dependency installation; Verify pending.
+
+**Next:** Wait for M6-3 Verify; then M6-4, M6-5 and CP-1.
+
+## Earlier milestone results
 
 **LP-8 Verify #156 (`3704b3d`): GREEN (19/19).** `audit`, `browsers (desktop, chromium)`, `browsers (Pixel, chromium)`, `browsers (iPhone, webkit)`, `browsers (iPad, webkit)`, `integration`, `property`, `unit`, `static-checks`, `lighthouse`, `rehearsal-live`, `merge-scenario-reports`, `required-checks` and all six scenario shards succeeded.
 
@@ -15,10 +23,6 @@
 **Ubuntu runner review (19 October):** 12 jobs use `ubuntu-24.04` (11 Verify, one promote); no change recommended. GitHub refreshes the image behind this label, so OS packages can drift.
 
 **Phase A:** Read-only publish checklist added to `docs/HOSTING.md`. No deployment, settings, domain, DNS, secrets or paid service were changed.
-
-**M6 safe undo:** Existing server behavior is covered by targeted integration tests for expiry, private-screen invalidation/stale rejection, and no undo after role reveal. No runtime behavior changed.
-
-**Next queue:** M6-3 presenter views, M6-4 accessibility/readability, then M6-5 exit criteria; CP-1 remains after M6-5 is green.
 
 **LP-8 local status:** All six static pages and coming-soon rules are implemented. Targeted unit tests, typecheck, lint, format, production build, static build, desktop Chromium, Pixel Chromium and local Firefox pass. Lighthouse scores are 1.00 for all required categories on all six public pages. iPhone/iPad WebKit cannot launch locally because this Nix container lacks Playwright's WebKit host libraries; Verify installs WebKit with its system dependencies.
 

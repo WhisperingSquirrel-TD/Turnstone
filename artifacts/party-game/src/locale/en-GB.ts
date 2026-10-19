@@ -123,7 +123,20 @@ export const en = {
       'This game could not be found. Check the link with the organiser.',
     waiting: 'The presenter screen is ready once the organiser pairs it.',
     currentStep: 'Current step',
-    nightPrivate: 'Night choices are private. Everyone is choosing now.',
+    nightCommentary: (night: number) =>
+      `Night ${night}. Night choices are private. Everyone is choosing now.`,
+    dayCommentary: (day: number, players: number) =>
+      `Day ${day}. ${players} players remain.`,
+    voteProgress: (done: number, total: number) =>
+      `${done} of ${total} have voted.`,
+    finalVoteProgress: (done: number, total: number) =>
+      `${done} of ${total} have chosen whether to end the game.`,
+    endgameCommentary: (players: number, unanimous: boolean) =>
+      `${players} players remain. Decide together: end the game now, or banish one more? ${
+        unanimous
+          ? 'Everyone must agree to end.'
+          : 'A majority must agree to end.'
+      }`,
     paused: 'Paused',
     lobbyCode: 'Game code',
     joinPrompt: 'Scan to join, or enter this code:',
@@ -133,7 +146,7 @@ export const en = {
     noUpdates: 'No public updates yet.',
     prizePot: (amount: number, unit: string) => `Prize pot: ${amount} ${unit}`,
     results: 'Results',
-    role: (name: string, role: string) => `${name}: ${role}`,
+    gameComplete: 'The game has finished.',
   },
   home: {
     eyebrow: 'A game for everyone',

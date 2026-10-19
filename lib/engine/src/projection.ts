@@ -86,6 +86,7 @@ export function viewFor(
   }
 
   const own = state.seats.find((seat) => seat.id === viewer.seatId);
+  const presenter = viewer.kind === 'presenter';
   const ended = state.phase === 'FINISHED';
   const ownSeatViewer =
     (viewer.kind === 'player' || viewer.kind === 'ghost') && own ? own : null;
@@ -117,23 +118,25 @@ export function viewFor(
     submittedVoters.every((id) => state.revealed.includes(id));
   const anonymousReveal =
     state.config.roundTable.revealStyle === 'anonymous' && completedReveal;
-  const ballots = anonymousReveal
-    ? Object.fromEntries(
-        submittedVoters
-          .filter((id) => state.revealed.includes(id))
-          .map((id, index) => [
-            `anonymous-vote-${index + 1}`,
-            state.votes[id]!,
-          ]),
-      )
-    : state.phase === 'VERDICT' &&
-        state.config.roundTable.revealStyle !== 'anonymous'
+  const ballots = presenter
+    ? {}
+    : anonymousReveal
       ? Object.fromEntries(
-          state.revealed
-            .filter((id) => state.votes[id])
-            .map((id) => [id, state.votes[id]!]),
+          submittedVoters
+            .filter((id) => state.revealed.includes(id))
+            .map((id, index) => [
+              `anonymous-vote-${index + 1}`,
+              state.votes[id]!,
+            ]),
         )
-      : {};
+      : state.phase === 'VERDICT' &&
+          state.config.roundTable.revealStyle !== 'anonymous'
+        ? Object.fromEntries(
+            state.revealed
+              .filter((id) => state.votes[id])
+              .map((id) => [id, state.votes[id]!]),
+          )
+        : {};
   const announcement = state.publicAnnouncement;
   let publicAnnouncement: FullView['publicAnnouncement'] = null;
   if (announcement?.kind === 'dawn') {
@@ -161,10 +164,12 @@ export function viewFor(
       seat: {
         id: seat.id,
         name: seat.name,
-        ...(seat.publicRole && seat.role ? { role: seat.role } : {}),
+        ...(!presenter && seat.publicRole && seat.role
+          ? { role: seat.role }
+          : {}),
       },
     };
-  } else if (announcement?.kind === 'finished') {
+  } else if (announcement?.kind === 'finished' && !presenter) {
     publicAnnouncement = {
       kind: 'finished',
       winner: announcement.winner,
@@ -206,7 +211,8 @@ export function viewFor(
     unit: state.config.missions.potUnit,
     seats: state.seats.map((seat) => {
       const visible =
-        ended || (host && reveal) || (spectator && reveal) || seat.publicRole;
+        !presenter &&
+        (ended || (host && reveal) || (spectator && reveal) || seat.publicRole);
       return {
         id: seat.id,
         name: seat.name,
@@ -233,86 +239,90 @@ export function viewFor(
       total: alive(state).length,
     },
     votedSeatIds:
-      state.phase === 'VOTE' || state.phase === 'FINAL_BANISH'
+      !presenter && (state.phase === 'VOTE' || state.phase === 'FINAL_BANISH')
         ? alive(state)
             .filter((seat) => state.votes[seat.id] !== undefined)
             .map((seat) => seat.id)
         : [],
-    voteCandidates: state.candidates,
+    voteCandidates: presenter ? [] : state.candidates,
     ballots,
-    winner: state.winner,
+    winner: presenter ? null : state.winner,
     publicAnnouncement,
-    publicLog: (state.publicLog ?? []).map((entry) => {
-      if (
-        entry.action === 'seat_pin_reset' ||
-        entry.action === 'device_recovered'
-      )
-        return {
-          seq: entry.seq,
-          at: entry.at,
-          action: entry.action,
-          seatId: entry.seatId,
-          name:
-            state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
-        };
-      if (entry.action === 'dawn')
-        return {
-          seq: entry.seq,
-          at: entry.at,
-          action: entry.action,
-          victims: entry.victimIds.map((id) => ({
-            id,
-            name: state.seats.find((seat) => seat.id === id)?.name ?? '',
-          })),
-        };
-      if (entry.action === 'no_votes')
-        return {
-          seq: entry.seq,
-          at: entry.at,
-          action: entry.action,
-        };
-      if (entry.action === 'banishment')
-        return {
-          seq: entry.seq,
-          at: entry.at,
-          action: entry.action,
-          seat: {
-            id: entry.seatId,
+    publicLog: (state.publicLog ?? [])
+      .filter((entry) => !presenter || entry.action !== 'finished')
+      .map((entry) => {
+        if (
+          entry.action === 'seat_pin_reset' ||
+          entry.action === 'device_recovered'
+        )
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+            seatId: entry.seatId,
             name:
               state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
-          },
-        };
-      if (entry.action === 'seat_departed')
+          };
+        if (entry.action === 'dawn')
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+            victims: entry.victimIds.map((id) => ({
+              id,
+              name: state.seats.find((seat) => seat.id === id)?.name ?? '',
+            })),
+          };
+        if (entry.action === 'no_votes')
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+          };
+        if (entry.action === 'banishment')
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+            seat: {
+              id: entry.seatId,
+              name:
+                state.seats.find((seat) => seat.id === entry.seatId)?.name ??
+                '',
+            },
+          };
+        if (entry.action === 'seat_departed')
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+            seat: {
+              id: entry.seatId,
+              name:
+                state.seats.find((seat) => seat.id === entry.seatId)?.name ??
+                '',
+            },
+          };
+        if (entry.action === 'schedule_shift')
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+            minutes: entry.minutes,
+          };
+        if (entry.action === 'coordinator_undo')
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+          };
         return {
           seq: entry.seq,
           at: entry.at,
           action: entry.action,
-          seat: {
-            id: entry.seatId,
-            name:
-              state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
-          },
+          winner: entry.winner,
         };
-      if (entry.action === 'schedule_shift')
-        return {
-          seq: entry.seq,
-          at: entry.at,
-          action: entry.action,
-          minutes: entry.minutes,
-        };
-      if (entry.action === 'coordinator_undo')
-        return {
-          seq: entry.seq,
-          at: entry.at,
-          action: entry.action,
-        };
-      return {
-        seq: entry.seq,
-        at: entry.at,
-        action: entry.action,
-        winner: entry.winner,
-      };
-    }),
+      }),
     coordinatorAlerts:
       viewer.kind === 'coordinator'
         ? (state.coordinatorAlerts ?? []).map((alert) => ({
@@ -325,117 +335,122 @@ export function viewFor(
             lockedUntil: alert.lockedUntil,
           }))
         : [],
-    private: reveal
-      ? {
-          role: own?.role ?? null,
-          team: (host || spectator
-            ? state.seats
-            : isTraitor
-              ? alive(state).filter((seat) => seat.role === 'traitor')
-              : []
-          )
-            .filter((seat) => seat.role !== null)
-            .map((seat) => ({
-              id: seat.id,
-              name: seat.name,
-              role: seat.role!,
-            })),
-          options: alive(state)
-            .filter(
-              (seat) => seat.id !== own?.id && seat.id !== previousSlotChoice,
+    private:
+      !presenter && reveal
+        ? {
+            role: own?.role ?? null,
+            team: (host || spectator
+              ? state.seats
+              : isTraitor
+                ? alive(state).filter((seat) => seat.role === 'traitor')
+                : []
             )
-            .map((seat) => ({ id: seat.id, name: seat.name })),
-          choices: isTraitor
-            ? Object.fromEntries(
-                alive(state)
-                  .filter(
-                    (seat) => seat.role === 'traitor' && state.shadow[seat.id],
-                  )
-                  .map((seat) => [seat.id, state.shadow[seat.id]!]),
+              .filter((seat) => seat.role !== null)
+              .map((seat) => ({
+                id: seat.id,
+                name: seat.name,
+                role: seat.role!,
+              })),
+            options: alive(state)
+              .filter(
+                (seat) => seat.id !== own?.id && seat.id !== previousSlotChoice,
               )
-            : {},
-          choiceSlots: [1, 2].flatMap((slot) =>
-            [1, 2].flatMap((round) => {
-              const picks = state.shadowPicks
-                .filter(
-                  (pick) =>
-                    pick.cycle === state.cycle &&
-                    pick.slot === slot &&
-                    pick.round === round &&
-                    (isTraitor
-                      ? alive(state).some(
-                          (seat) =>
-                            seat.id === pick.seatId && seat.role === 'traitor',
-                        )
-                      : viewer.kind === 'player' &&
-                        own?.role === 'faithful' &&
-                        own.id === pick.seatId),
+              .map((seat) => ({ id: seat.id, name: seat.name })),
+            choices: isTraitor
+              ? Object.fromEntries(
+                  alive(state)
+                    .filter(
+                      (seat) =>
+                        seat.role === 'traitor' && state.shadow[seat.id],
+                    )
+                    .map((seat) => [seat.id, state.shadow[seat.id]!]),
                 )
-                .sort((left, right) => left.seq - right.seq)
-                .map(({ seatId, choice }) => ({ seatId, choice }));
-              return picks.length
-                ? [{ slot: slot as 1 | 2, round: round as 1 | 2, picks }]
-                : [];
-            }),
-          ),
-          chat: host
-            ? state.chat.map((item) => ({
-                seatId: item.seatId,
-                text: item.text,
-                seq: item.seq,
-              }))
-            : isTraitor
-              ? state.chat
-                  .filter((item) => item.seq >= (own?.traitorSince ?? Infinity))
-                  .map((item) => ({
-                    seatId: item.seatId,
-                    text: item.text,
-                    seq: item.seq,
-                  }))
-              : [],
-          task:
-            state.config.tasks.enabled && own
-              ? (() => {
-                  const taskCycle =
-                    state.phase === 'DEAL'
-                      ? 1
-                      : state.phase === 'DAWN'
-                        ? state.cycle + 1
-                        : state.cycle;
-                  const assignment = state.taskAssignments.find(
-                    (task) =>
-                      task.seatId === own.id &&
-                      task.cycle === taskCycle &&
-                      task.status !== 'void',
-                  );
-                  const actual =
-                    own.role === 'traitor' ? assignment : undefined;
-                  const privateTask =
-                    actual?.taskId !== null ? actual : undefined;
-                  return {
-                    kind: privateTask ? 'task' : 'decoy',
-                    instruction:
-                      privateTask?.text ??
-                      'Keep watch today: who is acting oddly?',
-                    report: privateTask?.status ?? null,
-                    murderLost:
-                      isTraitor &&
-                      state.taskMurderCancelledCycles.some(
-                        (resolution) =>
-                          resolution.cycle === state.cycle &&
-                          resolution.cancelled &&
-                          resolution.traitors.includes(own.id),
-                      ),
-                  };
-                })()
-              : null,
-          minimumDurationMs:
-            state.config.privacy.shieldSeconds * 1000 +
-            state.config.privacy.holdMs,
-        }
-      : null,
+              : {},
+            choiceSlots: [1, 2].flatMap((slot) =>
+              [1, 2].flatMap((round) => {
+                const picks = state.shadowPicks
+                  .filter(
+                    (pick) =>
+                      pick.cycle === state.cycle &&
+                      pick.slot === slot &&
+                      pick.round === round &&
+                      (isTraitor
+                        ? alive(state).some(
+                            (seat) =>
+                              seat.id === pick.seatId &&
+                              seat.role === 'traitor',
+                          )
+                        : viewer.kind === 'player' &&
+                          own?.role === 'faithful' &&
+                          own.id === pick.seatId),
+                  )
+                  .sort((left, right) => left.seq - right.seq)
+                  .map(({ seatId, choice }) => ({ seatId, choice }));
+                return picks.length
+                  ? [{ slot: slot as 1 | 2, round: round as 1 | 2, picks }]
+                  : [];
+              }),
+            ),
+            chat: host
+              ? state.chat.map((item) => ({
+                  seatId: item.seatId,
+                  text: item.text,
+                  seq: item.seq,
+                }))
+              : isTraitor
+                ? state.chat
+                    .filter(
+                      (item) => item.seq >= (own?.traitorSince ?? Infinity),
+                    )
+                    .map((item) => ({
+                      seatId: item.seatId,
+                      text: item.text,
+                      seq: item.seq,
+                    }))
+                : [],
+            task:
+              state.config.tasks.enabled && own
+                ? (() => {
+                    const taskCycle =
+                      state.phase === 'DEAL'
+                        ? 1
+                        : state.phase === 'DAWN'
+                          ? state.cycle + 1
+                          : state.cycle;
+                    const assignment = state.taskAssignments.find(
+                      (task) =>
+                        task.seatId === own.id &&
+                        task.cycle === taskCycle &&
+                        task.status !== 'void',
+                    );
+                    const actual =
+                      own.role === 'traitor' ? assignment : undefined;
+                    const privateTask =
+                      actual?.taskId !== null ? actual : undefined;
+                    return {
+                      kind: privateTask ? 'task' : 'decoy',
+                      instruction:
+                        privateTask?.text ??
+                        'Keep watch today: who is acting oddly?',
+                      report: privateTask?.status ?? null,
+                      murderLost:
+                        isTraitor &&
+                        state.taskMurderCancelledCycles.some(
+                          (resolution) =>
+                            resolution.cycle === state.cycle &&
+                            resolution.cancelled &&
+                            resolution.traitors.includes(own.id),
+                        ),
+                    };
+                  })()
+                : null,
+            minimumDurationMs:
+              state.config.privacy.shieldSeconds * 1000 +
+              state.config.privacy.holdMs,
+          }
+        : null,
     fairness:
-      ended && state.deal
+      !presenter && ended && state.deal
         ? {
             salt: state.deal.salt,
             roles: state.deal.roles,

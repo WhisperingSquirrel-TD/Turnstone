@@ -163,6 +163,7 @@ React is retained. If the actual route budget cannot be met, record measured opt
 
 - [ ] Phone-first logistics, count-only private progress, public logs, extension/pause/resume/shift, seat management, PIN reset approvals, co-coordinator rights and early-end confirmation.
 - [x] Safe undo window only when no private information was released; offline takeover/co-coordinator prompting and majority approval.
+- [x] M6-3 presenter projection is public-only: no ballots, voter/candidate IDs, per-seat roles, endgame winner or fairness data; phase commentary and vote progress are aggregate and role-neutral.
 - [ ] Paired `/tv` public view, QR/lobby/timetable/countdowns, private warnings, vote reveals, mission/pot/endgame/reveal displays, text-mirrored narration and sound consent.
 - [ ] Use the shared §25 palette and typography on coordinator and presenter screens; preserve role-neutral styling and room-readable type.
 - [ ] Keyboard, large-screen readability, wake-lock fallback and reduced-motion tests; adversarial coordinator/presenter payload and route checks.
