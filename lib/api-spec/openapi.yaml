@@ -1065,6 +1065,14 @@ components:
                 name: { type: string }
         - type: object
           additionalProperties: false
+          required: [seq, at, action, minutes]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: schedule_shift }
+            minutes: { type: integer, minimum: 1 }
+        - type: object
+          additionalProperties: false
           required: [seq, at, action, winner]
           properties:
             seq: { type: integer, minimum: 1 }

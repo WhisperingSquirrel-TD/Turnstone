@@ -50,6 +50,12 @@ describe('CoordinatorConsole', () => {
   it('shows public updates without adding private player details', () => {
     const publicLog: CoordinatorConsoleView['publicLog'] = [
       {
+        seq: 3,
+        at: 1_800_000_000_000,
+        action: 'schedule_shift',
+        minutes: 5,
+      },
+      {
         seq: 4,
         at: 1_800_000_000_000,
         action: 'banishment',
@@ -70,6 +76,7 @@ describe('CoordinatorConsole', () => {
 
     expect(html).toContain(en.game.latestUpdates);
     expect(html).toContain(en.game.publicLogBanishment('Casey'));
+    expect(html).toContain(en.game.publicLogScheduleShift(5));
     expect(html).not.toContain('Morgan');
   });
 

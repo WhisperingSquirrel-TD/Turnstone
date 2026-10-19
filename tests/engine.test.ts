@@ -16,6 +16,33 @@ describe('Milestone 1 deterministic engine', () => {
       commitment('g', roles, 'salt', 'c'),
     );
   });
+  it('announces schedule extensions in every public game view', () => {
+    const game = fixture(5);
+    command(game, { type: 'StartGame' });
+    command(game, { type: 'ExtendPhase', minutes: 5 }, true, {
+      kind: 'coordinator',
+    });
+    const extension = game.events.find(
+      (event) => event.type === 'DeadlineExtended',
+    );
+    expect(extension).toBeDefined();
+    if (extension?.type !== 'DeadlineExtended')
+      throw new Error('The schedule extension event is missing.');
+    const expected = {
+      seq: extension.seq,
+      at: extension.at,
+      action: 'schedule_shift',
+      minutes: 5,
+    };
+
+    expect(viewFor({ kind: 'presenter' }, game.state).publicLog).toContainEqual(
+      expected,
+    );
+    expect(
+      viewFor({ kind: 'player', seatId: game.state.seats[0]!.id }, game.state)
+        .publicLog,
+    ).toContainEqual(expected);
+  });
   it('has validated owner defaults and rejects removed/Could/unsafe settings', () => {
     const config = gameConfigSchema.parse({});
     expect(config.basics.labels).toEqual({

@@ -136,6 +136,12 @@ export type State = {
     | {
         seq: number;
         at: number;
+        action: 'schedule_shift';
+        minutes: number;
+      }
+    | {
+        seq: number;
+        at: number;
         action: 'dawn';
         victimIds: string[];
       }

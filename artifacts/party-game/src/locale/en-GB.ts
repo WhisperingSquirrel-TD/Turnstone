@@ -504,6 +504,8 @@ export const en = {
         ? victims.map((name) => `${name} was taken in the night.`).join(' ')
         : 'No one was taken.',
     publicLogBanishment: (name: string) => `${name} was banished.`,
+    publicLogScheduleShift: (minutes: number) =>
+      `The schedule has been shifted by ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
     publicLogFinished: (winner: 'traitor' | 'faithful') =>
       `The ${winner === 'traitor' ? 'Traitors' : 'Faithful'} won.`,
     rehearseAgain: 'Practise again',

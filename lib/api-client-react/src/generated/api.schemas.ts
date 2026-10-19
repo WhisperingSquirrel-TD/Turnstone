@@ -363,6 +363,15 @@ export type PublicLogEntry =
       seq: number;
       /** @minimum 0 */
       at: number;
+      action: 'schedule_shift';
+      /** @minimum 1 */
+      minutes: number;
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
       action: 'finished';
       winner: Role;
     };

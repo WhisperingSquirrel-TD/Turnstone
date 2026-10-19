@@ -76,6 +76,8 @@ function publicUpdate(entry: FullView['publicLog'][number]): string {
   if (entry.action === 'no_votes') return en.game.noVotesAnnouncement;
   if (entry.action === 'banishment')
     return en.game.publicLogBanishment(entry.seat.name);
+  if (entry.action === 'schedule_shift')
+    return en.game.publicLogScheduleShift(entry.minutes);
   return en.game.publicLogFinished(entry.winner);
 }
 

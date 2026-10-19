@@ -2569,7 +2569,11 @@ function PlayerGame() {
                                     ? en.game.publicLogBanishment(
                                         entry.seat.name,
                                       )
-                                    : en.game.publicLogFinished(entry.winner)}
+                                    : entry.action === 'schedule_shift'
+                                      ? en.game.publicLogScheduleShift(
+                                          entry.minutes,
+                                        )
+                                      : en.game.publicLogFinished(entry.winner)}
                         </li>
                       ))}
                     {full.publicLog.length === 0 && (

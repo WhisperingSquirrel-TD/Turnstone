@@ -441,10 +441,23 @@ export function evolve(previous: State | null, input: unknown): State {
       state.remaining = null;
       state.shadowRemaining = null;
       break;
-    case 'DeadlineExtended':
+    case 'DeadlineExtended': {
+      const addedMs = event.deadline - (previous.deadline ?? event.deadline);
       state.deadline = event.deadline;
       state.shadowEndAt = event.shadowEndAt;
+      if (addedMs > 0) {
+        state.publicLog = [
+          ...state.publicLog,
+          {
+            seq: event.seq,
+            at: event.at,
+            action: 'schedule_shift',
+            minutes: Math.round(addedMs / 60_000),
+          },
+        ];
+      }
       break;
+    }
     case 'SleeperWaiting':
       state.pendingSleeper = true;
       break;

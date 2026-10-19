@@ -294,6 +294,14 @@ const publicLogEntrySchema = z.discriminatedUnion('action', [
     .object({
       seq: z.number().int().positive(),
       at: z.number().int().nonnegative(),
+      action: z.literal('schedule_shift'),
+      minutes: z.number().int().positive(),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
       action: z.literal('finished'),
       winner: roleSchema,
     })

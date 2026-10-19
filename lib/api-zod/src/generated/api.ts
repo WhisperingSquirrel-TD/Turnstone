@@ -114,6 +114,8 @@ export const startRehearsalResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 export const startRehearsalResponseViewTwoPublicLogItemSixAtMin = 0;
 
+export const startRehearsalResponseViewTwoPublicLogItemSevenAtMin = 0;
+
 export const startRehearsalResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
 export const startRehearsalResponseViewTwoCoordinatorAlertsItemLockedUntilMin = 0;
@@ -407,6 +409,15 @@ export const StartRehearsalResponse = zod.object({
               .number()
               .int()
               .min(startRehearsalResponseViewTwoPublicLogItemSixAtMin),
+            action: zod.literal('schedule_shift'),
+            minutes: zod.number().int().min(1),
+          }),
+          zod.object({
+            seq: zod.number().int().min(1),
+            at: zod
+              .number()
+              .int()
+              .min(startRehearsalResponseViewTwoPublicLogItemSevenAtMin),
             action: zod.literal('finished'),
             winner: zod.enum(['traitor', 'faithful']),
           }),
@@ -569,6 +580,8 @@ export const createGameResponseViewTwoPublicLogItemFourAtMin = 0;
 export const createGameResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 export const createGameResponseViewTwoPublicLogItemSixAtMin = 0;
+
+export const createGameResponseViewTwoPublicLogItemSevenAtMin = 0;
 
 export const createGameResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
@@ -848,6 +861,15 @@ export const CreateGameResponse = zod.object({
               .number()
               .int()
               .min(createGameResponseViewTwoPublicLogItemSixAtMin),
+            action: zod.literal('schedule_shift'),
+            minutes: zod.number().int().min(1),
+          }),
+          zod.object({
+            seq: zod.number().int().min(1),
+            at: zod
+              .number()
+              .int()
+              .min(createGameResponseViewTwoPublicLogItemSevenAtMin),
             action: zod.literal('finished'),
             winner: zod.enum(['traitor', 'faithful']),
           }),
@@ -1152,6 +1174,8 @@ export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemFourAtMin 
 export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemFiveAtMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemSixAtMin = 0;
+
+export const getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemSevenAtMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoCoordinatorAlertsItemAtMin = 0;
 
@@ -1499,6 +1523,17 @@ export const GetJoinRequestStatusResponse = zod.union([
                   .min(
                     getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemSixAtMin,
                   ),
+                action: zod.literal('schedule_shift'),
+                minutes: zod.number().int().min(1),
+              }),
+              zod.object({
+                seq: zod.number().int().min(1),
+                at: zod
+                  .number()
+                  .int()
+                  .min(
+                    getJoinRequestStatusResponseThreeGameViewTwoPublicLogItemSevenAtMin,
+                  ),
                 action: zod.literal('finished'),
                 winner: zod.enum(['traitor', 'faithful']),
               }),
@@ -1692,6 +1727,8 @@ export const getGameViewResponseViewTwoPublicLogItemFourAtMin = 0;
 export const getGameViewResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 export const getGameViewResponseViewTwoPublicLogItemSixAtMin = 0;
+
+export const getGameViewResponseViewTwoPublicLogItemSevenAtMin = 0;
 
 export const getGameViewResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
@@ -1977,6 +2014,15 @@ export const GetGameViewResponse = zod.object({
               .number()
               .int()
               .min(getGameViewResponseViewTwoPublicLogItemSixAtMin),
+            action: zod.literal('schedule_shift'),
+            minutes: zod.number().int().min(1),
+          }),
+          zod.object({
+            seq: zod.number().int().min(1),
+            at: zod
+              .number()
+              .int()
+              .min(getGameViewResponseViewTwoPublicLogItemSevenAtMin),
             action: zod.literal('finished'),
             winner: zod.enum(['traitor', 'faithful']),
           }),
@@ -2137,6 +2183,8 @@ export const revealPrivateViewResponseViewTwoPublicLogItemFourAtMin = 0;
 export const revealPrivateViewResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 export const revealPrivateViewResponseViewTwoPublicLogItemSixAtMin = 0;
+
+export const revealPrivateViewResponseViewTwoPublicLogItemSevenAtMin = 0;
 
 export const revealPrivateViewResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
@@ -2437,6 +2485,15 @@ export const RevealPrivateViewResponse = zod.object({
               .number()
               .int()
               .min(revealPrivateViewResponseViewTwoPublicLogItemSixAtMin),
+            action: zod.literal('schedule_shift'),
+            minutes: zod.number().int().min(1),
+          }),
+          zod.object({
+            seq: zod.number().int().min(1),
+            at: zod
+              .number()
+              .int()
+              .min(revealPrivateViewResponseViewTwoPublicLogItemSevenAtMin),
             action: zod.literal('finished'),
             winner: zod.enum(['traitor', 'faithful']),
           }),
@@ -2607,6 +2664,8 @@ export const submitGameCommandResponseViewTwoPublicLogItemFourAtMin = 0;
 export const submitGameCommandResponseViewTwoPublicLogItemFiveAtMin = 0;
 
 export const submitGameCommandResponseViewTwoPublicLogItemSixAtMin = 0;
+
+export const submitGameCommandResponseViewTwoPublicLogItemSevenAtMin = 0;
 
 export const submitGameCommandResponseViewTwoCoordinatorAlertsItemAtMin = 0;
 
@@ -2907,6 +2966,15 @@ export const SubmitGameCommandResponse = zod.object({
               .number()
               .int()
               .min(submitGameCommandResponseViewTwoPublicLogItemSixAtMin),
+            action: zod.literal('schedule_shift'),
+            minutes: zod.number().int().min(1),
+          }),
+          zod.object({
+            seq: zod.number().int().min(1),
+            at: zod
+              .number()
+              .int()
+              .min(submitGameCommandResponseViewTwoPublicLogItemSevenAtMin),
             action: zod.literal('finished'),
             winner: zod.enum(['traitor', 'faithful']),
           }),

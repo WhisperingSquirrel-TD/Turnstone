@@ -135,6 +135,12 @@ test('presenter shows the public verdict without exposing private ballots or a d
         action: 'banishment',
         seat: { id: 'seat-two', name: 'Sam' },
       },
+      {
+        seq: 2,
+        at: Date.now() + 1,
+        action: 'schedule_shift',
+        minutes: 5,
+      },
     ],
     ballots: { 'seat-one': 'private-ballot-seat' },
   } as unknown as FullView;
@@ -171,6 +177,9 @@ test('presenter shows the public verdict without exposing private ballots or a d
     page.getByText('Sam has been banished. They were Faithful.'),
   ).toBeVisible();
   await expect(page.getByText('Sam was banished.')).toBeVisible();
+  await expect(
+    page.getByText('The schedule has been shifted by 5 minutes.'),
+  ).toBeVisible();
   await expect(page.getByTestId('presenter-countdown')).toHaveText(/1:59|2:00/);
   await expect(page.getByText('private-ballot-seat')).toHaveCount(0);
   await expect(page.getByText(/Prize pot:/)).toHaveCount(0);
