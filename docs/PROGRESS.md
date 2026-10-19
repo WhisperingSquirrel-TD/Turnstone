@@ -1,7 +1,7 @@
 # Status for reviewer
 
-- Updated: 19 October 2026, 10:13 UTC. **Phase A LA-1:** Verify #142 **Success** on `e02f493`; **LA-2:** static public output built and locally verified, CI pending.
-- Next: LA-3 agent-readable pages and metadata. No deployment or production changes.
+- Updated: 19 October 2026, 10:20 UTC. **LA-2:** Verify #143 failed because `/practice` was missing from Vercel shell rewrites; synced locally and targeted test passes.
+- Next: push route-sync correction and wait for green Verify before LA-3.
 - Hard stops: no publish, deployment, domain, DNS, secrets or paid services. Eight content attachments remain untracked.
 - After LA-7: resume remaining M6 items; stop first for Phase A deployment approval.
 

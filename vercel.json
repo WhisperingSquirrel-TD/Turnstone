@@ -59,6 +59,7 @@
   ],
   "rewrites": [
     { "source": "/play/:path*", "destination": "/app-shell.html" },
+    { "source": "/practice/:path*", "destination": "/app-shell.html" },
     { "source": "/create/:path*", "destination": "/app-shell.html" },
     { "source": "/join/:path*", "destination": "/app-shell.html" },
     { "source": "/join-request/:path*", "destination": "/app-shell.html" },
