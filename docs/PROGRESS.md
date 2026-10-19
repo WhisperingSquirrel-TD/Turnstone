@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- **Milestone 5 real-phone rehearsal accepted; Milestone 6 is in progress.** Updated: 19 October 2026, 06:13 UTC.
-- [Verify #132](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39207916012) **Success** for the coordinator public-updates slice. Current code commit `18d3adc` adds coordinator PIN-lockout alerts; Verify is pending.
-- Local typecheck, lint, 6 coordinator unit tests and Pixel/iPhone coordinator E2E pass. The console now includes aggregate progress, server-clock timing, pause/resume, extensions, confirmations, public updates and lockout alerts.
-- Eight owner content attachments are present but not processed; they remain uncommitted. No publishing, paid service, domain, DNS or production-secret changes; production peak capacity remains unproven.
+- **Milestone 5 real-phone rehearsal accepted; Milestone 6 is in progress.** Updated: 19 October 2026, 06:17 UTC.
+- [Verify #133](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/39208747239) **Success** for the coordinator console and PIN-lockout alerts.
+- Local typecheck, lint, 6 coordinator unit tests and Pixel/iPhone coordinator E2E passed. The console includes aggregate progress, server-clock timing, pause/resume, extensions, confirmations, public updates and PIN-lockout alerts.
+- Next: presenter pairing/public display and the remaining coordinator controls. Eight owner content attachments are present but unprocessed and uncommitted; no publishing, paid service, domain, DNS or production-secret changes.
 
 ## Previous verification history
 
