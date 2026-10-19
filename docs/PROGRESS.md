@@ -1,9 +1,9 @@
 # Status for reviewer
 
-- **Milestone 5 rehearsal accepted; Milestone 6 is in progress.** Updated: 19 October 2026, 07:01 UTC.
-- Verify #137 **Success** on `e5edc05`; its focused mock-browser listing check fixed the #136 timeout. Current commit `2103efb` adds a server-synchronised presenter countdown; pending Verify.
-- Local typecheck, lint, 8 unit tests and Pixel/iPhone setup, coordinator and presenter E2E pass, including a device clock two minutes fast. Presenter pairing, public lobby, verdict/log view and hidden private ballots are verified.
-- Next: continue Task 6 coordinator/presenter requirements. Eight owner content attachments remain unprocessed and uncommitted; no publishing, paid service, domain, DNS or production-secret changes.
+- **Milestone 5 rehearsal accepted; Milestone 6 is in progress.** Updated: 19 October 2026, 07:21 UTC.
+- Verify #138 **Success** on `b9e8e8f`. Current commit `606e523` adds public schedule-shift announcements to player, coordinator and presenter updates; Verify pending.
+- Local: 414 unit tests, typecheck, lint, format, 2,571 scenario games (0 failures), and six Pixel/iPhone coordinator/presenter browser tests pass.
+- Next: continue Task 6. Eight owner content attachments remain unprocessed and uncommitted; no publishing, paid services, domain, DNS or production-secret changes.
 
 ## Previous verification history
 
