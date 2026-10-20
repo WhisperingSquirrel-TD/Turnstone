@@ -1,70 +1,14 @@
-import {
-  devices,
-  expect,
-  test,
-  type BrowserContext,
-  type Page,
-} from '@playwright/test';
+import { devices, expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
+import { cookieNameForGame } from '../artifacts/api-server/src/session-auth';
 import type { FullView } from '../lib/shared/src/contracts';
 import { pendingJoinRequestsResponseSchema } from '../lib/shared/src/contracts';
-
-function createPublicView(gameId: string): FullView {
-  return {
-    id: gameId,
-    viewerSeatId: 'seat-morgan',
-    canAdvancePhase: false,
-    gameName: 'Saturday gathering',
-    version: 12,
-    phase: 'DEBATE',
-    paused: false,
-    deadline: Date.now() + 60_000,
-    coordinatorPlays: true,
-    cycle: 2,
-    revote: false,
-    shadowRound: 0,
-    shadowSlot: 0,
-    murderSlots: 1,
-    endRule: 'unanimous',
-    missionsEnabled: true,
-    rehearsal: false,
-    pot: 18,
-    unit: 'points',
-    seats: [
-      { id: 'seat-morgan', name: 'Morgan', status: 'alive' },
-      { id: 'seat-alex', name: 'Alex', status: 'departed' },
-      { id: 'seat-jamie', name: 'Jamie', status: 'alive' },
-    ],
-    commitment: null,
-    progress: { done: 0, total: 2 },
-    votedSeatIds: [],
-    voteCandidates: [],
-    ballots: {},
-    winner: null,
-    publicAnnouncement: null,
-    private: null,
-    publicLog: [
-      {
-        seq: 11,
-        at: Date.now() - 120_000,
-        action: 'device_recovered',
-        seatId: 'seat-alex',
-        name: 'Alex',
-      },
-      {
-        seq: 12,
-        at: Date.now() - 60_000,
-        action: 'seat_pin_reset',
-        seatId: 'seat-morgan',
-        name: 'Morgan',
-      },
-    ],
-    coordinatorUndo: null,
-    coordinatorAlerts: [],
-    fairness: null,
-  } as FullView;
-}
+import {
+  coldSeatGameId,
+  coldSeatToken,
+  createPublicView,
+} from './support/public-view';
 
 async function browserStorageText(page: Page): Promise<string> {
   return page.evaluate(() => {
@@ -2097,59 +2041,22 @@ test('mobile cold browser restart restores the seat and current vote screen from
     'Cold seat recovery is checked on Android Chrome and iPhone WebKit.',
   );
 
-  const gameId = 'mobile-cold-seat';
-  const seatCookieName = 'oathstone-seat-mobile-cold';
-  const view = {
-    ...createPublicView(gameId),
-    phase: 'VOTE',
-    deadline: Date.now() + 48 * 60 * 60 * 1_000,
-  } as FullView;
+  const gameId = coldSeatGameId;
+  const seatCookieName = cookieNameForGame(gameId);
   const originPage = page;
 
   await originPage.goto('/');
   const origin = new URL(originPage.url()).origin;
-  const installRoutes = async (
-    context: BrowserContext,
-    onAuthenticatedView?: () => void,
-  ) => {
-    await context.route('**/api/csrf', (route) =>
-      route.fulfill({
-        status: 200,
-        headers: {
-          'Set-Cookie': `${seatCookieName}=opaque-test-seat-token; Path=/; HttpOnly; SameSite=Strict`,
-        },
-        json: { csrfToken: 'test-csrf' },
-      }),
-    );
-    await context.route(`**/api/games/${gameId}/view**`, async (route) => {
-      const cookieHeader = (await route.request().allHeaders()).cookie ?? '';
-      if (
-        !cookieHeader
-          .split(';')
-          .some(
-            (cookie) =>
-              cookie.trim() === `${seatCookieName}=opaque-test-seat-token`,
-          )
-      ) {
-        return route.fulfill({
-          status: 401,
-          json: { message: 'The saved seat session is required.' },
-        });
-      }
-      onAuthenticatedView?.();
-      return route.fulfill({
-        json: { serverNow: Date.now(), version: view.version, view },
-      });
-    });
-  };
-  let initialViewUsedSavedToken = false;
-  await installRoutes(originPage.context(), () => {
-    initialViewUsedSavedToken = true;
-  });
-  await originPage.evaluate(async () => {
-    const response = await fetch('/api/csrf', { credentials: 'include' });
-    if (!response.ok) throw new Error('Seat cookie seeding failed.');
-  });
+  await originPage.context().addCookies([
+    {
+      name: seatCookieName,
+      value: coldSeatToken,
+      url: origin,
+      httpOnly: true,
+      secure: new URL(origin).protocol === 'https:',
+      sameSite: 'Lax',
+    },
+  ]);
   expect(
     (await originPage.context().cookies(origin)).some(
       (cookie) => cookie.name === seatCookieName,
@@ -2157,7 +2064,6 @@ test('mobile cold browser restart restores the seat and current vote screen from
   ).toBe(true);
   const gameUrl = new URL(`/game/${gameId}`, origin).toString();
   await originPage.goto(gameUrl);
-  expect(initialViewUsedSavedToken).toBe(true);
   await expect(originPage.getByTestId('player-game')).toHaveAttribute(
     'data-phase',
     'VOTE',
@@ -2187,10 +2093,6 @@ test('mobile cold browser restart restores the seat and current vote screen from
   });
   try {
     const coldPage = await coldContext.newPage();
-    let coldViewUsedSavedToken = false;
-    await installRoutes(coldContext, () => {
-      coldViewUsedSavedToken = true;
-    });
     expect(
       (await coldContext.cookies(origin)).some(
         (cookie) => cookie.name === seatCookieName,
@@ -2206,7 +2108,6 @@ test('mobile cold browser restart restores the seat and current vote screen from
       coldPage.getByText('Who do you vote to banish?', { exact: true }),
     ).toBeVisible();
     await expect(coldPage.getByTestId('private-choice-list')).toBeVisible();
-    expect(coldViewUsedSavedToken).toBe(true);
     expect(await browserStorageText(coldPage)).not.toMatch(
       /seat-jamie|Faithful|Traitor/i,
     );

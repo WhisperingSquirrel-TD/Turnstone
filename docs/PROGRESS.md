@@ -8,12 +8,13 @@
 
 **Verify #174 (`b8392d4`): RED; fixed in #175.** All four browser profiles failed from a stale hidden-screen assertion, private-state loss on resize and the away card preceding the result after navigation.
 
-**R6-1:** Complete; Verify #179 is green. Local typecheck, test typecheck, lint, format, real-server full rehearsal and cold restart, and targeted Pixel/iPhone return tests passed. R6-2 and R6-3 have not started.
-**R6-2 / CP-2:** Voting-circle work and the 35-prompt CP-2 library are implemented on the clean delivery branch. Selection is deterministic by game/day, uses public facts only, limits each card to one challenge, repeats only when fewer than three fresh eligible prompts fit, and keeps M7 prompts hidden.
+**R6-1:** Complete; Verify #179 is green. Pixel and iPhone cold-restart checks now verify the stored seat cookie against the test API before restoring the vote screen.
+**R6-2:** Implemented locally. Ballots stay private until each player reveals in the random speaker order; property tests check every projection before and after reveals.
+**R6-3 / CP-2:** Implemented locally with all 35 supplied prompts. Selection is deterministic by game/day, based on public facts, limited to one challenge, repeats only when fewer than three fresh eligible prompts fit, and keeps M7 prompts hidden.
 
-**Local checks:** Unit 455/455, property 21/21, server coverage 85.92% (85% threshold), 2,571 scenario games, typechecks, lint and format pass. Live rehearsal passed on desktop Chromium; Pixel and iPhone vote/reveal specs passed 4/4.
+**Local checks:** Unit 455/455, property 21/21, server coverage 85.92% (85% threshold), 2,571 scenarios, typechecks, lint and format pass. Pixel/iPhone cold-restart passed 2/2; vote/reveal 4/4; rehearsal-live 2/2 on Pixel.
 
-**Delivery:** `r6-cp2-delivery` is based on remote `fccba1a`; the local-only CP-1 attachment ancestry was not carried. No push or new Verify run yet; latest confirmed green remains Verify #179 (`c285f746`).
+**Delivery:** `r6-cp2-delivery` is based on remote `fccba1a`; no CP-1 attachment or SPEC change is included. No push or new Verify run yet; latest confirmed green remains Verify #179 (`c285f746`).
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 
