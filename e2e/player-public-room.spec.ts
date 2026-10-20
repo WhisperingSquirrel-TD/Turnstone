@@ -1147,6 +1147,7 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   const publicView = {
     ...createPublicView(gameId),
     phase: 'VOTE',
+    revote: true,
     voteCandidates: ['seat-jamie', 'seat-practice-2'],
     viewerSeatId: 'seat-morgan',
     seats: [
@@ -1229,13 +1230,21 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
       ),
     );
   expect(displayedChoices.sort()).toEqual(
-    ['Jamie', 'Practice player 2'].sort(),
+    [
+      'Jamie',
+      ...Array.from(
+        { length: 10 },
+        (_, index) => `Practice player ${index + 1}`,
+      ),
+    ].sort(),
   );
   await expect(
     page.getByText('Who do you vote to banish?', { exact: true }),
   ).toHaveCSS('color', 'rgb(61, 58, 56)');
+  const tiedChoiceIds = new Set(['seat-jamie', 'seat-practice-2']);
   for (const choiceButton of await choiceList.getByRole('button').all()) {
-    await expect(choiceButton).toBeEnabled();
+    const choiceId = await choiceButton.getAttribute('data-choice-id');
+    expect(choiceId).toBeTruthy();
     const visualState = await choiceButton.evaluate((element) => {
       const style = getComputedStyle(element);
       return {
@@ -1244,9 +1253,18 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
         opacity: style.opacity,
       };
     });
-    expect(visualState.color).toBe('rgb(61, 58, 56)');
-    expect(visualState.opacity).toBe('1');
-    expect(visualState.cursor).not.toBe('not-allowed');
+    if (tiedChoiceIds.has(choiceId!)) {
+      await expect(choiceButton).toBeEnabled();
+      await expect(choiceButton).not.toHaveClass(/choice-action--unavailable/);
+      expect(visualState.color).toBe('rgb(61, 58, 56)');
+      expect(visualState.opacity).toBe('1');
+      expect(visualState.cursor).not.toBe('not-allowed');
+    } else {
+      await expect(choiceButton).toBeDisabled();
+      await expect(choiceButton).toHaveClass(/choice-action--unavailable/);
+      expect(visualState.opacity).toBe('0.45');
+      expect(visualState.cursor).toBe('not-allowed');
+    }
   }
   const contentOverflow = await page
     .getByTestId('private-choice-content')
