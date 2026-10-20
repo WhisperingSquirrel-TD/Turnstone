@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green:** Verify #179 (`c285f746`) passed all 19 required jobs, including server coverage, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards. Optional promotion was skipped.
+**Latest green:** Verify #181 (`ef20d93`) passed all 19 required jobs, including the coverage-gated integration job, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards.
 
 **Verify #178 (`3f88d1e`): RED; fixed in #179.** `static-checks` found unsupported `DeviceDescriptor.screen`; browser and rehearsal tests expected the fresh-start guide on direct game URLs instead of the current phase guide.
 
@@ -8,13 +8,13 @@
 
 **Verify #174 (`b8392d4`): RED; fixed in #175.** All four browser profiles failed from a stale hidden-screen assertion, private-state loss on resize and the away card preceding the result after navigation.
 
-**R6-1:** Complete; Verify #179 is green. Pixel and iPhone cold-restart checks now verify the stored seat cookie against the test API before restoring the vote screen.
-**R6-2:** Implemented locally. Ballots stay private until each player reveals in the random speaker order; property tests check every projection before and after reveals.
-**R6-3 / CP-2:** Implemented locally with all 35 supplied prompts. Selection is deterministic by game/day, based on public facts, limited to one challenge, repeats only when fewer than three fresh eligible prompts fit, and keeps M7 prompts hidden.
+**R6-1:** Complete; Verify #181 is green. Pixel and iPhone cold-restart checks verify the stored seat cookie against the test API before restoring the vote screen.
+**R6-2:** Complete; Verify #181 is green. Ballots stay private until each player reveals in the random speaker order; property tests check projections before and after reveals.
+**R6-3 / CP-2:** Complete; Verify #181 is green. All 35 supplied prompts are data-driven; selection is deterministic by game/day, public-fact-only, limited to one challenge, repeats only when fewer than three fresh eligible prompts fit, and keeps M7 prompts hidden.
 
 **Local checks:** Unit 455/455, property 21/21, server coverage 85.92% (85% threshold), 2,571 scenarios, typechecks, lint and format pass. Pixel/iPhone cold-restart passed 2/2; vote/reveal 4/4; rehearsal-live 2/2 on Pixel.
 
-**Delivery:** `r6-cp2-delivery` is based on remote `fccba1a`; no CP-1 attachment or SPEC change is included. No push or new Verify run yet; latest confirmed green remains Verify #179 (`c285f746`).
+**Delivery:** Main is at `ef20d93`; no CP-1 attachment, SPEC or workflow change is included. No deployment or production setting was changed.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 
