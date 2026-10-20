@@ -128,8 +128,15 @@ async function playAndSkipPhaseClip(
   await expect(video).toHaveJSProperty('muted', true);
   await expect(video).toHaveJSProperty('playsInline', true);
   await expect(video).toHaveJSProperty('controls', false);
-  await expect(video).toHaveJSProperty('disablePictureInPicture', true);
-  await expect(video).toHaveJSProperty('disableRemotePlayback', true);
+  await expect(video).toHaveAttribute('disablepictureinpicture', '');
+  await expect(video).toHaveAttribute('disableremoteplayback', '');
+  const canPlayClip = await video.evaluate((element) => {
+    const media = element as HTMLVideoElement;
+    return Boolean(
+      media.canPlayType('video/mp4; codecs="avc1.42E01E"') ||
+      media.canPlayType('video/webm; codecs="vp9"'),
+    );
+  });
   await expect
     .poll(async () =>
       page
@@ -146,6 +153,19 @@ async function playAndSkipPhaseClip(
     );
   const phaseKey = await overlay.getAttribute('data-phase-key');
   expect(phaseKey).toBeTruthy();
+  if (!canPlayClip) {
+    const before = await page.locator('main').boundingBox();
+    await expect(overlay).toHaveCount(0, { timeout: 1_500 });
+    expect(
+      await page.evaluate(
+        (key) => window.sessionStorage.getItem(`oathstone-phase-clip:${key}`),
+        phaseKey,
+      ),
+    ).toBeNull();
+    const after = await page.locator('main').boundingBox();
+    expect(after).toEqual(before);
+    return;
+  }
   const playbackMarker = await expect
     .poll(() =>
       page.evaluate(
@@ -487,9 +507,7 @@ async function submitPrivateChoice(
       : roster.seats
           .filter(
             (seat) =>
-              seat.status === 'alive' &&
-              seat.id !== roster.viewerSeatId &&
-              (voteCandidates.size === 0 || voteCandidates.has(seat.id)),
+              seat.status === 'alive' && seat.id !== roster.viewerSeatId,
           )
           .map((seat) => seat.name);
     expect(
@@ -506,10 +524,20 @@ async function submitPrivateChoice(
         choiceList.getByRole('button', { name: seat.name, exact: true }),
       ).toHaveCount(0);
     }
+    const selectableNames = roster.seats
+      .filter(
+        (seat) =>
+          seat.status === 'alive' &&
+          seat.id !== roster.viewerSeatId &&
+          (voteCandidates.size === 0 || voteCandidates.has(seat.id)),
+      )
+      .map((seat) => seat.name);
     selectedName =
-      phaseBeforeChoice === 'VOTE' && preferredVoteName
+      phaseBeforeChoice === 'VOTE' &&
+      preferredVoteName &&
+      selectableNames.includes(preferredVoteName)
         ? preferredVoteName
-        : displayedNames[0];
+        : selectableNames[0];
     if (phaseBeforeChoice === 'SHADOW') {
       await expect(page.getByTestId('vote-progress-list')).toHaveCount(0);
       await expect(page.locator('[data-testid^="vote-status-"]')).toHaveCount(
@@ -1032,6 +1060,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(page.getByTestId('text-rehearsal-player-count')).toHaveText(
       '8',
     );
+    await expect(
+      page.getByText('Practice games use 6 to 15 players.', { exact: true }),
+    ).toBeVisible();
     const players = page.getByTestId('input-rehearsal-player-count');
     await players.focus();
     await players.press('Home');
@@ -1745,6 +1776,26 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             await expect(page.getByTestId('tie-revote-prompt')).toHaveText(
               `It's a tie between ${tiedNamesText}. Vote again, choosing between them.`,
             );
+            const eligibleChoiceIds = tieView.seats
+              .filter(
+                (seat) =>
+                  seat.status === 'alive' && seat.id !== tieView.viewerSeatId,
+              )
+              .map((seat) => seat.id);
+            const choiceList = page.getByTestId('private-choice-list');
+            for (const seatId of eligibleChoiceIds) {
+              const choice = choiceList.locator(`[data-choice-id="${seatId}"]`);
+              if (tiedCandidateIds.includes(seatId)) {
+                await expect(choice).toBeEnabled();
+                await expect(choice).not.toHaveClass(
+                  /choice-action--unavailable/,
+                );
+              } else {
+                await expect(choice).toBeDisabled();
+                await expect(choice).toHaveClass(/choice-action--unavailable/);
+                await expect(choice).toHaveCSS('opacity', '0.45');
+              }
+            }
             sawForcedVoteTie = true;
             await submitPrivateChoice(page, activeGameId, null);
           } else {

@@ -1,8 +1,8 @@
 # Status for reviewer
 
-**Latest green:** GitHub Verify #189 (`2c861af`) passed all 19 jobs, including Pixel, desktop Chromium, iPad and iPhone WebKit, `rehearsal-live`, Lighthouse, audit, coverage-gated integration, all scenario shards and `required-checks`.
+**Latest green:** GitHub Verify #190 (`655a9b6`) passed all 19 jobs, including Pixel, desktop Chromium, iPad and iPhone WebKit, `rehearsal-live`, Lighthouse, audit, coverage-gated integration, all scenario shards and `required-checks`.
 
-**Phase clips (F):** Tom confirmed a shared, non-blocking nightfall overlay at `SHADOW` for every role, with no separate step. Local implementation and tests are ready; Verify is pending. Unit 479/479, typechecks, lint, formatting, build, server line coverage 85.92% (threshold 85%) and scenario report (0 failures/2,571 games) pass. Pixel full rehearsal passes playback, tap-to-skip, timed close, reduced-motion and `?clips=off` skips. Local iPhone WebKit cannot decode either fixture format (`canPlayType` is empty); GitHub WebKit must verify playback. The six production assets are not present. Tom should save/upload `nightfall.webm`, `nightfall.mp4`, `nightfall-poster.webp`, `dawn.webm`, `dawn.mp4` and `dawn-poster.webp` to `artifacts/party-game/public/clips/`; tiny fixtures remain under e2e only.
+**Phase clips (F):** Owner confirmed nightfall is a shared overlay at `SHADOW` for every role, with no separate step. Verify #190 is green (all 19 jobs). Full unit 479/479, typechecks, lint, formatting, build, 85.92% server line coverage and scenario report (0 failures/2,571 games) pass. Pixel rehearsal verifies nightfall/dawn playback, tap-to-skip, timed close, reduced-motion and `?clips=off`; local iPhone WebKit has no supported clip codec and verifies the safe no-op instead. The six owner assets are not present; save/upload them to `artifacts/party-game/public/clips/` as `nightfall.webm`, `nightfall.mp4`, `nightfall-poster.webp`, `dawn.webm`, `dawn.mp4` and `dawn-poster.webp`. Only tiny test fixtures are used locally.
 
 **Verify #188 (`5b2e716`): RED; corrected by #189.** The browser profiles failed because two specs expected older conversation copy and the player-room spec expected older vote copy; the rendered wording was correct and the assertions now match the concise text.
 
@@ -16,7 +16,7 @@
 
 **Verify #174 (`b8392d4`): RED; fixed in #175.** All four browser profiles failed from a stale hidden-screen assertion, private-state loss on resize and the away card preceding the result after navigation.
 
-**R6-1:** Automated checks are complete. Verify #187 passed all four browser profiles. The real-server cold-restart test also passes locally in Pixel Chromium and iPhone WebKit: a fresh context restored the saved seat cookie/storage state and the authenticated view returned the original seat ID. The earlier iPhone handler failure was consistent with an unseeded test context; no restore bug was reproduced.
+**R6-1:** Complete and owner accepted. Verify #187 passed all four browser profiles. The real-server cold-restart test passed locally in Pixel Chromium and iPhone WebKit: a fresh context restored the saved seat cookie/storage state and the authenticated view returned the original seat ID. The earlier iPhone handler failure was consistent with an unseeded test context; no restore bug was reproduced.
 **R6-2:** Complete; Verify #181 is green. Ballots stay private until each player reveals in the random speaker order; property tests check projections before and after reveals.
 **R6-3 / CP-2:** Complete; Verify #181 is green. All 35 supplied prompts are data-driven; selection is deterministic by game/day, public-fact-only, limited to one challenge, repeats only when fewer than three fresh eligible prompts fit, and keeps M7 prompts hidden.
 **R6 feedback A1–A2:** Complete; Verify #185 is green. Prompt gates and day-one copy are in the commit. The wake-lock notice remains in the shared game header, over reserved top padding; it does not change header geometry or push the game content down.
@@ -27,11 +27,13 @@
 
 **R6 feedback D — voting-circle card:** The current speaker can open a full-screen view of their own vote card; opening and closing it does not reveal a ballot or change the public tally. The overlay uses the Fullscreen API where available, remains viewport- and safe-area-aware in portrait and landscape, and has Close and Escape controls. The existing game wake lock remains active. Real-server rehearsal passes in Pixel Chromium and iPhone WebKit; Verify #187 is green.
 
-**R6 feedback E — wording audit:** First-time rehearsal cards now use concise copy separate from the full “What’s this?” details. The Notes detail no longer repeats its privacy line, and the role-reveal instruction is shorter. Verify #188 exposed stale browser expectations; the assertions were updated without weakening coverage and Verify #189 is green.
+**R6 feedback E — wording audit:** First-time rehearsal cards use concise copy separate from the full “What’s this?” details. The Notes detail no longer repeats its privacy line, and the role-reveal instruction is shorter. Verify #188 exposed stale browser expectations for the shorter conversation and vote cards; both were updated without weakening coverage. Verify #190 is green.
+
+**R6 feedback 5 and practice range:** Re-vote renders every living opponent; only tied candidates are enabled and full-contrast, while other choices are disabled and dimmed. The explanatory tie line remains unchanged. The practice setup now says “Practice games use 6 to 15 players.” Component and real-server tie tests pass on Pixel Chromium and iPhone WebKit; typecheck, lint and formatting pass. These follow-up changes are awaiting Verify.
 
 **Local checks:** Copy-card unit tests pass (14/14). The full real-server rehearsal and cold-restart tests pass in Pixel Chromium and iPhone WebKit. The affected conversation/vote card browser checks pass in Pixel Chromium and iPhone WebKit. Typecheck, lint and formatting pass; audit reports 0 high and 0 critical; the 85% server-coverage threshold is unchanged.
 
-**Delivery:** GitHub main is at `2c861af`; Verify #189 is the latest green. Phase F has not yet been pushed. No CP-1 attachment, workflow, SPEC, deployment or production-setting change is included.
+**Delivery:** GitHub main is at `655a9b6`; Verify #190 is the latest green. Re-vote selection and the practice range explanation are locally verified; their clean commit is pending. No CP-1 attachment, workflow, SPEC, deployment or production-setting change is included.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 

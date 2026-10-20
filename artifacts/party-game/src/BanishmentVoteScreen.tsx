@@ -6,11 +6,13 @@ import {
 
 type BanishmentVoteScreenProps = PrivateChoiceControlsProps & {
   revote?: boolean;
+  tieCandidateIds?: string[];
   tieCandidateNames?: string[];
 };
 
 export function BanishmentVoteScreen({
   revote = false,
+  tieCandidateIds = [],
   tieCandidateNames = [],
   ...props
 }: BanishmentVoteScreenProps) {
@@ -20,6 +22,13 @@ export function BanishmentVoteScreen({
   const alphabeticalTieCandidates = [...tieCandidateNames].sort((left, right) =>
     left.localeCompare(right, 'en-GB', { sensitivity: 'base' }),
   );
+  const tiedIds = new Set(tieCandidateIds);
+  const disabledChoiceIds =
+    revote && tiedIds.size >= 2
+      ? props.choices
+          .filter((choice) => !tiedIds.has(choice.id))
+          .map((choice) => choice.id)
+      : [];
 
   return (
     <div className="enter">
@@ -35,6 +44,7 @@ export function BanishmentVoteScreen({
       <PrivateChoiceControls
         {...props}
         choices={alphabeticalChoices}
+        disabledChoiceIds={disabledChoiceIds}
         voteProgressRows={props.voteProgressRows}
         viewerSeatId={props.viewerSeatId}
       />

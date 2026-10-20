@@ -180,6 +180,10 @@ h2,
   border-color: var(--gilt);
   box-shadow: inset 3px 0 var(--gilt);
 }
+.choice-action--unavailable:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 .primary-action:disabled,
 .quiet-action:disabled {
   cursor: not-allowed;

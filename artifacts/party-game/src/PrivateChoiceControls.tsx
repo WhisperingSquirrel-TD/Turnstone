@@ -25,6 +25,7 @@ export type PrivateChoiceControlsProps = {
   onChooseAgain: () => void;
   voteProgressRows?: VoteProgressRow[];
   viewerSeatId?: string;
+  disabledChoiceIds?: string[];
 };
 
 export function PrivateChoiceControls({
@@ -41,9 +42,11 @@ export function PrivateChoiceControls({
   onChooseAgain,
   voteProgressRows,
   viewerSeatId,
+  disabledChoiceIds = [],
 }: PrivateChoiceControlsProps) {
   const selectedOption = choices.find((choice) => choice.id === selected);
   const choiceById = new Map(choices.map((choice) => [choice.id, choice]));
+  const disabledChoiceIdSet = new Set(disabledChoiceIds);
   const orderedVoteProgressRows = voteProgressRows
     ? [...voteProgressRows].sort((left, right) =>
         left.name.localeCompare(right.name, 'en-GB', { sensitivity: 'base' }),
@@ -103,7 +106,13 @@ export function PrivateChoiceControls({
                 <button
                   key={choice.id}
                   type="button"
-                  className="choice-action justify-between gap-3"
+                  className={`choice-action justify-between gap-3 ${
+                    disabledChoiceIdSet.has(choice.id)
+                      ? 'choice-action--unavailable'
+                      : ''
+                  }`}
+                  data-choice-id={choice.id}
+                  disabled={disabledChoiceIdSet.has(choice.id)}
                   aria-label={choice.name}
                   aria-describedby={statusId}
                   aria-pressed={selected === choice.id}
@@ -124,7 +133,13 @@ export function PrivateChoiceControls({
               <button
                 key={choice.id}
                 type="button"
-                className="choice-action"
+                className={`choice-action ${
+                  disabledChoiceIdSet.has(choice.id)
+                    ? 'choice-action--unavailable'
+                    : ''
+                }`}
+                data-choice-id={choice.id}
+                disabled={disabledChoiceIdSet.has(choice.id)}
                 aria-pressed={selected === choice.id}
                 onClick={() => onSelect(choice.id)}
               >

@@ -1009,12 +1009,7 @@ function PlayerGame() {
         ? []
         : full?.phase === 'VOTE' || full?.phase === 'FINAL_BANISH'
           ? eligibleSeats
-              .filter(
-                (seat) =>
-                  seat.id !== full.viewerSeatId &&
-                  (!full.voteCandidates.length ||
-                    full.voteCandidates.includes(seat.id)),
-              )
+              .filter((seat) => seat.id !== full.viewerSeatId)
               .map(({ id: seatId, name }) => ({ id: seatId, name }))
           : full?.phase === 'SHADOW'
             ? privateOptions
@@ -2721,6 +2716,7 @@ function PlayerGame() {
                               <BanishmentVoteScreen
                                 {...choiceControlProps}
                                 revote={full.revote}
+                                tieCandidateIds={full.voteCandidates}
                                 tieCandidateNames={tieCandidateNames}
                                 voteProgressRows={voteProgressRows}
                                 viewerSeatId={full.viewerSeatId}

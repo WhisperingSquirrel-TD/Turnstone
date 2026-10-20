@@ -51,4 +51,40 @@ describe('BanishmentVoteScreen', () => {
       'It&#x27;s a tie between Alex, Blair and Casey. Vote again, choosing between them.',
     );
   });
+
+  it('keeps only tied candidates selectable and dims the rest of the re-vote list', () => {
+    const props = {
+      ...controls,
+      choices: [
+        { id: 'seat-a', name: 'Alex' },
+        { id: 'seat-b', name: 'Blair' },
+        { id: 'seat-c', name: 'Casey' },
+      ],
+      voteProgressRows: [
+        { id: 'seat-a', name: 'Alex', hasVoted: false },
+        { id: 'seat-b', name: 'Blair', hasVoted: false },
+        { id: 'seat-c', name: 'Casey', hasVoted: false },
+        { id: 'viewer', name: 'Morgan', hasVoted: false },
+      ],
+      viewerSeatId: 'viewer',
+      revote: true,
+      tieCandidateIds: ['seat-a', 'seat-b'],
+      tieCandidateNames: ['Alex', 'Blair'],
+    };
+
+    const html = renderToString(<BanishmentVoteScreen {...props} />);
+
+    expect(html).toMatch(
+      /<button(?=[^>]*data-choice-id="seat-a")(?!(?:[^>]*disabled=""))[^>]*>/,
+    );
+    expect(html).toMatch(
+      /<button(?=[^>]*data-choice-id="seat-b")(?!(?:[^>]*disabled=""))[^>]*>/,
+    );
+    expect(html).toMatch(
+      /<button(?=[^>]*data-choice-id="seat-c")(?=[^>]*disabled="")(?=[^>]*choice-action--unavailable)[^>]*>/,
+    );
+    expect(html).toContain(
+      'It&#x27;s a tie between Alex and Blair. Vote again, choosing between them.',
+    );
+  });
 });

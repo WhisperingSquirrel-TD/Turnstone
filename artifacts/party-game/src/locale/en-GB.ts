@@ -458,7 +458,7 @@ export const en = {
     rehearsalDescription:
       'Play a complete rehearsal on this phone with practice players filling the other seats.',
     rehearsalPlayersLabel: 'Players',
-    rehearsalRange: 'Choose between 6 and 15 players.',
+    rehearsalRange: 'Practice games use 6 to 15 players.',
     rehearsalSpeedLabel: 'Game speed',
     fast: 'Fast',
     normal: 'Normal',
