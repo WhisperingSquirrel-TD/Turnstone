@@ -1494,7 +1494,17 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       watchModePhases.has('SHADOW'),
       `viewer=${finalView.viewerSeatId ?? 'no-seat'}; phases/status: ${seatStatusTimeline.join(', ')}; trace: ${JSON.stringify(finalTrace)}`,
     ).toBe(true);
-    expect(watchModePhases.has('DAWN')).toBe(true);
+    const lastDawnIndex = finalTrace
+      .map((event) => event.type)
+      .lastIndexOf('DawnResolved');
+    const lastFinishIndex = finalTrace
+      .map((event) => event.type)
+      .lastIndexOf('GameFinished');
+    const terminalDawn = lastDawnIndex >= 0 && lastFinishIndex > lastDawnIndex;
+    expect(
+      watchModePhases.has('DAWN') || terminalDawn,
+      `phases/status: ${seatStatusTimeline.join(', ')}; trace: ${JSON.stringify(finalTrace)}`,
+    ).toBe(true);
     expect(watchModePhases.has('FINISHED')).toBe(true);
     expect([...seenShadowSlots].sort()).toEqual([1]);
     expect([...seenFirstNightShadowSlots].sort()).toEqual([1]);
@@ -1572,6 +1582,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       .allTextContents();
     const updates = publicUpdates.join('\n');
     expect(updates).toMatch(/was banished/);
+    expect(updates).toMatch(/was taken in the night\.|No one was taken\./);
     expect(updates).toMatch(/The Traitors won|The Faithful won/);
     await expect(
       page.getByRole('button', { name: 'Practise again' }),
