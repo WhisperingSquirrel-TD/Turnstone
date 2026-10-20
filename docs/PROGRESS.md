@@ -1,14 +1,14 @@
 # Status for reviewer
 
-**Latest green:** Verify #177 (`01c340a8`) passed all 19 jobs, including server coverage, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards.
+**Latest green:** Verify #179 (`c285f746`) passed all 19 required jobs, including server coverage, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards. Optional promotion was skipped.
 
-**Verify #178 (`3f88d1e`): RED.** `static-checks` found unsupported `DeviceDescriptor.screen`; all four browser profiles and `rehearsal-live` expected the fresh-start guide on direct game URLs instead of the current phase guide. The type usage and assertions are corrected; rerun pending.
+**Verify #178 (`3f88d1e`): RED; fixed in #179.** `static-checks` found unsupported `DeviceDescriptor.screen`; browser and rehearsal tests expected the fresh-start guide on direct game URLs instead of the current phase guide.
 
 **Verify #172:** Resolved by #173. The iPhone browser failure came from the coordinator-console test not restoring its mobile viewport after large-screen checks.
 
 **Verify #174 (`b8392d4`): RED; fixed in #175.** All four browser profiles failed from a stale hidden-screen assertion, private-state loss on resize and the away card preceding the result after navigation.
 
-**R6-1:** Away-and-back changes and tests are in the current change set. Targeted typecheck, lint, format, real-server cold restart, and 8 Pixel/iPhone cases pass locally. R6-2 and R6-3 have not started.
+**R6-1:** Complete; Verify #179 is green. Local typecheck, test typecheck, lint, format, real-server full rehearsal and cold restart, and targeted Pixel/iPhone return tests passed. R6-2 and R6-3 have not started.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 
