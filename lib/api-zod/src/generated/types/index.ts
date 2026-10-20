@@ -37,6 +37,7 @@ export * from './fullViewCoordinatorUndo';
 export * from './fullViewEndRule';
 export * from './fullViewProgress';
 export * from './fullViewPublicAnnouncement';
+export * from './fullViewVoteCircle';
 export * from './gameCommandInput';
 export * from './gameInviteResponse';
 export * from './gameViewResponse';

@@ -47,6 +47,8 @@ export const VIEW_ALLOW_LIST = [
   'votedSeatIds',
   'voteCandidates',
   'ballots',
+  'voteCircle',
+  'ownVoteTargetId',
   'winner',
   'publicAnnouncement',
   'private',
@@ -184,10 +186,17 @@ export function viewFor(
           )
           .sort((left, right) => right.seq - left.seq)[0]?.choice
       : undefined;
+  const voteCircleActive =
+    state.phase === 'VERDICT' &&
+    state.config.roundTable.revealStyle === 'speaker-circle' &&
+    state.voteRevealOrder.length > 0;
+  const voteSpeakerId = voteCircleActive
+    ? (state.voteRevealOrder.find((id) => !state.revealed.includes(id)) ?? null)
+    : null;
   return fullViewSchema.parse({
     id: state.id,
     ...(ownSeatViewer ? { viewerSeatId: ownSeatViewer.id } : {}),
-    canAdvancePhase: rehearsalOrganizer,
+    canAdvancePhase: rehearsalOrganizer && voteSpeakerId === null,
     ...(state.config.basics.gameName
       ? { gameName: state.config.basics.gameName }
       : {}),
@@ -244,6 +253,15 @@ export function viewFor(
         : [],
     voteCandidates: presenter ? [] : state.candidates,
     ballots,
+    ...(!presenter && voteCircleActive
+      ? { voteCircle: { speakerSeatId: voteSpeakerId } }
+      : {}),
+    ...(viewer.kind === 'player' &&
+    own &&
+    voteCircleActive &&
+    state.votes[own.id]
+      ? { ownVoteTargetId: state.votes[own.id] }
+      : {}),
     winner: presenter ? null : state.winner,
     publicAnnouncement,
     publicLog: (state.publicLog ?? [])

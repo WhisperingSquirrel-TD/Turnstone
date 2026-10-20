@@ -88,6 +88,16 @@ export function decide(
     });
     return chosen;
   };
+  const shuffledVoters = (voters: readonly string[]) => {
+    const result = [...new Set(voters)].sort();
+    for (let index = result.length - 1; index > 0; index--) {
+      const other = ctx.random.int(index + 1);
+      if (!Number.isInteger(other) || other < 0 || other > index)
+        throw new Error('Invalid injected random source');
+      [result[index], result[other]] = [result[other]!, result[index]!];
+    }
+    return result;
+  };
   const eligibleTasks = () =>
     (ctx.taskCatalog ?? [])
       .flatMap((item) => {
@@ -158,6 +168,7 @@ export function decide(
   if (
     [
       'SubmitVote',
+      'RevealVote',
       'SubmitShadowChoice',
       'SubmitTaskReport',
       'AcknowledgePrivate',
@@ -167,7 +178,8 @@ export function decide(
     ].includes(cmd.type)
   ) {
     if (ctx.actor.kind !== 'player' || !actingSeat) return error('FORBIDDEN');
-    if (actingSeat.status !== 'alive') return error('SEAT_INACTIVE');
+    if (actingSeat.status !== 'alive' && cmd.type !== 'RevealVote')
+      return error('SEAT_INACTIVE');
   }
   if (
     state.paused &&
@@ -282,15 +294,52 @@ export function decide(
     seatId: string,
     reason: 'departed' | 'banished' | 'murdered',
   ) => {
+    const finalBanishment =
+      state!.phase === 'FINAL_BANISH' ||
+      (state!.phase === 'VERDICT' && state!.voteContext === 'final');
     const publicRole =
       reason === 'departed'
         ? state!.config.players.departureReveal === 'now'
         : reason === 'banished' &&
           (state!.config.roundTable.revealRole === 'always' ||
             (state!.config.roundTable.revealRole === 'not-endgame' &&
-              state!.phase !== 'FINAL_BANISH'));
+              !finalBanishment));
     emit('SeatRemoved', { seatId, reason, publicRole });
     if (!(reason === 'banished' && state!.phase === 'VERDICT')) checkWin();
+  };
+  const nextVoteSpeaker = () => {
+    const current = state;
+    if (!current) return undefined;
+    return current.voteRevealOrder.find(
+      (seatId) => !current.revealed.includes(seatId),
+    );
+  };
+  const finishVoteCircleIfReady = () => {
+    if (
+      !state ||
+      state.phase !== 'VERDICT' ||
+      state.config.roundTable.revealStyle !== 'speaker-circle'
+    )
+      return;
+    while (
+      state.config.rehearsal.enabled &&
+      state.config.rehearsal.botSeatIds.includes(nextVoteSpeaker() ?? '')
+    ) {
+      const seatId = nextVoteSpeaker();
+      if (!seatId) break;
+      emit('VoteRevealed', { seatId });
+    }
+    if (
+      state.voteRevealOrder.length > 0 &&
+      !nextVoteSpeaker() &&
+      state.target &&
+      !(
+        state.publicAnnouncement?.kind === 'verdict' &&
+        state.publicAnnouncement.cycle === state.cycle &&
+        state.publicAnnouncement.seatId === state.target
+      )
+    )
+      remove(state.target, 'banished');
   };
   switch (cmd.type) {
     case 'JoinGame': {
@@ -402,6 +451,20 @@ export function decide(
       if (!state.config.roundTable.changeVote && state.votes[actingSeat!.id])
         return error('VOTE_LOCKED');
       emit('VoteSubmitted', { seatId: actingSeat!.id, target: cmd.target });
+      break;
+    }
+    case 'RevealVote': {
+      if (
+        state.phase !== 'VERDICT' ||
+        state.config.roundTable.revealStyle !== 'speaker-circle'
+      )
+        return error('WRONG_PHASE');
+      const speakerId = nextVoteSpeaker();
+      if (!speakerId) return error('NO_VOTE_TO_REVEAL');
+      if (ctx.actor.kind !== 'player' || actingSeat?.id !== speakerId)
+        return error('NOT_VOTE_SPEAKER');
+      emit('VoteRevealed', { seatId: speakerId });
+      finishVoteCircleIfReady();
       break;
     }
     case 'SubmitShadowChoice':
@@ -580,6 +643,9 @@ export function decide(
         break;
       }
       if (state.phase === 'VOTE' || state.phase === 'FINAL_BANISH') {
+        const voteContext = state.phase === 'FINAL_BANISH' ? 'final' : 'cycle';
+        const circleEnabled =
+          state.config.roundTable.revealStyle === 'speaker-circle';
         const candidates = alive(state)
           .filter(
             (s) =>
@@ -601,7 +667,13 @@ export function decide(
           break;
         }
         if (tied.length > 1 && !state.revote) {
-          emit('VoteClosed', { target: null, revote: true, candidates: tied });
+          emit('VoteClosed', {
+            target: null,
+            revote: true,
+            candidates: tied,
+            context: voteContext,
+            revealOrder: [],
+          });
           enter(state.phase);
           break;
         }
@@ -618,20 +690,56 @@ export function decide(
                     : 'cycle-vote-tie-break',
                 )
               : tied[0]!;
-        emit('VoteClosed', { target, revote: false, candidates: [] });
+        const revealOrder =
+          circleEnabled && Object.keys(state.votes).length > 0
+            ? shuffledVoters(Object.keys(state.votes))
+            : [];
+        emit('VoteClosed', {
+          target,
+          revote: false,
+          candidates: [],
+          context: voteContext,
+          revealOrder,
+        });
         if (state!.phase === 'FINAL_BANISH') {
-          if (target) remove(target, 'banished');
-          if (!finished()) enter('FINAL_VOTE');
-        } else enter('VERDICT');
+          if (revealOrder.length) {
+            enter('VERDICT');
+            finishVoteCircleIfReady();
+          } else {
+            if (target) remove(target, 'banished');
+            if (!finished()) enter('FINAL_VOTE');
+          }
+        } else {
+          enter('VERDICT');
+          finishVoteCircleIfReady();
+        }
         break;
       }
       if (state.phase === 'VERDICT') {
+        if (
+          state.config.roundTable.revealStyle === 'speaker-circle' &&
+          nextVoteSpeaker()
+        ) {
+          if (ctx.actor.kind !== 'system')
+            return error('VOTE_CIRCLE_INCOMPLETE');
+          while (nextVoteSpeaker()) {
+            const seatId = nextVoteSpeaker();
+            if (!seatId) break;
+            emit('VoteRevealed', { seatId });
+          }
+          if (state.target) remove(state.target, 'banished');
+          break;
+        }
         const verdictAlreadyShown =
           state.publicAnnouncement?.kind === 'verdict' &&
           state.publicAnnouncement.cycle === state.cycle;
         if (verdictAlreadyShown) {
           checkWin();
           if (finished()) break;
+          if (state.voteContext === 'final') {
+            enter('FINAL_VOTE');
+            break;
+          }
         } else {
           const remaining = Object.keys(state.votes)
             .filter((id) => !state!.revealed.includes(id))

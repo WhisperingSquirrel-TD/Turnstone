@@ -12,6 +12,7 @@ import type { FullViewCoordinatorUndo } from './fullViewCoordinatorUndo';
 import type { FullViewEndRule } from './fullViewEndRule';
 import type { FullViewProgress } from './fullViewProgress';
 import type { FullViewPublicAnnouncement } from './fullViewPublicAnnouncement';
+import type { FullViewVoteCircle } from './fullViewVoteCircle';
 import type { Phase } from './phase';
 import type { PrivateView } from './privateView';
 import type { PublicLogEntry } from './publicLogEntry';
@@ -84,6 +85,12 @@ export interface FullView {
      */
   voteCandidates: string[];
   ballots: FullViewBallots;
+  voteCircle?: FullViewVoteCircle;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  ownVoteTargetId?: string;
   winner: Role | null;
   publicAnnouncement: FullViewPublicAnnouncement;
   private: PrivateView | null;

@@ -937,10 +937,39 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       }
       if (phase === 'VERDICT') {
         const revealRows = page.getByTestId('list-vote-reveal').locator('li');
+        const votingCircle = page.getByTestId('voting-circle');
+        if ((await votingCircle.count()) > 0 && seatStatus === 'alive') {
+          const voteCard = page.getByTestId('vote-circle-card');
+          const revealButton = page.getByRole('button', {
+            name: 'I’ve said who I voted for and why',
+            exact: true,
+          });
+          await expect(voteCard).toContainText('You voted for');
+          await expect(revealButton).toBeVisible();
+
+          const originalViewport = page.viewportSize();
+          const cardText = await voteCard.innerText();
+          if (originalViewport) {
+            await page.setViewportSize({ width: 390, height: 844 });
+            await expect(voteCard).toBeVisible();
+            await expect(voteCard).toHaveText(cardText);
+            await page.setViewportSize({ width: 844, height: 390 });
+            await expect(voteCard).toBeVisible();
+            await expect(voteCard).toHaveText(cardText);
+            await page.setViewportSize(originalViewport);
+          }
+
+          const revealedBefore = await revealRows.count();
+          await revealButton.click();
+          await expect
+            .poll(() => revealRows.count(), { timeout: 10_000 })
+            .toBeGreaterThan(revealedBefore);
+          sawVoteRevealInCurrentVerdict = true;
+          sawVoteReveal = true;
+        }
         const revealedCount = await revealRows.count();
         expect(revealedCount).toBeGreaterThanOrEqual(previousVerdictRowCount);
         if (revealedCount > previousVerdictRowCount) {
-          expect(revealedCount).toBe(previousVerdictRowCount + 1);
           sawVoteRevealInCurrentVerdict = true;
           sawVoteReveal = true;
         }

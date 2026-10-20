@@ -66,6 +66,7 @@ import { VerdictScreen } from './VerdictScreen';
 import { ShieldCard } from './ShieldCard';
 import { PhaseProgressStatus } from './PhaseProgressStatus';
 import { VoteProgressSummary } from './VoteProgressSummary';
+import { VotingCircleScreen } from './VotingCircleScreen';
 import { voteCompletionMessage } from './vote-progress';
 import { CoordinatorTakeoverPanel } from './CoordinatorTakeoverPanel';
 import { apiUrl } from './api-url';
@@ -1905,6 +1906,21 @@ function PlayerGame() {
     }
   }
 
+  async function revealVote() {
+    if (!token || command.isPending) return;
+    setCommandMessage('');
+    try {
+      await command.mutateAsync({
+        id,
+        data: { type: 'RevealVote', idempotencyKey: idempotencyKey() },
+      });
+      command.reset();
+    } catch {
+      command.reset();
+      setCommandMessage(en.game.voteRevealFailed);
+    }
+  }
+
   async function moveOn() {
     if (!full?.canAdvancePhase || command.isPending) return;
     const currentPhase = full.phase;
@@ -2054,6 +2070,7 @@ function PlayerGame() {
 
   const showOrganiserBar = Boolean(
     full?.canAdvancePhase &&
+    !(full.voteCircle && full.voteCircle.speakerSeatId !== null) &&
     !isResuming &&
     activeGame &&
     !showShieldCard &&
@@ -2346,6 +2363,23 @@ function PlayerGame() {
                   </p>
                 )}
               </section>
+            )}
+            {!inPrivateMoment && full.voteCircle && (
+              <VotingCircleScreen
+                speakerSeatId={full.voteCircle.speakerSeatId}
+                viewerSeatId={full.viewerSeatId ?? null}
+                ownVoteTargetName={
+                  full.ownVoteTargetId
+                    ? (full.seats.find(
+                        (seat) => seat.id === full.ownVoteTargetId,
+                      )?.name ?? null)
+                    : null
+                }
+                ballots={full.ballots}
+                seats={full.seats}
+                onReveal={() => void revealVote()}
+                isPending={command.isPending}
+              />
             )}
 
             {!inPrivateMoment &&

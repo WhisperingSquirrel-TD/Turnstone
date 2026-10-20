@@ -71,6 +71,8 @@ export type State = {
   readySeats?: string[];
   votes: Record<string, string>;
   revealed: string[];
+  voteRevealOrder: string[];
+  voteContext: 'cycle' | 'final';
   target: string | null;
   revote: boolean;
   candidates: string[];

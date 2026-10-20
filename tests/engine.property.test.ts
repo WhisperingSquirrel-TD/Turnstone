@@ -100,6 +100,103 @@ it('keeps every visitor projection limited to join-screen data, even after ballo
   );
 });
 
+it('never exposes an unrevealed in-room ballot outside its owner phone', () => {
+  fc.assert(
+    fc.property(fc.integer({ min: 5, max: 20 }), (count) => {
+      const game = fixture(count, {
+        roundTable: { revealStyle: 'speaker-circle' },
+      });
+      command(game, { type: 'StartGame' });
+      advance(game, 'VOTE');
+      for (const [index, seat] of game.state.seats.entries()) {
+        const target =
+          index === 0 ? game.state.seats[1]! : game.state.seats[0]!;
+        command(game, { type: 'SubmitVote', target: target.id }, true, {
+          kind: 'player',
+          seatId: seat.id,
+        });
+      }
+
+      const votingView = viewFor({ kind: 'presenter' }, game.state);
+      expect(votingView.ballots).toEqual({});
+      expect(votingView).not.toHaveProperty('voteCircle');
+      for (const seat of game.state.seats) {
+        const ownView = viewFor(
+          { kind: 'player', seatId: seat.id },
+          game.state,
+        ) as unknown as { ballots: Record<string, string> };
+        expect(ownView.ballots).toEqual({});
+      }
+
+      advance(game, 'VERDICT');
+      const circleView = viewFor(
+        { kind: 'player', seatId: game.state.seats[0]!.id },
+        game.state,
+      ) as unknown as {
+        ballots: Record<string, string>;
+        voteCircle?: { speakerSeatId: string | null };
+      };
+      const speakerId = circleView.voteCircle?.speakerSeatId;
+      expect(speakerId).toBeTruthy();
+      expect(circleView.ballots).toEqual({});
+      for (const seat of game.state.seats) {
+        const playerView = viewFor(
+          { kind: 'player', seatId: seat.id },
+          game.state,
+        ) as unknown as {
+          ballots: Record<string, string>;
+          voteCircle?: { speakerSeatId: string | null };
+        };
+        expect(playerView.ballots).toEqual({});
+        expect(playerView.voteCircle?.speakerSeatId).toBe(speakerId);
+      }
+      const presenterCircleView = viewFor({ kind: 'presenter' }, game.state);
+      expect(presenterCircleView.ballots).toEqual({});
+      expect(presenterCircleView).not.toHaveProperty('voteCircle');
+      expect(presenterCircleView).not.toHaveProperty('ownVoteTargetId');
+      command(game, { type: 'RevealVote' }, true, {
+        kind: 'player',
+        seatId: speakerId!,
+      });
+
+      const revealed = Object.fromEntries([
+        [speakerId!, game.state.votes[speakerId!]!],
+      ]);
+      const viewers = [
+        ...game.state.seats.map((seat) => ({
+          kind: 'player' as const,
+          seatId: seat.id,
+        })),
+        { kind: 'coordinator' as const },
+        { kind: 'presenter' as const },
+        { kind: 'admin' as const },
+      ];
+      for (const viewer of viewers) {
+        const projected = viewFor(viewer, game.state) as unknown as {
+          ballots: Record<string, string>;
+          ownVoteTargetId?: string;
+          voteCircle?: { speakerSeatId: string | null };
+        };
+        expect(projected.ballots).toEqual(
+          viewer.kind === 'presenter' ? {} : revealed,
+        );
+        if (viewer.kind === 'presenter') {
+          expect(projected).not.toHaveProperty('voteCircle');
+          expect(projected).not.toHaveProperty('ownVoteTargetId');
+        }
+        if (viewer.kind === 'player') {
+          expect(projected.ownVoteTargetId).toBe(
+            game.state.votes[viewer.seatId],
+          );
+        } else {
+          expect(projected).not.toHaveProperty('ownVoteTargetId');
+        }
+      }
+    }),
+    { numRuns: 15, seed: 20261020 },
+  );
+});
+
 it('invariants reject corrupted role ownership and negative pots', () => {
   const game = fixture(5);
   command(game, { type: 'StartGame' });

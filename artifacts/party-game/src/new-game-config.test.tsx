@@ -34,4 +34,27 @@ describe('buildNewGameConfig', () => {
 
     expect(config.basics.coCoordinators).toBe(2);
   });
+
+  it('defaults in-room games to the speaker-driven voting circle', () => {
+    const config = buildNewGameConfig({
+      gameName: 'Friday game',
+      playerCount: 8,
+      coCoordinatorCount: 0,
+      presenterEnabled: false,
+    });
+
+    expect(config.roundTable.revealStyle).toBe('speaker-circle');
+  });
+
+  it('keeps automatic reveal available for video-call and multi-day games', () => {
+    const config = buildNewGameConfig({
+      gameName: 'Friday game',
+      playerCount: 8,
+      coCoordinatorCount: 0,
+      presenterEnabled: false,
+      revealStyle: 'one-by-one',
+    });
+
+    expect(config.roundTable.revealStyle).toBe('one-by-one');
+  });
 });

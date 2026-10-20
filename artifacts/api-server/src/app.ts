@@ -759,7 +759,7 @@ export function createApp(
           debateMinutes: speed === 'fast' ? 2 : 15,
           voteMinutes: speed === 'fast' ? 1 : 3,
           tieRule: 'revote-random',
-          revealStyle: 'one-by-one',
+          revealStyle: 'speaker-circle',
           revealRole: 'always',
         },
         missions: { enabled: false, shields: 'off' },

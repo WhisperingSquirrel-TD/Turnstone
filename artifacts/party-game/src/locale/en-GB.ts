@@ -418,6 +418,12 @@ export const en = {
     createOrganiserHeading: 'Your name and PIN',
     organiserNameLabel: 'Your first name',
     organiserPinLabel: 'Choose a 4-digit PIN',
+    votingStyleLabel: 'How should votes be revealed?',
+    speakerCircleLabel: 'In-room voting circle (recommended)',
+    speakerCircleDescription:
+      'Each player says who they voted for and why, in a random order.',
+    automaticRevealLabel: 'Automatic reveal',
+    automaticRevealDescription: 'Use this for video-call or multi-day games.',
     presenterToggleLabel: 'Use an optional TV presenter screen',
     presenterToggleDescription:
       'Shows public updates on a shared display. Everyone can still use their own phone.',
@@ -546,6 +552,19 @@ export const en = {
     voteResults: 'Votes revealed',
     voteTally: (count: number, target: string) =>
       `${count} ${count === 1 ? 'vote' : 'votes'} for ${target}.`,
+    voteCircleHeading: 'The voting circle',
+    voteCircleInstruction: 'Say who you voted for and why out loud.',
+    voteCircleCardLabel: 'You voted for',
+    voteCircleYourTurn:
+      'It’s your turn. Say who you voted for and why, then reveal your card.',
+    voteCircleWaitingFor: (name: string) =>
+      `${name} is speaking now. Listen to their reason.`,
+    voteCircleEveryoneDone: 'Everyone has shared their vote.',
+    voteCircleRevealButton: 'I’ve said who I voted for and why',
+    voteCircleTally: 'Tally so far',
+    voteCircleNoVotesYet: 'No votes have been revealed yet.',
+    voteRevealFailed:
+      'Your vote could not be revealed. Check your connection and try again.',
     voteReveal: (voter: string, target: string) =>
       `${voter} voted to banish ${target}.`,
     resultTraitors: 'The Traitors win.',

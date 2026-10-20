@@ -102,7 +102,7 @@ export const gameConfigSchema = z
         voteMinutes: minutes(3, 1, 10),
         changeVote: z.boolean().default(true),
         revealStyle: z
-          .enum(['one-by-one', 'all', 'anonymous'])
+          .enum(['speaker-circle', 'one-by-one', 'all', 'anonymous'])
           .default('one-by-one'),
         tieRule: z
           .enum(['revote-random', 'revote-none'])

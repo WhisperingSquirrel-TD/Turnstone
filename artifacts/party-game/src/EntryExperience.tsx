@@ -141,6 +141,11 @@ export interface EntryExperienceCopy {
   createOrganiserHeading: string;
   organiserNameLabel: string;
   organiserPinLabel: string;
+  votingStyleLabel: string;
+  speakerCircleLabel: string;
+  speakerCircleDescription: string;
+  automaticRevealLabel: string;
+  automaticRevealDescription: string;
   presenterToggleLabel: string;
   presenterToggleDescription: string;
   createButton: string;
@@ -222,6 +227,7 @@ export interface EntryExperienceProps {
     organiserName: string;
     organiserPin: string;
     presenterEnabled: boolean;
+    revealStyle: 'speaker-circle' | 'one-by-one';
   }) => void | Promise<void>;
   onApproveJoiner: (joinerId: string) => void | Promise<void>;
   onStartGame: () => void | Promise<void>;
@@ -275,6 +281,9 @@ export function EntryExperience({
   const [localError, setLocalError] = useState('');
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [presenterEnabled, setPresenterEnabled] = useState(false);
+  const [revealStyle, setRevealStyle] = useState<
+    'speaker-circle' | 'one-by-one'
+  >('speaker-circle');
   const [duplicateName, setDuplicateName] = useState<string | null>(null);
   const [recoveringSeat, setRecoveringSeat] = useState(false);
   const codeRefs = useRef<Array<HTMLInputElement | null>>([]);
@@ -449,9 +458,11 @@ export function EntryExperience({
         organiserName,
         organiserPin,
         presenterEnabled,
+        revealStyle,
       });
       onInputChange('organiserPin', '');
       setPresenterEnabled(false);
+      setRevealStyle('speaker-circle');
       onClearSensitiveValues();
       moveTo('lobby');
     } catch {
@@ -1138,6 +1149,45 @@ export function EntryExperience({
                   </span>
                 </span>
               </label>
+              <fieldset className="entry-voting-style">
+                <legend className="entry-label">{copy.votingStyleLabel}</legend>
+                <label className="entry-presenter-option">
+                  <input
+                    data-testid="radio-vote-circle"
+                    type="radio"
+                    name="vote-reveal-style"
+                    value="speaker-circle"
+                    checked={revealStyle === 'speaker-circle'}
+                    onChange={() => setRevealStyle('speaker-circle')}
+                  />
+                  <span>
+                    <span className="entry-label">
+                      {copy.speakerCircleLabel}
+                    </span>
+                    <span className="entry-help">
+                      {copy.speakerCircleDescription}
+                    </span>
+                  </span>
+                </label>
+                <label className="entry-presenter-option">
+                  <input
+                    data-testid="radio-vote-automatic"
+                    type="radio"
+                    name="vote-reveal-style"
+                    value="one-by-one"
+                    checked={revealStyle === 'one-by-one'}
+                    onChange={() => setRevealStyle('one-by-one')}
+                  />
+                  <span>
+                    <span className="entry-label">
+                      {copy.automaticRevealLabel}
+                    </span>
+                    <span className="entry-help">
+                      {copy.automaticRevealDescription}
+                    </span>
+                  </span>
+                </label>
+              </fieldset>
               <button
                 className="entry-primary-action"
                 data-testid="button-create-submit"

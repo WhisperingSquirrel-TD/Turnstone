@@ -623,6 +623,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     organiserName: string;
     organiserPin: string;
     presenterEnabled: boolean;
+    revealStyle: 'speaker-circle' | 'one-by-one';
   }): Promise<void> {
     setErrors({});
     setBusy((current) => ({ ...current, create: true }));
@@ -634,6 +635,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         playerCount: data.playerCount,
         coCoordinatorCount: data.coCoordinatorCount,
         presenterEnabled: data.presenterEnabled,
+        revealStyle: data.revealStyle,
       });
       const command = commandSchema.parse({
         type: 'CreateGame',

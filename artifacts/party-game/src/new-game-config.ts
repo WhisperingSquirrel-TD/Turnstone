@@ -5,6 +5,7 @@ export interface NewGameConfigInput {
   playerCount: number;
   coCoordinatorCount: number;
   presenterEnabled: boolean;
+  revealStyle?: 'speaker-circle' | 'one-by-one';
 }
 
 export function buildNewGameConfig(input: NewGameConfigInput) {
@@ -16,5 +17,8 @@ export function buildNewGameConfig(input: NewGameConfigInput) {
     },
     players: { count: input.playerCount },
     presenter: { enabled: input.presenterEnabled },
+    roundTable: {
+      revealStyle: input.revealStyle ?? 'speaker-circle',
+    },
   });
 }

@@ -2108,7 +2108,10 @@ test('mobile cold browser restart restores the seat and current vote screen from
 
   await originPage.goto('/');
   const origin = new URL(originPage.url()).origin;
-  const installRoutes = async (context: BrowserContext) => {
+  const installRoutes = async (
+    context: BrowserContext,
+    onAuthenticatedView?: () => void,
+  ) => {
     await context.route('**/api/csrf', (route) =>
       route.fulfill({
         status: 200,
@@ -2118,13 +2121,31 @@ test('mobile cold browser restart restores the seat and current vote screen from
         json: { csrfToken: 'test-csrf' },
       }),
     );
-    await context.route(`**/api/games/${gameId}/view`, (route) => {
+    await context.route(`**/api/games/${gameId}/view**`, async (route) => {
+      const cookieHeader = (await route.request().allHeaders()).cookie ?? '';
+      if (
+        !cookieHeader
+          .split(';')
+          .some(
+            (cookie) =>
+              cookie.trim() === `${seatCookieName}=opaque-test-seat-token`,
+          )
+      ) {
+        return route.fulfill({
+          status: 401,
+          json: { message: 'The saved seat session is required.' },
+        });
+      }
+      onAuthenticatedView?.();
       return route.fulfill({
         json: { serverNow: Date.now(), version: view.version, view },
       });
     });
   };
-  await installRoutes(originPage.context());
+  let initialViewUsedSavedToken = false;
+  await installRoutes(originPage.context(), () => {
+    initialViewUsedSavedToken = true;
+  });
   await originPage.evaluate(async () => {
     const response = await fetch('/api/csrf', { credentials: 'include' });
     if (!response.ok) throw new Error('Seat cookie seeding failed.');
@@ -2136,6 +2157,7 @@ test('mobile cold browser restart restores the seat and current vote screen from
   ).toBe(true);
   const gameUrl = new URL(`/game/${gameId}`, origin).toString();
   await originPage.goto(gameUrl);
+  expect(initialViewUsedSavedToken).toBe(true);
   await expect(originPage.getByTestId('player-game')).toHaveAttribute(
     'data-phase',
     'VOTE',
@@ -2164,13 +2186,16 @@ test('mobile cold browser restart restores the seat and current vote screen from
     storageState: savedState,
   });
   try {
-    await installRoutes(coldContext);
+    const coldPage = await coldContext.newPage();
+    let coldViewUsedSavedToken = false;
+    await installRoutes(coldContext, () => {
+      coldViewUsedSavedToken = true;
+    });
     expect(
       (await coldContext.cookies(origin)).some(
         (cookie) => cookie.name === seatCookieName,
       ),
     ).toBe(true);
-    const coldPage = await coldContext.newPage();
     await coldPage.goto(gameUrl);
     await expect(coldPage.getByTestId('player-game')).toHaveAttribute(
       'data-phase',
@@ -2181,6 +2206,7 @@ test('mobile cold browser restart restores the seat and current vote screen from
       coldPage.getByText('Who do you vote to banish?', { exact: true }),
     ).toBeVisible();
     await expect(coldPage.getByTestId('private-choice-list')).toBeVisible();
+    expect(coldViewUsedSavedToken).toBe(true);
     expect(await browserStorageText(coldPage)).not.toMatch(
       /seat-jamie|Faithful|Traitor/i,
     );

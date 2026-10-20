@@ -442,6 +442,92 @@ describe('Milestone 1 deterministic engine', () => {
     expect(view.progress).toEqual({ done: 4, total: 6 });
     expect(view.ballots).toEqual({});
   });
+  it('reveals in-room ballots only when each randomly chosen speaker shares them', () => {
+    const game = fixture(8, {
+      roundTable: { revealStyle: 'speaker-circle' },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'VOTE');
+    const preferredTarget = game.state.seats[0]!.id;
+    const targets = Object.fromEntries(
+      game.state.seats.map((seat) => [
+        seat.id,
+        seat.id === preferredTarget ? game.state.seats[1]!.id : preferredTarget,
+      ]),
+    );
+    for (const seat of game.state.seats)
+      command(game, { type: 'SubmitVote', target: targets[seat.id] }, true, {
+        kind: 'player',
+        seatId: seat.id,
+      });
+
+    const beforeCircle = viewFor({ kind: 'presenter' }, game.state);
+    expect(beforeCircle.ballots).toEqual({});
+    expect(beforeCircle).not.toHaveProperty('voteCircle');
+
+    advance(game, 'VERDICT');
+    expect(
+      command(game, { type: 'AdvancePhase' }, false, {
+        kind: 'coordinator',
+      }),
+    ).toMatchObject({ ok: false, code: 'VOTE_CIRCLE_INCOMPLETE' });
+    const firstSpeakerView = viewFor(
+      { kind: 'player', seatId: game.state.seats[0]!.id },
+      game.state,
+    ) as
+      | typeof beforeCircle
+      | (typeof beforeCircle & {
+          voteCircle?: { speakerSeatId: string | null };
+        });
+    const speakerId = firstSpeakerView.voteCircle?.speakerSeatId;
+    expect(speakerId).toBeTruthy();
+    expect(firstSpeakerView.ballots).toEqual({});
+    expect(game.state.voteRevealOrder).toEqual(
+      expect.arrayContaining(game.state.seats.map((seat) => seat.id)),
+    );
+    expect(game.state.voteRevealOrder).not.toEqual(
+      game.state.seats.map((seat) => seat.id),
+    );
+
+    const speakerVote = viewFor(
+      { kind: 'player', seatId: speakerId! },
+      game.state,
+    ) as typeof beforeCircle & { ownVoteTargetId?: string };
+    expect(speakerVote.ownVoteTargetId).toBe(targets[speakerId!]);
+    expect(viewFor({ kind: 'presenter' }, game.state)).not.toHaveProperty(
+      'ownVoteTargetId',
+    );
+
+    const wrongSpeaker = game.state.seats.find(
+      (seat) => seat.id !== speakerId,
+    )!;
+    expect(
+      command(game, { type: 'RevealVote' }, false, {
+        kind: 'player',
+        seatId: wrongSpeaker.id,
+      }),
+    ).toMatchObject({ ok: false, code: 'NOT_VOTE_SPEAKER' });
+    command(game, { type: 'RevealVote' }, true, {
+      kind: 'player',
+      seatId: speakerId!,
+    });
+
+    const publicAfterFirstReveal = viewFor(
+      { kind: 'player', seatId: game.state.seats[0]!.id },
+      game.state,
+    ) as typeof beforeCircle & {
+      voteCircle?: { speakerSeatId: string | null };
+    };
+    expect(publicAfterFirstReveal.ballots).toEqual({
+      [speakerId!]: targets[speakerId!],
+    });
+    const presenterAfterReveal = viewFor({ kind: 'presenter' }, game.state);
+    expect(presenterAfterReveal.ballots).toEqual({});
+    expect(presenterAfterReveal).not.toHaveProperty('voteCircle');
+    expect(publicAfterFirstReveal.voteCircle?.speakerSeatId).not.toBe(
+      speakerId,
+    );
+  });
   it('publishes anonymous tallies without publishing voter identifiers', () => {
     const game = fixture(15, {
       roundTable: { revealStyle: 'anonymous' },

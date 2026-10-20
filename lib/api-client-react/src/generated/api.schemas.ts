@@ -501,6 +501,15 @@ export type FullViewProgress = {
 
 export type FullViewBallots = {[key: string]: string};
 
+export type FullViewVoteCircle = {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     * @nullable
+     */
+  speakerSeatId: string | null;
+};
+
 export type FullViewPublicAnnouncement = {
   kind: 'dawn';
   /** @minimum 0 */
@@ -601,6 +610,12 @@ export interface FullView {
      */
   voteCandidates: string[];
   ballots: FullViewBallots;
+  voteCircle?: FullViewVoteCircle;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  ownVoteTargetId?: string;
   winner: Role | null;
   publicAnnouncement: FullViewPublicAnnouncement;
   private: PrivateView | null;

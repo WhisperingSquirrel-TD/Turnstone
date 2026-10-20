@@ -42,6 +42,7 @@ export const commandSchema = z.union([
   command('AcknowledgePrivate', { ready: z.boolean().optional() }),
   command('RequestRedeal'),
   command('SubmitVote', { target: id }),
+  command('RevealVote'),
   command('SubmitShadowChoice', {
     choice: id,
     slot: z.union([z.literal(1), z.literal(2)]).optional(),
@@ -116,6 +117,8 @@ export const eventSchema = z.discriminatedUnion('type', [
     target: id.nullable(),
     revote: z.boolean(),
     candidates: z.array(id),
+    context: z.enum(['cycle', 'final']).optional(),
+    revealOrder: z.array(id).max(40).optional(),
   }),
   event('RandomChoiceRecorded', {
     purpose: z.enum([
@@ -371,6 +374,8 @@ export const fullViewSchema = z
     votedSeatIds: z.array(id).max(40),
     voteCandidates: z.array(id),
     ballots: z.record(id),
+    voteCircle: z.object({ speakerSeatId: id.nullable() }).strict().optional(),
+    ownVoteTargetId: id.optional(),
     winner: roleSchema.nullable(),
     publicAnnouncement: z
       .discriminatedUnion('kind', [

@@ -51,6 +51,7 @@ Thumbs.db
 .local/
 
 # User-supplied review and content attachments kept locally, not used by the build
+/attached_assets/.cp1-originals-v2.1/
 /attached_assets/Pasted-HOSTING-DECISION-owner-approved-14-Oct-2026-Replaces-SP_1791986830881.txt
 /attached_assets/Pasted-HOSTING-DECISION-owner-approved-14-Oct-2026-Replaces-SP_1791986835746.txt
 /attached_assets/Pasted-HOSTING-DECISION-owner-approved-14-Oct-2026-Replaces-SP_1791986839011.txt

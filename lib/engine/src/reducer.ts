@@ -59,6 +59,8 @@ export function evolve(previous: State | null, input: unknown): State {
       readySeats: [],
       votes: {},
       revealed: [],
+      voteRevealOrder: [],
+      voteContext: 'cycle',
       target: null,
       revote: false,
       candidates: [],
@@ -213,13 +215,24 @@ export function evolve(previous: State | null, input: unknown): State {
       state.votes = { ...previous.votes, [event.seatId]: event.target };
       break;
     case 'VoteRevealed':
-      if (!previous.revealed.includes(event.seatId))
+      if (!previous.revealed.includes(event.seatId)) {
+        const expected = previous.voteRevealOrder.find(
+          (seatId) => !previous.revealed.includes(seatId),
+        );
+        if (previous.voteRevealOrder.length && expected !== event.seatId)
+          throw new Error('Vote reveal order is invalid');
         state.revealed = [...previous.revealed, event.seatId];
+      }
       break;
     case 'VoteClosed':
       state.target = event.target;
       state.revote = event.revote;
       state.candidates = event.candidates;
+      state.voteRevealOrder = event.revealOrder ?? [];
+      state.voteContext =
+        event.context ??
+        (previous.phase === 'FINAL_BANISH' ? 'final' : 'cycle');
+      state.revealed = [];
       break;
     case 'VoteSkipped':
       if (previous.phase !== 'VOTE')
@@ -551,15 +564,31 @@ export function replayFrom(
 }
 
 function normalizeSnapshot(snapshot: State): State {
-  const shadowPicks = (
-    snapshot as State & {
-      shadowPicks?: unknown;
-    }
-  ).shadowPicks;
-  if (shadowPicks === undefined) return { ...snapshot, shadowPicks: [] };
-  if (!Array.isArray(shadowPicks))
+  const legacy = snapshot as State & {
+    shadowPicks?: unknown;
+    voteRevealOrder?: unknown;
+    voteContext?: unknown;
+  };
+  if (legacy.shadowPicks !== undefined && !Array.isArray(legacy.shadowPicks))
     throw new Error('Stored snapshot shadow picks are invalid');
-  return snapshot;
+  if (
+    legacy.voteRevealOrder !== undefined &&
+    !Array.isArray(legacy.voteRevealOrder)
+  )
+    throw new Error('Stored snapshot vote reveal order is invalid');
+  if (
+    legacy.voteContext !== undefined &&
+    legacy.voteContext !== 'cycle' &&
+    legacy.voteContext !== 'final'
+  )
+    throw new Error('Stored snapshot vote context is invalid');
+  return {
+    ...snapshot,
+    shadowPicks: (legacy.shadowPicks as State['shadowPicks'] | undefined) ?? [],
+    voteRevealOrder: (legacy.voteRevealOrder as string[] | undefined) ?? [],
+    voteContext:
+      (legacy.voteContext as State['voteContext'] | undefined) ?? 'cycle',
+  };
 }
 
 export function replay(events: readonly Event[]): State {
