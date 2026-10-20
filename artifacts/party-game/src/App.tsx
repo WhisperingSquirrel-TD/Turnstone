@@ -56,6 +56,7 @@ import { NightChoiceScreen } from './NightChoiceScreen';
 import { GameStepAnnouncement } from './GameStepAnnouncement';
 import { buildNightChoiceStatusLines } from './night-choice-status';
 import { orderChoiceOptions } from './choice-order';
+import { WhileAwayCard } from './WhileAwayCard';
 import {
   privateStepKeyFor,
   shouldPreserveShadowChoice,
@@ -720,6 +721,51 @@ function explanationKeyForPhase(
   }
 }
 
+function publicLogMessage(entry: FullView['publicLog'][number]): string {
+  if (entry.action === 'device_recovered')
+    return en.game.publicLogDeviceRecovered(entry.name);
+  if (entry.action === 'seat_pin_reset')
+    return en.game.publicLogPinReset(entry.name);
+  if (entry.action === 'dawn')
+    return en.game.publicLogDawn(entry.victims.map((victim) => victim.name));
+  if (entry.action === 'no_votes') return en.game.noVotesAnnouncement;
+  if (entry.action === 'banishment')
+    return en.game.publicLogBanishment(entry.seat.name);
+  if (entry.action === 'seat_departed')
+    return en.game.publicLogSeatDeparted(entry.seat.name);
+  if (entry.action === 'schedule_shift')
+    return en.game.publicLogScheduleShift(entry.minutes);
+  if (entry.action === 'coordinator_undo')
+    return en.game.publicLogCoordinatorUndo;
+  return en.game.publicLogFinished(entry.winner);
+}
+
+function publicUpdatesSince(
+  publicLog: FullView['publicLog'],
+  lastPublicSeq: number | null,
+): string[] {
+  if (lastPublicSeq === null) return [];
+  return publicLog
+    .filter((entry) => entry.seq > lastPublicSeq)
+    .sort((first, second) => first.seq - second.seq)
+    .map(publicLogMessage);
+}
+
+function awayCursorStorageKey(gameId: string): string {
+  return `oathstone-away-seq:${gameId}`;
+}
+
+function readAwayCursor(gameId: string): number | null {
+  if (!gameId || typeof window === 'undefined') return null;
+  try {
+    const saved = window.localStorage.getItem(awayCursorStorageKey(gameId));
+    const parsed = saved === null ? Number.NaN : Number(saved);
+    return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function PlayerGame() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -747,6 +793,13 @@ function PlayerGame() {
   const [wakeLockFallback, setWakeLockFallback] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<GameConnectionState>('connecting');
+  const [resumeStatus, setResumeStatus] = useState<
+    'idle' | 'syncing' | 'failed'
+  >(() => (readAwayCursor(id) === null ? 'idle' : 'syncing'));
+  const [whileAwayUpdates, setWhileAwayUpdates] = useState<string[] | null>(
+    null,
+  );
+  const isResuming = resumeStatus !== 'idle' || readAwayCursor(id) !== null;
   const [fullscreenMessage, setFullscreenMessage] = useState('');
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -769,6 +822,9 @@ function PlayerGame() {
   const focusTime = useRef(0);
   const serverClockOffsetMs = useRef(0);
   const ignoreSyntheticClick = useRef(false);
+  const awaySnapshot = useRef<{ lastPublicSeq: number | null } | null>(null);
+  const lastPublicSeq = useRef(0);
+  const resyncPromise = useRef<Promise<void> | null>(null);
   const request = useMemo(() => requestHeaders(token), [token]);
   const gameQuery = useGetGameView(id, {
     query: { enabled: Boolean(id), queryKey: getGetGameViewQueryKey(id) },
@@ -791,6 +847,45 @@ function PlayerGame() {
       );
     }
   }, [response?.serverNow]);
+  useEffect(() => {
+    const savedSequence = readAwayCursor(id);
+    awaySnapshot.current =
+      savedSequence === null ? null : { lastPublicSeq: savedSequence };
+    lastPublicSeq.current = 0;
+    resyncPromise.current = null;
+    setResumeStatus(savedSequence === null ? 'idle' : 'syncing');
+    setWhileAwayUpdates(null);
+  }, [id]);
+  useEffect(() => {
+    if (!full) return;
+    const latestSeq = full.publicLog.reduce(
+      (maximum, entry) => Math.max(maximum, entry.seq),
+      0,
+    );
+    lastPublicSeq.current = Math.max(lastPublicSeq.current, latestSeq);
+    if (awaySnapshot.current?.lastPublicSeq === null) {
+      awaySnapshot.current.lastPublicSeq = latestSeq;
+      try {
+        window.localStorage.setItem(
+          awayCursorStorageKey(id),
+          String(latestSeq),
+        );
+      } catch {
+        // Returning to a fresh server view still works when storage is blocked.
+      }
+    }
+    if (awaySnapshot.current && !isResuming) {
+      setWhileAwayUpdates(
+        publicUpdatesSince(full.publicLog, awaySnapshot.current.lastPublicSeq),
+      );
+      awaySnapshot.current = null;
+      try {
+        window.localStorage.removeItem(awayCursorStorageKey(id));
+      } catch {
+        // The in-memory away card remains available when storage is blocked.
+      }
+    }
+  }, [full, id, isResuming]);
   const explanationKey = full
     ? explanationKeyForPhase(full.phase, notesOpen)
     : null;
@@ -1011,6 +1106,18 @@ function PlayerGame() {
     inPrivateMoment && (!actionDone || notesOpen),
   );
   const isDealPhase = full?.phase === 'DEAL';
+  const returnState = useRef({
+    shieldRequired,
+    inPrivateMoment,
+    isDealPhase,
+    notesOpen,
+  });
+  returnState.current = {
+    shieldRequired,
+    inPrivateMoment,
+    isDealPhase,
+    notesOpen,
+  };
   const showShieldCard = Boolean(
     full &&
     inPrivateMoment &&
@@ -1243,53 +1350,160 @@ function PlayerGame() {
   }, [activeGame]);
 
   useEffect(() => {
-    const refetch = () => {
-      void queryClient.invalidateQueries({
-        queryKey: getGetGameViewQueryKey(id),
-        exact: true,
-      });
-    };
+    let active = true;
     const coverPrivate = () => {
-      cancelPrivate();
-      const requiresDealReshield = shieldRequired && isDealPhase;
+      clearPrivate({ preserveSelection: true });
+      const currentState = returnState.current;
+      const requiresDealReshield =
+        currentState.shieldRequired && currentState.isDealPhase;
       setShielded(!requiresDealReshield);
       setShieldCountdown(requiresDealReshield ? 5 : 0);
       setRoleSeen(false);
-      setPrivateCovered(Boolean(inPrivateMoment && !isDealPhase));
+      setPrivateCovered(
+        Boolean(currentState.inPrivateMoment && !currentState.isDealPhase),
+      );
+    };
+    const markAwayAndCover = () => {
+      if (!awaySnapshot.current) {
+        const cachedView = queryClient.getQueryData<GameViewResponse>(
+          getGetGameViewQueryKey(id),
+        )?.view;
+        const latestSeq =
+          cachedView && isFullView(cachedView)
+            ? cachedView.publicLog.reduce(
+                (maximum, entry) => Math.max(maximum, entry.seq),
+                0,
+              )
+            : lastPublicSeq.current || null;
+        awaySnapshot.current = { lastPublicSeq: latestSeq };
+        if (latestSeq !== null) {
+          try {
+            window.localStorage.setItem(
+              awayCursorStorageKey(id),
+              String(latestSeq),
+            );
+          } catch {
+            // The in-memory cursor still supports this open page.
+          }
+        }
+        setWhileAwayUpdates(null);
+      }
+      coverPrivate();
+    };
+    const resync = () => {
+      if (
+        document.visibilityState !== 'visible' ||
+        !active ||
+        resyncPromise.current
+      )
+        return;
+      setResumeStatus('syncing');
+      const pending = (async () => {
+        try {
+          const previousView = queryClient.getQueryData<GameViewResponse>(
+            getGetGameViewQueryKey(id),
+          )?.view;
+          const result = await gameQuery.refetch();
+          if (!active) return;
+          if (result.isError || !result.data) {
+            setResumeStatus('failed');
+            return;
+          }
+          const refreshedView = result.data.view;
+          if (isFullView(refreshedView)) {
+            if (previousView && isFullView(previousView)) {
+              const previousStep = privateStepKeyFor({
+                phase: previousView.phase,
+                cycle: previousView.cycle,
+                deadline: previousView.deadline,
+                shadowSlot: previousView.shadowSlot,
+                shadowRound: previousView.shadowRound,
+                notesOpen: returnState.current.notesOpen,
+              });
+              const refreshedStep = privateStepKeyFor({
+                phase: refreshedView.phase,
+                cycle: refreshedView.cycle,
+                deadline: refreshedView.deadline,
+                shadowSlot: refreshedView.shadowSlot,
+                shadowRound: refreshedView.shadowRound,
+                notesOpen: returnState.current.notesOpen,
+              });
+              if (previousStep !== refreshedStep) {
+                clearPrivate();
+                setSelected('');
+                setConfirmChoice(false);
+                setActionDone(false);
+              }
+            }
+            const snapshot = awaySnapshot.current;
+            if (snapshot) {
+              setWhileAwayUpdates(
+                publicUpdatesSince(
+                  refreshedView.publicLog,
+                  snapshot.lastPublicSeq,
+                ),
+              );
+            } else {
+              setWhileAwayUpdates(null);
+            }
+            lastPublicSeq.current = Math.max(
+              lastPublicSeq.current,
+              refreshedView.publicLog.reduce(
+                (maximum, entry) => Math.max(maximum, entry.seq),
+                0,
+              ),
+            );
+          } else {
+            setWhileAwayUpdates(null);
+          }
+          awaySnapshot.current = null;
+          try {
+            window.localStorage.removeItem(awayCursorStorageKey(id));
+          } catch {
+            // The UI still clears the cursor when browser storage is blocked.
+          }
+          setResumeStatus('idle');
+        } catch {
+          if (active) setResumeStatus('failed');
+        } finally {
+          resyncPromise.current = null;
+        }
+      })();
+      resyncPromise.current = pending;
     };
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') refetch();
-      else coverPrivate();
+      if (document.visibilityState === 'visible') resync();
+      else markAwayAndCover();
     };
-    const onPageShow = () => refetch();
+    const onPageShow = () => resync();
     const onOrientation = () => coverPrivate();
-    const onOnline = () => refetch();
-    const onFocus = () => refetch();
+    const onOnline = () => resync();
+    const onFocus = () => resync();
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('focus', onFocus);
     window.addEventListener('online', onOnline);
+    window.addEventListener('offline', markAwayAndCover);
     window.addEventListener('orientationchange', onOrientation);
-    window.addEventListener('blur', coverPrivate);
+    window.addEventListener('resize', coverPrivate);
+    window.addEventListener('blur', markAwayAndCover);
     document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('pagehide', coverPrivate);
+    window.addEventListener('pagehide', markAwayAndCover);
+    if (!navigator.onLine) markAwayAndCover();
+    else if (awaySnapshot.current) resync();
     return () => {
+      active = false;
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', markAwayAndCover);
       window.removeEventListener('orientationchange', onOrientation);
-      window.removeEventListener('blur', coverPrivate);
+      window.removeEventListener('resize', coverPrivate);
+      window.removeEventListener('blur', markAwayAndCover);
       document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('pagehide', coverPrivate);
-      cancelPrivate();
+      window.removeEventListener('pagehide', markAwayAndCover);
+      clearPrivate();
     };
-  }, [
-    id,
-    queryClient,
-    cancelPrivate,
-    shieldRequired,
-    inPrivateMoment,
-    isDealPhase,
-  ]);
+  }, [id, queryClient, gameQuery.refetch, clearPrivate]);
 
   useEffect(() => {
     if (
@@ -1792,6 +2006,7 @@ function PlayerGame() {
 
   const showOrganiserBar = Boolean(
     full?.canAdvancePhase &&
+    !isResuming &&
     activeGame &&
     !showShieldCard &&
     !held &&
@@ -1802,11 +2017,15 @@ function PlayerGame() {
   return (
     <Shell
       isPlayer
-      phase={full?.phase}
-      privateMode={inPrivateMoment}
-      privateRevealActive={held}
+      phase={!isResuming ? full?.phase : undefined}
+      privateMode={!isResuming && inPrivateMoment}
+      privateRevealActive={!isResuming && held}
       connectionStatus={
-        gameQuery.isLoading || hasPlayerSeat ? connectionStatus : null
+        isResuming
+          ? 'reconnecting'
+          : gameQuery.isLoading || hasPlayerSeat
+            ? connectionStatus
+            : null
       }
     >
       <section
@@ -1816,7 +2035,33 @@ function PlayerGame() {
             : 'mx-auto w-full max-w-[480px]'
         }
       >
-        {gameQuery.isLoading && (
+        {isResuming && (
+          <div
+            aria-live="polite"
+            className="border border-stone p-5"
+            data-testid="away-resync-overlay"
+            role={resumeStatus === 'failed' ? 'alert' : 'status'}
+          >
+            <h1 className="display text-2xl">{en.game.awayResyncHeading}</h1>
+            <p className="mt-2 text-ash">
+              {resumeStatus === 'failed'
+                ? en.game.awayResyncFailed
+                : en.game.awayResyncing}
+            </p>
+            {resumeStatus === 'failed' && (
+              <button
+                className="quiet-action mt-4"
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new Event('online'));
+                }}
+              >
+                {en.game.tryAgain}
+              </button>
+            )}
+          </div>
+        )}
+        {!isResuming && gameQuery.isLoading && (
           <div
             aria-label={en.game.loadingLabel}
             className="enter space-y-5"
@@ -1828,7 +2073,7 @@ function PlayerGame() {
             <span className="sr-only">{en.game.loading}</span>
           </div>
         )}
-        {gameQuery.isError && (
+        {!isResuming && gameQuery.isError && (
           <div role="alert" className="border-l-2 border-gilt pl-5">
             <h1 className="display text-3xl">{en.game.unavailableHeading}</h1>
             <p className="mt-3 text-ash">{en.game.unavailableBody}</p>
@@ -1841,7 +2086,7 @@ function PlayerGame() {
             </button>
           </div>
         )}
-        {visitor && (
+        {!isResuming && visitor && (
           <div>
             <h1 className="display mt-3 text-4xl">
               {phaseLabel(visitor.phase)}
@@ -1855,7 +2100,7 @@ function PlayerGame() {
             </Link>
           </div>
         )}
-        {full && (
+        {!isResuming && full && (
           <div
             className={
               showOrganiserBar ? (watchingRehearsal ? 'pb-40' : 'pb-24') : ''
@@ -1868,6 +2113,15 @@ function PlayerGame() {
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
+            {whileAwayUpdates !== null && (
+              <WhileAwayCard
+                title={en.game.awayCardHeading}
+                noUpdates={en.game.awayCardNoUpdates}
+                updates={whileAwayUpdates}
+                returnLabel={en.game.awayCardReturn}
+                onDismiss={() => setWhileAwayUpdates(null)}
+              />
+            )}
             {watchingRehearsal && (
               <RehearsalWatchCommentary phase={full.phase} />
             )}
@@ -2563,33 +2817,7 @@ function PlayerGame() {
                           className="py-3 text-sm text-ash"
                           data-testid={`public-log-entry-${entry.seq}`}
                         >
-                          {entry.action === 'device_recovered'
-                            ? en.game.publicLogDeviceRecovered(entry.name)
-                            : entry.action === 'seat_pin_reset'
-                              ? en.game.publicLogPinReset(entry.name)
-                              : entry.action === 'dawn'
-                                ? en.game.publicLogDawn(
-                                    entry.victims.map((victim) => victim.name),
-                                  )
-                                : entry.action === 'no_votes'
-                                  ? en.game.noVotesAnnouncement
-                                  : entry.action === 'banishment'
-                                    ? en.game.publicLogBanishment(
-                                        entry.seat.name,
-                                      )
-                                    : entry.action === 'seat_departed'
-                                      ? en.game.publicLogSeatDeparted(
-                                          entry.seat.name,
-                                        )
-                                      : entry.action === 'schedule_shift'
-                                        ? en.game.publicLogScheduleShift(
-                                            entry.minutes,
-                                          )
-                                        : entry.action === 'coordinator_undo'
-                                          ? en.game.publicLogCoordinatorUndo
-                                          : en.game.publicLogFinished(
-                                              entry.winner,
-                                            )}
+                          {publicLogMessage(entry)}
                         </li>
                       ))}
                     {full.publicLog.length === 0 && (
@@ -2683,7 +2911,7 @@ function PlayerGame() {
             </div>
           </section>
         )}
-        {advanceConfirmationOpen && full && !full.rehearsal && (
+        {!isResuming && advanceConfirmationOpen && full && !full.rehearsal && (
           <div
             className="game-fullscreen-overlay fixed inset-0 z-50 flex flex-col bg-charcoal"
             role="dialog"
@@ -2722,7 +2950,7 @@ function PlayerGame() {
             />
           </div>
         )}
-        {full?.rehearsal && rehearsalGuideVisible && (
+        {!isResuming && full?.rehearsal && rehearsalGuideVisible && (
           <div
             className="game-fullscreen-overlay fixed inset-0 z-40 flex flex-col bg-charcoal"
             role="dialog"
@@ -2760,7 +2988,7 @@ function PlayerGame() {
             />
           </div>
         )}
-        {showShieldCard && (
+        {!isResuming && showShieldCard && (
           <ShieldCard
             ref={shieldDialog}
             countdown={shieldCountdown}
@@ -2787,6 +3015,7 @@ function PlayerGame() {
             gameId={id}
             csrfToken={token}
             hidden={
+              isResuming ||
               !activeGame ||
               inPrivateMoment ||
               held ||

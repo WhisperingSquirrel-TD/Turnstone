@@ -1,12 +1,28 @@
 # Status for reviewer
 
-**Latest green:** Verify #170 (`04990cc`) passed all 19 jobs, including all four browser profiles, Lighthouse, `required-checks` and scenario shards.
+**Latest green:** Verify #173 (`b32c737`) passed all 19 jobs, including `test:server-coverage`, iPhone/iPad WebKit, Lighthouse, `required-checks` and all scenario shards.
+
+**Verify #172 (`edd0c14`): RED.** The `integration` job ran `test:server-coverage` and passed at 85.92% line coverage against the unchanged 85% threshold. The only failed job was `browsers (iPhone, webkit)`; `required-checks` failed as a consequence. The coordinator-console end-to-end test changed the viewport to 3840×2160 for its large-screen checks but did not restore the iPhone viewport before continuing with interactive actions; the final “End game now” click timed out. Commit `b32c737` restores and asserts the original viewport before those actions. Verify #173 is green. The affected test passed locally on Pixel and desktop; local iPhone WebKit could not launch because the container lacks its required browser libraries. No workflow files or thresholds were changed.
+
+**R6-1 — Away-and-back resilience:** implementation and tests are included in this push; Verify is pending. Targeted typechecks, lint, formatting, unit tests, Pixel Chromium and iPhone WebKit passed locally. The live rehearsal cold-restart test passed against the real server. Browser tests cover simulated 30-second, 5-minute, 1-hour and overnight absences, public-log-only updates, preserved choices, private-screen hiding, and resize/orientation. R6-2 and R6-3 have not started.
 
 **Milestone 6 — automated items verified:** takeover/coordinator secrecy, undo and schedule shifts; coordinator logistics; public-only `/tv` pairing, verdict and finish; accessibility, route, keyboard, reduced-motion and bundle checks; configured admission-capacity behaviour. Targeted coordinator/presenter browser tests (Pixel and desktop), takeover/admission integration tests, unit tests, typecheck, lint and format check passed locally.
 
 **Task 6 owner items:** manual VoiceOver/TalkBack and real-device checks; approve the PIN-reset request/approval interaction; confirm whether to add timetable/mission details to the public presenter projection; run a representative capacity test and approve `MAX_ACTIVE_GAMES`. Presenter ballots remain excluded and narration remains organiser-phone-only under §26.
 
-**Next:** CP-1 content patch v2.1, local copies only; content remains untracked and unintegrated.
+**CP-1 — NOT FINISHED; blocked (20 October 2026):** 46 tasks: 6/6 replacements applied; 46 decoys: 13/13 applied; 37 missions: 8 named fields changed and 2 already matched (10 checked). Length matching fails: maximum sorted difference 11 (limit 8), at `task-031`/`decoy-022` (36/46, diff 10), `task-007`/`decoy-001` (39/50, diff 11), and `task-010`/`decoy-040` (51/60, diff 9). Band differences exceed 2 at 60–79 (5) and 80–99 (4). No wording beyond v2.1 was changed. The eight supplied content files and backups are in local-only commit `3bfd1c9`; it is not pushed and the content is not integrated into the app. Q6 records the wording/length blocker; Q7 records the local-commit conflict. No content changes, push or history rewrite will be made pending owner direction.
+
+## CP-1 content patch v2.1 — 19 October 2026
+
+- Applied all 6 task replacements: `task-014`, `task-017`, `task-018`, `task-025`, `task-031`, `task-043`.
+- Applied all 13 decoy replacements: `decoy-001`, `decoy-006`, `decoy-009`, `decoy-016`, `decoy-017`, `decoy-020`, `decoy-021`, `decoy-022`, `decoy-030`, `decoy-031`, `decoy-035`, `decoy-038`, `decoy-042`.
+- The source contains 37 missions. Five mission entries had named fields in the patch: 8 fields changed (`straight-face.setUp`; `silent-line-up.setUp`, `.rules`, `.accessibility`; `truth-hunt.setUp`; `fetch-it.setUp`, `.locationNotes.remote`; `mummy-wrap.setUp`); `fetch-it.locationNotes.indoor` and `.outdoor` already matched. No patch item was skipped.
+- All three edited JSON files parse. Backups of all eight supplied content files are in `attached_assets/.cp1-originals-v2.1/`. The content and backups were committed locally in `3bfd1c9`, but not pushed or integrated into the app; this conflicts with the CP-1 no-commit instruction (see Q7).
+- The GitHub tree at #171 already contains the three review CSV attachments: `attached_assets/missions-review_1792389710747.csv`, `attached_assets/task-decoys-review_1792389710837.csv`, and `attached_assets/traitor-tasks-review_1792389710882.csv`. They were not modified or pushed during CP-1. The five other supplied files are absent from that tree. The brief forbids commits during CP-1, so the existing CSV tracking was not changed.
+- Searched the repository outside `attached_assets/` for the 29 requested new strings: zero matches.
+- Length check used all 46 task and 46 decoy entries. Sorted-length maximum difference is **11** (limit 8). Failing ranks: 1, `task-031` 36 vs `decoy-022` 46 (10); 2, `task-007` 39 vs `decoy-001` 50 (11); 6, `task-010` 51 vs `decoy-040` 60 (9).
+- 20-character bands (tasks / decoys / absolute difference): 20–39: 2 / 0 / 2; 40–59: 5 / 5 / 0; 60–79: 13 / 18 / 5; 80–99: 20 / 16 / 4; 100–119: 6 / 7 / 1. The 60–79 and 80–99 bands exceed the limit of 2.
+- The requested v2.1 wording is unchanged; no substitute wording has been drafted or applied. Resolution is blocked pending owner-approved wording for the failing matches and band counts (see Q6).
 
 ## Earlier milestone results
 

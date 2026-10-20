@@ -1799,6 +1799,297 @@ test('Notes have the same geometry and colours for Traitor and Faithful', async 
   }
 });
 
+test('mobile players retain an unfinished private night choice after backgrounding', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'Night-choice recovery is checked on Android Chrome and iPhone WebKit.',
+  );
+
+  const gameId = 'away-night-choice';
+  let view = {
+    ...createPublicView(gameId),
+    phase: 'SHADOW',
+    shadowSlot: 1,
+    murderSlots: 1,
+    deadline: Date.now() + 60 * 60 * 1_000,
+  } as FullView;
+  const privateData = {
+    role: 'traitor' as const,
+    team: [{ id: 'seat-morgan', name: 'Morgan', role: 'traitor' as const }],
+    options: [
+      { id: 'seat-jamie', name: 'Jamie' },
+      { id: 'seat-alex', name: 'Alex' },
+    ],
+    choices: {},
+    choiceSlots: [],
+    chat: [],
+    task: null,
+    minimumDurationMs: 0,
+  };
+  const envelope = () => ({
+    serverNow: Date.now(),
+    version: view.version,
+    view,
+  });
+
+  await page.clock.install();
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route(`**/api/games/${gameId}/private-view`, (route) =>
+    route.fulfill({
+      json: {
+        ...envelope(),
+        view: { ...view, private: privateData },
+      },
+    }),
+  );
+
+  await page.goto(`/game/${gameId}`);
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toBeVisible();
+  await page.clock.fastForward(3_000);
+  await page.getByRole('button', { name: 'I’m shielded' }).click();
+  const choices = page.getByTestId('private-choice-list');
+  await expect(choices).toBeVisible();
+  await choices.getByRole('button', { name: 'Jamie', exact: true }).click();
+  await expect(
+    page.getByText('Your pick: Jamie', { exact: true }),
+  ).toBeVisible();
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'hidden',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(choices).toHaveCount(0);
+  view = { ...view, version: view.version + 1 };
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.getByTestId('player-game')).toHaveAttribute(
+    'data-version',
+    String(view.version),
+  );
+  await page
+    .getByTestId('while-away-card')
+    .getByRole('button', { name: 'Back to the game' })
+    .click();
+  await page
+    .getByRole('button', { name: 'Tap to see your private screen again' })
+    .click();
+  await expect(page.getByTestId('private-choice-list')).toBeVisible();
+  await expect(
+    page.getByText('Your pick: Jamie', { exact: true }),
+  ).toBeVisible();
+});
+
+test('mobile players resync after long absences without losing an unsubmitted vote', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'Away-and-back resilience is checked on Android Chrome and iPhone WebKit.',
+  );
+
+  const gameId = 'away-resilience';
+  let simulatedNow = Date.now();
+  await page.clock.install({ time: new Date(simulatedNow) });
+  let publicView = {
+    ...createPublicView(gameId),
+    phase: 'VOTE',
+    deadline: simulatedNow + 48 * 60 * 60 * 1_000,
+  } as FullView;
+  let holdNextView = false;
+  const blockedView = { release: null as (() => void) | null };
+
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, async (route) => {
+    if (holdNextView) {
+      holdNextView = false;
+      await new Promise<void>((resolve) => {
+        blockedView.release = resolve;
+      });
+    }
+    await route.fulfill({
+      status: 200,
+      json: {
+        serverNow: simulatedNow,
+        version: publicView.version,
+        view: structuredClone(publicView),
+      },
+    });
+  });
+
+  await page.goto(`/game/${gameId}`);
+  const originalViewport = page.viewportSize();
+  if (!originalViewport)
+    throw new Error('The mobile profile needs a viewport.');
+  await page.getByRole('button', { name: 'Jamie', exact: true }).click();
+  await expect(
+    page.getByText('Your pick: Jamie', { exact: true }),
+  ).toBeVisible();
+
+  const awayCases = [
+    { durationMs: 30_000, suspend: 'visibility', resume: 'visibility' },
+    { durationMs: 5 * 60_000, suspend: 'pagehide', resume: 'pageshow' },
+    { durationMs: 60 * 60_000, suspend: 'offline', resume: 'online' },
+    {
+      durationMs: 12 * 60 * 60_000,
+      suspend: 'visibility',
+      resume: 'visibility',
+    },
+  ] as const;
+
+  for (const [index, awayCase] of awayCases.entries()) {
+    await page.evaluate((eventName) => {
+      if (eventName === 'visibility') {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          value: 'hidden',
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      } else {
+        window.dispatchEvent(new Event(eventName));
+      }
+    }, awayCase.suspend);
+
+    simulatedNow += awayCase.durationMs;
+    await page.clock.setFixedTime(new Date(simulatedNow));
+    const lastSeq = Math.max(...publicView.publicLog.map((entry) => entry.seq));
+    const guestName = `Guest ${index + 1}`;
+    publicView = {
+      ...publicView,
+      version: publicView.version + 1,
+      publicLog: [
+        ...publicView.publicLog,
+        {
+          seq: lastSeq + 1,
+          at: simulatedNow,
+          action: 'seat_departed',
+          seat: { id: `seat-away-${index + 1}`, name: guestName },
+        },
+      ],
+    };
+
+    if (index === 0) holdNextView = true;
+    await page.evaluate((eventName) => {
+      if (eventName === 'visibility') {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          value: 'visible',
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      } else {
+        window.dispatchEvent(new Event(eventName));
+      }
+    }, awayCase.resume);
+
+    if (index === 0) {
+      await expect(page.getByTestId('away-resync-overlay')).toBeVisible();
+      await expect(page.getByTestId('player-game')).toHaveCount(0);
+      await expect.poll(() => blockedView.release !== null).toBe(true);
+      const release = blockedView.release;
+      if (!release) throw new Error('The blocked game view was not requested.');
+      release();
+    }
+
+    await expect(page.getByTestId('player-game')).toHaveAttribute(
+      'data-version',
+      String(publicView.version),
+    );
+    const awayCard = page.getByTestId('while-away-card');
+    await expect(awayCard).toBeVisible();
+    await expect(awayCard).toContainText(
+      `${guestName} was marked as departed.`,
+    );
+    await expect(awayCard).not.toContainText('Your pick: Jamie');
+    await awayCard.getByRole('button', { name: 'Back to the game' }).click();
+    await page
+      .getByRole('button', { name: 'Tap to see your private screen again' })
+      .click();
+    await expect(
+      page.getByText('Your pick: Jamie', { exact: true }),
+    ).toBeVisible();
+  }
+
+  for (const viewport of [{ width: 844, height: 390 }, originalViewport]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('orientationchange'));
+    });
+    await page
+      .getByRole('button', { name: 'Tap to see your private screen again' })
+      .click();
+    await expect(
+      page.getByText('Your pick: Jamie', { exact: true }),
+    ).toBeVisible();
+  }
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'hidden',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  const lastSeq = Math.max(...publicView.publicLog.map((entry) => entry.seq));
+  simulatedNow += 30_000;
+  publicView = {
+    ...publicView,
+    phase: 'VERDICT',
+    version: publicView.version + 1,
+    publicAnnouncement: {
+      kind: 'verdict',
+      cycle: publicView.cycle,
+      seat: { id: 'seat-alex', name: 'Alex', role: 'faithful' },
+    },
+    publicLog: [
+      ...publicView.publicLog,
+      {
+        seq: lastSeq + 1,
+        at: simulatedNow,
+        action: 'banishment',
+        seat: { id: 'seat-alex', name: 'Alex' },
+      },
+    ],
+  };
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect(page.getByTestId('player-game')).toHaveAttribute(
+    'data-phase',
+    'VERDICT',
+  );
+  await expect(page.getByText('Your pick: Jamie', { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(page.getByTestId('while-away-card')).toContainText(
+    'Alex was banished.',
+  );
+});
+
 test('private Notes hide after background and idle, then return with one tap', async ({
   page,
 }) => {

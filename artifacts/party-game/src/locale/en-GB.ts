@@ -581,6 +581,14 @@ export const en = {
     personalTakenFate:
       "You were taken in the night. You're out, but you can keep watching.",
     personalOutFate: "You're out. You can watch, but you can't vote or choose.",
+    awayResyncHeading: 'Getting back in sync',
+    awayResyncing:
+      'Checking the latest game state. Your previous screen is hidden until it is current.',
+    awayResyncFailed:
+      'We could not reconnect to the latest game state. Your previous screen is still hidden.',
+    awayCardHeading: 'While you were away',
+    awayCardNoUpdates: 'No public updates were recorded while you were away.',
+    awayCardReturn: 'Back to the game',
     latestUpdates: 'Latest updates',
     publicLogDeviceRecovered: (name: string) => `${name} moved to a new device`,
     publicLogPinReset: (name: string) => `${name}’s PIN was reset`,

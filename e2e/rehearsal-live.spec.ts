@@ -1581,6 +1581,131 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
   }
 });
 
+test('a cold browser restart restores the existing seat from its stored token @rehearsal-live', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(90_000);
+  const { db } = await import('@workspace/db');
+  let gameId: string | undefined;
+  let coldContext: Awaited<ReturnType<typeof browser.newContext>> | null = null;
+
+  try {
+    await page.goto('/play');
+    await page.getByTestId('button-practise-alone').click();
+    await page.getByTestId('input-rehearsal-name').fill('Cold restart');
+    await page.getByTestId('button-speed-fast').click();
+    const startResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/rehearsals' &&
+        response.request().method() === 'POST',
+      { timeout: 15_000 },
+    );
+    await page.getByTestId('button-start-rehearsal').click();
+    const startResult = await startResponse;
+    expect(startResult.ok()).toBe(true);
+    await page.waitForURL(/\/game\/[^/]+$/, { timeout: 15_000 });
+    const match = new URL(page.url()).pathname.match(/\/game\/([^/]+)$/);
+    gameId = match?.[1];
+    if (!gameId) throw new Error('The restarted game id is missing.');
+
+    await page
+      .getByRole('button', { name: 'Got it', exact: true })
+      .click({ timeout: 10_000 });
+    const roleGuide = page.getByTestId('rehearsal-explainer');
+    await expect(roleGuide).toBeVisible();
+    await roleGuide.getByRole('button', { name: 'Got it' }).click();
+    await expect(page.getByTestId('player-game')).toHaveAttribute(
+      'data-phase',
+      'DEAL',
+    );
+    await handleShield(page, gameId);
+    const roleSeal = page.getByTestId('button-hold-reveal');
+    const roleContent = page.getByTestId('private-role-content');
+    await roleSeal.focus();
+    await page.keyboard.down('Space');
+    await expect(roleContent).toContainText(/Traitor|Faithful/);
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: 'hidden',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(roleContent).toHaveCount(0);
+    await expect(page.getByTestId('away-resync-overlay')).toBeVisible();
+    await page.keyboard.up('Space');
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+    const originalSeatId = await page.evaluate(async (id) => {
+      const response = await fetch(
+        `/api/games/${encodeURIComponent(id)}/view`,
+        {
+          cache: 'no-store',
+          credentials: 'include',
+        },
+      );
+      if (!response.ok)
+        throw new Error('The original seat view was unavailable.');
+      const payload = (await response.json()) as {
+        view: { viewerSeatId?: string };
+      };
+      return payload.view.viewerSeatId;
+    }, gameId);
+    expect(originalSeatId).toBeTruthy();
+
+    const savedBrowserState = await page.context().storageState();
+    const seatCookie = savedBrowserState.cookies.find((cookie) =>
+      cookie.name.startsWith('oathstone-seat-'),
+    );
+    expect(seatCookie).toBeDefined();
+    expect(seatCookie?.expires).toBeGreaterThan(Math.floor(Date.now() / 1_000));
+
+    const gameUrl = new URL(`/game/${gameId}`, page.url()).toString();
+    await page.close();
+    await page.context().close();
+    coldContext = await browser.newContext({
+      storageState: savedBrowserState,
+    });
+    const coldPage = await coldContext.newPage();
+    await coldPage.goto(gameUrl);
+    await expect(coldPage.getByTestId('player-game')).toHaveAttribute(
+      'data-phase',
+      'DEAL',
+    );
+    await expect(coldPage.getByTestId('while-away-card')).toContainText(
+      'While you were away',
+    );
+    const restoredSeatId = await coldPage.evaluate(async (id) => {
+      const response = await fetch(
+        `/api/games/${encodeURIComponent(id)}/view`,
+        {
+          cache: 'no-store',
+          credentials: 'include',
+        },
+      );
+      if (!response.ok)
+        throw new Error('The restored seat view was unavailable.');
+      const payload = (await response.json()) as {
+        view: { viewerSeatId?: string };
+      };
+      return payload.view.viewerSeatId;
+    }, gameId);
+    expect(restoredSeatId).toBe(originalSeatId);
+  } finally {
+    await coldContext?.close().catch(() => undefined);
+    if (gameId) {
+      await db.transaction(async (transaction) => {
+        await transaction.execute(sql`SET LOCAL lock_timeout = '3s'`);
+        await transaction.execute(sql`SET LOCAL statement_timeout = '3s'`);
+        await transaction.execute(sql`delete from games where id = ${gameId}`);
+      });
+    }
+  }
+});
+
 test.afterAll(async () => {
   if (!process.env.DATABASE_URL) return;
   const { pool } = await import('@workspace/db');
