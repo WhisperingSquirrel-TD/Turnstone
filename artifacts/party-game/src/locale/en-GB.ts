@@ -272,12 +272,13 @@ export const en = {
           'A quick game takes about one hour. A day format can span a gathering, and a multi-day game can run for two to fourteen days.',
       },
       {
-        question: 'Is there a free alternative to the WhatsApp traitors game?',
+        question:
+          'Is there a free alternative to chat-based hidden-traitor games?',
         answer:
-          'Yes. Chat versions play out as messages over a week, charge per player and limit numbers. Oathstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight.',
+          'Yes. Many versions of this kind of game play out as group-chat messages over a week, charge per player and limit numbers. Oathstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight.',
       },
       {
-        question: 'Is Oathstone the official game from the TV show?',
+        question: 'Is Oathstone affiliated with a television programme?',
         answer: `No. ${independenceStatement}`,
       },
       {
@@ -303,7 +304,7 @@ export const en = {
       {
         name: 'Week-long chat games',
         description:
-          'These play out as messages over several days and can have player limits or a per-player price.',
+          'Many versions of this kind of game play out as group-chat messages over a week, charge per player and limit numbers.',
       },
       {
         name: 'Single-player apps',

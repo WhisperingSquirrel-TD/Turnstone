@@ -3,10 +3,12 @@ import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
 import { PUBLIC_MARKETING_ROUTE_PATHS } from '../lib/shared/src/app-routes';
 
 const requiredQuestions = [
-  'Is there a free alternative to the WhatsApp traitors game?',
-  'Is Oathstone the official game from the TV show?',
+  'Is there a free alternative to chat-based hidden-traitor games?',
+  'Is Oathstone affiliated with a television programme?',
   'Do I need WhatsApp or an app?',
 ];
+const requiredChatGameAnswer =
+  'Yes. Many versions of this kind of game play out as group-chat messages over a week, charge per player and limit numbers. Oathstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight.';
 
 test('FAQ, comparison and llms.txt are public, complete and pre-launch noindex', async ({
   request,
@@ -22,6 +24,7 @@ test('FAQ, comparison and llms.txt are public, complete and pre-launch noindex',
   const faqResponse = await request.get('/faq');
   const faqHtml = await faqResponse.text();
   for (const question of requiredQuestions) expect(faqHtml).toContain(question);
+  expect(faqHtml).toContain(requiredChatGameAnswer);
   expect(faqHtml).toContain('Oathstone is an independent game');
   for (const fact of [
     '5 to 40 players',
@@ -36,6 +39,7 @@ test('FAQ, comparison and llms.txt are public, complete and pre-launch noindex',
   const compareHtml = await compareResponse.text();
   for (const question of requiredQuestions)
     expect(compareHtml).toContain(question);
+  expect(compareHtml).toContain(requiredChatGameAnswer);
   for (const category of [
     'Boxed games',
     'Week-long chat games',
@@ -52,6 +56,7 @@ test('FAQ, comparison and llms.txt are public, complete and pre-launch noindex',
   const llmsText = await llmsResponse.text();
   for (const question of requiredQuestions)
     expect(llmsText).toContain(question);
+  expect(llmsText).toContain(requiredChatGameAnswer);
   for (const fact of [
     '5 to 40 players',
     'One hour to two weeks',

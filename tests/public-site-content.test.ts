@@ -84,12 +84,13 @@ describe('public-site shared content', () => {
   it('uses the exact approved additional FAQs on every public content surface', () => {
     const additionalFaqs = [
       {
-        question: 'Is there a free alternative to the WhatsApp traitors game?',
+        question:
+          'Is there a free alternative to chat-based hidden-traitor games?',
         answer:
-          'Yes. Chat versions play out as messages over a week, charge per player and limit numbers. Oathstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight.',
+          'Yes. Many versions of this kind of game play out as group-chat messages over a week, charge per player and limit numbers. Oathstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight.',
       },
       {
-        question: 'Is Oathstone the official game from the TV show?',
+        question: 'Is Oathstone affiliated with a television programme?',
         answer:
           'No. Oathstone is an independent game made by Stackstone Consulting. It is not affiliated with, or endorsed by, any TV programme or its producers.',
       },

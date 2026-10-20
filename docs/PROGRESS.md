@@ -1,12 +1,14 @@
 # Status for reviewer
 
-**Latest green:** Verify #173 (`b32c737`) passed all 19 jobs, including the 85% server-coverage gate, browser profiles, Lighthouse, `required-checks` and all scenario shards.
+**Latest green:** Verify #175 (`1ee9b204`) passed all 19 jobs, including server coverage, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards.
 
-**Verify #172:** Resolved by #173. The iPhone browser failure was caused by the coordinator-console test not restoring its mobile viewport after large-screen checks.
+**Verify #172:** Resolved by #173. The iPhone browser failure came from the coordinator-console test not restoring its mobile viewport after large-screen checks.
 
-**Verify #174 (`b8392d4`): RED.** All four browser profiles failed; `required-checks` failed as a consequence. The failures exposed an outdated hidden-screen assertion, private-state loss on resize, and the away card appearing ahead of the result after navigation. Fix and test updates are now locally green on Pixel/iPhone (six affected specs each) and the real-server cold-restart test; typecheck, lint and formatting pass. The next Verify is pending.
+**Verify #174 (`b8392d4`): RED; fixed in #175.** All four browser profiles failed from a stale hidden-screen assertion, private-state loss on resize and the away card preceding the result after navigation.
 
-**R6-1 — Away-and-back resilience:** the fix preserves role/choice state through resize and orientation, waits for a fresh view on return, and keeps public away updates below the step result. Tests cover 30 seconds, 5 minutes, 1 hour and overnight, public-log-only updates, private-screen hiding and cold seat restoration. R6-2 and R6-3 have not started.
+**R6-1:** Complete. Verify #175 is green; local Pixel/iPhone tests (six each), real-server cold restart, typechecks, lint and formatting pass. R6-2 and R6-3 have not started.
+
+**Copy alignment:** Approved FAQ and comparison wording is updated in the shared source and SPEC; public-page tests and the static public build pass locally. Separate commit and Verify pending.
 
 **Milestone 6 — automated items verified:** takeover/coordinator secrecy, undo and schedule shifts; coordinator logistics; public-only `/tv` pairing, verdict and finish; accessibility, route, keyboard, reduced-motion and bundle checks; configured admission-capacity behaviour. Targeted coordinator/presenter browser tests (Pixel and desktop), takeover/admission integration tests, unit tests, typecheck, lint and format check passed locally.
 

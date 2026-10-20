@@ -97,7 +97,10 @@ describe('agent-readable public pages', () => {
       new URL(APP_ROUTE_PATHS.comingSoon, config.siteOrigin).href,
     );
     expect(text).toContain(
-      'Is there a free alternative to the WhatsApp traitors game?',
+      'Is there a free alternative to chat-based hidden-traitor games?',
+    );
+    expect(text).toContain(
+      'Yes. Many versions of this kind of game play out as group-chat messages over a week, charge per player and limit numbers. Oathstone is different: it is free for everyone, with no per-player tickets; it takes up to 40 players, and families with children can play together; you play face to face in one room, with phones used only for secrets; there are no phone numbers or group chats, just a code and a first name; secrets stay secret with hold-to-reveal and identical screens for every role; and it works anywhere, for an hour or a fortnight.',
     );
     expect(text).not.toContain(`${config.siteOrigin}/play`);
     expect(text).not.toContain(`${config.siteOrigin}/api`);
@@ -188,7 +191,7 @@ describe('agent-readable public pages', () => {
     const faqPage = faqJsonLd.find((entry) => entry['@type'] === 'FAQPage');
     expect(faqPage).toBeDefined();
     expect(JSON.stringify(faqPage)).toContain(
-      'Is there a free alternative to the WhatsApp traitors game?',
+      'Is there a free alternative to chat-based hidden-traitor games?',
     );
   });
 });
