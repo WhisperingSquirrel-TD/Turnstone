@@ -2,6 +2,8 @@
 
 **Latest green:** Verify #187 (`0a5f7da`) passed all 18 reported jobs, including the coverage-gated integration job, all four browser profiles, `rehearsal-live`, Lighthouse, audit, `required-checks` and all scenario shards.
 
+**Verify #188 (`5b2e716`): RED.** All four browser profiles and dependent `required-checks` failed because `e2e/player-public-room.spec.ts` and `e2e/smoke.spec.ts` still expected the former long conversation card copy; the player-room spec also expected the former long vote card copy. The rendered copy was correct. Assertions now check the concise text exactly; targeted Pixel and iPhone browser checks pass. Verify for the correction is pending.
+
 **Verify #182 cause and fix:** `rehearsal-live` expected a separate Dawn screen after a terminal night. The server recorded `DawnResolved`, then `GameFinished` immediately when the murder reached parity, so the browser correctly landed on the results screen. The test now accepts that terminal order and verifies the Dawn update remains in the final public log; Verify #183 is green.
 
 **Verify #184 (`5ae88c3`): RED; fixed by #185.** Failed jobs: `browsers (Pixel, chromium)`, `browsers (desktop, chromium)`, `audit`, and dependent `required-checks`. The browser failures were two existing header-alignment checks: the conditional wake-lock grid row collapsed the first row, moving the shell wordmark to y=16 while the shield/guide wordmark stayed at y=22. The audit found high `markdown-it` 14.3.1 and moderate `fast-uri` 3.1.7 advisories. The fix preserves the assertions and threshold, places the notice in reserved top padding without adding a grid row, and adds mature patched versions 14.3.2 and 3.1.8 to the existing workspace overrides while preserving all other overrides. Local audit reports zero high and critical; Verify #185 is green.
@@ -23,11 +25,11 @@
 
 **R6 feedback D — voting-circle card:** The current speaker can open a full-screen view of their own vote card; opening and closing it does not reveal a ballot or change the public tally. The overlay uses the Fullscreen API where available, remains viewport- and safe-area-aware in portrait and landscape, and has Close and Escape controls. The existing game wake lock remains active. Real-server rehearsal passes in Pixel Chromium and iPhone WebKit; Verify #187 is green.
 
-**R6 feedback E — wording audit:** First-time rehearsal cards now use concise copy separate from the full “What’s this?” details. The Notes detail no longer repeats its privacy line, and the role-reveal instruction is shorter. Targeted unit and real-server Pixel/iPhone rehearsal checks pass; final static checks and Verify are pending.
+**R6 feedback E — wording audit:** First-time rehearsal cards now use concise copy separate from the full “What’s this?” details. The Notes detail no longer repeats its privacy line, and the role-reveal instruction is shorter. Verify #188 exposed stale browser expectations for the shorter conversation and vote cards; both were updated without weakening coverage. Targeted Pixel and iPhone browser checks pass; Verify for the correction is pending.
 
-**Local checks:** The copy-card unit tests pass (14/14). The full real-server rehearsal and cold-restart tests pass in Pixel Chromium and iPhone WebKit; typecheck, lint and formatting are being checked. Audit reports 0 high and 0 critical; the 85% server-coverage threshold is unchanged.
+**Local checks:** Copy-card unit tests pass (14/14). The full real-server rehearsal and cold-restart tests pass in Pixel Chromium and iPhone WebKit. The affected conversation/vote card browser checks pass in Pixel Chromium and iPhone WebKit. Typecheck, lint and formatting pass; audit reports 0 high and 0 critical; the 85% server-coverage threshold is unchanged.
 
-**Delivery:** GitHub main is at `0a5f7da`; Verify #187 is green. The R6 feedback E change set is local and pending Verify. No CP-1 attachment, SPEC or workflow change is included. No deployment or production setting was changed.
+**Delivery:** GitHub main is at `5b2e716`; Verify #187 is the latest green. The E correction is limited to browser assertions and this status note; Verify is pending. No CP-1 attachment, SPEC or workflow change is included. No deployment or production setting was changed.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 

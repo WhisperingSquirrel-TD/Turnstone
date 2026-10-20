@@ -752,7 +752,9 @@ test('game wordmark stays top-left and the action banner stays above the footer'
     JSON.stringify({ guideWordmarkBounds, shellWordmarkBounds }),
   ).toBe(shellWordmarkBounds.y);
   await expect(guide).toHaveAccessibleName('The conversation');
-  await expect(guide).toContainText('Everyone talks it over');
+  await expect(guide).toContainText(
+    'Share what you have noticed before the vote.',
+  );
   const guideScrollMetrics = await guide.evaluate((overlay) => ({
     overlayHeight: overlay.clientHeight,
     overlayScrollHeight: overlay.scrollHeight,

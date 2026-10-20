@@ -1010,7 +1010,9 @@ test('rehearsal player can move on from public and voting screens', async ({
   const stepGuide = page.getByTestId('rehearsal-explainer');
   await expect(stepGuide).toBeVisible();
   await expect(stepGuide).toHaveAccessibleName('The conversation');
-  await expect(stepGuide).toContainText('Everyone talks it over');
+  await expect(stepGuide).toContainText(
+    'Share what you have noticed before the vote.',
+  );
   await stepGuide.getByRole('button', { name: 'Got it' }).click();
   await expect(stepGuide).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Next step' })).toBeVisible();
@@ -1023,7 +1025,7 @@ test('rehearsal player can move on from public and voting screens', async ({
   await page.getByRole('button', { name: 'Next step' }).click();
   const voteGuide = page.getByRole('dialog', { name: 'The vote' });
   await expect(voteGuide).toBeVisible();
-  await expect(voteGuide).toContainText('Everyone secretly votes');
+  await expect(voteGuide).toContainText('Choose your suspect privately.');
   await voteGuide.getByRole('button', { name: 'Got it' }).click();
   await expect(voteGuide).toHaveCount(0);
   await expect(
