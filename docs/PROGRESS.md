@@ -1,8 +1,8 @@
 # Status for reviewer
 
-**Latest green:** GitHub Verify #190 (`655a9b6`) passed all 19 jobs, including Pixel, desktop Chromium, iPad and iPhone WebKit, `rehearsal-live`, Lighthouse, audit, coverage-gated integration, all scenario shards and `required-checks`.
+**Latest green:** GitHub Verify #193 (`8106efb`) passed all 19 jobs, including Pixel, desktop Chromium, iPad and iPhone WebKit, `rehearsal-live`, Lighthouse, audit, coverage-gated integration, all scenario shards and `required-checks`.
 
-**Verify #192 (`cf3df40`): RED; audit fix prepared.** All four browser profiles passed, as did unit, static checks, property, integration, live rehearsal, Lighthouse and scenarios. `audit` found one high advisory, so `required-checks` failed. The job log showed only the count; reproducing the audit against npmjs identified `markdown-it` 14.3.2 (GHSA-gfr2-rv44-r23c, affected range `>=14.1.0 <14.3.3`) via `orval > typedoc`. The Replit registry had stale advisory data. Raised the workspace override to 14.3.3 and updated the lockfile; the public-registry audit now passes with zero high or critical findings. A new Verify run is pending.
+**Verify #192 (`cf3df40`): RED; fixed in #193.** All four browser profiles passed, as did unit, static checks, property, integration, live rehearsal, Lighthouse and scenarios. `audit` found one high advisory, so `required-checks` failed. The job log showed only the count; reproducing the audit against npmjs identified `markdown-it` 14.3.2 (GHSA-gfr2-rv44-r23c, affected range `>=14.1.0 <14.3.3`) via `orval > typedoc`. The Replit registry had stale advisory data. Raised the workspace override to 14.3.3 and updated the lockfile; the public-registry audit passes with zero high or critical findings. Verify #193 is green.
 
 **Verify #191 (`9600900`): RED; browser fixes passed in #192.** All four browser profiles had failed the same re-vote test because its fixture was not marked as a re-vote and its assertions expected only tied seats, all selectable. The app correctly displays all living opponents, with only tied candidates selectable. The test now covers the full list and disabled/dimmed non-tied choices. The audit also failed because Vite 7.3.6 had a high advisory; Vite 7.3.7 fixed it. Local WebKit browser launch is unavailable because this environment lacks Playwright system libraries.
 
@@ -37,7 +37,7 @@
 
 **Local checks:** Copy-card unit tests pass (14/14), and BanishmentVoteScreen tests pass (4/4). The full real-server rehearsal and cold-restart tests pass in Pixel Chromium and iPhone WebKit. The corrected re-vote browser test passes in Pixel and desktop Chromium; local iPhone/iPad launch is blocked by missing Playwright system libraries. Typecheck, lint and formatting pass; audit against npmjs reports 0 high and 0 critical; the 85% server-coverage threshold is unchanged.
 
-**Delivery:** GitHub main is at `cf3df40`; Verify #190 is the latest green, and #192 is red for the audit issue above. The markdown-it 14.3.3 override and lockfile pass the public-registry audit locally; the clean fix commit is pending. No CP-1 attachment, workflow, SPEC, deployment or production-setting change is included.
+**Delivery:** GitHub main is at `8106efb`; Verify #193 is green. The tie re-vote display, practice-range explanation, phase-clip player and audit fix are verified. The six production clip assets are not present; only test fixtures are used. No CP-1 attachment, workflow, SPEC, deployment or production-setting change is included.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 
