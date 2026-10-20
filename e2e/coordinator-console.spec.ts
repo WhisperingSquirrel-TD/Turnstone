@@ -138,6 +138,10 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await page.route('**/socket.io/**', (route) => route.abort());
 
   await page.goto(`/coordinate/${gameId}`);
+  const initialViewport = page.viewportSize();
+  if (!initialViewport) {
+    throw new Error('Coordinator screen test needs a configured viewport.');
+  }
   const coordinatorConsole = page.getByTestId('coordinator-console');
   await expect(coordinatorConsole).toBeVisible();
   await page.setViewportSize({ width: 320, height: 900 });
@@ -179,6 +183,8 @@ test('coordinator can pause, extend and safely advance an active game', async ({
         .filter(({ width, height }) => width < 44 || height < 44),
     );
   expect(undersizedButtons).toEqual([]);
+  await page.setViewportSize(initialViewport);
+  expect(page.viewportSize()).toEqual(initialViewport);
   expect(
     (
       await new AxeBuilder({ page })
