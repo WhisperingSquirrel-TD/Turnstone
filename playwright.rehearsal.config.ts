@@ -4,6 +4,14 @@ const webPort = Number(process.env.REHEARSAL_WEB_PORT ?? 3111);
 const apiPort = Number(process.env.REHEARSAL_API_PORT ?? 4111);
 const databaseUrl = process.env.DATABASE_URL;
 const sessionSecret = process.env.SESSION_SECRET;
+const rehearsalProfile = process.env.REHEARSAL_PROFILE ?? 'Pixel';
+const useIPhone = rehearsalProfile === 'iPhone';
+const rehearsalDevice = useIPhone ? devices['iPhone 13'] : devices['Pixel 7'];
+const serverTestFlags = [
+  '--test-only-force-human-removal',
+  '--test-only-force-first-vote-tie',
+  '--test-only-force-human-faithful',
+];
 
 if (!databaseUrl) throw new Error('Rehearsal e2e requires DATABASE_URL.');
 if (!sessionSecret || sessionSecret.length < 32)
@@ -18,8 +26,13 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 5_000 },
   use: {
-    ...devices['Pixel 7'],
-    browserName: 'chromium',
+    ...rehearsalDevice,
+    browserName: useIPhone ? 'webkit' : 'chromium',
+    ...(useIPhone && process.env.WEBKIT_TEST_EXECUTABLE
+      ? {
+          launchOptions: { executablePath: process.env.WEBKIT_TEST_EXECUTABLE },
+        }
+      : {}),
     baseURL: `http://127.0.0.1:${webPort}`,
     trace: 'off',
     screenshot: 'off',
@@ -27,8 +40,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command:
-        'pnpm --filter @workspace/api-server run build && cd artifacts/api-server && node --enable-source-maps ./dist/index.mjs --test-only-force-human-removal --test-only-force-first-vote-tie',
+      command: `pnpm --filter @workspace/api-server run build && cd artifacts/api-server && node --enable-source-maps ./dist/index.mjs ${serverTestFlags.join(' ')}`,
       url: `http://127.0.0.1:${apiPort}/healthz`,
       timeout: 120_000,
       reuseExistingServer: false,

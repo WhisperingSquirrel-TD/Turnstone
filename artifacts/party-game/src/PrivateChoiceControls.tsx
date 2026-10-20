@@ -15,6 +15,7 @@ export type PrivateChoiceControlsProps = {
   choices: PrivateChoiceOption[];
   selected: string;
   confirmChoice: boolean;
+  choiceSubmitted?: boolean;
   isPending: boolean;
   hasToken: boolean;
   commandMessage: string;
@@ -30,6 +31,7 @@ export function PrivateChoiceControls({
   choices,
   selected,
   confirmChoice,
+  choiceSubmitted = false,
   isPending,
   hasToken,
   commandMessage,
@@ -139,7 +141,7 @@ export function PrivateChoiceControls({
           {en.game.yourPick(selectedOption.name)}
         </p>
       )}
-      {selected && !confirmChoice && (
+      {selected && !confirmChoice && !choiceSubmitted && (
         <button
           className="quiet-action mt-4 w-full"
           type="button"
@@ -148,7 +150,7 @@ export function PrivateChoiceControls({
           {en.game.reviewChoice}
         </button>
       )}
-      {selected && confirmChoice && (
+      {selected && confirmChoice && !choiceSubmitted && (
         <div className="mt-4 border-t border-stone pt-4">
           <p className="text-candle">{en.game.confirmChoice}</p>
           <div className="mt-3 flex flex-wrap gap-3">

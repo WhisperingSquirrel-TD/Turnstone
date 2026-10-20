@@ -1109,6 +1109,7 @@ function PlayerGame() {
       options: {
         preservePrivateView?: boolean;
         preserveSelection?: boolean;
+        preserveChoiceProgress?: boolean;
         preserveSyntheticClick?: boolean;
       } = {},
     ) => {
@@ -1122,8 +1123,10 @@ function PlayerGame() {
         privateVersionRef.current = 0;
       }
       if (!options.preserveSelection) setSelected('');
-      setConfirmChoice(false);
-      setActionDone(false);
+      if (!options.preserveChoiceProgress) {
+        setConfirmChoice(false);
+        setActionDone(false);
+      }
       setCommandMessage('');
       setNotesStatus('');
       setHoldMessage('');
@@ -1411,7 +1414,10 @@ function PlayerGame() {
   useEffect(() => {
     let active = true;
     const coverPrivate = () => {
-      clearPrivate({ preserveSelection: true });
+      clearPrivate({
+        preserveSelection: true,
+        preserveChoiceProgress: true,
+      });
       const currentState = returnState.current;
       const requiresDealReshield =
         currentState.shieldRequired && currentState.isDealPhase;
@@ -2076,9 +2082,9 @@ function PlayerGame() {
     hasToken: Boolean(token),
     commandMessage,
     onSelect: (choiceId: string) => {
+      if (choiceId !== selected) setActionDone(false);
       setSelected(choiceId);
       setConfirmChoice(false);
-      setActionDone(false);
       setCommandMessage('');
     },
     onReview: () => setConfirmChoice(true),
@@ -2671,6 +2677,7 @@ function PlayerGame() {
                           <>
                             <NightChoiceScreen
                               {...choiceControlProps}
+                              actionDone={actionDone}
                               taskInstruction={privateView?.task?.instruction}
                               slotLabel={
                                 full.shadowSlot === 1

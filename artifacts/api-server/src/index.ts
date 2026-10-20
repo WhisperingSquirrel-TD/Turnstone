@@ -45,6 +45,9 @@ const rehearsalBots = createRehearsalBotRunner({
     environment.NODE_ENV === 'test' &&
     process.argv.includes('--test-only-force-first-vote-tie'),
 });
+const testOnlyHumanFaithful =
+  environment.NODE_ENV === 'test' &&
+  process.argv.includes('--test-only-force-human-faithful');
 const serverOptions = createServerAppOptions({
   environment,
   resolveViewer: (request) => {
@@ -80,6 +83,14 @@ const app = createApp(
   },
   {
     ...serverOptions,
+    ...(testOnlyHumanFaithful
+      ? {
+          testOnlyRandom: {
+            int: () => 0,
+            bytes: (length: number) => new Uint8Array(length),
+          },
+        }
+      : {}),
     clientDirectory,
     processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
   },

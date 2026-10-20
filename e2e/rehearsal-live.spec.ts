@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 
 type Phase =
@@ -257,6 +258,7 @@ async function submitPrivateChoice(
   shadowContext: ShadowPrivateContext | null,
   preferredVoteName?: string,
   excludedShadowChoiceName?: string,
+  exerciseBackgroundResume = false,
 ): Promise<string> {
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   const choiceList = page.getByTestId('private-choice-list');
@@ -418,6 +420,38 @@ async function submitPrivateChoice(
     await page
       .getByRole('button', { name: 'Review this choice' })
       .evaluate((button: HTMLButtonElement) => button.click());
+    if (exerciseBackgroundResume) {
+      await expect(
+        page.getByRole('button', { name: 'Confirm', exact: true }),
+      ).toBeVisible();
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          value: 'hidden',
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await page.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          value: 'visible',
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      if (phaseBeforeChoice === 'SHADOW') {
+        await page
+          .getByRole('button', {
+            name: 'Tap to see your private screen again',
+          })
+          .click();
+      }
+      await expect(page.getByTestId('selected-choice')).toHaveText(
+        `Your pick: ${selectedName}`,
+      );
+      await expect(
+        page.getByRole('button', { name: 'Confirm', exact: true }),
+      ).toBeVisible();
+    }
     await page
       .getByRole('button', { name: 'Confirm', exact: true })
       .evaluate((button: HTMLButtonElement) => button.click());
@@ -439,6 +473,37 @@ async function submitPrivateChoice(
           exact: true,
         }),
       ).toBeEnabled();
+      if (exerciseBackgroundResume) {
+        await choiceList
+          .getByRole('button', {
+            name: selectedName,
+            exact: true,
+          })
+          .click();
+        await expect(
+          page.getByRole('button', { name: 'Review this choice' }),
+        ).toHaveCount(0);
+        await choiceList
+          .getByRole('button', {
+            name: nightAlternativeName,
+            exact: true,
+          })
+          .click();
+        await expect(
+          page.getByRole('button', { name: 'Review this choice' }),
+        ).toBeVisible();
+        await page.getByRole('button', { name: 'Review this choice' }).click();
+        await page
+          .getByRole('button', { name: 'Confirm', exact: true })
+          .click();
+        await expect(waiting).toHaveText('Thanks. Waiting for everyone.');
+        await expect(page.getByTestId('selected-choice')).toHaveText(
+          `Your pick: ${nightAlternativeName}`,
+        );
+        await expect(
+          page.getByRole('button', { name: 'Review this choice' }),
+        ).toHaveCount(0);
+      }
     }
     const rejected = page.getByText('Please choose someone else.', {
       exact: true,
@@ -456,6 +521,14 @@ async function submitPrivateChoice(
       if (await waiting.isVisible().catch(() => false)) {
         if (phaseBeforeChoice === 'SHADOW') {
           await expect(waiting).toHaveText('Thanks. Waiting for everyone.');
+          await page.waitForTimeout(350);
+          await expect(waiting).toHaveText('Thanks. Waiting for everyone.');
+          await expect(
+            page.getByRole('button', { name: 'Confirm', exact: true }),
+          ).toHaveCount(0);
+          await expect(
+            page.getByRole('button', { name: 'Review this choice' }),
+          ).toHaveCount(0);
           await expect(
             page
               .getByTestId('rehearsal-action-bar')
@@ -746,19 +819,18 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       '8',
     );
     await page.getByTestId('input-rehearsal-name').fill('Morgan');
-    await page.evaluate(() => {
-      const fixedIds = [
-        '00000000-0000-4000-8000-000000000001',
-        '00000000-0000-4000-8000-000000000002',
-      ];
-      let nextId = 0;
-      const cryptoObject = window.crypto;
-      const nativeRandomUUID = cryptoObject.randomUUID.bind(cryptoObject);
-      Object.defineProperty(cryptoObject, 'randomUUID', {
-        configurable: true,
-        value: () => fixedIds[nextId++] ?? nativeRandomUUID(),
-      });
-    });
+    await page.evaluate(
+      (fixedIds) => {
+        let nextId = 0;
+        const cryptoObject = window.crypto;
+        const nativeRandomUUID = cryptoObject.randomUUID.bind(cryptoObject);
+        Object.defineProperty(cryptoObject, 'randomUUID', {
+          configurable: true,
+          value: () => fixedIds[nextId++] ?? nativeRandomUUID(),
+        });
+      },
+      [randomUUID(), randomUUID()],
+    );
     await page.getByTestId('button-speed-fast').click();
     const rehearsalStartResponsePromise = page.waitForResponse(
       (response) =>
@@ -1139,6 +1211,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               shadowContextByCycle.get(shadowCycleBefore) ?? null;
             if (!shadowContext)
               throw new Error('The night choice has no private team context.');
+            if (shadowCycleBefore === 1)
+              expect(shadowContext.role).toBe('faithful');
             await expect(
               page.getByText(
                 shadowContext.role === 'traitor'
@@ -1189,7 +1263,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             activeGameId,
             shadowContext,
             phase === 'FINAL_VOTE' ? 'Continue playing' : undefined,
+            undefined,
+            phase === 'SHADOW',
           );
+          if (
+            process.env.REHEARSAL_NIGHT_CHOICE_ONLY === 'true' &&
+            phase === 'SHADOW' &&
+            shadowCycleBefore === 1
+          ) {
+            break;
+          }
         } else {
           await expect(
             page.getByRole('dialog', { name: 'Shield your screen' }),
@@ -1485,6 +1568,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       }
       expect(appDocumentLoads).toBe(0);
     }
+
+    if (process.env.REHEARSAL_NIGHT_CHOICE_ONLY === 'true') return;
 
     expect(sawVoteReveal).toBe(true);
     expect(sawVerdictResult).toBe(true);

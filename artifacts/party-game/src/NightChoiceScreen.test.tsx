@@ -69,6 +69,48 @@ describe('NightChoiceScreen', () => {
     expect(html).not.toContain('<dialog');
   });
 
+  it('keeps submitted night picks changeable without repeat controls for either role', () => {
+    const roleViews = [
+      {
+        prompt: 'Who will the Traitors take tonight?',
+        statusLines: [
+          'You picked: Alex',
+          'Blair picked: Casey',
+          'Waiting for Drew',
+          'You can change your pick until the night ends.',
+        ],
+      },
+      {
+        prompt: 'Who do you think the Traitors will take tonight?',
+        statusLines: [
+          'Your guess: Alex',
+          'Guesses stay secret until the end.',
+          'Think about who the Traitors fear most.',
+          'You can change your guess until the night ends.',
+        ],
+      },
+    ];
+
+    for (const roleView of roleViews) {
+      const html = renderToString(
+        <NightChoiceScreen
+          {...controls}
+          selected="seat-a"
+          actionDone
+          slotLabel="First choice"
+          prompt={roleView.prompt}
+          statusLines={roleView.statusLines}
+        />,
+      );
+
+      expect(html).toContain(roleView.statusLines[0]!);
+      expect(html).toContain('data-testid="private-choice-list"');
+      expect(html).toContain('data-testid="selected-choice"');
+      expect(html).not.toContain('Review this choice');
+      expect(html).not.toContain('Confirm');
+    }
+  });
+
   it('uses the same fixed four-line status area for Traitor and Faithful prompts', () => {
     const renderNight = (prompt: string, statusLines: string[]) =>
       renderToString(

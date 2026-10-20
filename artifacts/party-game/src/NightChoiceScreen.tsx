@@ -4,6 +4,7 @@ import {
 } from './PrivateChoiceControls';
 
 type NightChoiceScreenProps = PrivateChoiceControlsProps & {
+  actionDone?: boolean;
   taskInstruction?: string;
   slotLabel: string;
   prompt: string;
@@ -11,6 +12,7 @@ type NightChoiceScreenProps = PrivateChoiceControlsProps & {
 };
 
 export function NightChoiceScreen({
+  actionDone = false,
   taskInstruction,
   slotLabel,
   prompt,
@@ -42,7 +44,7 @@ export function NightChoiceScreen({
           </p>
         ))}
       </div>
-      <PrivateChoiceControls {...choiceControls} />
+      <PrivateChoiceControls {...choiceControls} choiceSubmitted={actionDone} />
     </div>
   );
 }
