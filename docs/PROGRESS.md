@@ -1,12 +1,12 @@
 # Status for reviewer
 
-**Latest green:** Verify #176 (`d3b7fded`) passed all 19 jobs, including server coverage, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards.
+**Latest green:** Verify #177 (`01c340a8`) passed all 19 jobs, including server coverage, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards.
 
 **Verify #172:** Resolved by #173. The iPhone browser failure came from the coordinator-console test not restoring its mobile viewport after large-screen checks.
 
 **Verify #174 (`b8392d4`): RED; fixed in #175.** All four browser profiles failed from a stale hidden-screen assertion, private-state loss on resize and the away card preceding the result after navigation.
 
-**R6-1:** Complete. Verify #175 is green; local Pixel/iPhone tests (six each), real-server cold restart, typechecks, lint and formatting pass. R6-2 and R6-3 have not started.
+**R6-1:** Away-and-back changes and tests are in this change set. Targeted typecheck, lint, format, real-server cold restart, and 8 Pixel/iPhone cases pass locally; Verify is pending. R6-2 and R6-3 have not started.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 

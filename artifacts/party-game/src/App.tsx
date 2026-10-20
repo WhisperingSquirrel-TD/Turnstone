@@ -806,7 +806,11 @@ function storeAwayCursor(gameId: string, snapshot: AwaySnapshot) {
 
 function PlayerGame() {
   const { id = '' } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const showRehearsalStartGuide =
+    (location.state as { showRehearsalStartGuide?: boolean } | null)
+      ?.showRehearsalStartGuide === true;
   const token = useContext(csrfContext);
   const install = useContext(installContext);
   const queryClient = useQueryClient();
@@ -843,7 +847,6 @@ function PlayerGame() {
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesStatus, setNotesStatus] = useState('');
-  const [rehearsalGuideStarted, setRehearsalGuideStarted] = useState(false);
   const [rehearsalGuideDismissedSteps, setRehearsalGuideDismissedSteps] =
     useState<Set<string>>(() => new Set());
   const [advanceConfirmationOpen, setAdvanceConfirmationOpen] = useState(false);
@@ -939,12 +942,12 @@ function PlayerGame() {
       })
     : '';
   const renderedRehearsalGuideKey: RehearsalGuideKey =
-    full?.rehearsal && !rehearsalGuideStarted
+    full?.rehearsal && showRehearsalStartGuide
       ? 'start'
       : (explanationKey ?? 'start');
   const rehearsalGuideVisible = shouldShowRehearsalGuide({
     rehearsal: Boolean(full?.rehearsal),
-    started: rehearsalGuideStarted,
+    started: !showRehearsalStartGuide,
     explanationAvailable: Boolean(explanationKey),
     stepKey: explanationStepKey,
     dismissedStepKeys: rehearsalGuideDismissedSteps,
@@ -1295,7 +1298,6 @@ function PlayerGame() {
   useEffect(() => {
     shieldedShadowCycle.current = null;
     requestedShadowPrivateViewKey.current = null;
-    setRehearsalGuideStarted(false);
     setRehearsalGuideDismissedSteps(new Set());
   }, [id]);
 
@@ -1977,8 +1979,11 @@ function PlayerGame() {
   }
 
   function dismissRehearsalGuide() {
-    if (!rehearsalGuideStarted) {
-      setRehearsalGuideStarted(true);
+    if (showRehearsalStartGuide) {
+      navigate(`${location.pathname}${location.search}${location.hash}`, {
+        replace: true,
+        state: null,
+      });
       return;
     }
     if (explanationKey) {
@@ -3000,6 +3005,9 @@ function PlayerGame() {
             aria-modal="true"
             aria-labelledby="rehearsal-guide-title"
             data-testid="rehearsal-explainer"
+            data-guide-key={renderedRehearsalGuideKey}
+            data-guide-started={String(!showRehearsalStartGuide)}
+            data-start-entry={String(showRehearsalStartGuide)}
           >
             <OathstonePlayerHeader />
             <div className="mx-auto my-auto w-full max-w-[480px]">

@@ -876,7 +876,9 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       );
       if (!isFullView(result.view))
         throw new Error('rehearsal-view-unavailable');
-      navigate(webPath(`/game/${encodeURIComponent(result.view.id)}`));
+      navigate(webPath(`/game/${encodeURIComponent(result.view.id)}`), {
+        state: { showRehearsalStartGuide: true },
+      });
     } catch (error) {
       setErrors((current) => ({
         ...current,

@@ -1614,7 +1614,18 @@ test('a cold browser restart restores the existing seat from its stored token @r
       .click({ timeout: 10_000 });
     const roleGuide = page.getByTestId('rehearsal-explainer');
     await expect(roleGuide).toBeVisible();
+    await expect(
+      roleGuide.getByRole('heading', { name: 'Your role' }),
+    ).toBeVisible();
     await roleGuide.getByRole('button', { name: 'Got it' }).click();
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const state = window.history.state as { usr?: unknown } | null;
+          return state?.usr ?? null;
+        }),
+      )
+      .toBeNull();
     await expect(page.getByTestId('player-game')).toHaveAttribute(
       'data-phase',
       'DEAL',
@@ -1662,6 +1673,26 @@ test('a cold browser restart restores the existing seat from its stored token @r
     );
     expect(seatCookie).toBeDefined();
     expect(seatCookie?.expires).toBeGreaterThan(Math.floor(Date.now() / 1_000));
+    expect(
+      savedBrowserState.origins.some((originState) =>
+        originState.localStorage.some(
+          (entry) => entry.name === `oathstone-away-seq:${gameId}`,
+        ),
+      ),
+    ).toBe(true);
+    const savedAwayCursor = savedBrowserState.origins
+      .flatMap((originState) => originState.localStorage)
+      .find((entry) => entry.name === `oathstone-away-seq:${gameId}`);
+    const savedAwaySnapshot = JSON.parse(savedAwayCursor?.value ?? 'null') as {
+      lastPublicSeq?: unknown;
+      showEmptyCard?: unknown;
+    } | null;
+    expect(savedAwaySnapshot).not.toBeNull();
+    expect(typeof savedAwaySnapshot?.showEmptyCard).toBe('boolean');
+    expect(
+      savedAwaySnapshot?.lastPublicSeq === null ||
+        Number.isSafeInteger(savedAwaySnapshot?.lastPublicSeq),
+    ).toBe(true);
 
     const gameUrl = new URL(`/game/${gameId}`, page.url()).toString();
     await page.close();
@@ -1671,10 +1702,31 @@ test('a cold browser restart restores the existing seat from its stored token @r
     });
     const coldPage = await coldContext.newPage();
     await coldPage.goto(gameUrl);
+    expect(
+      await coldPage.evaluate(
+        (id) => window.localStorage.getItem(`oathstone-away-seq:${id}`),
+        gameId,
+      ),
+    ).toBe(savedAwayCursor?.value);
+    expect(
+      await coldPage.evaluate(() => {
+        const state = window.history.state as {
+          usr?: { showRehearsalStartGuide?: boolean };
+        } | null;
+        return state?.usr?.showRehearsalStartGuide === true;
+      }),
+    ).toBe(false);
     await expect(coldPage.getByTestId('player-game')).toHaveAttribute(
       'data-phase',
       'DEAL',
     );
+    const restoredGuide = coldPage.getByTestId('rehearsal-explainer');
+    await expect(restoredGuide).toHaveAttribute('data-guide-started', 'true');
+    await expect(restoredGuide).toHaveAttribute('data-start-entry', 'false');
+    await expect(restoredGuide).toHaveAttribute('data-guide-key', 'role');
+    await expect(
+      restoredGuide.getByRole('heading', { name: 'Your role' }),
+    ).toBeVisible();
     await expect(coldPage.getByTestId('away-resync-overlay')).toHaveCount(0);
     await expect(coldPage.getByTestId('private-role-content')).toHaveCount(0);
     const restoredSeatId = await coldPage.evaluate(async (id) => {

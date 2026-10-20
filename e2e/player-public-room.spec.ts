@@ -1,4 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
+import {
+  devices,
+  expect,
+  test,
+  type BrowserContext,
+  type Page,
+} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 import type { FullView } from '../lib/shared/src/contracts';
@@ -58,6 +64,20 @@ function createPublicView(gameId: string): FullView {
     coordinatorAlerts: [],
     fairness: null,
   } as FullView;
+}
+
+async function browserStorageText(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const storageEntries = (storage: Storage) =>
+      Array.from({ length: storage.length }, (_, index) => {
+        const key = storage.key(index);
+        return `${key ?? ''}=${key === null ? '' : (storage.getItem(key) ?? '')}`;
+      });
+    return [
+      ...storageEntries(window.localStorage),
+      ...storageEntries(window.sessionStorage),
+    ].join('\n');
+  });
 }
 
 test('game-clock colours and Always dark keep text accessible in both palettes', async ({
@@ -1327,6 +1347,9 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   await expect(
     page.getByText('Your pick: Jamie', { exact: true }),
   ).toBeVisible();
+  expect(await browserStorageText(page)).not.toMatch(
+    /seat-jamie|Jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
+  );
   await expect(
     choiceList.getByRole('button', { name: 'Jamie', exact: true }),
   ).toHaveAttribute('aria-pressed', 'true');
@@ -1808,12 +1831,14 @@ test('mobile players retain an unfinished private night choice after backgroundi
   );
 
   const gameId = 'away-night-choice';
+  let simulatedNow = Date.now();
+  await page.clock.install({ time: new Date(simulatedNow) });
   let view = {
     ...createPublicView(gameId),
     phase: 'SHADOW',
     shadowSlot: 1,
     murderSlots: 1,
-    deadline: Date.now() + 60 * 60 * 1_000,
+    deadline: simulatedNow + 48 * 60 * 60 * 1_000,
   } as FullView;
   const privateData = {
     role: 'traitor' as const,
@@ -1834,7 +1859,6 @@ test('mobile players retain an unfinished private night choice after backgroundi
     view,
   });
 
-  await page.clock.install();
   await page.route('**/api/csrf', (route) =>
     route.fulfill({ json: { csrfToken: 'test-csrf' } }),
   );
@@ -1865,6 +1889,176 @@ test('mobile players retain an unfinished private night choice after backgroundi
   await expect(
     page.getByText('Your pick: Jamie', { exact: true }),
   ).toBeVisible();
+  expect(await browserStorageText(page)).not.toMatch(
+    /seat-jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
+  );
+
+  const awayCases = [
+    { durationMs: 30_000, suspend: 'visibility', resume: 'visibility' },
+    { durationMs: 5 * 60_000, suspend: 'pagehide', resume: 'pageshow' },
+    { durationMs: 60 * 60_000, suspend: 'offline', resume: 'online' },
+    {
+      durationMs: 12 * 60 * 60_000,
+      suspend: 'visibility',
+      resume: 'visibility',
+    },
+  ] as const;
+
+  for (const [index, awayCase] of awayCases.entries()) {
+    await page.evaluate((eventName) => {
+      if (eventName === 'visibility') {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          value: 'hidden',
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      } else {
+        window.dispatchEvent(new Event(eventName));
+      }
+    }, awayCase.suspend);
+    await expect(choices).toHaveCount(0);
+
+    simulatedNow += awayCase.durationMs;
+    await page.clock.setFixedTime(new Date(simulatedNow));
+    const latestSeq = Math.max(...view.publicLog.map((entry) => entry.seq));
+    const guestName = `Night guest ${index + 1}`;
+    view = {
+      ...view,
+      version: view.version + 1,
+      deadline: simulatedNow + 48 * 60 * 60 * 1_000,
+      publicLog: [
+        ...view.publicLog,
+        {
+          seq: latestSeq + 1,
+          at: simulatedNow,
+          action: 'seat_departed',
+          seat: { id: `seat-night-away-${index + 1}`, name: guestName },
+        },
+      ],
+    };
+
+    await page.evaluate((eventName) => {
+      if (eventName === 'visibility') {
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          value: 'visible',
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      } else {
+        window.dispatchEvent(new Event(eventName));
+      }
+    }, awayCase.resume);
+
+    await expect(page.getByTestId('player-game')).toHaveAttribute(
+      'data-version',
+      String(view.version),
+    );
+    const awayCard = page.getByTestId('while-away-card');
+    await expect(awayCard).toContainText(
+      `${guestName} was marked as departed.`,
+    );
+    await awayCard.getByRole('button', { name: 'Back to the game' }).click();
+    await page
+      .getByRole('button', { name: 'Tap to see your private screen again' })
+      .click();
+    await expect(page.getByTestId('private-choice-list')).toBeVisible();
+    await expect(
+      page.getByText('Your pick: Jamie', { exact: true }),
+    ).toBeVisible();
+    expect(await browserStorageText(page)).not.toMatch(
+      /seat-jamie|Jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
+    );
+    expect(await browserStorageText(page)).not.toMatch(
+      /seat-jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
+    );
+  }
+
+  for (const viewport of [
+    { width: 844, height: 390 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('orientationchange'));
+    });
+    await expect(page.getByTestId('private-choice-list')).toBeVisible();
+    await expect(
+      page.getByText('Your pick: Jamie', { exact: true }),
+    ).toBeVisible();
+  }
+});
+
+test('mobile players hide a held role on background and never store it', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'Private role hiding is checked on Android Chrome and iPhone WebKit.',
+  );
+
+  const gameId = 'away-private-role';
+  let simulatedNow = Date.now();
+  let view = {
+    ...createPublicView(gameId),
+    phase: 'DEAL',
+    deadline: simulatedNow + 48 * 60 * 60 * 1_000,
+  } as FullView;
+  const privateData = {
+    role: 'faithful' as const,
+    team: [],
+    options: [],
+    choices: {},
+    choiceSlots: [],
+    chat: [],
+    task: {
+      kind: 'task' as const,
+      instruction: 'PRIVATE_TASK_SENTINEL',
+      report: null,
+      murderLost: false,
+    },
+    minimumDurationMs: 0,
+  };
+
+  await page.clock.install();
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/private-view`, (route) =>
+    route.fulfill({
+      json: {
+        serverNow: Date.now(),
+        version: view.version,
+        view: { ...view, private: privateData },
+      },
+    }),
+  );
+
+  await page.goto(`/game/${gameId}`);
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toBeVisible();
+  await page.clock.fastForward(3_000);
+  await page.getByRole('button', { name: 'I’m shielded' }).click();
+  const roleSeal = page.getByTestId('button-hold-reveal');
+  const roleContent = page.getByTestId('private-role-content');
+  await roleSeal.focus();
+  await page.keyboard.down('Space');
+  await page.clock.fastForward(1_000);
+  await expect(roleContent).toContainText('Faithful');
+  await expect(roleContent).toContainText('PRIVATE_TASK_SENTINEL');
+  expect(await browserStorageText(page)).not.toMatch(
+    /Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
+  );
 
   await page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', {
@@ -1873,8 +2067,11 @@ test('mobile players retain an unfinished private night choice after backgroundi
     });
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  await expect(choices).toHaveCount(0);
-  await page.clock.fastForward(30_000);
+  await expect(roleContent).toHaveCount(0);
+  await expect(page.getByTestId('away-resync-overlay')).toBeVisible();
+  await page.keyboard.up('Space');
+  simulatedNow += 30_000;
+  await page.clock.setFixedTime(new Date(simulatedNow));
   view = { ...view, version: view.version + 1 };
   await page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', {
@@ -1887,17 +2084,115 @@ test('mobile players retain an unfinished private night choice after backgroundi
     'data-version',
     String(view.version),
   );
-  await page
-    .getByTestId('while-away-card')
-    .getByRole('button', { name: 'Back to the game' })
-    .click();
-  await page
-    .getByRole('button', { name: 'Tap to see your private screen again' })
-    .click();
-  await expect(page.getByTestId('private-choice-list')).toBeVisible();
+  await expect(roleContent).toHaveCount(0);
   await expect(
-    page.getByText('Your pick: Jamie', { exact: true }),
+    page.getByRole('dialog', { name: 'Shield your screen' }),
   ).toBeVisible();
+  expect(await browserStorageText(page)).not.toMatch(
+    /Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
+  );
+});
+
+test('mobile cold browser restart restores the seat and current vote screen from its cookie', async ({
+  page,
+  browser,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'Cold seat recovery is checked on Android Chrome and iPhone WebKit.',
+  );
+
+  const gameId = 'mobile-cold-seat';
+  const seatCookieName = 'oathstone-seat-mobile-cold';
+  const view = {
+    ...createPublicView(gameId),
+    phase: 'VOTE',
+    deadline: Date.now() + 48 * 60 * 60 * 1_000,
+  } as FullView;
+  const originPage = page;
+
+  await originPage.goto('/');
+  const origin = new URL(originPage.url()).origin;
+  const installRoutes = async (context: BrowserContext) => {
+    await context.route('**/api/csrf', (route) =>
+      route.fulfill({
+        status: 200,
+        headers: {
+          'Set-Cookie': `${seatCookieName}=opaque-test-seat-token; Path=/; HttpOnly; SameSite=Strict`,
+        },
+        json: { csrfToken: 'test-csrf' },
+      }),
+    );
+    await context.route(`**/api/games/${gameId}/view`, (route) => {
+      return route.fulfill({
+        json: { serverNow: Date.now(), version: view.version, view },
+      });
+    });
+  };
+  await installRoutes(originPage.context());
+  await originPage.evaluate(async () => {
+    const response = await fetch('/api/csrf', { credentials: 'include' });
+    if (!response.ok) throw new Error('Seat cookie seeding failed.');
+  });
+  expect(
+    (await originPage.context().cookies(origin)).some(
+      (cookie) => cookie.name === seatCookieName,
+    ),
+  ).toBe(true);
+  const gameUrl = new URL(`/game/${gameId}`, origin).toString();
+  await originPage.goto(gameUrl);
+  await expect(originPage.getByTestId('player-game')).toHaveAttribute(
+    'data-phase',
+    'VOTE',
+  );
+  await expect(
+    originPage.getByText('Who do you vote to banish?', { exact: true }),
+  ).toBeVisible();
+  await originPage.evaluate(() => {
+    window.dispatchEvent(new Event('pagehide'));
+  });
+  const savedState = await originPage.context().storageState();
+  expect(
+    savedState.cookies.some((cookie) => cookie.name === seatCookieName),
+  ).toBe(true);
+
+  const device =
+    testInfo.project.name === 'iPhone'
+      ? devices['iPhone 13']
+      : devices['Pixel 7'];
+  const coldContext = await browser.newContext({
+    viewport: device.viewport,
+    screen: device.screen,
+    deviceScaleFactor: device.deviceScaleFactor,
+    isMobile: device.isMobile,
+    hasTouch: device.hasTouch,
+    userAgent: device.userAgent,
+    storageState: savedState,
+  });
+  try {
+    await installRoutes(coldContext);
+    expect(
+      (await coldContext.cookies(origin)).some(
+        (cookie) => cookie.name === seatCookieName,
+      ),
+    ).toBe(true);
+    const coldPage = await coldContext.newPage();
+    await coldPage.goto(gameUrl);
+    await expect(coldPage.getByTestId('player-game')).toHaveAttribute(
+      'data-phase',
+      'VOTE',
+    );
+    await expect(coldPage.getByTestId('away-resync-overlay')).toHaveCount(0);
+    await expect(
+      coldPage.getByText('Who do you vote to banish?', { exact: true }),
+    ).toBeVisible();
+    await expect(coldPage.getByTestId('private-choice-list')).toBeVisible();
+    expect(await browserStorageText(coldPage)).not.toMatch(
+      /seat-jamie|Faithful|Traitor/i,
+    );
+  } finally {
+    await coldContext.close();
+  }
 });
 
 test('mobile players resync after long absences without losing an unsubmitted vote', async ({
@@ -2083,6 +2378,9 @@ test('mobile players resync after long absences without losing an unsubmitted vo
   );
   await expect(page.getByText('Your pick: Jamie', { exact: true })).toHaveCount(
     0,
+  );
+  expect(await browserStorageText(page)).not.toMatch(
+    /seat-jamie|Jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
   );
   await expect(page.getByTestId('while-away-card')).toContainText(
     'Alex was banished.',
