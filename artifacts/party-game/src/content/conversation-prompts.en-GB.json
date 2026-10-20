@@ -1,0 +1,177 @@
+[
+  {
+    "id": "a1",
+    "when": "always",
+    "text": "Who has been quietest so far, and is that suspicious or just sensible?"
+  },
+  {
+    "id": "a2",
+    "when": "always",
+    "text": "Whose story has changed since yesterday? Say what you noticed."
+  },
+  {
+    "id": "a3",
+    "when": "always",
+    "text": "Who would you trust with your life, and what have they done to earn it?"
+  },
+  {
+    "id": "a4",
+    "when": "always",
+    "text": "If you had to bet on one person being truthful, who and why?"
+  },
+  {
+    "id": "a5",
+    "when": "always",
+    "text": "Who are you watching most closely today? Say it out loud."
+  },
+  {
+    "id": "a6",
+    "when": "always",
+    "text": "Has anyone been too helpful? Where is the line between helpful and hiding?"
+  },
+  {
+    "id": "a7",
+    "when": "always",
+    "text": "Who agreed with everyone yesterday? Is that loyalty or cover?"
+  },
+  {
+    "id": "a8",
+    "when": "always",
+    "text": "Name one person who has surprised you in this game."
+  },
+  {
+    "id": "d1",
+    "when": "day1",
+    "text": "First impressions: who looks like they are enjoying this a little too much?"
+  },
+  {
+    "id": "d2",
+    "when": "day1",
+    "text": "Nobody has been banished yet. What would make you suspicious of someone?"
+  },
+  {
+    "id": "b1",
+    "when": "afterBanishment",
+    "text": "{name} has gone. Who benefits most from that choice?"
+  },
+  {
+    "id": "b2",
+    "when": "afterBanishment",
+    "text": "Who pushed hardest for {name}? Was it reasoning or relief?"
+  },
+  {
+    "id": "b3",
+    "when": "afterBanishment",
+    "text": "Did anyone change their mind about {name} at the last minute? Why?"
+  },
+  {
+    "id": "b4",
+    "when": "afterBanishment",
+    "text": "Was {name}'s exit a good result for the table? Defend your answer."
+  },
+  {
+    "id": "n1",
+    "when": "afterDawn",
+    "text": "{names} did not make it through the night. What does that tell you?"
+  },
+  {
+    "id": "n2",
+    "when": "afterDawn",
+    "text": "Who looked least surprised when the night was announced?"
+  },
+  {
+    "id": "n3",
+    "when": "afterDawn",
+    "text": "Why would anyone choose {names}? Say your theory."
+  },
+  {
+    "id": "n4",
+    "when": "afterDawn",
+    "text": "Whose side did {names} sit on, and who gains from losing them?"
+  },
+  {
+    "id": "z1",
+    "when": "noDawnVictim",
+    "text": "Nobody was lost overnight. Why might that be, and who is it good for?"
+  },
+  {
+    "id": "z2",
+    "when": "noDawnVictim",
+    "text": "A quiet night. Who would prefer that nobody noticed anything?"
+  },
+  {
+    "id": "f1",
+    "when": "fewLeft",
+    "text": "Only {count} remain. Who is your final suspect, and what is the evidence?"
+  },
+  {
+    "id": "f2",
+    "when": "fewLeft",
+    "text": "With {count} left, every vote counts. Who has not yet explained theirs?"
+  },
+  {
+    "id": "f3",
+    "when": "fewLeft",
+    "text": "Who would you save if you could only save one more person?"
+  },
+  {
+    "id": "c1",
+    "when": "challenge",
+    "text": "Pick someone and ask: what exactly did you mean when you said that earlier?"
+  },
+  {
+    "id": "c2",
+    "when": "challenge",
+    "text": "Repeat back what someone said yesterday. Do they still stand by it?"
+  },
+  {
+    "id": "c3",
+    "when": "challenge",
+    "text": "Ask the person on your left why they voted the way they did."
+  },
+  {
+    "id": "c4",
+    "when": "challenge",
+    "text": "Who gave a vague answer? Ask them to be specific."
+  },
+  {
+    "id": "c5",
+    "when": "challenge",
+    "text": "Is anyone playing a double bluff? Describe what it would look like."
+  },
+  {
+    "id": "c6",
+    "when": "challenge",
+    "text": "Say who you are not voting for, and tell the table why."
+  },
+  {
+    "id": "c7",
+    "when": "challenge",
+    "text": "Whose defence sounded rehearsed? Ask them to say it in different words."
+  },
+  {
+    "id": "m1",
+    "when": "m7",
+    "text": "Who kept their shield, and who gave it away? What does each choice say?"
+  },
+  {
+    "id": "m2",
+    "when": "m7",
+    "text": "How did the mission go? Who gained from the way it played out?"
+  },
+  {
+    "id": "m3",
+    "when": "m7",
+    "text": "If someone could have given away a shield and did not, why not?"
+  },
+  {
+    "id": "m4",
+    "when": "m7",
+    "text": "Who is protected right now, and does that change your vote?"
+  },
+  {
+    "id": "m5",
+    "when": "m7",
+    "text": "Did the mission result match what people said beforehand?"
+  }
+]

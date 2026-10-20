@@ -563,6 +563,7 @@ export const en = {
     voteCircleRevealButton: 'I’ve said who I voted for and why',
     voteCircleTally: 'Tally so far',
     voteCircleNoVotesYet: 'No votes have been revealed yet.',
+    conversationPromptsTitle: 'Conversation prompts',
     voteRevealFailed:
       'Your vote could not be revealed. Check your connection and try again.',
     voteReveal: (voter: string, target: string) =>

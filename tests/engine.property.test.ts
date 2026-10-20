@@ -108,6 +108,15 @@ it('never exposes an unrevealed in-room ballot outside its owner phone', () => {
       });
       command(game, { type: 'StartGame' });
       advance(game, 'VOTE');
+      const viewers = [
+        ...game.state.seats.map((seat) => ({
+          kind: 'player' as const,
+          seatId: seat.id,
+        })),
+        { kind: 'coordinator' as const },
+        { kind: 'presenter' as const },
+        { kind: 'admin' as const },
+      ];
       for (const [index, seat] of game.state.seats.entries()) {
         const target =
           index === 0 ? game.state.seats[1]! : game.state.seats[0]!;
@@ -115,18 +124,18 @@ it('never exposes an unrevealed in-room ballot outside its owner phone', () => {
           kind: 'player',
           seatId: seat.id,
         });
+        for (const viewer of viewers) {
+          const projected = viewFor(viewer, game.state) as unknown as {
+            ballots: Record<string, string>;
+          };
+          expect(projected.ballots).toEqual({});
+        }
       }
 
       const votingView = viewFor({ kind: 'presenter' }, game.state);
       expect(votingView.ballots).toEqual({});
       expect(votingView).not.toHaveProperty('voteCircle');
-      for (const seat of game.state.seats) {
-        const ownView = viewFor(
-          { kind: 'player', seatId: seat.id },
-          game.state,
-        ) as unknown as { ballots: Record<string, string> };
-        expect(ownView.ballots).toEqual({});
-      }
+      expect(votingView).not.toHaveProperty('ownVoteTargetId');
 
       advance(game, 'VERDICT');
       const circleView = viewFor(
@@ -162,15 +171,6 @@ it('never exposes an unrevealed in-room ballot outside its owner phone', () => {
       const revealed = Object.fromEntries([
         [speakerId!, game.state.votes[speakerId!]!],
       ]);
-      const viewers = [
-        ...game.state.seats.map((seat) => ({
-          kind: 'player' as const,
-          seatId: seat.id,
-        })),
-        { kind: 'coordinator' as const },
-        { kind: 'presenter' as const },
-        { kind: 'admin' as const },
-      ];
       for (const viewer of viewers) {
         const projected = viewFor(viewer, game.state) as unknown as {
           ballots: Record<string, string>;

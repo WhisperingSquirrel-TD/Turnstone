@@ -205,14 +205,14 @@ async function handleShield(
 async function ownSeatStatus(
   page: Page,
   gameId: string,
-): Promise<string | null> {
+): Promise<{ seatId: string | null; status: string | null }> {
   return page.evaluate(
     async ({ id }) => {
       const response = await fetch(
         `/api/games/${encodeURIComponent(id)}/view`,
         { cache: 'no-store', credentials: 'include' },
       );
-      if (!response.ok) return null;
+      if (!response.ok) return { seatId: null, status: null };
       const payload = (await response.json()) as {
         view: {
           viewerSeatId?: string;
@@ -220,10 +220,13 @@ async function ownSeatStatus(
         };
       };
       const viewerSeatId = payload.view.viewerSeatId;
-      return viewerSeatId
-        ? (payload.view.seats.find((seat) => seat.id === viewerSeatId)
-            ?.status ?? null)
-        : null;
+      return {
+        seatId: viewerSeatId ?? null,
+        status: viewerSeatId
+          ? (payload.view.seats.find((seat) => seat.id === viewerSeatId)
+              ?.status ?? null)
+          : null,
+      };
     },
     { id: gameId },
   );
@@ -839,6 +842,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     let firstCycleNightSafe = false;
     let sawHumanRemoved = false;
     let forcedHumanRemovalAfterSafety = false;
+    let watchModeStarted = false;
     const watchModePhases = new Set<Phase>();
     const visitedPhases = new Set<Phase>();
     const seatStatusByPhase = new Map<Phase, string | null>();
@@ -854,10 +858,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       );
       visitedPhases.add(phase);
       const phaseStartedAt = Date.now();
-      const seatStatus = await ownSeatStatus(page, activeGameId);
+      const ownSeat = await ownSeatStatus(page, activeGameId);
+      const seatStatus = ownSeat.status;
       seatStatusByPhase.set(phase, seatStatus);
-      seatStatusTimeline.push(`${phase}:${seatStatus ?? 'unknown'}`);
-      if (seatStatus && seatStatus !== 'alive') sawHumanRemoved = true;
+      seatStatusTimeline.push(
+        `${phase}:${ownSeat.seatId ?? 'no-seat'}:${seatStatus ?? 'unknown'}`,
+      );
+      if (seatStatus && seatStatus !== 'alive') {
+        sawHumanRemoved = true;
+        watchModeStarted = true;
+      }
       if (seatStatus && seatStatus !== 'alive') {
         await expect(page.getByTestId('player-fate')).toHaveText(
           phase === 'DAWN' && seatStatus === 'murdered'
@@ -867,11 +877,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       } else {
         await expect(page.getByTestId('player-fate')).toHaveCount(0);
       }
-      if (
-        phase === 'VERDICT' &&
-        seatStatus !== 'alive' &&
-        !firstCycleNightSafe
-      ) {
+      if (seatStatus && seatStatus !== 'alive' && !firstCycleNightSafe) {
         const { readGameEvents } = await import('@workspace/db/game-store');
         const events = await readGameEvents(activeGameId);
         const recentVotes = events
@@ -884,7 +890,18 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           `The human was removed before completing the first night: ${JSON.stringify(recentVotes)}`,
         );
       }
-      if (phase === 'FINISHED') break;
+      if (phase === 'FINISHED') {
+        if (watchModeStarted) {
+          const watchMessage = rehearsalWatchMessageByPhase[phase];
+          if (!watchMessage)
+            throw new Error(`Watch mode has no copy for phase ${phase}.`);
+          await expect(
+            page.getByTestId('rehearsal-watch-commentary'),
+          ).toHaveText(watchMessage);
+          watchModePhases.add(phase);
+        }
+        break;
+      }
       if (phase === 'VERDICT' && previousLoopPhase !== 'VERDICT') {
         previousVerdictRowCount = 0;
         sawVoteRevealInCurrentVerdict = false;
@@ -912,7 +929,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         await page.getByRole('button', { name: 'Got it' }).click();
         seenExplanations.add(phase);
       }
-      if (seatStatus && seatStatus !== 'alive') {
+      if (watchModeStarted) {
         const watchMessage = rehearsalWatchMessageByPhase[phase];
         if (!watchMessage)
           throw new Error(`Watch mode has no copy for phase ${phase}.`);
@@ -935,6 +952,13 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           page.getByText(/players have completed this part/),
         ).toHaveCount(0);
       }
+      if (phase === 'DEBATE') {
+        const prompts = page.getByTestId('conversation-prompts');
+        await expect(prompts).toBeVisible();
+        await expect(prompts.getByRole('listitem')).toHaveCount(3);
+      } else {
+        await expect(page.getByTestId('conversation-prompts')).toHaveCount(0);
+      }
       if (phase === 'VERDICT') {
         const revealRows = page.getByTestId('list-vote-reveal').locator('li');
         const votingCircle = page.getByTestId('voting-circle');
@@ -948,14 +972,19 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           await expect(revealButton).toBeVisible();
 
           const originalViewport = page.viewportSize();
-          const cardText = await voteCard.innerText();
+          const voteCardLabel = voteCard.locator('span');
+          const voteCardPlayer = voteCard.locator('strong');
+          const cardLabelText = await voteCardLabel.innerText();
+          const cardPlayerText = await voteCardPlayer.innerText();
           if (originalViewport) {
             await page.setViewportSize({ width: 390, height: 844 });
             await expect(voteCard).toBeVisible();
-            await expect(voteCard).toHaveText(cardText);
+            await expect(voteCardLabel).toHaveText(cardLabelText);
+            await expect(voteCardPlayer).toHaveText(cardPlayerText);
             await page.setViewportSize({ width: 844, height: 390 });
             await expect(voteCard).toBeVisible();
-            await expect(voteCard).toHaveText(cardText);
+            await expect(voteCardLabel).toHaveText(cardLabelText);
+            await expect(voteCardPlayer).toHaveText(cardPlayerText);
             await page.setViewportSize(originalViewport);
           }
 
@@ -1018,6 +1047,14 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         seenShadowSlots.add(shadowSlotBefore);
         if (shadowCycleBefore === 1) {
           seenFirstNightShadowSlots.add(shadowSlotBefore);
+        }
+      }
+      if (phase === 'DAWN') {
+        const dawnView = await latestSynchronizedServerPhase(
+          page,
+          activeGameId,
+        );
+        if (dawnView.cycle === 1) {
           const { readGameEvents } = await import('@workspace/db/game-store');
           const events = await readGameEvents(activeGameId);
           const nightStart = events.findIndex(
@@ -1026,12 +1063,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               event.phase === 'SHADOW' &&
               event.cycle === 1,
           );
-          const viewerSeatId = (await latestServerPhase(page, activeGameId))
-            .viewerSeatId;
+          const dawnResolvedIndex = events.findIndex(
+            (event, index) =>
+              index > nightStart && event.type === 'DawnResolved',
+          );
+          const viewerSeatId = dawnView.viewerSeatId;
           const firstNightPicks = events
-            .slice(nightStart + 1)
+            .slice(nightStart + 1, dawnResolvedIndex)
             .filter((event) => event.type === 'ShadowSubmitted');
           expect(nightStart).toBeGreaterThanOrEqual(0);
+          expect(dawnResolvedIndex).toBeGreaterThan(nightStart);
           expect(viewerSeatId).toBeTruthy();
           expect(firstNightPicks.length).toBeGreaterThan(0);
           expect(
@@ -1448,7 +1489,13 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       `phases/status: ${seatStatusTimeline.join(', ')}; trace: ${JSON.stringify(finalTrace)}`,
     ).toBe(true);
     expect(sawHumanRemoved).toBe(true);
-    expect(watchModePhases.has('VERDICT')).toBe(true);
+    const finalView = await latestServerPhase(page, activeGameId);
+    expect(
+      watchModePhases.has('SHADOW'),
+      `viewer=${finalView.viewerSeatId ?? 'no-seat'}; phases/status: ${seatStatusTimeline.join(', ')}; trace: ${JSON.stringify(finalTrace)}`,
+    ).toBe(true);
+    expect(watchModePhases.has('DAWN')).toBe(true);
+    expect(watchModePhases.has('FINISHED')).toBe(true);
     expect([...seenShadowSlots].sort()).toEqual([1]);
     expect([...seenFirstNightShadowSlots].sort()).toEqual([1]);
     await expect(game).toHaveAttribute('data-phase', 'FINISHED', {
@@ -1462,9 +1509,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(page.getByTestId('rehearsal-watch-commentary')).toHaveText(
       rehearsalWatchMessageByPhase.FINISHED!,
     );
-    expect(await ownSeatStatus(page, activeGameId)).not.toBe('alive');
-    watchModePhases.add('FINISHED');
-    expect(watchModePhases.has('FINISHED')).toBe(true);
+    expect((await ownSeatStatus(page, activeGameId)).status).not.toBe('alive');
     await expect(
       page.getByText(/players have completed this part/),
     ).toHaveCount(0);

@@ -54,6 +54,8 @@ import { BanishmentVoteScreen } from './BanishmentVoteScreen';
 import { PrivateChoiceControls } from './PrivateChoiceControls';
 import { NightChoiceScreen } from './NightChoiceScreen';
 import { GameStepAnnouncement } from './GameStepAnnouncement';
+import { ConversationPromptsCard } from './ConversationPromptsCard';
+import { getDayStartConversationPrompts } from './conversation-prompts';
 import { buildNightChoiceStatusLines } from './night-choice-status';
 import { orderChoiceOptions } from './choice-order';
 import { WhileAwayCard } from './WhileAwayCard';
@@ -931,6 +933,11 @@ function PlayerGame() {
   const explanationKey = full
     ? explanationKeyForPhase(full.phase, notesOpen)
     : null;
+  const conversationPrompts = useMemo(
+    () =>
+      full?.phase === 'DEBATE' ? getDayStartConversationPrompts(full) : [],
+    [full],
+  );
   const explanationStepKey = full
     ? rehearsalGuideStepKey({
         phase: full.phase,
@@ -2216,6 +2223,12 @@ function PlayerGame() {
                   : undefined
               }
             />
+            {full.phase === 'DEBATE' && (
+              <ConversationPromptsCard
+                title={en.game.conversationPromptsTitle}
+                prompts={conversationPrompts}
+              />
+            )}
             {((!isBanishmentPhase &&
               ['DEAL', 'FINAL_VOTE'].includes(full.phase)) ||
               full.paused ||
