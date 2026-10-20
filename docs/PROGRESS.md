@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green:** Verify #175 (`1ee9b204`) passed all 19 jobs, including server coverage, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards.
+**Latest green:** Verify #176 (`d3b7fded`) passed all 19 jobs, including server coverage, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards.
 
 **Verify #172:** Resolved by #173. The iPhone browser failure came from the coordinator-console test not restoring its mobile viewport after large-screen checks.
 
@@ -8,7 +8,7 @@
 
 **R6-1:** Complete. Verify #175 is green; local Pixel/iPhone tests (six each), real-server cold restart, typechecks, lint and formatting pass. R6-2 and R6-3 have not started.
 
-**Copy alignment:** Approved FAQ and comparison wording is updated in the shared source and SPEC; public-page tests and the static public build pass locally. Separate commit and Verify pending.
+**Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 
 **Milestone 6 — automated items verified:** takeover/coordinator secrecy, undo and schedule shifts; coordinator logistics; public-only `/tv` pairing, verdict and finish; accessibility, route, keyboard, reduced-motion and bundle checks; configured admission-capacity behaviour. Targeted coordinator/presenter browser tests (Pixel and desktop), takeover/admission integration tests, unit tests, typecheck, lint and format check passed locally.
 
