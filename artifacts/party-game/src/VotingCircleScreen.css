@@ -16,3 +16,59 @@
   font-size: clamp(2rem, 9vw, 4rem);
   line-height: 1.1;
 }
+
+.vote-circle-presenter {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  box-sizing: border-box;
+  place-items: center;
+  overflow: hidden;
+  padding: max(1rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+  background: var(--game-page-background, var(--hearth));
+  color: var(--candle);
+}
+
+.vote-circle-presenter__close {
+  position: absolute;
+  inset-block-start: max(1rem, env(safe-area-inset-top));
+  inset-inline-end: max(1rem, env(safe-area-inset-right));
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--gilt);
+  color: var(--candle);
+}
+
+.vote-circle-presenter__content {
+  display: grid;
+  width: min(100%, 90rem);
+  min-height: 0;
+  justify-items: center;
+  gap: clamp(0.5rem, 3dvh, 2rem);
+  text-align: center;
+}
+
+.vote-circle-presenter__content p {
+  font-size: clamp(1.25rem, 5vw, 2.5rem);
+}
+
+.vote-circle-presenter__content h2 {
+  max-width: 100%;
+  font-size: clamp(3rem, min(22vw, 30dvh), 14rem);
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+html:has(.vote-circle-presenter),
+body:has(.vote-circle-presenter),
+.game-shell-main:has(.vote-circle-presenter) {
+  overflow: hidden !important;
+}

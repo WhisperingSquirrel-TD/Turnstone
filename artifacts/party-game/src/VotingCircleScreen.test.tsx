@@ -24,6 +24,10 @@ describe('VotingCircleScreen', () => {
 
     expect(html).toContain('You voted for');
     expect(html).toContain('Lena');
+    expect(html).toContain(
+      'Expand the card below to full screen and show it to the group when it is your turn.',
+    );
+    expect(html).toContain('Show your vote card full screen');
     expect(html).toContain('I’ve said who I voted for and why');
     expect(html).toContain('It’s your turn.');
   });
@@ -44,5 +48,6 @@ describe('VotingCircleScreen', () => {
     expect(html).toContain('1 vote for Lena.');
     expect(html).toContain('Mina');
     expect(html).not.toContain('<button');
+    expect(html).not.toContain('Show your vote card full screen');
   });
 });

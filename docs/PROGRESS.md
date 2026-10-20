@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green:** Verify #185 (`99f4686`) passed all 19 jobs, including the coverage-gated integration job, all four browser profiles, `rehearsal-live`, Lighthouse, audit, `required-checks` and all scenario shards.
+**Latest green:** Verify #186 (`561f04f`) passed all 19 jobs, including the coverage-gated integration job, all four browser profiles, `rehearsal-live`, Lighthouse, audit, `required-checks` and all scenario shards.
 
 **Verify #182 cause and fix:** `rehearsal-live` expected a separate Dawn screen after a terminal night. The server recorded `DawnResolved`, then `GameFinished` immediately when the murder reached parity, so the browser correctly landed on the results screen. The test now accepts that terminal order and verifies the Dawn update remains in the final public log; Verify #183 is green.
 
@@ -17,11 +17,15 @@
 **R6-3 / CP-2:** Complete; Verify #181 is green. All 35 supplied prompts are data-driven; selection is deterministic by game/day, public-fact-only, limited to one challenge, repeats only when fewer than three fresh eligible prompts fit, and keeps M7 prompts hidden.
 **R6 feedback A1–A2:** Complete; Verify #185 is green. Prompt gates and day-one copy are in the commit. The wake-lock notice remains in the shared game header, over reserved top padding; it does not change header geometry or push the game content down.
 
-**R6 feedback B — night-choice loop:** Root cause was the submitted night screen leaving “Review this choice” available while waiting, so Confirm could be sent repeatedly. It now suppresses repeat controls until a different target is selected, while preserving the draft through backgrounding. Pixel Chromium full rehearsal and focused Pixel/iPhone WebKit real-server checks pass; unit tests, typecheck, lint and formatting pass. Server coverage is 85.92% lines (95/95 tests; 85% threshold unchanged). Latest green is #185; this change is ready for Verify.
+**R6 feedback B — night-choice loop:** Root cause was the submitted night screen leaving “Review this choice” available while waiting, so Confirm could be sent repeatedly. It now suppresses repeat controls until a different target is selected, while preserving the draft through backgrounding. Pixel Chromium full rehearsal and focused Pixel/iPhone WebKit real-server checks pass; unit tests, typecheck, lint and formatting pass. Server coverage is 85.92% lines (95/95 tests; 85% threshold unchanged). Verify #186 is green.
 
-**Local checks:** Prompt tests 9/9, affected Pixel/desktop Chromium smoke checks 4/4, typecheck, test typecheck, lint, formatting, and `git diff --check` pass. Audit reports 0 high and 0 critical; the 85% server-coverage threshold is unchanged. The real-server rehearsal previously passed in Pixel Chromium and iPhone WebKit; iPhone WebKit cold restart remains unverified.
+**R6 feedback C — practice seat minimum:** SPEC §31 explicitly retains the 6–15-seat practice slider. No technical limitation is documented, so the minimum remains 6; no code or copy change was made.
 
-**Delivery:** GitHub main is at `99f4686`; the #185 repair commit contains only the existing workspace override list, dependency lock, shared-header CSS and this progress report. No CP-1 attachment, SPEC or workflow change is included. No deployment or production setting was changed.
+**R6 feedback D — voting-circle card:** The current speaker can open a full-screen view of their own vote card; opening and closing it does not reveal a ballot or change the public tally. The overlay uses the Fullscreen API where available, remains viewport- and safe-area-aware in portrait and landscape, and has Close and Escape controls. The existing game wake lock remains active. Real-server rehearsal passes in Pixel Chromium and iPhone WebKit; the targeted unit test, typecheck, lint and formatting checks pass. Verify pending.
+
+**Local checks:** Voting-circle unit tests 2/2, real-server rehearsal and portrait/landscape card checks pass in Pixel Chromium and iPhone WebKit; typecheck, lint and formatting pass. Audit reports 0 high and 0 critical; the 85% server-coverage threshold is unchanged. iPhone WebKit cold restart remains unverified.
+
+**Delivery:** GitHub main is at `561f04f`; Verify #186 is green. The R6 feedback D commit is pending Verify. No CP-1 attachment, SPEC or workflow change is included. No deployment or production setting was changed.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 

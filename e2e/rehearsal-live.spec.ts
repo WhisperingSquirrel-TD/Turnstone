@@ -800,6 +800,15 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             Promise.reject(new Error('Simulated wake-lock unavailability.')),
         },
       });
+      if (typeof HTMLElement.prototype.requestFullscreen === 'function') {
+        Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+          configurable: true,
+          value: function (this: HTMLElement) {
+            this.setAttribute('data-vote-card-fullscreen-requested', 'true');
+            return Promise.resolve();
+          },
+        });
+      }
     });
     await page.goto('/play');
     captureAppDocumentLoads = true;
@@ -1061,8 +1070,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             name: 'I’ve said who I voted for and why',
             exact: true,
           });
+          const showVoteCardButton = page.getByRole('button', {
+            name: 'Show your vote card full screen',
+            exact: true,
+          });
+          await expect(votingCircle).toContainText(
+            'Expand the card below to full screen and show it to the group when it is your turn.',
+          );
           await expect(voteCard).toContainText('You voted for');
           await expect(revealButton).toBeVisible();
+          await expect(showVoteCardButton).toBeVisible();
 
           const originalViewport = page.viewportSize();
           const voteCardLabel = voteCard.locator('span');
@@ -1082,6 +1099,55 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           }
 
           const revealedBefore = await revealRows.count();
+          await showVoteCardButton.click();
+          const fullscreenApiAvailable = await page.evaluate(
+            () =>
+              typeof document.documentElement.requestFullscreen === 'function',
+          );
+          if (fullscreenApiAvailable) {
+            await expect(page.locator('html')).toHaveAttribute(
+              'data-vote-card-fullscreen-requested',
+              'true',
+            );
+          }
+          const fullScreenVoteCard = page.getByTestId('vote-circle-fullscreen');
+          await expect(fullScreenVoteCard).toBeVisible();
+          await expect(
+            fullScreenVoteCard.getByText(cardLabelText, { exact: true }),
+          ).toBeVisible();
+          await expect(
+            fullScreenVoteCard.getByTestId('vote-circle-fullscreen-name'),
+          ).toHaveText(cardPlayerText);
+          await expect(revealRows).toHaveCount(revealedBefore);
+          await expect(revealButton).not.toBeVisible();
+
+          if (originalViewport) {
+            for (const viewport of [
+              { width: 390, height: 844 },
+              { width: 844, height: 390 },
+            ]) {
+              await page.setViewportSize(viewport);
+              await expect(fullScreenVoteCard).toBeVisible();
+              const presentedName = await fullScreenVoteCard
+                .getByTestId('vote-circle-fullscreen-name')
+                .boundingBox();
+              expect(presentedName).not.toBeNull();
+              if (presentedName) {
+                expect(presentedName.width).toBeLessThanOrEqual(viewport.width);
+                expect(presentedName.height).toBeLessThanOrEqual(
+                  viewport.height,
+                );
+              }
+            }
+            await page.setViewportSize(originalViewport);
+          }
+
+          await page
+            .getByRole('button', { name: 'Close vote card', exact: true })
+            .click();
+          await expect(fullScreenVoteCard).toHaveCount(0);
+          await expect(revealButton).toBeVisible();
+          await expect(revealRows).toHaveCount(revealedBefore);
           await revealButton.click();
           await expect
             .poll(() => revealRows.count(), { timeout: 10_000 })

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { en } from '@/locale/en-GB';
 import './VotingCircleScreen.css';
 
@@ -26,7 +27,55 @@ export function VotingCircleScreen({
   const viewerHasRevealed =
     viewerSeatId !== null && ballots[viewerSeatId] !== undefined;
   const isMyTurn = speakerSeatId !== null && speakerSeatId === viewerSeatId;
+  const [showingFullScreenCard, setShowingFullScreenCard] = useState(false);
+  const closeVoteCardButton = useRef<HTMLButtonElement>(null);
   const tally = new Map<string, { name: string; count: number }>();
+
+  useEffect(() => {
+    if (!showingFullScreenCard) return;
+
+    closeVoteCardButton.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setShowingFullScreenCard(false);
+      if (
+        document.fullscreenElement &&
+        typeof document.exitFullscreen === 'function'
+      ) {
+        void document.exitFullscreen().catch(() => undefined);
+      }
+    };
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) setShowingFullScreenCard(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+    };
+  }, [showingFullScreenCard]);
+
+  function openFullScreenCard() {
+    setShowingFullScreenCard(true);
+    const root = document.documentElement;
+    if (
+      !document.fullscreenElement &&
+      typeof root.requestFullscreen === 'function'
+    ) {
+      void root.requestFullscreen().catch(() => undefined);
+    }
+  }
+
+  function closeFullScreenCard() {
+    setShowingFullScreenCard(false);
+    if (
+      document.fullscreenElement &&
+      typeof document.exitFullscreen === 'function'
+    ) {
+      void document.exitFullscreen().catch(() => undefined);
+    }
+  }
 
   for (const targetId of Object.values(ballots)) {
     const target = seats.find((seat) => seat.id === targetId);
@@ -44,65 +93,109 @@ export function VotingCircleScreen({
       aria-labelledby="voting-circle-heading"
       data-testid="voting-circle"
     >
-      <h2
-        id="voting-circle-heading"
-        className="display text-2xl text-candle sm:text-3xl"
-      >
-        {en.game.voteCircleHeading}
-      </h2>
-      <p className="mt-2 text-base text-ash">{en.game.voteCircleInstruction}</p>
-
-      {ownVoteTargetName && (
-        <div
-          className="vote-circle-card border-2 border-gilt bg-stone text-candle"
-          aria-label={en.game.voteCircleCardLabel}
-          data-testid="vote-circle-card"
+      <div aria-hidden={showingFullScreenCard} inert={showingFullScreenCard}>
+        <h2
+          id="voting-circle-heading"
+          className="display text-2xl text-candle sm:text-3xl"
         >
-          <span className="text-base">{en.game.voteCircleCardLabel}</span>
-          <strong className="display">{ownVoteTargetName}</strong>
+          {en.game.voteCircleHeading}
+        </h2>
+        <p className="mt-2 text-base text-ash">
+          {en.game.voteCircleInstruction}
+        </p>
+
+        {ownVoteTargetName && (
+          <div
+            className="vote-circle-card border-2 border-gilt bg-stone text-candle"
+            aria-label={en.game.voteCircleCardLabel}
+            data-testid="vote-circle-card"
+          >
+            <span className="text-base">{en.game.voteCircleCardLabel}</span>
+            <strong className="display">{ownVoteTargetName}</strong>
+          </div>
+        )}
+
+        {ownVoteTargetName && isMyTurn && !viewerHasRevealed && (
+          <button
+            className="secondary-action mt-4 min-h-11 w-full"
+            type="button"
+            data-testid="button-open-vote-card"
+            onClick={openFullScreenCard}
+          >
+            {en.game.voteCircleFullScreen}
+          </button>
+        )}
+
+        <p className="mt-4 text-base text-ash" role="status" aria-live="polite">
+          {isMyTurn
+            ? en.game.voteCircleYourTurn
+            : speaker
+              ? en.game.voteCircleWaitingFor(speaker.name)
+              : en.game.voteCircleEveryoneDone}
+        </p>
+
+        {isMyTurn && !viewerHasRevealed && (
+          <button
+            className="primary-action mt-4 min-h-11 w-full"
+            type="button"
+            onClick={onReveal}
+            disabled={isPending}
+          >
+            {en.game.voteCircleRevealButton}
+          </button>
+        )}
+
+        <section className="mt-6" aria-label={en.game.voteCircleTally}>
+          <h3 className="text-lg text-candle">{en.game.voteCircleTally}</h3>
+          {tally.size ? (
+            <ul className="mt-2 grid gap-2">
+              {[...tally.values()]
+                .sort((left, right) => left.name.localeCompare(right.name))
+                .map(({ name, count }) => (
+                  <li
+                    className="border-b border-stone py-2 text-base text-ash"
+                    key={name}
+                  >
+                    {en.game.voteTally(count, name)}
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-ash">
+              {en.game.voteCircleNoVotesYet}
+            </p>
+          )}
+        </section>
+      </div>
+
+      {showingFullScreenCard && ownVoteTargetName && (
+        <div
+          className="vote-circle-presenter"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vote-circle-presenter-name"
+          data-testid="vote-circle-fullscreen"
+        >
+          <button
+            ref={closeVoteCardButton}
+            className="vote-circle-presenter__close"
+            type="button"
+            onClick={closeFullScreenCard}
+          >
+            {en.game.voteCircleCloseCard}
+          </button>
+          <div className="vote-circle-presenter__content">
+            <p>{en.game.voteCircleCardLabel}</p>
+            <h2
+              className="display"
+              id="vote-circle-presenter-name"
+              data-testid="vote-circle-fullscreen-name"
+            >
+              {ownVoteTargetName}
+            </h2>
+          </div>
         </div>
       )}
-
-      <p className="mt-4 text-base text-ash" role="status" aria-live="polite">
-        {isMyTurn
-          ? en.game.voteCircleYourTurn
-          : speaker
-            ? en.game.voteCircleWaitingFor(speaker.name)
-            : en.game.voteCircleEveryoneDone}
-      </p>
-
-      {isMyTurn && !viewerHasRevealed && (
-        <button
-          className="primary-action mt-4 min-h-11 w-full"
-          type="button"
-          onClick={onReveal}
-          disabled={isPending}
-        >
-          {en.game.voteCircleRevealButton}
-        </button>
-      )}
-
-      <section className="mt-6" aria-label={en.game.voteCircleTally}>
-        <h3 className="text-lg text-candle">{en.game.voteCircleTally}</h3>
-        {tally.size ? (
-          <ul className="mt-2 grid gap-2">
-            {[...tally.values()]
-              .sort((left, right) => left.name.localeCompare(right.name))
-              .map(({ name, count }) => (
-                <li
-                  className="border-b border-stone py-2 text-base text-ash"
-                  key={name}
-                >
-                  {en.game.voteTally(count, name)}
-                </li>
-              ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-sm text-ash">
-            {en.game.voteCircleNoVotesYet}
-          </p>
-        )}
-      </section>
     </section>
   );
 }

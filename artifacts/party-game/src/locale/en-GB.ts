@@ -553,8 +553,11 @@ export const en = {
     voteTally: (count: number, target: string) =>
       `${count} ${count === 1 ? 'vote' : 'votes'} for ${target}.`,
     voteCircleHeading: 'The voting circle',
-    voteCircleInstruction: 'Say who you voted for and why out loud.',
+    voteCircleInstruction:
+      'Expand the card below to full screen and show it to the group when it is your turn.',
     voteCircleCardLabel: 'You voted for',
+    voteCircleFullScreen: 'Show your vote card full screen',
+    voteCircleCloseCard: 'Close vote card',
     voteCircleYourTurn:
       'It’s your turn. Say who you voted for and why, then reveal your card.',
     voteCircleWaitingFor: (name: string) =>
