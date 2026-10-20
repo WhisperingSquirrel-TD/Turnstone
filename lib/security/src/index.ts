@@ -18,6 +18,7 @@ export function securityHeaders(nonce: string, development = false) {
       stylePolicy,
       "img-src 'self' data:",
       "font-src 'self'",
+      "media-src 'self'",
       `connect-src 'self'${development ? ' ws: wss:' : ''}`,
       "base-uri 'none'",
       "object-src 'none'",

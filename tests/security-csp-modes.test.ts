@@ -13,10 +13,12 @@ describe('content security policy modes', () => {
     );
     expect(development).toContain("style-src 'self' 'unsafe-inline'");
     expect(development).toContain('ws: wss:');
+    expect(development).toContain("media-src 'self'");
     expect(production).not.toContain("'unsafe-inline'");
     expect(production).not.toContain("'unsafe-eval'");
     expect(production).toContain(
       "script-src 'nonce-test-nonce' 'strict-dynamic'",
     );
+    expect(production).toContain("media-src 'self'");
   });
 });

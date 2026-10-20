@@ -48,6 +48,7 @@ it('builds public pages and an app fallback without scripts or game assets', asy
   await mkdir(join(sourceDirectory, 'assets'), { recursive: true });
   await mkdir(join(sourceDirectory, 'faq'), { recursive: true });
   await mkdir(join(sourceDirectory, 'brand'), { recursive: true });
+  await mkdir(join(sourceDirectory, 'clips'), { recursive: true });
   await writeFile(
     join(sourceDirectory, 'faq', 'index.html'),
     '<link rel="stylesheet" href="/assets/public-abc.css"><script type="module" src="/assets/app-abc.js"></script>',
@@ -63,6 +64,8 @@ it('builds public pages and an app fallback without scripts or game assets', asy
     join(sourceDirectory, 'brand', 'stackstone-icon-dark-outlined.svg'),
     '<svg/>',
   );
+  await writeFile(join(sourceDirectory, 'clips', 'nightfall.webm'), 'video');
+  await writeFile(join(sourceDirectory, 'clips', 'dawn.mp4'), 'video');
 
   await buildStaticPublicSite({
     sourceDirectory,
@@ -88,6 +91,7 @@ it('builds public pages and an app fallback without scripts or game assets', asy
   expect(
     publicPageHtml.filter((html) => forbiddenGameRoute.test(html)),
   ).toEqual([]);
+  expect(publicPageHtml.join('\n')).not.toContain('/clips/');
   const metadata = publicPageHtml.map((html) => ({
     title: html.match(/<title>(.*?)<\/title>/)?.[1],
     description: html.match(/<meta name="description" content="(.*?)">/)?.[1],
@@ -173,6 +177,7 @@ it('builds public pages and an app fallback without scripts or game assets', asy
   expect(files).toContain('assets/font-abc.woff2');
   expect(files).toContain('favicon.svg');
   expect(files).toContain('brand/stackstone-icon-dark-outlined.svg');
+  expect(files.some((file) => file.startsWith('clips/'))).toBe(false);
   expect(PUBLIC_MARKETING_ROUTE_PATHS).toEqual([
     '/',
     '/about',

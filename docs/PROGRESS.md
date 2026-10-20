@@ -1,8 +1,10 @@
 # Status for reviewer
 
-**Latest green:** Verify #187 (`0a5f7da`) passed all 18 reported jobs, including the coverage-gated integration job, all four browser profiles, `rehearsal-live`, Lighthouse, audit, `required-checks` and all scenario shards.
+**Latest green:** GitHub Verify #189 (`2c861af`) passed all 19 jobs, including Pixel, desktop Chromium, iPad and iPhone WebKit, `rehearsal-live`, Lighthouse, audit, coverage-gated integration, all scenario shards and `required-checks`.
 
-**Verify #188 (`5b2e716`): RED.** All four browser profiles and dependent `required-checks` failed because `e2e/player-public-room.spec.ts` and `e2e/smoke.spec.ts` still expected the former long conversation card copy; the player-room spec also expected the former long vote card copy. The rendered copy was correct. Assertions now check the concise text exactly; targeted Pixel and iPhone browser checks pass. Verify for the correction is pending.
+**Phase clips (F):** Tom confirmed a shared, non-blocking nightfall overlay at `SHADOW` for every role, with no separate step. Local implementation and tests are ready; Verify is pending. Unit 479/479, typechecks, lint, formatting, build, server line coverage 85.92% (threshold 85%) and scenario report (0 failures/2,571 games) pass. Pixel full rehearsal passes playback, tap-to-skip, timed close, reduced-motion and `?clips=off` skips. Local iPhone WebKit cannot decode either fixture format (`canPlayType` is empty); GitHub WebKit must verify playback. The six production assets are not present. Tom should save/upload `nightfall.webm`, `nightfall.mp4`, `nightfall-poster.webp`, `dawn.webm`, `dawn.mp4` and `dawn-poster.webp` to `artifacts/party-game/public/clips/`; tiny fixtures remain under e2e only.
+
+**Verify #188 (`5b2e716`): RED; corrected by #189.** The browser profiles failed because two specs expected older conversation copy and the player-room spec expected older vote copy; the rendered wording was correct and the assertions now match the concise text.
 
 **Verify #182 cause and fix:** `rehearsal-live` expected a separate Dawn screen after a terminal night. The server recorded `DawnResolved`, then `GameFinished` immediately when the murder reached parity, so the browser correctly landed on the results screen. The test now accepts that terminal order and verifies the Dawn update remains in the final public log; Verify #183 is green.
 
@@ -25,11 +27,11 @@
 
 **R6 feedback D — voting-circle card:** The current speaker can open a full-screen view of their own vote card; opening and closing it does not reveal a ballot or change the public tally. The overlay uses the Fullscreen API where available, remains viewport- and safe-area-aware in portrait and landscape, and has Close and Escape controls. The existing game wake lock remains active. Real-server rehearsal passes in Pixel Chromium and iPhone WebKit; Verify #187 is green.
 
-**R6 feedback E — wording audit:** First-time rehearsal cards now use concise copy separate from the full “What’s this?” details. The Notes detail no longer repeats its privacy line, and the role-reveal instruction is shorter. Verify #188 exposed stale browser expectations for the shorter conversation and vote cards; both were updated without weakening coverage. Targeted Pixel and iPhone browser checks pass; Verify for the correction is pending.
+**R6 feedback E — wording audit:** First-time rehearsal cards now use concise copy separate from the full “What’s this?” details. The Notes detail no longer repeats its privacy line, and the role-reveal instruction is shorter. Verify #188 exposed stale browser expectations; the assertions were updated without weakening coverage and Verify #189 is green.
 
 **Local checks:** Copy-card unit tests pass (14/14). The full real-server rehearsal and cold-restart tests pass in Pixel Chromium and iPhone WebKit. The affected conversation/vote card browser checks pass in Pixel Chromium and iPhone WebKit. Typecheck, lint and formatting pass; audit reports 0 high and 0 critical; the 85% server-coverage threshold is unchanged.
 
-**Delivery:** GitHub main is at `5b2e716`; Verify #187 is the latest green. The E correction is limited to browser assertions and this status note; Verify is pending. No CP-1 attachment, SPEC or workflow change is included. No deployment or production setting was changed.
+**Delivery:** GitHub main is at `2c861af`; Verify #189 is the latest green. Phase F has not yet been pushed. No CP-1 attachment, workflow, SPEC, deployment or production-setting change is included.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 

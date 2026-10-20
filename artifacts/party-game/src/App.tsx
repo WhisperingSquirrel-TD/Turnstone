@@ -49,6 +49,7 @@ import type {
 import { config } from '@/config';
 import { BrandFooter } from './BrandFooter';
 import { GameConnectionStatus } from './GameConnectionStatus';
+import { PhaseClipOverlay } from './PhaseClipOverlay';
 import { NotesScreen } from './NotesScreen';
 import { BanishmentVoteScreen } from './BanishmentVoteScreen';
 import { PrivateChoiceControls } from './PrivateChoiceControls';
@@ -2118,6 +2119,18 @@ function PlayerGame() {
             : null
       }
     >
+      <PhaseClipOverlay
+        enabled={Boolean(activeGame && !isResuming)}
+        gameId={id}
+        phase={full?.phase}
+        cycle={full?.cycle}
+        phaseStartedAt={
+          full
+            ? (full as FullView & { phaseStartedAt?: number }).phaseStartedAt
+            : undefined
+        }
+        serverNow={response?.serverNow}
+      />
       <section
         className={
           inPrivateMoment

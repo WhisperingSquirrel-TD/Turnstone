@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
 
 type Phase =
@@ -43,6 +45,158 @@ const rehearsalWatchMessageByPhase: Partial<Record<Phase, string>> = {
   FINAL_BANISH: 'The remaining players are voting now.',
   FINISHED: "The game is complete. Everyone's roles are revealed.",
 };
+
+const phaseClipNetworkLog: string[] = [];
+
+async function installPhaseClipFixtures(page: Page): Promise<void> {
+  phaseClipNetworkLog.length = 0;
+  const webm = readFileSync(
+    resolve(process.cwd(), 'e2e/fixtures/phase-clips/fixture.webm'),
+  );
+  const mp4 = readFileSync(
+    resolve(process.cwd(), 'e2e/fixtures/phase-clips/fixture.mp4'),
+  );
+  const poster = readFileSync(
+    resolve(process.cwd(), 'e2e/fixtures/phase-clips/poster.webp'),
+  );
+  await page.route('**/clips/**', async (route) => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    const isPoster = pathname.endsWith('-poster.webp');
+    const isMp4 = pathname.endsWith('.mp4');
+    phaseClipNetworkLog.push(
+      `${request.method()} ${pathname} range=${request.headers()['range'] ?? 'none'}`,
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: isPoster ? 'image/webp' : isMp4 ? 'video/mp4' : 'video/webm',
+      body: isPoster ? poster : isMp4 ? mp4 : webm,
+    });
+  });
+}
+
+async function playAndSkipPhaseClip(
+  page: Page,
+  name: 'nightfall' | 'dawn',
+  options: { tapToSkip?: boolean } = {},
+): Promise<void> {
+  const overlay = page.getByTestId('phase-clip-overlay');
+  const diagnostics = await page.evaluate(async () => {
+    const gameId = location.pathname.match(/\/game\/([^/]+)/)?.[1];
+    let phaseView: unknown = null;
+    if (gameId) {
+      const response = await fetch(`/api/games/${gameId}/view`, {
+        credentials: 'include',
+      });
+      const payload = (await response.json()) as {
+        serverNow?: number;
+        view?: { phase?: string; cycle?: number; phaseStartedAt?: number };
+      };
+      phaseView = {
+        status: response.status,
+        serverNow: payload.serverNow,
+        phase: payload.view?.phase,
+        cycle: payload.view?.cycle,
+        phaseStartedAt: payload.view?.phaseStartedAt,
+      };
+    }
+    return {
+      visibility: document.visibilityState,
+      reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      url: location.href,
+      game: document
+        .querySelector('[data-testid="player-game"]')
+        ?.getAttribute('data-phase'),
+      phaseView,
+      prefetches: Array.from(
+        document.querySelectorAll('link[rel="prefetch"][as="video"]'),
+      ).map((link) => (link as HTMLLinkElement).href),
+      media: Array.from(document.querySelectorAll('video')).map((video) => ({
+        source: video.currentSrc,
+        readyState: video.readyState,
+        error: video.error?.code ?? null,
+      })),
+    };
+  });
+  await expect(overlay, JSON.stringify(diagnostics)).toBeVisible({
+    timeout: 5_000,
+  });
+  await expect(overlay).toHaveAttribute('aria-hidden', 'true');
+  await expect(overlay).toHaveAttribute('data-clip-name', name);
+  await expect(overlay).toHaveText('');
+  const video = overlay.locator('video');
+  await expect(video).toHaveJSProperty('muted', true);
+  await expect(video).toHaveJSProperty('playsInline', true);
+  await expect(video).toHaveJSProperty('controls', false);
+  await expect(video).toHaveJSProperty('disablePictureInPicture', true);
+  await expect(video).toHaveJSProperty('disableRemotePlayback', true);
+  await expect
+    .poll(async () =>
+      page
+        .locator('link[rel="prefetch"][as="video"]')
+        .evaluateAll((links) =>
+          links.map((link) => (link as HTMLLinkElement).href),
+        ),
+    )
+    .toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('/clips/nightfall.'),
+        expect.stringContaining('/clips/dawn.'),
+      ]),
+    );
+  const phaseKey = await overlay.getAttribute('data-phase-key');
+  expect(phaseKey).toBeTruthy();
+  const playbackMarker = await expect
+    .poll(() =>
+      page.evaluate(
+        (key) => window.sessionStorage.getItem(`oathstone-phase-clip:${key}`),
+        phaseKey,
+      ),
+    )
+    .toBe('1')
+    .then(() => '1')
+    .catch(async (error: unknown) => {
+      const playbackDiagnostics = await page.evaluate((network) => {
+        const debugWindow = window as Window & {
+          __phaseClipDebug?: string[];
+        };
+        return {
+          events: debugWindow.__phaseClipDebug ?? [],
+          network,
+          videos: Array.from(document.querySelectorAll('video')).map(
+            (video) => ({
+              source: video.currentSrc,
+              readyState: video.readyState,
+              error: video.error?.code ?? null,
+              paused: video.paused,
+              canPlayWebm: video.canPlayType('video/webm; codecs="vp9"'),
+              canPlayMp4: video.canPlayType('video/mp4; codecs="avc1.42E01E"'),
+            }),
+          ),
+          storage: Object.keys(sessionStorage)
+            .filter((key) => key.startsWith('oathstone-phase-clip:'))
+            .map((key) => [key, sessionStorage.getItem(key)]),
+        };
+      }, phaseClipNetworkLog);
+      throw new Error(
+        `Phase clip did not start: ${JSON.stringify(playbackDiagnostics)}`,
+        { cause: error },
+      );
+    });
+  expect(playbackMarker).toBe('1');
+  await expect(overlay).toHaveCSS('opacity', '1');
+  const before = await page.locator('main').boundingBox();
+  if (options.tapToSkip !== false) {
+    await overlay.click({ position: { x: 6, y: 6 } });
+    await expect(overlay).toHaveCount(0);
+  } else {
+    const startedAt = Date.now();
+    await expect(overlay).toHaveCount(0, { timeout: 4_000 });
+    expect(Date.now() - startedAt).toBeLessThanOrEqual(3_600);
+  }
+  const after = await page.locator('main').boundingBox();
+  expect(after).toEqual(before);
+}
 
 async function currentPhase(page: Page): Promise<Phase> {
   const phase = await page
@@ -666,6 +820,7 @@ async function rejectStuckZero(page: Page, phase: Phase): Promise<void> {
 test('plays a full rehearsal from the player screen with no presenter or refresh @rehearsal-live', async ({
   page,
 }) => {
+  await installPhaseClipFixtures(page);
   test.setTimeout(150_000);
   const wakeLockNotice =
     'Your screen may lock during play. Tap it to keep the game visible.';
@@ -785,6 +940,72 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
 
   try {
     await page.addInitScript(() => {
+      const debugWindow = window as Window & {
+        __phaseClipDebug?: string[];
+      };
+      debugWindow.__phaseClipDebug = [];
+      for (const eventName of [
+        'loadstart',
+        'loadedmetadata',
+        'canplay',
+        'playing',
+        'error',
+      ]) {
+        document.addEventListener(
+          eventName,
+          (event) => {
+            const video = event.target;
+            if (video instanceof HTMLVideoElement)
+              debugWindow.__phaseClipDebug?.push(
+                `${eventName}:${video.currentSrc}:ready=${video.readyState}:error=${video.error?.code ?? 'none'}:sources=${Array.from(
+                  video.querySelectorAll('source'),
+                )
+                  .map(
+                    (source) => `${source.type}:${source.getAttribute('src')}`,
+                  )
+                  .join(
+                    '|',
+                  )}:mp4=${video.canPlayType('video/mp4')}:webm=${video.canPlayType('video/webm; codecs="vp9"')}`,
+              );
+          },
+          true,
+        );
+      }
+      document.addEventListener(
+        'playing',
+        (event) => {
+          const video = event.target;
+          if (video instanceof HTMLVideoElement)
+            debugWindow.__phaseClipDebug?.push(`playing:${video.currentSrc}`);
+        },
+        true,
+      );
+      document.addEventListener(
+        'error',
+        (event) => {
+          const video = event.target;
+          if (video instanceof HTMLVideoElement)
+            debugWindow.__phaseClipDebug?.push(
+              `error:${video.currentSrc}:${video.error?.code ?? 'none'}`,
+            );
+        },
+        true,
+      );
+      const nativePlay = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+        const result = nativePlay.call(this);
+        void result.then(
+          () =>
+            debugWindow.__phaseClipDebug?.push(
+              `play-promise:resolved:src=${this.currentSrc}`,
+            ),
+          (error: unknown) =>
+            debugWindow.__phaseClipDebug?.push(
+              `play-promise:rejected:${error instanceof Error ? error.name : String(error)}:src=${this.currentSrc}`,
+            ),
+        );
+        return result;
+      };
       Object.defineProperty(navigator, 'wakeLock', {
         configurable: true,
         value: {
@@ -875,7 +1096,17 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     const game = page.getByTestId('player-game');
     await expect(game).toHaveAttribute('data-phase', 'DEAL');
     await expect.poll(() => socketConnections).toBeGreaterThan(0);
-    await expect.poll(() => socketSeatCookieSeen).toBe(true);
+    await expect
+      .poll(() =>
+        page.evaluate(async (gameId) => {
+          const response = await fetch(
+            `/api/games/${encodeURIComponent(gameId)}/view`,
+            { cache: 'no-store', credentials: 'include' },
+          );
+          return response.status;
+        }, activeGameId),
+      )
+      .toBe(200);
     try {
       await expect.poll(() => socketConnectAcks).toBeGreaterThan(0);
     } catch {
@@ -916,6 +1147,10 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     let sawVoteRevealInCurrentVerdict = false;
     let sawVoteReveal = false;
     let sawVerdictResult = false;
+    let sawNightfallClip = false;
+    let sawDawnClip = false;
+    let sawReducedMotionClipSkip = false;
+    let sawClipsOffClipSkip = false;
     let sawForcedVoteTie = false;
     let submittedVoteToForceTie = false;
     let firstCycleInitialVoteSafe = false;
@@ -1591,6 +1826,51 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         page.getByRole('button', { name: 'Next step', exact: true }),
       ).toBeVisible();
       await rejectStuckZero(page, phase);
+      const expectedClip: {
+        name: 'nightfall' | 'dawn';
+        next: 'SHADOW' | 'DAWN';
+      } | null =
+        phase === 'VERDICT'
+          ? { name: 'nightfall', next: 'SHADOW' }
+          : phase === 'SHADOW'
+            ? { name: 'dawn', next: 'DAWN' }
+            : null;
+      let clipSkipMode: 'none' | 'reduced-motion' | 'clips-off' = 'none';
+      if (
+        phase === 'VERDICT' &&
+        sawNightfallClip &&
+        !sawReducedMotionClipSkip
+      ) {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        clipSkipMode = 'reduced-motion';
+      } else if (
+        phase === 'SHADOW' &&
+        sawReducedMotionClipSkip &&
+        !sawClipsOffClipSkip
+      ) {
+        await page.emulateMedia({ reducedMotion: 'no-preference' });
+        await page.evaluate(() => {
+          const url = new URL(window.location.href);
+          url.searchParams.set('clips', 'off');
+          window.history.replaceState(
+            window.history.state,
+            '',
+            `${url.pathname}${url.search}${url.hash}`,
+          );
+        });
+        clipSkipMode = 'clips-off';
+      }
+      const clipAppearance =
+        expectedClip && clipSkipMode === 'none'
+          ? page
+              .getByTestId('phase-clip-overlay')
+              .waitFor({
+                state: 'visible',
+                timeout: phase === 'SHADOW' ? 15_000 : 5_000,
+              })
+              .then(() => true)
+              .catch(() => false)
+          : null;
       try {
         await advanceIfStillOn(page, activeGameId, phase, phaseStartedAt);
       } catch (error) {
@@ -1602,6 +1882,24 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           `${message} Socket diagnostics: ${socketConnections} connection(s), ${socketFramesReceived} frame(s), ${socketGameViewFramesReceived} game-view frame(s), ${socketErrors} error(s), ${socketCloses} close(s), seat cookie present=${socketSeatCookieSeen}, requests ${socketRequestDetails.join(' | ') || 'none'}, HTTP ${socketHttpDetails.join(' | ') || 'none'}.`,
           { cause: error },
         );
+      }
+      if (expectedClip && (await currentPhase(page)) === expectedClip.next) {
+        if (clipSkipMode === 'none') {
+          expect(
+            await clipAppearance,
+            `${expectedClip.name} should appear as the public phase begins.`,
+          ).toBe(true);
+          await playAndSkipPhaseClip(page, expectedClip.name, {
+            tapToSkip: expectedClip.name === 'nightfall',
+          });
+          if (expectedClip.name === 'nightfall') sawNightfallClip = true;
+          if (expectedClip.name === 'dawn') sawDawnClip = true;
+        } else {
+          await expect(page.getByTestId('phase-clip-overlay')).toHaveCount(0);
+          if (clipSkipMode === 'reduced-motion')
+            sawReducedMotionClipSkip = true;
+          if (clipSkipMode === 'clips-off') sawClipsOffClipSkip = true;
+        }
       }
       if (inspectFirstCycleRevoteAfterAdvance) {
         const { readGameEvents } = await import('@workspace/db/game-store');
@@ -1639,6 +1937,10 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
 
     if (process.env.REHEARSAL_NIGHT_CHOICE_ONLY === 'true') return;
 
+    expect(sawNightfallClip).toBe(true);
+    expect(sawDawnClip).toBe(true);
+    expect(sawReducedMotionClipSkip).toBe(true);
+    expect(sawClipsOffClipSkip).toBe(true);
     expect(sawVoteReveal).toBe(true);
     expect(sawVerdictResult).toBe(true);
     expect(sawForcedVoteTie).toBe(true);

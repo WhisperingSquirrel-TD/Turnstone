@@ -1024,6 +1024,8 @@ describe('Milestone 1 deterministic engine', () => {
       { kind: 'player', seatId: traitor.id, reveal: true },
       game.state,
     );
+    expect(faithfulView.phaseStartedAt).toBe(game.state.phaseStarted);
+    expect(traitorView.phaseStartedAt).toBe(faithfulView.phaseStartedAt);
     expect(JSON.stringify(traitorView.private?.choiceSlots)).not.toContain(
       faithfulTarget.id,
     );
