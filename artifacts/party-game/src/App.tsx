@@ -230,6 +230,7 @@ function Shell({
   privateMode = false,
   privateRevealActive = false,
   connectionStatus = null,
+  wakeLockFallback = false,
   phase,
 }: {
   children: ReactNode;
@@ -237,6 +238,7 @@ function Shell({
   privateMode?: boolean;
   privateRevealActive?: boolean;
   connectionStatus?: GameConnectionState | null;
+  wakeLockFallback?: boolean;
   phase?: string;
 }) {
   const navigate = useNavigate();
@@ -395,6 +397,15 @@ function Shell({
             </>
           )}
         </nav>
+        {isPlayer && wakeLockFallback && (
+          <p
+            role="status"
+            data-testid="wake-lock-notice"
+            className="player-wake-lock-notice"
+          >
+            {en.game.wakeLockFallback}
+          </p>
+        )}
         {!isPlayer && (
           <details className="public-home-menu">
             <summary>{en.nav.menu}</summary>
@@ -2092,6 +2103,7 @@ function PlayerGame() {
       phase={!isResuming ? full?.phase : undefined}
       privateMode={!isResuming && inPrivateMoment}
       privateRevealActive={!isResuming && held}
+      wakeLockFallback={Boolean(activeGame && wakeLockFallback)}
       connectionStatus={
         isResuming
           ? 'reconnecting'
@@ -2355,11 +2367,6 @@ function PlayerGame() {
                   </p>
                 )}
               </div>
-            )}
-            {activeGame && !inPrivateMoment && wakeLockFallback && (
-              <p role="status" className="mt-4 text-sm text-ash">
-                {en.game.wakeLockFallback}
-              </p>
             )}
             {!inPrivateMoment && isBanishmentPhase && (
               <section>

@@ -602,6 +602,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
   page,
 }) => {
   test.setTimeout(150_000);
+  const wakeLockNotice =
+    'Your screen may lock during play. Tap it to keep the game visible.';
   const { db } = await import('@workspace/db');
   let gameId: string | undefined;
   let playerRole: 'Traitor' | 'Faithful' | undefined;
@@ -717,6 +719,15 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
   });
 
   try {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'wakeLock', {
+        configurable: true,
+        value: {
+          request: () =>
+            Promise.reject(new Error('Simulated wake-lock unavailability.')),
+        },
+      });
+    });
     await page.goto('/play');
     captureAppDocumentLoads = true;
     await page.getByTestId('button-practise-alone').click();
@@ -850,6 +861,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     let expectedTieCandidateIds: string[] = [];
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
+      if (phase !== 'FINISHED' && phase !== 'ARCHIVED') {
+        await expect(
+          page
+            .locator('.player-shell-header')
+            .getByText(wakeLockNotice, { exact: true }),
+        ).toBeVisible();
+        await expect(
+          page.getByText(wakeLockNotice, { exact: true }),
+        ).toHaveCount(1);
+      }
       await expect(page.locator('.game-shell')).toHaveAttribute(
         'data-game-theme',
         phase === 'SHADOW' || phase === 'LOBBY' || phase === 'DRAFT'

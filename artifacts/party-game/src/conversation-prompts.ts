@@ -4,10 +4,12 @@ import promptsJson from './content/conversation-prompts.en-GB.json';
 export type PromptWhen =
   | 'always'
   | 'day1'
+  | 'afterFirstDay'
   | 'afterBanishment'
   | 'afterDawn'
   | 'noDawnVictim'
   | 'fewLeft'
+  | 'fewLeftAfterBanishment'
   | 'challenge'
   | 'm7';
 
@@ -15,6 +17,7 @@ export type ConversationPrompt = {
   id: string;
   when: PromptWhen;
   text: string;
+  challenge?: boolean;
 };
 
 export type PublicPromptFacts = {
@@ -42,6 +45,8 @@ export function eligibleConversationPrompts(
         return true;
       case 'day1':
         return facts.dayNumber === 1;
+      case 'afterFirstDay':
+        return facts.dayNumber > 1;
       case 'afterBanishment':
         return Boolean(facts.lastBanishmentName);
       case 'afterDawn':
@@ -54,10 +59,16 @@ export function eligibleConversationPrompts(
         );
       case 'fewLeft':
         return facts.remainingPlayers <= 6;
+      case 'fewLeftAfterBanishment':
+        return facts.remainingPlayers <= 6 && Boolean(facts.lastBanishmentName);
       case 'm7':
         return facts.m7Available === true;
     }
   });
+}
+
+export function isConversationChallenge(prompt: ConversationPrompt): boolean {
+  return prompt.challenge === true || prompt.when === 'challenge';
 }
 
 export function buildConversationPromptHistory(
@@ -157,8 +168,8 @@ function selectPromptsForDay(
     },
   );
   const fresh = ordered.filter((prompt) => !usedPromptIds.has(prompt.id));
-  const freshChallenge = fresh.find((prompt) => prompt.when === 'challenge');
-  const freshOther = fresh.filter((prompt) => prompt.when !== 'challenge');
+  const freshChallenge = fresh.find(isConversationChallenge);
+  const freshOther = fresh.filter((prompt) => !isConversationChallenge(prompt));
   const selected: ConversationPrompt[] = [];
 
   if (freshChallenge) selected.push(freshChallenge);
@@ -171,8 +182,8 @@ function selectPromptsForDay(
     if (selected.length === 3) break;
     if (selected.some((chosen) => chosen.id === prompt.id)) continue;
     if (
-      prompt.when === 'challenge' &&
-      selected.some((chosen) => chosen.when === 'challenge')
+      isConversationChallenge(prompt) &&
+      selected.some(isConversationChallenge)
     ) {
       continue;
     }

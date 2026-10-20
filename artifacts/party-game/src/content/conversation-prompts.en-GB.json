@@ -6,7 +6,7 @@
   },
   {
     "id": "a2",
-    "when": "always",
+    "when": "afterFirstDay",
     "text": "Whose story has changed since yesterday? Say what you noticed."
   },
   {
@@ -31,7 +31,7 @@
   },
   {
     "id": "a7",
-    "when": "always",
+    "when": "afterFirstDay",
     "text": "Who agreed with everyone yesterday? Is that loyalty or cover?"
   },
   {
@@ -47,7 +47,7 @@
   {
     "id": "d2",
     "when": "day1",
-    "text": "Nobody has been banished yet. What would make you suspicious of someone?"
+    "text": "What would make you suspicious of someone?"
   },
   {
     "id": "b1",
@@ -106,12 +106,12 @@
   },
   {
     "id": "f2",
-    "when": "fewLeft",
+    "when": "fewLeftAfterBanishment",
     "text": "With {count} left, every vote counts. Who has not yet explained theirs?"
   },
   {
     "id": "f3",
-    "when": "fewLeft",
+    "when": "fewLeftAfterBanishment",
     "text": "Who would you save if you could only save one more person?"
   },
   {
@@ -121,12 +121,14 @@
   },
   {
     "id": "c2",
-    "when": "challenge",
+    "when": "afterFirstDay",
+    "challenge": true,
     "text": "Repeat back what someone said yesterday. Do they still stand by it?"
   },
   {
     "id": "c3",
-    "when": "challenge",
+    "when": "afterBanishment",
+    "challenge": true,
     "text": "Ask the person on your left why they voted the way they did."
   },
   {
@@ -141,7 +143,8 @@
   },
   {
     "id": "c6",
-    "when": "challenge",
+    "when": "afterBanishment",
+    "challenge": true,
     "text": "Say who you are not voting for, and tell the table why."
   },
   {

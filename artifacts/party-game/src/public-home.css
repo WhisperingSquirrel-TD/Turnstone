@@ -46,6 +46,18 @@
   margin-inline: auto;
 }
 
+.player-wake-lock-notice {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: end;
+  max-width: 100%;
+  margin: -0.25rem 0 0;
+  color: var(--ash);
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  text-align: right;
+}
+
 [data-testid='brand-footer-static'],
 .safe-page:not(.game-shell) > [data-testid='brand-footer-shell'] {
   position: relative;

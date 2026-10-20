@@ -4,6 +4,7 @@ import {
   conversationPromptLibrary,
   derivePublicPromptFacts,
   eligibleConversationPrompts,
+  isConversationChallenge,
   renderConversationPromptText,
   type PublicPromptFacts,
   type PromptPublicView,
@@ -42,16 +43,13 @@ describe('conversation prompts', () => {
       const eligible = eligibleConversationPrompts(days[index]!);
       const fresh = eligible.filter((prompt) => !seen.has(prompt.id));
       const freshSlots =
-        fresh.filter((prompt) => prompt.when !== 'challenge').length +
-        Math.min(
-          1,
-          fresh.filter((prompt) => prompt.when === 'challenge').length,
-        );
+        fresh.filter((prompt) => !isConversationChallenge(prompt)).length +
+        Math.min(1, fresh.filter(isConversationChallenge).length);
 
       expect(selected).toHaveLength(3);
       expect(new Set(selected.map((prompt) => prompt.id)).size).toBe(3);
       expect(
-        selected.filter((prompt) => prompt.when === 'challenge').length,
+        selected.filter(isConversationChallenge).length,
       ).toBeLessThanOrEqual(1);
       expect(selected.filter((prompt) => !seen.has(prompt.id)).length).toBe(
         Math.min(3, freshSlots),
@@ -59,7 +57,12 @@ describe('conversation prompts', () => {
       selected.forEach((prompt) => seen.add(prompt.id));
     });
 
-    expect(seen.size).toBe(15);
+    const eligiblePromptIds = new Set(
+      days.flatMap((facts) =>
+        eligibleConversationPrompts(facts).map((prompt) => prompt.id),
+      ),
+    );
+    expect(seen.size).toBe(eligiblePromptIds.size);
   });
 
   it('matches only prompts whose conditions are supported by public facts', () => {
@@ -80,9 +83,54 @@ describe('conversation prompts', () => {
     expect(ids).not.toContain('d1');
     expect(ids).not.toContain('z1');
     expect(ids).not.toContain('m1');
-    expect(
-      eligible.filter((prompt) => prompt.when === 'challenge'),
-    ).toHaveLength(7);
+    expect(eligible.filter(isConversationChallenge)).toHaveLength(7);
+  });
+
+  it('keeps event-referencing prompts out of day one before those events happen', () => {
+    const dayOne = eligibleConversationPrompts(quietDay(1));
+
+    expect(dayOne.map((prompt) => prompt.text).join('\n')).not.toMatch(
+      /\b(votes?|voted|voting|banishment|banished|nights?|shields?)\b/i,
+    );
+  });
+
+  it('gates yesterday and vote prompts on the matching public history', () => {
+    const dayOneIds = new Set(
+      eligibleConversationPrompts(quietDay(1)).map((prompt) => prompt.id),
+    );
+    expect(dayOneIds).not.toContain('a2');
+    expect(dayOneIds).not.toContain('a7');
+    expect(dayOneIds).not.toContain('c2');
+    expect(dayOneIds).not.toContain('c3');
+    expect(dayOneIds).not.toContain('c6');
+
+    const dayTwoIds = new Set(
+      eligibleConversationPrompts({
+        ...quietDay(2),
+        remainingPlayers: 6,
+        lastDawnVictimNames: [],
+      }).map((prompt) => prompt.id),
+    );
+    expect(dayTwoIds).toContain('a2');
+    expect(dayTwoIds).toContain('a7');
+    expect(dayTwoIds).toContain('c2');
+    expect(dayTwoIds).not.toContain('c3');
+    expect(dayTwoIds).not.toContain('c6');
+    expect(dayTwoIds).not.toContain('f2');
+    expect(dayTwoIds).not.toContain('f3');
+
+    const afterBanishmentIds = new Set(
+      eligibleConversationPrompts({
+        dayNumber: 3,
+        remainingPlayers: 6,
+        lastBanishmentName: 'Mina',
+        lastDawnVictimNames: [],
+      }).map((prompt) => prompt.id),
+    );
+    expect(afterBanishmentIds).toContain('c3');
+    expect(afterBanishmentIds).toContain('c6');
+    expect(afterBanishmentIds).toContain('f2');
+    expect(afterBanishmentIds).toContain('f3');
   });
 
   it('keeps M7 prompts hidden by default and allows at most one challenge', () => {
@@ -97,9 +145,9 @@ describe('conversation prompts', () => {
 
     const selected = buildConversationPromptHistory('game-42', [facts]).at(-1)!;
     expect(selected).toHaveLength(3);
-    expect(
-      selected.filter((prompt) => prompt.when === 'challenge').length,
-    ).toBeLessThanOrEqual(1);
+    expect(selected.filter(isConversationChallenge).length).toBeLessThanOrEqual(
+      1,
+    );
   });
 
   it('renders templates using only public names and the public player count', () => {

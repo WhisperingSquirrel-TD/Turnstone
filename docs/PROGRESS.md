@@ -1,8 +1,8 @@
 # Status for reviewer
 
-**Latest green:** Verify #181 (`ef20d93`) passed all 19 required jobs, including the coverage-gated integration job, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards. Verify #182 (`2b22db1`) is red; the local fix is prepared and awaits a fresh Verify run.
+**Latest green:** Verify #183 (`89ed3b8`) passed all 19 required jobs, including the coverage-gated integration job, all four browser profiles, `rehearsal-live`, Lighthouse, `required-checks` and all scenario shards. The separate “Promote verified commit” run #183 was skipped; it is not a Verify result.
 
-**Verify #182 cause:** `rehearsal-live` expected a separate Dawn screen after a terminal night. The server recorded `DawnResolved`, then `GameFinished` immediately when the murder reached parity, so the browser correctly landed on the results screen. The test now requires that terminal event order and verifies the Dawn update remains in the final public log.
+**Verify #182 cause and fix:** `rehearsal-live` expected a separate Dawn screen after a terminal night. The server recorded `DawnResolved`, then `GameFinished` immediately when the murder reached parity, so the browser correctly landed on the results screen. The test now accepts that terminal order and verifies the Dawn update remains in the final public log; Verify #183 is green.
 
 **Verify #178 (`3f88d1e`): RED; fixed in #179.** `static-checks` found unsupported `DeviceDescriptor.screen`; browser and rehearsal tests expected the fresh-start guide on direct game URLs instead of the current phase guide.
 
@@ -13,10 +13,11 @@
 **R6-1:** Incomplete. The Pixel cold-restart check passes, but iPhone WebKit cold restart is not yet proven; investigate its authenticated test handler after the #182 fix is green.
 **R6-2:** Complete; Verify #181 is green. Ballots stay private until each player reveals in the random speaker order; property tests check projections before and after reveals.
 **R6-3 / CP-2:** Complete; Verify #181 is green. All 35 supplied prompts are data-driven; selection is deterministic by game/day, public-fact-only, limited to one challenge, repeats only when fewer than three fresh eligible prompts fit, and keeps M7 prompts hidden.
+**R6 feedback A1–A2:** Implemented locally. Prompts referring to prior days, votes or banishment now require the matching public history; the day-one banishment reference was removed. The wake-lock notice is in the shared game header, not phase content. Local checks pass; this change set is awaiting its Verify run.
 
-**Local checks:** Targeted real-server Pixel rehearsal 1/1 passes with the terminal-Dawn assertion; typecheck, test typecheck, targeted lint and format pass. iPhone WebKit cold restart remains unverified.
+**Local checks:** Prompt tests 9/9, typecheck, test typecheck, targeted lint and format pass. The real-server rehearsal passes in Pixel Chromium and iPhone WebKit with the wake-lock notice checked across active phases. iPhone WebKit cold restart remains unverified.
 
-**Delivery:** GitHub main is at `2b22db1`; no CP-1 attachment, SPEC or workflow change is included. No deployment or production setting was changed.
+**Delivery:** GitHub main is at `89ed3b8`; the pending A1–A2 change set contains no CP-1 attachment, SPEC or workflow change. No deployment or production setting was changed.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 
