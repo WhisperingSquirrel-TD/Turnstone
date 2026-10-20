@@ -1675,9 +1675,8 @@ test('a cold browser restart restores the existing seat from its stored token @r
       'data-phase',
       'DEAL',
     );
-    await expect(coldPage.getByTestId('while-away-card')).toContainText(
-      'While you were away',
-    );
+    await expect(coldPage.getByTestId('away-resync-overlay')).toHaveCount(0);
+    await expect(coldPage.getByTestId('private-role-content')).toHaveCount(0);
     const restoredSeatId = await coldPage.evaluate(async (id) => {
       const response = await fetch(
         `/api/games/${encodeURIComponent(id)}/view`,

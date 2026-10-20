@@ -740,6 +740,11 @@ function publicLogMessage(entry: FullView['publicLog'][number]): string {
   return en.game.publicLogFinished(entry.winner);
 }
 
+type AwaySnapshot = {
+  lastPublicSeq: number | null;
+  showEmptyCard: boolean;
+};
+
 function publicUpdatesSince(
   publicLog: FullView['publicLog'],
   lastPublicSeq: number | null,
@@ -755,14 +760,47 @@ function awayCursorStorageKey(gameId: string): string {
   return `oathstone-away-seq:${gameId}`;
 }
 
-function readAwayCursor(gameId: string): number | null {
+function readAwayCursor(gameId: string): AwaySnapshot | null {
   if (!gameId || typeof window === 'undefined') return null;
   try {
     const saved = window.localStorage.getItem(awayCursorStorageKey(gameId));
-    const parsed = saved === null ? Number.NaN : Number(saved);
-    return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+    if (saved === null) return null;
+    try {
+      const parsed: unknown = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        const candidate = parsed as Partial<AwaySnapshot>;
+        const sequenceIsValid =
+          candidate.lastPublicSeq === null ||
+          (typeof candidate.lastPublicSeq === 'number' &&
+            Number.isSafeInteger(candidate.lastPublicSeq) &&
+            candidate.lastPublicSeq >= 0);
+        if (sequenceIsValid && typeof candidate.showEmptyCard === 'boolean') {
+          return {
+            lastPublicSeq: candidate.lastPublicSeq ?? null,
+            showEmptyCard: candidate.showEmptyCard,
+          };
+        }
+      }
+    } catch {
+      // Read the earlier numeric cursor format as a no-empty-card snapshot.
+    }
+    const legacySequence = Number(saved);
+    return Number.isSafeInteger(legacySequence) && legacySequence >= 0
+      ? { lastPublicSeq: legacySequence, showEmptyCard: false }
+      : null;
   } catch {
     return null;
+  }
+}
+
+function storeAwayCursor(gameId: string, snapshot: AwaySnapshot) {
+  try {
+    window.localStorage.setItem(
+      awayCursorStorageKey(gameId),
+      JSON.stringify(snapshot),
+    );
+  } catch {
+    // In-memory state still supports the open page when storage is blocked.
   }
 }
 
@@ -822,7 +860,8 @@ function PlayerGame() {
   const focusTime = useRef(0);
   const serverClockOffsetMs = useRef(0);
   const ignoreSyntheticClick = useRef(false);
-  const awaySnapshot = useRef<{ lastPublicSeq: number | null } | null>(null);
+  const awaySnapshot = useRef<AwaySnapshot | null>(null);
+  const pageIsHiding = useRef(false);
   const lastPublicSeq = useRef(0);
   const resyncPromise = useRef<Promise<void> | null>(null);
   const request = useMemo(() => requestHeaders(token), [token]);
@@ -848,12 +887,12 @@ function PlayerGame() {
     }
   }, [response?.serverNow]);
   useEffect(() => {
-    const savedSequence = readAwayCursor(id);
-    awaySnapshot.current =
-      savedSequence === null ? null : { lastPublicSeq: savedSequence };
+    const savedSnapshot = readAwayCursor(id);
+    awaySnapshot.current = savedSnapshot;
+    pageIsHiding.current = false;
     lastPublicSeq.current = 0;
     resyncPromise.current = null;
-    setResumeStatus(savedSequence === null ? 'idle' : 'syncing');
+    setResumeStatus(savedSnapshot === null ? 'idle' : 'syncing');
     setWhileAwayUpdates(null);
   }, [id]);
   useEffect(() => {
@@ -865,18 +904,17 @@ function PlayerGame() {
     lastPublicSeq.current = Math.max(lastPublicSeq.current, latestSeq);
     if (awaySnapshot.current?.lastPublicSeq === null) {
       awaySnapshot.current.lastPublicSeq = latestSeq;
-      try {
-        window.localStorage.setItem(
-          awayCursorStorageKey(id),
-          String(latestSeq),
-        );
-      } catch {
-        // Returning to a fresh server view still works when storage is blocked.
-      }
+      storeAwayCursor(id, awaySnapshot.current);
     }
     if (awaySnapshot.current && !isResuming) {
+      const updates = publicUpdatesSince(
+        full.publicLog,
+        awaySnapshot.current.lastPublicSeq,
+      );
       setWhileAwayUpdates(
-        publicUpdatesSince(full.publicLog, awaySnapshot.current.lastPublicSeq),
+        updates.length > 0 || awaySnapshot.current.showEmptyCard
+          ? updates
+          : null,
       );
       awaySnapshot.current = null;
       try {
@@ -1363,7 +1401,10 @@ function PlayerGame() {
         Boolean(currentState.inPrivateMoment && !currentState.isDealPhase),
       );
     };
-    const markAwayAndCover = () => {
+    const markAwayAndCover = (
+      showEmptyCard: boolean,
+      replaceEmptyCardChoice = false,
+    ) => {
       if (!awaySnapshot.current) {
         const cachedView = queryClient.getQueryData<GameViewResponse>(
           getGetGameViewQueryKey(id),
@@ -1375,19 +1416,12 @@ function PlayerGame() {
                 0,
               )
             : lastPublicSeq.current || null;
-        awaySnapshot.current = { lastPublicSeq: latestSeq };
-        if (latestSeq !== null) {
-          try {
-            window.localStorage.setItem(
-              awayCursorStorageKey(id),
-              String(latestSeq),
-            );
-          } catch {
-            // The in-memory cursor still supports this open page.
-          }
-        }
+        awaySnapshot.current = { lastPublicSeq: latestSeq, showEmptyCard };
         setWhileAwayUpdates(null);
+      } else if (showEmptyCard || replaceEmptyCardChoice) {
+        awaySnapshot.current.showEmptyCard = showEmptyCard;
       }
+      storeAwayCursor(id, awaySnapshot.current);
       coverPrivate();
     };
     const resync = () => {
@@ -1437,11 +1471,12 @@ function PlayerGame() {
             }
             const snapshot = awaySnapshot.current;
             if (snapshot) {
+              const updates = publicUpdatesSince(
+                refreshedView.publicLog,
+                snapshot.lastPublicSeq,
+              );
               setWhileAwayUpdates(
-                publicUpdatesSince(
-                  refreshedView.publicLog,
-                  snapshot.lastPublicSeq,
-                ),
+                updates.length > 0 || snapshot.showEmptyCard ? updates : null,
               );
             } else {
               setWhileAwayUpdates(null);
@@ -1472,35 +1507,43 @@ function PlayerGame() {
       resyncPromise.current = pending;
     };
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') resync();
-      else markAwayAndCover();
+      if (document.visibilityState === 'visible') {
+        pageIsHiding.current = false;
+        resync();
+      } else if (!pageIsHiding.current) {
+        markAwayAndCover(true);
+      }
     };
-    const onPageShow = () => resync();
-    const onOrientation = () => coverPrivate();
+    const onPageShow = () => {
+      pageIsHiding.current = false;
+      resync();
+    };
     const onOnline = () => resync();
     const onFocus = () => resync();
+    const onOffline = () => markAwayAndCover(true);
+    const onBlur = () => markAwayAndCover(false);
+    const onPageHide = () => {
+      pageIsHiding.current = true;
+      markAwayAndCover(false, true);
+    };
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('focus', onFocus);
     window.addEventListener('online', onOnline);
-    window.addEventListener('offline', markAwayAndCover);
-    window.addEventListener('orientationchange', onOrientation);
-    window.addEventListener('resize', coverPrivate);
-    window.addEventListener('blur', markAwayAndCover);
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('blur', onBlur);
     document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('pagehide', markAwayAndCover);
-    if (!navigator.onLine) markAwayAndCover();
+    window.addEventListener('pagehide', onPageHide);
+    if (!navigator.onLine) markAwayAndCover(true);
     else if (awaySnapshot.current) resync();
     return () => {
       active = false;
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('online', onOnline);
-      window.removeEventListener('offline', markAwayAndCover);
-      window.removeEventListener('orientationchange', onOrientation);
-      window.removeEventListener('resize', coverPrivate);
-      window.removeEventListener('blur', markAwayAndCover);
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('blur', onBlur);
       document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('pagehide', markAwayAndCover);
+      window.removeEventListener('pagehide', onPageHide);
       clearPrivate();
     };
   }, [id, queryClient, gameQuery.refetch, clearPrivate]);
@@ -2113,15 +2156,6 @@ function PlayerGame() {
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
-            {whileAwayUpdates !== null && (
-              <WhileAwayCard
-                title={en.game.awayCardHeading}
-                noUpdates={en.game.awayCardNoUpdates}
-                updates={whileAwayUpdates}
-                returnLabel={en.game.awayCardReturn}
-                onDismiss={() => setWhileAwayUpdates(null)}
-              />
-            )}
             {watchingRehearsal && (
               <RehearsalWatchCommentary phase={full.phase} />
             )}
@@ -2213,6 +2247,15 @@ function PlayerGame() {
                   full.publicAnnouncement?.kind === 'verdict' &&
                   full.publicAnnouncement.cycle === full.cycle
                 }
+              />
+            )}
+            {whileAwayUpdates !== null && (
+              <WhileAwayCard
+                title={en.game.awayCardHeading}
+                noUpdates={en.game.awayCardNoUpdates}
+                updates={whileAwayUpdates}
+                returnLabel={en.game.awayCardReturn}
+                onDismiss={() => setWhileAwayUpdates(null)}
               />
             )}
             {full.phase === 'LOBBY' && (

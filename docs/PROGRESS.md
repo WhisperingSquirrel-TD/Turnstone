@@ -1,10 +1,12 @@
 # Status for reviewer
 
-**Latest green:** Verify #173 (`b32c737`) passed all 19 jobs, including `test:server-coverage`, iPhone/iPad WebKit, Lighthouse, `required-checks` and all scenario shards.
+**Latest green:** Verify #173 (`b32c737`) passed all 19 jobs, including the 85% server-coverage gate, browser profiles, Lighthouse, `required-checks` and all scenario shards.
 
-**Verify #172 (`edd0c14`): RED.** The `integration` job ran `test:server-coverage` and passed at 85.92% line coverage against the unchanged 85% threshold. The only failed job was `browsers (iPhone, webkit)`; `required-checks` failed as a consequence. The coordinator-console end-to-end test changed the viewport to 3840×2160 for its large-screen checks but did not restore the iPhone viewport before continuing with interactive actions; the final “End game now” click timed out. Commit `b32c737` restores and asserts the original viewport before those actions. Verify #173 is green. The affected test passed locally on Pixel and desktop; local iPhone WebKit could not launch because the container lacks its required browser libraries. No workflow files or thresholds were changed.
+**Verify #172:** Resolved by #173. The iPhone browser failure was caused by the coordinator-console test not restoring its mobile viewport after large-screen checks.
 
-**R6-1 — Away-and-back resilience:** implementation and tests are included in this push; Verify is pending. Targeted typechecks, lint, formatting, unit tests, Pixel Chromium and iPhone WebKit passed locally. The live rehearsal cold-restart test passed against the real server. Browser tests cover simulated 30-second, 5-minute, 1-hour and overnight absences, public-log-only updates, preserved choices, private-screen hiding, and resize/orientation. R6-2 and R6-3 have not started.
+**Verify #174 (`b8392d4`): RED.** All four browser profiles failed; `required-checks` failed as a consequence. The failures exposed an outdated hidden-screen assertion, private-state loss on resize, and the away card appearing ahead of the result after navigation. Fix and test updates are now locally green on Pixel/iPhone (six affected specs each) and the real-server cold-restart test; typecheck, lint and formatting pass. The next Verify is pending.
+
+**R6-1 — Away-and-back resilience:** the fix preserves role/choice state through resize and orientation, waits for a fresh view on return, and keeps public away updates below the step result. Tests cover 30 seconds, 5 minutes, 1 hour and overnight, public-log-only updates, private-screen hiding and cold seat restoration. R6-2 and R6-3 have not started.
 
 **Milestone 6 — automated items verified:** takeover/coordinator secrecy, undo and schedule shifts; coordinator logistics; public-only `/tv` pairing, verdict and finish; accessibility, route, keyboard, reduced-motion and bundle checks; configured admission-capacity behaviour. Targeted coordinator/presenter browser tests (Pixel and desktop), takeover/admission integration tests, unit tests, typecheck, lint and format check passed locally.
 

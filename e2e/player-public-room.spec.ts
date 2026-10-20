@@ -1874,6 +1874,7 @@ test('mobile players retain an unfinished private night choice after backgroundi
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await expect(choices).toHaveCount(0);
+  await page.clock.fastForward(30_000);
   view = { ...view, version: view.version + 1 };
   await page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', {
@@ -2035,9 +2036,7 @@ test('mobile players resync after long absences without losing an unsubmitted vo
     await page.evaluate(() => {
       window.dispatchEvent(new Event('orientationchange'));
     });
-    await page
-      .getByRole('button', { name: 'Tap to see your private screen again' })
-      .click();
+    await expect(page.getByTestId('private-choice-list')).toBeVisible();
     await expect(
       page.getByText('Your pick: Jamie', { exact: true }),
     ).toBeVisible();
@@ -2154,10 +2153,8 @@ test('private Notes hide after background and idle, then return with one tap', a
   });
   await expect(notes).toHaveCount(0);
   await expect.poll(() => privateRequests).toBe(1);
-  const restore = page.getByRole('button', {
-    name: 'Tap to see your private screen again',
-  });
-  await expect(restore).toBeVisible();
+  await expect(page.getByTestId('away-resync-overlay')).toBeVisible();
+  await page.clock.fastForward(30_000);
   await page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
@@ -2165,6 +2162,16 @@ test('private Notes hide after background and idle, then return with one tap', a
     });
     document.dispatchEvent(new Event('visibilitychange'));
   });
+  await expect(page.getByTestId('away-resync-overlay')).toHaveCount(0);
+  const awayCard = page.getByTestId('while-away-card');
+  await expect(awayCard).toContainText(
+    'No public updates were recorded while you were away.',
+  );
+  await awayCard.getByRole('button', { name: 'Back to the game' }).click();
+  const restore = page.getByRole('button', {
+    name: 'Tap to see your private screen again',
+  });
+  await expect(restore).toBeVisible();
   await restore.click();
   await expect.poll(() => privateRequests).toBe(2);
   await expect(notes).toBeVisible();
@@ -2338,6 +2345,7 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
   await expect(page.getByTestId('shared-announcement')).toContainText(
     'No one was taken',
   );
+  await expect(page.getByTestId('while-away-card')).toHaveCount(0);
 
   currentView = {
     ...currentView,
@@ -2360,6 +2368,7 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
     },
   };
   await page.reload();
+  await expect(page.getByTestId('while-away-card')).toHaveCount(0);
   const verdictAnnouncement = page.getByTestId('shared-announcement');
   await expect(verdictAnnouncement).toHaveText(
     'Alex has been banished. They were Traitor.',
@@ -2419,6 +2428,9 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
   await expect(
     page.getByTestId('player-game').getByRole('heading').first(),
   ).toHaveText('No votes were cast. Nobody is banished.');
+  await expect(page.getByTestId('while-away-card')).toContainText(
+    'No votes were cast. Nobody is banished.',
+  );
   await expect(page.getByTestId('public-log-entry-13')).toHaveText(
     'No votes were cast. Nobody is banished.',
   );
