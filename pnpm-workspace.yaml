@@ -43,6 +43,8 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  fast-uri: '3.1.8'
+  markdown-it: '14.3.2'
   brace-expansion: '5.0.12'
   # Parent packages still pin vulnerable transitive versions; no advisory exclusions.
   proxy-addr: '2.0.8'
