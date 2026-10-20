@@ -686,12 +686,12 @@ export const en = {
       role: 'Keep your role secret.',
       conversation: 'In a real game, people argue their case out loud now.',
       mission: 'In a real game, everyone works together.',
-      vote: 'Real players are choosing privately now.',
+      vote: 'In a real game, explain the evidence behind your choice.',
       verdict:
         "Real players would be watching each other's faces as names are read out.",
       night: 'Keep your phone shielded while you choose.',
       dawn: 'In a real game, the group reacts to the news together.',
-      notes: 'These notes are just for you.',
+      notes: 'Write down anything you want to remember before the next step.',
       endgame: 'In a real game, discuss the risk before choosing.',
       finalVote: 'In a real game, discuss the risk before choosing.',
       finalBanish: 'One more banishment could change the outcome.',
@@ -738,7 +738,7 @@ export const en = {
       night:
         'Night falls. The Traitors secretly choose someone to take. Everyone sees a private screen at the same moment, so nobody can tell who is choosing.',
       dawn: 'Morning. Everyone finds out who was taken in the night, then a new day begins.',
-      notes: 'Your private notebook. Only you can see your notes.',
+      notes: 'Use this space to jot down thoughts, reminders, or theories.',
       endgame:
         'Choose whether to end the game or banish again. The final result depends on who remains.',
       finalVote:
@@ -747,6 +747,22 @@ export const en = {
         'The remaining players vote to banish someone before the final result.',
       complete:
         'The Faithful win by banishing every Traitor. The Traitors win if any of them make it to the end. Every role is now revealed.',
+    },
+    rehearsalGuideCards: {
+      start:
+        'A practice game with computer players. Try each step at your own pace.',
+      role: 'Keep your screen covered while you reveal your role.',
+      conversation: 'Share what you have noticed before the vote.',
+      mission: 'Work as a group on the challenge.',
+      vote: 'Choose your suspect privately.',
+      verdict: 'Watch the votes and result appear for everyone.',
+      night: 'Make your choice while the screen is shielded.',
+      dawn: 'The day resumes after the night announcement.',
+      notes: 'Jot down thoughts or reminders to revisit later.',
+      endgame: 'Discuss whether the group is ready to finish.',
+      finalVote: 'Read the stakes, then make your choice.',
+      finalBanish: 'Review the remaining players before choosing.',
+      complete: 'See how the game ended.',
     },
     moveOnFailed: 'This step cannot move on yet. Try again in a moment.',
     shieldHeading: 'Shield your screen',
@@ -763,7 +779,7 @@ export const en = {
     releaseLabel: 'Release to hide your private screen',
     holdKeep: 'Keep holding',
     holdText: 'Hold',
-    holdInstructions: 'Hold the seal to see your role. Let go to hide it.',
+    holdInstructions: 'Hold to reveal. Let go to hide.',
     privateUnavailable: 'Private details are not available yet.',
     privateLoading: 'Opening your private screen…',
     privateRestore: 'Tap to see your private screen again',

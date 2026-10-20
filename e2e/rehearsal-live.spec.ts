@@ -18,26 +18,18 @@ type Phase =
   | 'FINISHED'
   | 'ARCHIVED';
 
-const rehearsalExplanationByPhase: Partial<Record<Phase, string>> = {
-  DEAL: 'Everyone is secretly dealt a role: Traitor or Faithful. Shield your screen, then hold the seal to see yours. Let go and it hides.',
-  MISSION:
-    'Work together to complete the mission. Your organiser records the result and any prize earned.',
-  DEBATE:
-    'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
-  VOTE: 'Everyone secretly votes for the player they think is a Traitor. Votes are revealed one by one once everyone has voted.',
-  VERDICT:
-    'The player with the most votes is banished, and their role is revealed to everyone.',
-  SHADOW:
-    'Night falls. The Traitors secretly choose someone to take. Everyone sees a private screen at the same moment, so nobody can tell who is choosing.',
-  DAWN: 'Morning. Everyone finds out who was taken in the night, then a new day begins.',
-  ENDGAME:
-    'Choose whether to end the game or banish again. The final result depends on who remains.',
-  FINAL_VOTE:
-    'Everyone secretly decides whether to end the game or continue playing.',
-  FINAL_BANISH:
-    'The remaining players vote to banish someone before the final result.',
-  FINISHED:
-    'The Faithful win by banishing every Traitor. The Traitors win if any of them make it to the end. Every role is now revealed.',
+const rehearsalCardByPhase: Partial<Record<Phase, string>> = {
+  DEAL: 'Keep your screen covered while you reveal your role.',
+  MISSION: 'Work as a group on the challenge.',
+  DEBATE: 'Share what you have noticed before the vote.',
+  VOTE: 'Choose your suspect privately.',
+  VERDICT: 'Watch the votes and result appear for everyone.',
+  SHADOW: 'Make your choice while the screen is shielded.',
+  DAWN: 'The day resumes after the night announcement.',
+  ENDGAME: 'Discuss whether the group is ready to finish.',
+  FINAL_VOTE: 'Read the stakes, then make your choice.',
+  FINAL_BANISH: 'Review the remaining players before choosing.',
+  FINISHED: 'See how the game ended.',
 };
 
 const rehearsalWatchMessageByPhase: Partial<Record<Phase, string>> = {
@@ -864,7 +856,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     gameId = activeGameId;
 
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
-      "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.",
+      'A practice game with computer players. Try each step at your own pace.',
     );
     await expect(page.getByTestId('text-entry-brand')).toBeVisible();
     await page.getByTestId('text-entry-brand').click();
@@ -874,7 +866,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     expect(appDocumentLoads).toBe(0);
     await page.goBack();
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
-      "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.",
+      'A practice game with computer players. Try each step at your own pace.',
     );
     await page
       .getByRole('button', { name: 'Got it' })
@@ -1013,15 +1005,15 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         phase === 'SHADOW'
           ? (await latestServerPhase(page, activeGameId)).cycle
           : 0;
-      const explanation = rehearsalExplanationByPhase[phase];
-      if (!explanation) {
+      const cardCopy = rehearsalCardByPhase[phase];
+      if (!cardCopy) {
         throw new Error(`Rehearsal step ${phase} has no explanation copy.`);
       }
       if (seenExplanations.has(phase)) {
         await expect(page.getByTestId('rehearsal-explainer')).toBeHidden();
       } else {
         await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
-          explanation,
+          cardCopy,
         );
         await expect(
           page
@@ -1030,6 +1022,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         ).toBeVisible();
         await page.getByRole('button', { name: 'Got it' }).click();
         seenExplanations.add(phase);
+        if (phase === 'DEBATE') {
+          const details = page
+            .locator('details')
+            .filter({ hasText: "What's this?" });
+          await details.locator('summary').click();
+          await expect(details.locator('p')).toHaveText(
+            'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
+          );
+          await details.locator('summary').click();
+        }
       }
       if (watchModeStarted) {
         const watchMessage = rehearsalWatchMessageByPhase[phase];
@@ -1684,7 +1686,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       timeout: 5_000,
     });
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
-      rehearsalExplanationByPhase.FINISHED!,
+      rehearsalCardByPhase.FINISHED!,
     );
     await page.getByRole('button', { name: 'Got it' }).click();
     await expect(page.getByTestId('shared-announcement')).toContainText(/win/);
@@ -1769,7 +1771,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     expect(appDocumentLoads).toBe(0);
     await page.goBack();
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
-      rehearsalExplanationByPhase.FINISHED!,
+      rehearsalCardByPhase.FINISHED!,
     );
     await page.getByRole('button', { name: 'Got it' }).click();
     await expect(page.getByTestId('rehearsal-explainer')).toHaveCount(0);
@@ -1784,7 +1786,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     captureAppDocumentLoads = false;
     await page.goto(`/game/${gameId}`);
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
-      rehearsalExplanationByPhase.FINISHED!,
+      rehearsalCardByPhase.FINISHED!,
     );
     await page
       .getByRole('button', { name: 'Got it' })

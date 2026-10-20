@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green:** Verify #186 (`561f04f`) passed all 19 jobs, including the coverage-gated integration job, all four browser profiles, `rehearsal-live`, Lighthouse, audit, `required-checks` and all scenario shards.
+**Latest green:** Verify #187 (`0a5f7da`) passed all 18 reported jobs, including the coverage-gated integration job, all four browser profiles, `rehearsal-live`, Lighthouse, audit, `required-checks` and all scenario shards.
 
 **Verify #182 cause and fix:** `rehearsal-live` expected a separate Dawn screen after a terminal night. The server recorded `DawnResolved`, then `GameFinished` immediately when the murder reached parity, so the browser correctly landed on the results screen. The test now accepts that terminal order and verifies the Dawn update remains in the final public log; Verify #183 is green.
 
@@ -12,7 +12,7 @@
 
 **Verify #174 (`b8392d4`): RED; fixed in #175.** All four browser profiles failed from a stale hidden-screen assertion, private-state loss on resize and the away card preceding the result after navigation.
 
-**R6-1:** Incomplete. The Pixel cold-restart check passes, but iPhone WebKit cold restart is not yet proven; investigate its authenticated test handler after the #182 fix is green.
+**R6-1:** Automated checks are complete. Verify #187 passed all four browser profiles. The real-server cold-restart test also passes locally in Pixel Chromium and iPhone WebKit: a fresh context restored the saved seat cookie/storage state and the authenticated view returned the original seat ID. The earlier iPhone handler failure was consistent with an unseeded test context; no restore bug was reproduced.
 **R6-2:** Complete; Verify #181 is green. Ballots stay private until each player reveals in the random speaker order; property tests check projections before and after reveals.
 **R6-3 / CP-2:** Complete; Verify #181 is green. All 35 supplied prompts are data-driven; selection is deterministic by game/day, public-fact-only, limited to one challenge, repeats only when fewer than three fresh eligible prompts fit, and keeps M7 prompts hidden.
 **R6 feedback A1–A2:** Complete; Verify #185 is green. Prompt gates and day-one copy are in the commit. The wake-lock notice remains in the shared game header, over reserved top padding; it does not change header geometry or push the game content down.
@@ -21,11 +21,13 @@
 
 **R6 feedback C — practice seat minimum:** SPEC §31 explicitly retains the 6–15-seat practice slider. No technical limitation is documented, so the minimum remains 6; no code or copy change was made.
 
-**R6 feedback D — voting-circle card:** The current speaker can open a full-screen view of their own vote card; opening and closing it does not reveal a ballot or change the public tally. The overlay uses the Fullscreen API where available, remains viewport- and safe-area-aware in portrait and landscape, and has Close and Escape controls. The existing game wake lock remains active. Real-server rehearsal passes in Pixel Chromium and iPhone WebKit; the targeted unit test, typecheck, lint and formatting checks pass. Verify pending.
+**R6 feedback D — voting-circle card:** The current speaker can open a full-screen view of their own vote card; opening and closing it does not reveal a ballot or change the public tally. The overlay uses the Fullscreen API where available, remains viewport- and safe-area-aware in portrait and landscape, and has Close and Escape controls. The existing game wake lock remains active. Real-server rehearsal passes in Pixel Chromium and iPhone WebKit; Verify #187 is green.
 
-**Local checks:** Voting-circle unit tests 2/2, real-server rehearsal and portrait/landscape card checks pass in Pixel Chromium and iPhone WebKit; typecheck, lint and formatting pass. Audit reports 0 high and 0 critical; the 85% server-coverage threshold is unchanged. iPhone WebKit cold restart remains unverified.
+**R6 feedback E — wording audit:** First-time rehearsal cards now use concise copy separate from the full “What’s this?” details. The Notes detail no longer repeats its privacy line, and the role-reveal instruction is shorter. Targeted unit and real-server Pixel/iPhone rehearsal checks pass; final static checks and Verify are pending.
 
-**Delivery:** GitHub main is at `561f04f`; Verify #186 is green. The R6 feedback D commit is pending Verify. No CP-1 attachment, SPEC or workflow change is included. No deployment or production setting was changed.
+**Local checks:** The copy-card unit tests pass (14/14). The full real-server rehearsal and cold-restart tests pass in Pixel Chromium and iPhone WebKit; typecheck, lint and formatting are being checked. Audit reports 0 high and 0 critical; the 85% server-coverage threshold is unchanged.
+
+**Delivery:** GitHub main is at `0a5f7da`; Verify #187 is green. The R6 feedback E change set is local and pending Verify. No CP-1 attachment, SPEC or workflow change is included. No deployment or production setting was changed.
 
 **Copy alignment:** Complete in `d3b7fded`; Verify #176 is green. Approved FAQ wording is in the shared source and SPEC; 14 unit tests, 27 public-page browser tests and the static build passed locally.
 

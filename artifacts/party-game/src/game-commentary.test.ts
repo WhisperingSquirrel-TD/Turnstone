@@ -114,6 +114,28 @@ describe('step explainer copy', () => {
     expect(en.game.guideTitles.vote).toBe('The vote');
     expect(en.game.guideTitles.night).toBe('Night');
   });
+  it('keeps first-time rehearsal cards brief and distinct from the details', () => {
+    expect(Object.keys(en.game.rehearsalGuideCards).sort()).toEqual(
+      Object.keys(en.game.rehearsalGuide).sort(),
+    );
+    for (const [step, cardCopy] of Object.entries(
+      en.game.rehearsalGuideCards,
+    )) {
+      expect(cardCopy.length, `${step} card copy`).toBeLessThanOrEqual(100);
+      expect(cardCopy, `${step} card copy`).not.toBe(
+        en.game.rehearsalGuide[step as keyof typeof en.game.rehearsalGuide],
+      );
+    }
+  });
+  it('keeps the notes detail focused on use, not repeated privacy wording', () => {
+    expect(en.game.rehearsalGuide.notes).not.toContain(
+      'Only you can see your notes.',
+    );
+    expect(en.game.notesPrivateIntro).toBe('Only you can see your notes.');
+  });
+  it('keeps the role reveal instruction concise on the screen', () => {
+    expect(en.game.holdInstructions).toBe('Hold to reveal. Let go to hide.');
+  });
   it('uses the correct Faithful grammar for winning and losing', () => {
     expect(en.game.playerOutcome('faithful', 'faithful')).toBe(
       'You won as one of the Faithful.',

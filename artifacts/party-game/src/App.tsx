@@ -3082,7 +3082,7 @@ function PlayerGame() {
                 className="mt-5 text-lg leading-relaxed text-ash"
                 data-testid="rehearsal-explanation-copy"
               >
-                {en.game.rehearsalGuide[renderedRehearsalGuideKey]}
+                {en.game.rehearsalGuideCards[renderedRehearsalGuideKey]}
               </p>
               <button
                 className="primary-action mt-8 w-full"
