@@ -1065,11 +1065,6 @@ test('rehearsal player can move on from public and voting screens', async ({
   await page.goto(`/game/${gameId}`);
   const stepGuide = page.getByTestId('rehearsal-explainer');
   await expect(stepGuide).toBeVisible();
-  await expect(stepGuide).toHaveAccessibleName('Your practice game');
-  await expect(stepGuide).toContainText(
-    'Computer players fill the other seats',
-  );
-  await stepGuide.getByRole('button', { name: 'Got it' }).click();
   await expect(stepGuide).toHaveAccessibleName('The conversation');
   await expect(stepGuide).toContainText('Everyone talks it over');
   await stepGuide.getByRole('button', { name: 'Got it' }).click();
@@ -2162,7 +2157,6 @@ test('mobile cold browser restart restores the seat and current vote screen from
       : devices['Pixel 7'];
   const coldContext = await browser.newContext({
     viewport: device.viewport,
-    screen: device.screen,
     deviceScaleFactor: device.deviceScaleFactor,
     isMobile: device.isMobile,
     hasTouch: device.hasTouch,

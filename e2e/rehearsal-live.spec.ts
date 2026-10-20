@@ -17,9 +17,6 @@ type Phase =
   | 'FINISHED'
   | 'ARCHIVED';
 
-const rehearsalStartExplanation =
-  "This is a practice game. Computer players fill the other seats, and nothing here is real. Each step explains itself; tap Next step when you're ready.";
-
 const rehearsalExplanationByPhase: Partial<Record<Phase, string>> = {
   DEAL: 'Everyone is secretly dealt a role: Traitor or Faithful. Shield your screen, then hold the seal to see yours. Let go and it hides.',
   MISSION:
@@ -1515,10 +1512,6 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     expect(appDocumentLoads).toBe(0);
     await page.goBack();
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
-      rehearsalStartExplanation,
-    );
-    await page.getByRole('button', { name: 'Got it' }).click();
-    await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
       rehearsalExplanationByPhase.FINISHED!,
     );
     await page.getByRole('button', { name: 'Got it' }).click();
@@ -1534,17 +1527,12 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     captureAppDocumentLoads = false;
     await page.goto(`/game/${gameId}`);
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
-      rehearsalStartExplanation,
-    );
-    await page
-      .getByRole('button', { name: 'Got it' })
-      .click({ timeout: 5_000 });
-    await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
       rehearsalExplanationByPhase.FINISHED!,
     );
     await page
       .getByRole('button', { name: 'Got it' })
       .click({ timeout: 5_000 });
+    await expect(page.getByTestId('rehearsal-explainer')).toHaveCount(0);
     captureAppDocumentLoads = true;
     await expect(
       page.getByRole('button', { name: 'Back to start', exact: true }),

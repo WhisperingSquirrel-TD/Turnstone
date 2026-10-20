@@ -751,8 +751,7 @@ test('game wordmark stays top-left and the action banner stays above the footer'
     guideWordmarkBounds.y,
     JSON.stringify({ guideWordmarkBounds, shellWordmarkBounds }),
   ).toBe(shellWordmarkBounds.y);
-  await expect(guide).toContainText('Each step explains itself');
-  await guide.getByRole('button', { name: 'Got it' }).click();
+  await expect(guide).toHaveAccessibleName('The conversation');
   await expect(guide).toContainText('Everyone talks it over');
   const guideScrollMetrics = await guide.evaluate((overlay) => ({
     overlayHeight: overlay.clientHeight,
@@ -765,6 +764,7 @@ test('game wordmark stays top-left and the action banner stays above the footer'
   );
   expect(guideScrollMetrics.mainOverflowY).toBe('hidden');
   await guide.getByRole('button', { name: 'Got it' }).click();
+  await expect(guide).toHaveCount(0);
 
   const actionBar = page.getByTestId('rehearsal-action-bar');
   const footer = page.getByTestId('brand-footer-shell');
