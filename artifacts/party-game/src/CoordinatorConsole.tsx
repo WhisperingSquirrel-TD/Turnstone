@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FullView } from '@workspace/api-client-react';
 import { en } from './locale/en-GB';
 import { secondsUntilServerDeadline, serverClockOffset } from './server-clock';
@@ -18,6 +18,7 @@ export interface CoordinatorConsoleView {
   paused: boolean;
   deadline: number | null;
   serverNow: number;
+  coordinatorMinimumAdvanceAt?: number | null;
   progress: FullView['progress'];
   seats: FullView['seats'];
   publicLog: FullView['publicLog'];
@@ -84,15 +85,21 @@ export function formatCoordinatorCountdown(
   deadline: number | null,
   serverNow: number,
   localNow = Date.now(),
+  offsetMs = serverClockOffset(serverNow, localNow),
 ): string {
   if (deadline === null) return en.coordinator.noTimer;
-  const seconds = secondsUntilServerDeadline(
-    deadline,
-    localNow,
-    serverClockOffset(serverNow, localNow),
-  );
+  const seconds = secondsUntilServerDeadline(deadline, localNow, offsetMs);
   if (seconds === 0) return en.coordinator.movingOn;
   return `${en.coordinator.timeLeft}: ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+function coordinatorMinimumWaitSeconds(
+  minimumAdvanceAt: number | null | undefined,
+  localNow: number,
+  offsetMs: number,
+): number {
+  if (minimumAdvanceAt == null) return 0;
+  return secondsUntilServerDeadline(minimumAdvanceAt, localNow, offsetMs);
 }
 
 const nonActivePhases = new Set<FullView['phase']>([
@@ -129,6 +136,10 @@ export function CoordinatorConsole({
   onHeartbeat: () => Promise<void>;
 }) {
   const [localNow, setLocalNow] = useState(() => Date.now());
+  const serverClockOffsetMs = useMemo(
+    () => serverClockOffset(view.serverNow, Date.now()),
+    [view.serverNow],
+  );
   const [confirmMove, setConfirmMove] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [departingSeatId, setDepartingSeatId] = useState<string | null>(null);
@@ -147,6 +158,11 @@ export function CoordinatorConsole({
   const [delegateError, setDelegateError] = useState('');
   const [delegateSaved, setDelegateSaved] = useState(false);
   const active = !nonActivePhases.has(view.phase);
+  const minimumWaitSeconds = coordinatorMinimumWaitSeconds(
+    view.coordinatorMinimumAdvanceAt,
+    localNow,
+    serverClockOffsetMs,
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -174,17 +190,27 @@ export function CoordinatorConsole({
   }, [delegateSelectionDirty, onHeartbeat, onLoadCoordinatorDelegates]);
 
   useEffect(() => {
-    if (!active || view.paused || view.deadline === null) return;
+    if (
+      !active ||
+      view.paused ||
+      (view.deadline === null && minimumWaitSeconds === 0)
+    )
+      return;
     const timer = window.setInterval(() => setLocalNow(Date.now()), 1_000);
     return () => window.clearInterval(timer);
-  }, [active, view.deadline, view.paused]);
+  }, [active, view.deadline, view.paused, minimumWaitSeconds]);
 
   const remaining =
     view.deadline === null
       ? 'No timer'
       : view.paused
         ? 'Paused'
-        : formatCoordinatorCountdown(view.deadline, view.serverNow, localNow);
+        : formatCoordinatorCountdown(
+            view.deadline,
+            view.serverNow,
+            localNow,
+            serverClockOffsetMs,
+          );
   const movePrompt = getCoordinatorMoveConfirmation(view.progress);
 
   async function run(command: CoordinatorCommand): Promise<boolean> {
@@ -566,11 +592,20 @@ export function CoordinatorConsole({
               </button>
             ))}
           </div>
+          {minimumWaitSeconds > 0 && (
+            <p
+              className="text-sm text-ash"
+              data-testid="coordinator-minimum-wait"
+              role="status"
+            >
+              {en.coordinator.minimumMoveOnWait(minimumWaitSeconds)}
+            </p>
+          )}
           <button
             className="entry-primary-action"
             data-testid="button-coordinator-move-on"
             type="button"
-            disabled={busy || view.paused}
+            disabled={busy || view.paused || minimumWaitSeconds > 0}
             onClick={() => {
               if (movePrompt) setConfirmMove(true);
               else void run({ type: 'AdvancePhase' });
@@ -600,7 +635,7 @@ export function CoordinatorConsole({
           <button
             className="entry-primary-action"
             type="button"
-            disabled={busy || view.paused}
+            disabled={busy || view.paused || minimumWaitSeconds > 0}
             onClick={async () => {
               if (await run({ type: 'AdvancePhase' })) setConfirmMove(false);
             }}

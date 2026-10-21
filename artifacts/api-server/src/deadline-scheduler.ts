@@ -19,6 +19,7 @@ type SchedulerOptions = {
   intervalMs?: number;
   leaseMs?: number;
   batchSize?: number;
+  testOnlyPhaseDurationMs?: number;
   publishGame?: (gameId: string) => Promise<void>;
   processRehearsalGame?: (gameId: string) => Promise<void>;
   onError?: () => void;
@@ -52,6 +53,7 @@ async function advanceDeadline(
   claim: DeadlineClaim,
   now: number,
   publishGame?: (gameId: string) => Promise<void>,
+  testOnlyPhaseDurationMs?: number,
 ): Promise<void> {
   const state = await loadState(claim.gameId);
   if (
@@ -71,6 +73,9 @@ async function advanceDeadline(
     now,
     actor: { kind: 'system' },
     random: gameRandom,
+    ...(testOnlyPhaseDurationMs === undefined
+      ? {}
+      : { testOnlyPhaseDurationMs }),
   });
   if (!result.ok || result.events.length === 0) return;
 
@@ -123,7 +128,12 @@ export function createDeadlineScheduler(options: SchedulerOptions = {}) {
       });
       for (const claim of claims) {
         try {
-          await advanceDeadline(claim, now(), options.publishGame);
+          await advanceDeadline(
+            claim,
+            now(),
+            options.publishGame,
+            options.testOnlyPhaseDurationMs,
+          );
           await completeGameDeadline(claim.id, claim.claimToken);
         } catch {
           await releaseGameDeadline(claim.id, claim.claimToken);

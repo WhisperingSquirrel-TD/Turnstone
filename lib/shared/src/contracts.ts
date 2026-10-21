@@ -347,6 +347,12 @@ export const fullViewSchema = z
     version: z.number(),
     phase: phaseSchema,
     phaseStartedAt: z.number().int().nonnegative().optional(),
+    coordinatorMinimumAdvanceAt: z
+      .number()
+      .int()
+      .nonnegative()
+      .nullable()
+      .optional(),
     paused: z.boolean(),
     deadline: z.number().nullable(),
     coordinatorPlays: z.boolean(),

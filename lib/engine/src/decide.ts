@@ -16,6 +16,7 @@ import {
   type Phase,
   type Seat,
 } from './model';
+import { getMinimumAdvanceAt } from './phase-timing';
 import { evolve } from './reducer';
 import { roleDeal } from './deal';
 const coordinatorCommands = new Set([
@@ -260,7 +261,7 @@ export function decide(
       DAWN: c.schedule.format === 'quick' ? 1 : 5,
       FINAL_VOTE: c.schedule.format === 'quick' ? 10 : 30,
     };
-    return (value[phase] ?? 1) * 60_000;
+    return ctx.testOnlyPhaseDurationMs ?? (value[phase] ?? 1) * 60_000;
   };
   const enter = (phase: Phase, nextCycle = state!.cycle) => {
     const phaseDuration = state!.config.rehearsal.enabled
@@ -617,15 +618,8 @@ export function decide(
     case 'UndoCoordinatorAction':
       return error('UNDO_REQUIRES_SERVER');
     case 'AdvancePhase': {
-      if (
-        ['DEAL', 'SHADOW', 'VOTE', 'FINAL_VOTE', 'FINAL_BANISH'].includes(
-          state.phase,
-        ) &&
-        ctx.now <
-          state.phaseStarted +
-            (state.config.privacy.shieldSeconds * 1000 +
-              state.config.privacy.holdMs)
-      )
+      const minimumAdvanceAt = getMinimumAdvanceAt(state);
+      if (minimumAdvanceAt !== null && ctx.now < minimumAdvanceAt)
         return error('TOO_EARLY');
       if (
         ctx.actor.kind === 'system' &&

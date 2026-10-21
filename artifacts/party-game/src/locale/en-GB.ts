@@ -39,6 +39,8 @@ export const en = {
     currentStep: 'Current step',
     paused: 'Paused',
     timeLeft: 'Time left',
+    minimumMoveOnWait: (seconds: number) =>
+      `You can move everyone on in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}.`,
     privateProgress: 'Private progress',
     progress: (done: number, total: number) => `${done} of ${total} done`,
     coCoordinatorHeading: 'Co-coordinator takeover',

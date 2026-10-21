@@ -70,4 +70,17 @@ describe('party game route bundles', () => {
       compressedBytes.reduce((total, size) => total + size, 0),
     ).toBeLessThan(250 * 1024);
   });
+
+  it('keeps virtual-player server hooks out of the public JavaScript bundle', async () => {
+    const javascript = (await readdir(assetsOutput)).filter((asset) =>
+      asset.endsWith('.js'),
+    );
+    const sources = await Promise.all(
+      javascript.map((asset) => readFile(join(assetsOutput, asset), 'utf8')),
+    );
+
+    expect(sources.join('\n')).not.toMatch(
+      /VIRTUAL_PLAYER_ENGINE_SEED|test-only-short-timers|testOnlyPhaseDurationMs|createTestOnlyRandom/,
+    );
+  });
 });

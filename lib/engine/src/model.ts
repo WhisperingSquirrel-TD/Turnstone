@@ -27,6 +27,7 @@ export type Context = {
     int: (upperExclusive: number) => number;
     bytes: (length: number) => Uint8Array;
   };
+  testOnlyPhaseDurationMs?: number;
   taskCatalog?: readonly TaskDefinition[];
 };
 export type TaskAssignment = {

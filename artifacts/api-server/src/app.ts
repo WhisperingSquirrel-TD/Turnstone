@@ -104,6 +104,8 @@ export type AppOptions = {
   testOnlyNow?: () => number;
   /** Test-only deterministic randomness; production always uses Web Crypto. */
   testOnlyRandom?: Context['random'];
+  /** Test-only phase timer used by the real-server browser harness. */
+  testOnlyPhaseDurationMs?: Context['testOnlyPhaseDurationMs'];
   publishGame?: (gameId: string) => Promise<void>;
   processRehearsalGame?: (gameId: string) => Promise<void>;
   allowedOrigins?: readonly string[];
@@ -321,6 +323,10 @@ export function createApp(
   options: AppOptions = {},
 ): Express {
   const app = express();
+  const testOnlyPhaseDurationMs =
+    process.env.NODE_ENV === 'test'
+      ? options.testOnlyPhaseDurationMs
+      : undefined;
   const readReadinessStatus = createReadinessStatusReader(probeDatabase);
   app.disable('x-powered-by');
   const activeDeploymentMode = options.deploymentMode ?? deploymentMode;
@@ -432,6 +438,9 @@ export function createApp(
       now,
       actor,
       random: options.testOnlyRandom ?? gameRandom,
+      ...(testOnlyPhaseDurationMs === undefined
+        ? {}
+        : { testOnlyPhaseDurationMs }),
     });
     if (!result.ok || result.events.length === 0)
       throw new Error('Internal game command was rejected');
@@ -2902,6 +2911,9 @@ export function createApp(
             now,
             actor,
             random: options.testOnlyRandom ?? gameRandom,
+            ...(testOnlyPhaseDurationMs === undefined
+              ? {}
+              : { testOnlyPhaseDurationMs }),
           });
           if (!result.ok) {
             sendError(response, 409, 'Command rejected');

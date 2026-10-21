@@ -48,6 +48,20 @@ const rehearsalBots = createRehearsalBotRunner({
 const testOnlyHumanFaithful =
   environment.NODE_ENV === 'test' &&
   process.argv.includes('--test-only-force-human-faithful');
+const testOnlyPhaseDurationMs =
+  environment.NODE_ENV === 'test' &&
+  process.argv.includes('--test-only-short-timers')
+    ? 15_000
+    : undefined;
+const virtualPlayerEngineSeed =
+  environment.NODE_ENV === 'test'
+    ? process.env.VIRTUAL_PLAYER_ENGINE_SEED
+    : undefined;
+const virtualPlayerTestRandom = virtualPlayerEngineSeed
+  ? (await import('./test-only-random')).createTestOnlyRandom(
+      virtualPlayerEngineSeed,
+    )
+  : undefined;
 const serverOptions = createServerAppOptions({
   environment,
   resolveViewer: (request) => {
@@ -83,15 +97,20 @@ const app = createApp(
   },
   {
     ...serverOptions,
-    ...(testOnlyHumanFaithful
-      ? {
-          testOnlyRandom: {
-            int: () => 0,
-            bytes: (length: number) => new Uint8Array(length),
-          },
-        }
-      : {}),
+    ...(virtualPlayerTestRandom
+      ? { testOnlyRandom: virtualPlayerTestRandom }
+      : testOnlyHumanFaithful
+        ? {
+            testOnlyRandom: {
+              int: () => 0,
+              bytes: (length: number) => new Uint8Array(length),
+            },
+          }
+        : {}),
     clientDirectory,
+    ...(testOnlyPhaseDurationMs === undefined
+      ? {}
+      : { testOnlyPhaseDurationMs }),
     processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
   },
 );
@@ -107,6 +126,7 @@ const realtime = await attachRealtime(server, {
 });
 publishGame = realtime.publishGame;
 const scheduler = createDeadlineScheduler({
+  ...(testOnlyPhaseDurationMs === undefined ? {} : { testOnlyPhaseDurationMs }),
   publishGame,
   processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
   onError: () => logger.error('Deadline scheduler iteration failed'),

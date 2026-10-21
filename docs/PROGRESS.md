@@ -1,5 +1,11 @@
 # Status for reviewer
 
+**H1:** Local real-server rehearsal passes (6 separate browser contexts, desktop and Pixel Chromium; seed `h1-seed-6001`). The first replay found an overstrict wait assertion that could outlive the vote's minimum window while players reveal; it now checks the displayed wait against the button state. GitHub Verify is pending.
+
+**Coordinator early-move guard:** The coordinator view uses server time, shows the private-minimum/SHADOW deadline wait and disables early move-on. The engine retains its deadline rejection; the timing is coordinator-only, with tests confirming player and presenter projections do not receive it.
+
+**Local checks:** 497 unit tests, 21 property tests, typechecks, lint, format and scenario report (0 failures across 2,571 games) pass. The server-coverage run was blocked by the shared development database returning three due-deadline claims where the isolation test expected one; the 85% threshold and tests were not changed. API workflow was restarted and is healthy. Physical phones and WebKit were not tested locally.
+
 **Latest green:** GitHub Verify #193 (`8106efb`) passed all 19 jobs, including Pixel, desktop Chromium, iPad and iPhone WebKit, `rehearsal-live`, Lighthouse, audit, coverage-gated integration, all scenario shards and `required-checks`.
 
 **Verify #192 (`cf3df40`): RED; fixed in #193.** All four browser profiles passed, as did unit, static checks, property, integration, live rehearsal, Lighthouse and scenarios. `audit` found one high advisory, so `required-checks` failed. The job log showed only the count; reproducing the audit against npmjs identified `markdown-it` 14.3.2 (GHSA-gfr2-rv44-r23c, affected range `>=14.1.0 <14.3.3`) via `orval > typedoc`. The Replit registry had stale advisory data. Raised the workspace override to 14.3.3 and updated the lockfile; the public-registry audit passes with zero high or critical findings. Verify #193 is green.

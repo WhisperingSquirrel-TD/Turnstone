@@ -6,6 +6,7 @@ import {
   type View,
 } from '../../shared/src/index';
 import { alive, type State } from './model';
+import { getCoordinatorMinimumAdvanceAt } from './phase-timing';
 
 export type Viewer =
   | { kind: 'visitor'; seatId?: string; reveal?: boolean }
@@ -29,6 +30,7 @@ export const VIEW_ALLOW_LIST = [
   'version',
   'phase',
   'phaseStartedAt',
+  'coordinatorMinimumAdvanceAt',
   'paused',
   'deadline',
   'coordinatorPlays',
@@ -205,6 +207,11 @@ export function viewFor(
     version: state.version,
     phase: state.phase,
     phaseStartedAt: state.phaseStarted,
+    ...(viewer.kind === 'coordinator'
+      ? {
+          coordinatorMinimumAdvanceAt: getCoordinatorMinimumAdvanceAt(state),
+        }
+      : {}),
     paused: state.paused,
     deadline: state.phase === 'SHADOW' ? state.shadowEndAt : state.deadline,
     coordinatorPlays: state.config.basics.coordinatorPlays,

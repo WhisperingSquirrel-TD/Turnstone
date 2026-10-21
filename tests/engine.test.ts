@@ -11,6 +11,49 @@ import { eventSchema, gameConfigSchema } from '../lib/shared/src/index';
 import { fixture, command, advance } from './support/engine';
 
 describe('Milestone 1 deterministic engine', () => {
+  it('holds coordinator move-on until the enforced SHADOW deadline', () => {
+    const game = fixture(5);
+    const state = {
+      ...game.state,
+      phase: 'SHADOW' as const,
+      phaseStarted: 1_000,
+      shadowRound: 2 as const,
+      deadline: 0,
+    };
+    const privateMinimum =
+      state.phaseStarted +
+      state.config.privacy.shieldSeconds * 1_000 +
+      state.config.privacy.holdMs;
+    state.deadline = privateMinimum + 5_000;
+
+    expect(privateMinimum).toBeLessThan(state.deadline);
+    expect(viewFor({ kind: 'coordinator' }, state)).toHaveProperty(
+      'coordinatorMinimumAdvanceAt',
+      state.deadline,
+    );
+    expect(
+      viewFor({ kind: 'player', seatId: game.state.seats[0]!.id }, state),
+    ).not.toHaveProperty('coordinatorMinimumAdvanceAt');
+    expect(viewFor({ kind: 'presenter' }, state)).not.toHaveProperty(
+      'coordinatorMinimumAdvanceAt',
+    );
+    game.state = state;
+    game.context.now = privateMinimum + 1;
+    expect(
+      command(game, { type: 'AdvancePhase' }, false, { kind: 'coordinator' }),
+    ).toMatchObject({ ok: false, code: 'SHADOW_WINDOW_NOT_DUE' });
+    expect(game.state.phase).toBe('SHADOW');
+  });
+
+  it('uses the injected short phase duration in the test engine context', () => {
+    const game = fixture(5);
+    game.context.testOnlyPhaseDurationMs = 15_000;
+
+    command(game, { type: 'StartGame' }, true, { kind: 'coordinator' });
+
+    expect(game.state.deadline).toBe(game.context.now + 15_000);
+  });
+
   it('binds the secret sleeper selection into the published deal commitment', () => {
     const roles = { a: 'traitor', b: 'faithful', c: 'faithful' } as const;
     expect(commitment('g', roles, 'salt', 'b')).not.toBe(

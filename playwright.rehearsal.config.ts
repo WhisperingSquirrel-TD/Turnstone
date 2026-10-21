@@ -5,6 +5,7 @@ const apiPort = Number(process.env.REHEARSAL_API_PORT ?? 4111);
 const databaseUrl = process.env.DATABASE_URL;
 const sessionSecret = process.env.SESSION_SECRET;
 const rehearsalProfile = process.env.REHEARSAL_PROFILE ?? 'Pixel';
+const virtualPlayerSeed = process.env.VIRTUAL_PLAYER_SEED;
 const useIPhone = rehearsalProfile === 'iPhone';
 const useIPad = rehearsalProfile === 'iPad';
 const useWebKit = useIPhone || useIPad;
@@ -19,6 +20,7 @@ const serverTestFlags = [
   '--test-only-force-human-removal',
   '--test-only-force-first-vote-tie',
   '--test-only-force-human-faithful',
+  '--test-only-short-timers',
 ];
 
 if (!databaseUrl) throw new Error('Rehearsal e2e requires DATABASE_URL.');
@@ -27,7 +29,7 @@ if (!sessionSecret || sessionSecret.length < 32)
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: 'rehearsal-live.spec.ts',
+  testMatch: ['a-virtual-player-h1.spec.ts', 'rehearsal-live.spec.ts'],
   outputDir: 'generated-artifacts/playwright-rehearsal',
   reporter: [['list']],
   workers: 1,
@@ -58,6 +60,9 @@ export default defineConfig({
         DATABASE_URL: databaseUrl,
         SESSION_SECRET: sessionSecret,
         APP_BASE_URL: `http://127.0.0.1:${webPort}`,
+        ...(virtualPlayerSeed
+          ? { VIRTUAL_PLAYER_ENGINE_SEED: `${virtualPlayerSeed}:engine` }
+          : {}),
       },
     },
     {

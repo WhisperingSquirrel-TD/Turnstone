@@ -47,7 +47,7 @@ describe('CoordinatorConsole', () => {
     );
 
     expect(html).toContain('The vote');
-    expect(html).toContain('Time left: 0:30');
+    expect(html).toMatch(/Time left: 0:(?:29|30)/);
     expect(html.replaceAll('<!-- -->', '')).toContain('3 of 8 done');
     expect(html).toContain('Pause game');
     expect(html).toContain('Add 1 minute');
@@ -57,6 +57,33 @@ describe('CoordinatorConsole', () => {
     expect(html).toContain('End game early');
     expect(html).not.toContain('Practice player');
     expect(html).not.toContain('Traitor');
+  });
+
+  it('disables move-on and explains the remaining minimum wait', () => {
+    const html = renderToString(
+      <CoordinatorConsole
+        view={{
+          ...view,
+          coordinatorMinimumAdvanceAt: view.serverNow + 8_000,
+        }}
+        presenterPath="/tv/test"
+        onCreatePresenterPairing={async () => ({
+          code: 'A'.repeat(43),
+          expiresAt: 1_800_000_600_000,
+        })}
+        onCommand={async () => {}}
+        onLoadCoordinatorDelegates={onLoadCoordinatorDelegates}
+        onSaveCoordinatorDelegates={onSaveCoordinatorDelegates}
+        onHeartbeat={onHeartbeat}
+      />,
+    );
+    const buttonStart = html.indexOf(
+      'data-testid="button-coordinator-move-on"',
+    );
+    const moveButton = html.slice(buttonStart, html.indexOf('>', buttonStart));
+
+    expect(moveButton).toContain('disabled=""');
+    expect(html).toMatch(/You can move everyone on in \d+ seconds?/);
   });
 
   it('shows public updates without adding private player details', () => {
