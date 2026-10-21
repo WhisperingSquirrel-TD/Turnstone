@@ -3680,7 +3680,7 @@ it('creates a private invite and gives a joining guest a seat session', async ()
       .send({ shortCode: inviteResponse.body.shortCode, name: 'Guest One' })
       .expect(200);
     expect(availableByCode.body).toEqual({ status: 'available' });
-    expect(rateLimitsUsed.slice(shortCodeRateLimitStart)).toContain(5);
+    expect(rateLimitsUsed.slice(shortCodeRateLimitStart)).toContain(40);
 
     const inviteRateLimitStart = rateLimitsUsed.length;
     const availableByInvite = await request(app)
