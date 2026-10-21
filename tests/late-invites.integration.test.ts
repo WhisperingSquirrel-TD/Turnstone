@@ -296,7 +296,7 @@ it('admits an always-Faithful late seat by fresh link only, with approval and jo
       false,
     );
     expect(replay(await readGameEvents(gameId)).seats).toHaveLength(5);
-    for (let retry = 0; retry < 4; retry += 1) {
+    for (let retry = 0; retry < 39; retry += 1) {
       const repeated = await request(app)
         .post(`/api/games/${gameId}/join`)
         .send(body)

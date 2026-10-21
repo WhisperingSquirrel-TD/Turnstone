@@ -397,7 +397,29 @@ export function createApp(
     }
     return true;
   }
-  const shortCodeJoinRateLimitPerMinute = 40;
+  const gameJoinRateLimitPerMinute = 40;
+  const joinIpAbuseRateLimitPerMinute = 240;
+  const joinStatusIpRateLimitPerMinute = 480;
+  const seatRecoveryRateLimitPerMinute = 10;
+
+  async function consumeRateLimitForSubject(
+    scope: string,
+    subject: string,
+    limit: number,
+  ): Promise<boolean> {
+    if (!options.rateLimitSecret) return true;
+    const { consumeRateLimit } = options.consumeRateLimit
+      ? { consumeRateLimit: options.consumeRateLimit }
+      : await import('@workspace/db/rate-limit');
+    const bucketHash = createHmac('sha256', options.rateLimitSecret)
+      .update(`${scope}\u0000${subject}`)
+      .digest('hex');
+    return consumeRateLimit(bucketHash, limit, 60_000);
+  }
+
+  function rateLimitIp(request: Request): string {
+    return `ip:${request.ip ?? request.socket.remoteAddress ?? 'unknown'}`;
+  }
 
   async function checkRateLimit(
     request: Request,
@@ -407,19 +429,77 @@ export function createApp(
   ): Promise<boolean> {
     if (!options.rateLimitSecret) return true;
     const subjects = [
-      `ip:${request.ip ?? request.socket.remoteAddress ?? 'unknown'}`,
+      rateLimitIp(request),
       ...(actor ? [`actor:${actor}`] : []),
     ];
-    const { consumeRateLimit } = options.consumeRateLimit
-      ? { consumeRateLimit: options.consumeRateLimit }
-      : await import('@workspace/db/rate-limit');
     for (const subject of subjects) {
-      const bucketHash = createHmac('sha256', options.rateLimitSecret)
-        .update(`${scope}\u0000${subject}`)
-        .digest('hex');
-      if (!(await consumeRateLimit(bucketHash, limit, 60_000))) return false;
+      if (!(await consumeRateLimitForSubject(scope, subject, limit)))
+        return false;
     }
     return true;
+  }
+
+  async function checkJoinIpAbuseRateLimit(request: Request): Promise<boolean> {
+    if (!options.rateLimitSecret) return true;
+    return consumeRateLimitForSubject(
+      'join-ip-abuse',
+      rateLimitIp(request),
+      joinIpAbuseRateLimitPerMinute,
+    );
+  }
+
+  async function checkGameJoinBucket(
+    request: Request,
+    scope: string,
+    gameKey: string,
+  ): Promise<boolean> {
+    if (!options.rateLimitSecret) return true;
+    return consumeRateLimitForSubject(
+      scope,
+      `${rateLimitIp(request)}\u0000game:${gameKey}`,
+      gameJoinRateLimitPerMinute,
+    );
+  }
+
+  async function checkGameJoinRateLimit(
+    request: Request,
+    scope: string,
+    gameKey: string,
+  ): Promise<boolean> {
+    if (!(await checkJoinIpAbuseRateLimit(request))) return false;
+    return checkGameJoinBucket(request, scope, gameKey);
+  }
+
+  async function checkJoinRequestStatusRateLimit(
+    request: Request,
+    requestId: string,
+  ): Promise<boolean> {
+    const ip = rateLimitIp(request);
+    if (
+      !(await consumeRateLimitForSubject(
+        'join-request-status-ip',
+        ip,
+        joinStatusIpRateLimitPerMinute,
+      ))
+    )
+      return false;
+    return consumeRateLimitForSubject(
+      'join-request-status',
+      `${ip}\u0000request:${requestId}`,
+      30,
+    );
+  }
+
+  async function checkSeatRecoveryRateLimit(
+    request: Request,
+    gameId: string,
+    seatId: string,
+  ): Promise<boolean> {
+    return consumeRateLimitForSubject(
+      'seat-recovery-pin',
+      `${rateLimitIp(request)}\u0000game:${gameId}\u0000seat:${seatId}`,
+      seatRecoveryRateLimitPerMinute,
+    );
   }
   async function publishGame(gameId: string): Promise<void> {
     await options.publishGame?.(gameId);
@@ -1149,11 +1229,10 @@ export function createApp(
       }
       const shortCodeHash = hashJoinCode(parsed.data.shortCode, secret);
       if (
-        !(await checkRateLimit(
+        !(await checkGameJoinRateLimit(
           request,
           'short-code-join',
           shortCodeHash,
-          shortCodeJoinRateLimitPerMinute,
         ))
       ) {
         sendError(response, 429, entryFailureMessages.joinRateLimited);
@@ -1201,11 +1280,10 @@ export function createApp(
       if ('shortCode' in parsed.data) {
         const shortCodeHash = hashJoinCode(parsed.data.shortCode, secret);
         if (
-          !(await checkRateLimit(
+          !(await checkGameJoinRateLimit(
             request,
             'short-code-name-check',
             shortCodeHash,
-            shortCodeJoinRateLimitPerMinute,
           ))
         ) {
           sendError(response, 429, entryFailureMessages.joinRateLimited);
@@ -1219,7 +1297,7 @@ export function createApp(
         gameId = invite.gameId;
       } else {
         gameId = parsed.data.gameId;
-        if (!(await checkRateLimit(request, 'guest-name-check', gameId, 10))) {
+        if (!(await checkJoinIpAbuseRateLimit(request))) {
           sendError(response, 429, entryFailureMessages.joinRateLimited);
           return;
         }
@@ -1232,6 +1310,10 @@ export function createApp(
         );
         if (!invite) {
           sendError(response, 404, entryFailureMessages.gameCodeUnavailable);
+          return;
+        }
+        if (!(await checkGameJoinBucket(request, 'guest-name-check', gameId))) {
+          sendError(response, 429, entryFailureMessages.joinRateLimited);
           return;
         }
       }
@@ -1259,7 +1341,11 @@ export function createApp(
           return;
         }
         if (
-          !(await checkRateLimit(request, 'late-invite-name-check', gameId, 5))
+          !(await checkGameJoinBucket(
+            request,
+            'late-invite-name-check',
+            gameId,
+          ))
         ) {
           sendError(response, 429, entryFailureMessages.joinRateLimited);
           return;
@@ -1445,7 +1531,7 @@ export function createApp(
       const requestId = request.params.requestId ?? '';
       if (
         !/^[a-f0-9]{32}$/.test(requestId) ||
-        !(await checkRateLimit(request, 'join-request-status', requestId, 30))
+        !(await checkJoinRequestStatusRateLimit(request, requestId))
       ) {
         sendError(response, 404, 'Not found');
         return;
@@ -1544,11 +1630,23 @@ export function createApp(
         sendError(response, 503, entryFailureMessages.recoveryUnavailable);
         return;
       }
-      const recoveryKey =
+      const recoveryGameKey =
         'shortCode' in parsed.data
           ? hashJoinCode(parsed.data.shortCode, secret)
+          : parsed.data.gameId;
+      const recoveryKey =
+        'shortCode' in parsed.data
+          ? recoveryGameKey
           : createHash('sha256').update(parsed.data.inviteToken).digest('hex');
-      if (!(await checkRateLimit(request, 'seat-recovery', recoveryKey, 10))) {
+      const recoveryRateAllowed =
+        'shortCode' in parsed.data
+          ? await checkGameJoinRateLimit(
+              request,
+              'seat-recovery',
+              recoveryGameKey,
+            )
+          : await checkJoinIpAbuseRateLimit(request);
+      if (!recoveryRateAllowed) {
         sendError(response, 429, entryFailureMessages.recoveryRateLimited);
         return;
       }
@@ -1573,6 +1671,13 @@ export function createApp(
         sendError(response, 401, entryFailureMessages.recoveryFailed);
         return;
       }
+      if (
+        'inviteToken' in parsed.data &&
+        !(await checkGameJoinBucket(request, 'seat-recovery', invite.gameId))
+      ) {
+        sendError(response, 429, entryFailureMessages.recoveryRateLimited);
+        return;
+      }
       const state = await loadGameState(invite.gameId);
       if (!state) {
         sendError(response, 401, entryFailureMessages.recoveryFailed);
@@ -1593,6 +1698,12 @@ export function createApp(
         return;
       }
       if (access.lockedUntil !== null && access.lockedUntil > now) {
+        sendError(response, 429, entryFailureMessages.recoveryRateLimited);
+        return;
+      }
+      if (
+        !(await checkSeatRecoveryRateLimit(request, invite.gameId, seat.id))
+      ) {
         sendError(response, 429, entryFailureMessages.recoveryRateLimited);
         return;
       }
@@ -1692,7 +1803,7 @@ export function createApp(
         return;
       }
       const gameId = request.params.id ?? '';
-      if (!(await checkRateLimit(request, 'guest-join', gameId, 10))) {
+      if (!(await checkJoinIpAbuseRateLimit(request))) {
         sendError(response, 429, entryFailureMessages.joinRateLimited);
         return;
       }
@@ -1715,6 +1826,10 @@ export function createApp(
         sendError(response, 404, entryFailureMessages.gameCodeUnavailable);
         return;
       }
+      if (!(await checkGameJoinBucket(request, 'guest-join', gameId))) {
+        sendError(response, 429, entryFailureMessages.joinRateLimited);
+        return;
+      }
       const state = await loadGameState(gameId);
       if (!state) {
         sendError(response, 404, entryFailureMessages.gameCodeUnavailable);
@@ -1729,7 +1844,7 @@ export function createApp(
           );
           return;
         }
-        if (!(await checkRateLimit(request, 'late-invite-join', gameId, 5))) {
+        if (!(await checkGameJoinBucket(request, 'late-invite-join', gameId))) {
           sendError(response, 429, entryFailureMessages.joinRateLimited);
           return;
         }

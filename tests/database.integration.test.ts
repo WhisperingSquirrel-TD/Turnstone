@@ -1321,7 +1321,7 @@ it('clears readable invite codes when the lobby closes or a game ends', async ()
       schemaVersion: 1,
       type: 'GameCreated',
       id: gameId,
-      config: gameConfigSchema.parse({}),
+      config: gameConfigSchema.parse({ players: { count: 40 } }),
     });
 
     try {
@@ -3680,7 +3680,9 @@ it('creates a private invite and gives a joining guest a seat session', async ()
       .send({ shortCode: inviteResponse.body.shortCode, name: 'Guest One' })
       .expect(200);
     expect(availableByCode.body).toEqual({ status: 'available' });
-    expect(rateLimitsUsed.slice(shortCodeRateLimitStart)).toContain(40);
+    expect(rateLimitsUsed.slice(shortCodeRateLimitStart)).toEqual(
+      expect.arrayContaining([40, 240]),
+    );
 
     const inviteRateLimitStart = rateLimitsUsed.length;
     const availableByInvite = await request(app)
@@ -3688,7 +3690,9 @@ it('creates a private invite and gives a joining guest a seat session', async ()
       .send({ gameId, inviteToken, name: 'Guest One' })
       .expect(200);
     expect(availableByInvite.body).toEqual({ status: 'available' });
-    expect(rateLimitsUsed.slice(inviteRateLimitStart)).toContain(10);
+    expect(rateLimitsUsed.slice(inviteRateLimitStart)).toEqual(
+      expect.arrayContaining([40, 240]),
+    );
 
     await request(app)
       .post('/api/join/name-check')
@@ -3988,30 +3992,31 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
 
 it('allows 40 short-code join attempts from one IP and rate-limits excess attempts', async () => {
   const gameId = randomUUID();
+  const secondGameId = randomUUID();
   const now = Date.now();
   const rateLimitCounts = new Map<string, number>();
-  const created = eventSchema.parse({
-    seq: 1,
-    at: now,
-    schemaVersion: 1,
-    type: 'GameCreated',
-    id: gameId,
-    config: gameConfigSchema.parse({}),
-  });
+  const createLobby = async (targetGameId: string, label: string) => {
+    const created = eventSchema.parse({
+      seq: 1,
+      at: now,
+      schemaVersion: 1,
+      type: 'GameCreated',
+      id: targetGameId,
+      config: gameConfigSchema.parse({ players: { count: 40 } }),
+    });
 
-  try {
     await createGameWithEvent({
       event: created,
-      actorId: 'coordinator:shared-ip-join-capacity',
-      idempotencyKey: `shared-ip-create-${gameId}`,
-      requestHash: `shared-ip-create-${gameId}`,
+      actorId: `coordinator:shared-ip-join-capacity-${label}`,
+      idempotencyKey: `shared-ip-create-${label}-${targetGameId}`,
+      requestHash: `shared-ip-create-${label}-${targetGameId}`,
     });
     await appendGameEvents({
-      gameId,
+      gameId: targetGameId,
       expectedVersion: 1,
-      actorId: 'coordinator:shared-ip-join-capacity',
-      idempotencyKey: `shared-ip-lobby-${gameId}`,
-      requestHash: `shared-ip-lobby-${gameId}`,
+      actorId: `coordinator:shared-ip-join-capacity-${label}`,
+      idempotencyKey: `shared-ip-lobby-${label}-${targetGameId}`,
+      requestHash: `shared-ip-lobby-${label}-${targetGameId}`,
       events: [
         eventSchema.parse({
           seq: 2,
@@ -4025,6 +4030,10 @@ it('allows 40 short-code join attempts from one IP and rate-limits excess attemp
         }),
       ],
     });
+  };
+
+  try {
+    await createLobby(gameId, 'first');
 
     const app = createApp(async () => {}, {
       resolveViewer: () => ({ kind: 'coordinator' }),
@@ -4042,6 +4051,7 @@ it('allows 40 short-code join attempts from one IP and rate-limits excess attemp
     const shortCode = invite.body.shortCode as string;
     const nameCheckStatuses: number[] = [];
     const joinStatuses: number[] = [];
+    const joinRequests: Array<{ requestId: string; cookie: string }> = [];
 
     for (let index = 0; index < 40; index += 1) {
       const suffix = String(index + 1).padStart(2, '0');
@@ -4060,6 +4070,20 @@ it('allows 40 short-code join attempts from one IP and rate-limits excess attemp
           idempotencyKey: `shared-room-join-${suffix}`,
         });
       joinStatuses.push(join.status);
+      if (join.status === 202) {
+        const requestId = join.body.requestId as string;
+        const cookieHeader = join.headers['set-cookie'];
+        const cookieHeaders: string[] = Array.isArray(cookieHeader)
+          ? cookieHeader
+          : typeof cookieHeader === 'string'
+            ? [cookieHeader]
+            : [];
+        const cookie = cookieHeaders
+          .find((value) => value.includes(`/api/join-requests/${requestId}`))
+          ?.split(';', 1)[0];
+        if (!cookie) throw new Error('Missing join request cookie');
+        joinRequests.push({ requestId, cookie });
+      }
     }
 
     const excessNameCheck = await request(app)
@@ -4074,10 +4098,182 @@ it('allows 40 short-code join attempts from one IP and rate-limits excess attemp
 
     expect(nameCheckStatuses).toEqual(Array.from({ length: 40 }, () => 200));
     expect(joinStatuses).toEqual(Array.from({ length: 40 }, () => 202));
+    const joinRequestStatuses = await Promise.all(
+      joinRequests.map(
+        async ({ requestId, cookie }) =>
+          (
+            await request(app)
+              .get(`/api/join-requests/${requestId}`)
+              .set('Cookie', cookie)
+          ).status,
+      ),
+    );
+    expect(joinRequestStatuses).toEqual(Array.from({ length: 40 }, () => 200));
+
+    await createLobby(secondGameId, 'second');
+    const secondInvite = await request(app)
+      .post(`/api/games/${secondGameId}/invites`)
+      .expect(201);
+    const secondShortCode = secondInvite.body.shortCode as string;
+    const secondInviteUrl = new URL(
+      secondInvite.body.joinUrl,
+      'https://oathstone.test',
+    );
+    const secondInviteToken = secondInviteUrl.hash.slice(1);
+    await request(app)
+      .post('/api/join/name-check')
+      .send({ shortCode: secondShortCode, name: 'Guest room B' })
+      .expect(200, { status: 'available' });
+    await request(app)
+      .post('/api/join')
+      .send({
+        shortCode: secondShortCode,
+        name: 'Guest room B',
+        pin: '5678',
+        idempotencyKey: 'shared-room-join-second',
+      })
+      .expect(202);
+
+    const linkNameCheckStatuses: number[] = [];
+    const linkJoinStatuses: number[] = [];
+    for (let index = 0; index < 40; index++) {
+      const suffix = String(index + 1).padStart(2, '0');
+      const name = `Link guest ${suffix}`;
+      const nameCheck = await request(app)
+        .post('/api/join/name-check')
+        .send({ gameId: secondGameId, inviteToken: secondInviteToken, name });
+      linkNameCheckStatuses.push(nameCheck.status);
+      const join = await request(app)
+        .post(`/api/games/${secondGameId}/join`)
+        .send({
+          inviteToken: secondInviteToken,
+          name,
+          pin: '5678',
+          idempotencyKey: `shared-link-join-${suffix}`,
+        });
+      linkJoinStatuses.push(join.status);
+    }
+
+    expect(linkNameCheckStatuses).toEqual(
+      Array.from({ length: 40 }, () => 200),
+    );
+    expect(linkJoinStatuses).toEqual(Array.from({ length: 40 }, () => 201));
+
     expect(excessNameCheck.status).toBe(429);
     expect(excessJoin.status).toBe(429);
+    await request(app)
+      .post('/api/join/name-check')
+      .send({
+        gameId: secondGameId,
+        inviteToken: secondInviteToken,
+        name: 'Link guest 41',
+      })
+      .expect(429);
+    await request(app)
+      .post(`/api/games/${secondGameId}/join`)
+      .send({
+        inviteToken: secondInviteToken,
+        name: 'Link guest 41',
+        pin: '5678',
+        idempotencyKey: 'shared-link-join-41',
+      })
+      .expect(429, {
+        error: 'Too many join attempts. Wait a minute, then try again.',
+      });
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
+    await db.execute(sql`delete from games where id = ${secondGameId}`);
+  }
+}, 30_000);
+
+it('caps join probing per IP across distinct game codes', async () => {
+  const rateLimitCounts = new Map<string, number>();
+  const app = createApp(async () => {}, {
+    rateLimitSecret: 'integration-test-join-ip-abuse-cap',
+    consumeRateLimit: async (bucketHash, limit) => {
+      const count = (rateLimitCounts.get(bucketHash) ?? 0) + 1;
+      rateLimitCounts.set(bucketHash, count);
+      return count <= limit;
+    },
+  });
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const codeFor = (index: number) => {
+    let value = index;
+    let code = '';
+    for (let position = 0; position < 6; position++) {
+      code = `${alphabet[value % alphabet.length]}${code}`;
+      value = Math.floor(value / alphabet.length);
+    }
+    return code;
+  };
+
+  for (let index = 0; index < 240; index++) {
+    await request(app)
+      .post('/api/join/name-check')
+      .send({ shortCode: codeFor(index), name: 'Probe guest' })
+      .expect(404);
+  }
+  await request(app)
+    .post('/api/join/name-check')
+    .send({ shortCode: codeFor(240), name: 'Probe guest' })
+    .expect(429, {
+      error: 'Too many join attempts. Wait a minute, then try again.',
+    });
+});
+
+it('caps unauthenticated join-status probes per IP across request IDs', async () => {
+  const rateLimitCounts = new Map<string, number>();
+  const rateLimitsUsed: number[] = [];
+  const app = createApp(async () => {}, {
+    rateLimitSecret: 'integration-test-status-ip-abuse-cap',
+    consumeRateLimit: async (bucketHash, limit) => {
+      rateLimitsUsed.push(limit);
+      const count = (rateLimitCounts.get(bucketHash) ?? 0) + 1;
+      rateLimitCounts.set(bucketHash, count);
+      return count <= limit;
+    },
+  });
+
+  for (let index = 1; index <= 481; index++) {
+    const requestId = String(index).padStart(32, '0');
+    await request(app).get(`/api/join-requests/${requestId}`).expect(404);
+  }
+  expect(rateLimitsUsed.filter((limit) => limit === 480)).toHaveLength(481);
+  expect(rateLimitsUsed.filter((limit) => limit === 30)).toHaveLength(480);
+});
+
+it('keeps game creation limited per IP after five games in one minute', async () => {
+  const gameIds = Array.from({ length: 6 }, () => randomUUID());
+  const rateLimitCounts = new Map<string, number>();
+  const app = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'coordinator' }),
+    rateLimitSecret: 'integration-test-game-create-limit',
+    consumeRateLimit: async (bucketHash, limit) => {
+      const count = (rateLimitCounts.get(bucketHash) ?? 0) + 1;
+      rateLimitCounts.set(bucketHash, count);
+      return count <= limit;
+    },
+  });
+
+  try {
+    for (const [index, gameId] of gameIds.entries()) {
+      const response = await request(app)
+        .post('/api/games')
+        .send({
+          type: 'CreateGame',
+          id: gameId,
+          idempotencyKey: `shared-ip-game-create-${index}`,
+          config: gameConfigSchema.parse({}),
+        });
+      expect(response.status).toBe(index < 5 ? 201 : 429);
+      if (index === 5) {
+        expect(response.body).toEqual({ error: 'Too many requests' });
+      }
+    }
+  } finally {
+    for (const gameId of gameIds) {
+      await db.execute(sql`delete from games where id = ${gameId}`);
+    }
   }
 });
 
@@ -4139,6 +4335,16 @@ it('locks PIN recovery after five failed attempts without exposing whether the n
       });
     expect(join.status).toBe(201);
 
+    const otherSeat = await request(app)
+      .post(`/api/games/${gameId}/join`)
+      .send({
+        inviteToken: joinUrl.hash.slice(1),
+        name: 'Other Seat',
+        pin: '9753',
+        idempotencyKey: 'pin-lockout-other-seat',
+      });
+    expect(otherSeat.status).toBe(201);
+
     const failures: number[] = [];
     for (let attempt = 0; attempt < 5; attempt++) {
       const failed = await request(app).post('/api/recover').send({
@@ -4164,6 +4370,15 @@ it('locks PIN recovery after five failed attempts without exposing whether the n
     expect(correctPinWhileLocked.body.error).toBe(
       'Too many recovery attempts. Wait before trying again. If your PIN is locked, ask your organiser to reset it.',
     );
+
+    await request(app)
+      .post('/api/recover')
+      .send({
+        shortCode: invite.body.shortCode,
+        name: 'Other Seat',
+        pin: '9753',
+      })
+      .expect(200);
 
     const coordinatorView = await request(app)
       .get(`/api/games/${gameId}/view`)
