@@ -3986,6 +3986,101 @@ it('holds short-code joins for coordinator approval and returns a seat cookie af
   }
 });
 
+it('allows 40 short-code join attempts from one IP and rate-limits excess attempts', async () => {
+  const gameId = randomUUID();
+  const now = Date.now();
+  const rateLimitCounts = new Map<string, number>();
+  const created = eventSchema.parse({
+    seq: 1,
+    at: now,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+
+  try {
+    await createGameWithEvent({
+      event: created,
+      actorId: 'coordinator:shared-ip-join-capacity',
+      idempotencyKey: `shared-ip-create-${gameId}`,
+      requestHash: `shared-ip-create-${gameId}`,
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:shared-ip-join-capacity',
+      idempotencyKey: `shared-ip-lobby-${gameId}`,
+      requestHash: `shared-ip-lobby-${gameId}`,
+      events: [
+        eventSchema.parse({
+          seq: 2,
+          at: now + 1,
+          schemaVersion: 1,
+          type: 'PhaseChanged',
+          phase: 'LOBBY',
+          deadline: null,
+          shadowEndAt: null,
+          cycle: 0,
+        }),
+      ],
+    });
+
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-shared-ip-join-capacity',
+      publicBaseUrl: 'https://oathstone.test',
+      consumeRateLimit: async (bucketHash, limit) => {
+        const count = (rateLimitCounts.get(bucketHash) ?? 0) + 1;
+        rateLimitCounts.set(bucketHash, count);
+        return count <= limit;
+      },
+    });
+    const invite = await request(app)
+      .post(`/api/games/${gameId}/invites`)
+      .expect(201);
+    const shortCode = invite.body.shortCode as string;
+    const nameCheckStatuses: number[] = [];
+    const joinStatuses: number[] = [];
+
+    for (let index = 0; index < 40; index += 1) {
+      const suffix = String(index + 1).padStart(2, '0');
+      const name = `Shared room guest ${suffix}`;
+      const nameCheck = await request(app)
+        .post('/api/join/name-check')
+        .send({ shortCode, name });
+      nameCheckStatuses.push(nameCheck.status);
+
+      const join = await request(app)
+        .post('/api/join')
+        .send({
+          shortCode,
+          name,
+          pin: '5678',
+          idempotencyKey: `shared-room-join-${suffix}`,
+        });
+      joinStatuses.push(join.status);
+    }
+
+    const excessNameCheck = await request(app)
+      .post('/api/join/name-check')
+      .send({ shortCode, name: 'Shared room guest 41' });
+    const excessJoin = await request(app).post('/api/join').send({
+      shortCode,
+      name: 'Shared room guest 41',
+      pin: '5678',
+      idempotencyKey: 'shared-room-join-41',
+    });
+
+    expect(nameCheckStatuses).toEqual(Array.from({ length: 40 }, () => 200));
+    expect(joinStatuses).toEqual(Array.from({ length: 40 }, () => 202));
+    expect(excessNameCheck.status).toBe(429);
+    expect(excessJoin.status).toBe(429);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
 it('locks PIN recovery after five failed attempts without exposing whether the name exists', async () => {
   const gameId = randomUUID();
   const now = Date.now();

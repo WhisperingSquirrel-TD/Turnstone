@@ -391,6 +391,8 @@ export function createApp(
     }
     return true;
   }
+  const shortCodeJoinRateLimitPerMinute = 40;
+
   async function checkRateLimit(
     request: Request,
     scope: string,
@@ -1138,7 +1140,12 @@ export function createApp(
       }
       const shortCodeHash = hashJoinCode(parsed.data.shortCode, secret);
       if (
-        !(await checkRateLimit(request, 'short-code-join', shortCodeHash, 5))
+        !(await checkRateLimit(
+          request,
+          'short-code-join',
+          shortCodeHash,
+          shortCodeJoinRateLimitPerMinute,
+        ))
       ) {
         sendError(response, 429, entryFailureMessages.joinRateLimited);
         return;
@@ -1189,7 +1196,7 @@ export function createApp(
             request,
             'short-code-name-check',
             shortCodeHash,
-            5,
+            shortCodeJoinRateLimitPerMinute,
           ))
         ) {
           sendError(response, 429, entryFailureMessages.joinRateLimited);
