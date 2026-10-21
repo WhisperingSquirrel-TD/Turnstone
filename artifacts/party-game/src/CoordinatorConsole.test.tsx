@@ -59,7 +59,7 @@ describe('CoordinatorConsole', () => {
     expect(html).not.toContain('Traitor');
   });
 
-  it('disables move-on and explains the remaining minimum wait', () => {
+  it('disables move-on and shows the countdown on the action', () => {
     const html = renderToString(
       <CoordinatorConsole
         view={{
@@ -83,7 +83,10 @@ describe('CoordinatorConsole', () => {
     const moveButton = html.slice(buttonStart, html.indexOf('>', buttonStart));
 
     expect(moveButton).toContain('disabled=""');
-    expect(html).toMatch(/You can move everyone on in \d+ seconds?/);
+    expect(moveButton).toContain('aria-label="Move everyone on"');
+    expect(html).toMatch(/>Ready in \d+</);
+    expect(html).toContain('Move everyone on in 8 seconds.');
+    expect(html).not.toContain('You can move everyone on in');
   });
 
   it('shows public updates without adding private player details', () => {

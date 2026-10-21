@@ -207,7 +207,7 @@ export function viewFor(
     version: state.version,
     phase: state.phase,
     phaseStartedAt: state.phaseStarted,
-    ...(viewer.kind === 'coordinator'
+    ...(viewer.kind === 'coordinator' || rehearsalOrganizer
       ? {
           coordinatorMinimumAdvanceAt: getCoordinatorMinimumAdvanceAt(state),
         }

@@ -1061,6 +1061,12 @@ components:
           maxLength: 128
         canAdvancePhase:
           type: boolean
+        coordinatorMinimumAdvanceAt:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: Server timestamp after which an organiser may advance the current phase.
         coordinatorUndo:
           oneOf:
             - type: object

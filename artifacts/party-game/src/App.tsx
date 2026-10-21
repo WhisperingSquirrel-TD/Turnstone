@@ -86,6 +86,7 @@ import {
   shouldShowRehearsalGuide,
 } from './rehearsal-guide-step';
 import { getPublicFacts } from './public-site-content';
+import { getAdvanceControlState, isAdvanceConflict } from './advance-control';
 import {
   secondsUntilServerDeadline,
   serverClockOffset,
@@ -857,6 +858,7 @@ function PlayerGame() {
   const [confirmChoice, setConfirmChoice] = useState(false);
   const [actionDone, setActionDone] = useState(false);
   const [commandMessage, setCommandMessage] = useState('');
+  const [advanceLocalNow, setAdvanceLocalNow] = useState(() => Date.now());
   const [installMessage, setInstallMessage] = useState('');
   const [wakeLockFallback, setWakeLockFallback] = useState(false);
   const [connectionStatus, setConnectionStatus] =
@@ -907,14 +909,40 @@ function PlayerGame() {
   const view = response?.view;
   const full = view && isFullView(view) ? view : null;
   const visitor = view && !isFullView(view) ? (view as VisitorView) : null;
+  const responseServerNow = response?.serverNow;
+  const advanceClockOffsetMs = useMemo(
+    () =>
+      responseServerNow === undefined
+        ? serverClockOffsetMs.current
+        : serverClockOffset(responseServerNow, Date.now()),
+    [responseServerNow],
+  );
+  const advanceControl = getAdvanceControlState({
+    minimumAdvanceAt: full?.coordinatorMinimumAdvanceAt,
+    localNow: advanceLocalNow,
+    serverClockOffsetMs: advanceClockOffsetMs,
+    busy: command.isPending,
+    paused: full?.paused ?? false,
+  });
+  const waitingForAdvanceMinimum = advanceControl.waitSeconds > 0;
   useEffect(() => {
     if (response) {
       serverClockOffsetMs.current = serverClockOffset(
         response.serverNow,
         Date.now(),
       );
+      setAdvanceLocalNow(Date.now());
     }
   }, [response?.serverNow]);
+  useEffect(() => {
+    if (!full?.canAdvancePhase || !waitingForAdvanceMinimum) return;
+    const timer = window.setInterval(() => setAdvanceLocalNow(Date.now()), 100);
+    return () => window.clearInterval(timer);
+  }, [
+    full?.canAdvancePhase,
+    full?.coordinatorMinimumAdvanceAt,
+    waitingForAdvanceMinimum,
+  ]);
   useEffect(() => {
     const savedSnapshot = readAwayCursor(id);
     awaySnapshot.current = savedSnapshot;
@@ -1953,7 +1981,7 @@ function PlayerGame() {
   }
 
   async function moveOn() {
-    if (!full?.canAdvancePhase || command.isPending) return;
+    if (!full?.canAdvancePhase || advanceControl.disabled) return;
     const currentPhase = full.phase;
     setCommandMessage('');
     try {
@@ -1969,6 +1997,22 @@ function PlayerGame() {
       }
       if (!latestView.canAdvancePhase) {
         setCommandMessage(en.game.moveOnFailed);
+        return;
+      }
+      const latestLocalNow = Date.now();
+      const latestClockOffsetMs =
+        latestResult.data?.serverNow === undefined
+          ? advanceClockOffsetMs
+          : serverClockOffset(latestResult.data.serverNow, latestLocalNow);
+      if (
+        getAdvanceControlState({
+          minimumAdvanceAt: latestView.coordinatorMinimumAdvanceAt,
+          localNow: latestLocalNow,
+          serverClockOffsetMs: latestClockOffsetMs,
+          paused: latestView.paused,
+        }).waitSeconds > 0
+      ) {
+        setAdvanceLocalNow(latestLocalNow);
         return;
       }
       const previousShadowWindow =
@@ -2008,16 +2052,22 @@ function PlayerGame() {
         setPrivateView(null);
         setSelected('');
       }
-    } catch {
+    } catch (error) {
       command.reset();
       const refreshed = await gameQuery.refetch();
       setCommandMessage(
-        refreshed.data?.view.phase === full.phase ? en.game.moveOnFailed : '',
+        refreshed.data?.view.phase === full.phase
+          ? isAdvanceConflict(error)
+            ? en.coordinator.advanceTooEarly
+            : en.game.moveOnFailed
+          : '',
       );
+      setAdvanceLocalNow(Date.now());
     }
   }
 
   function requestMoveOn() {
+    if (advanceControl.disabled) return;
     if (!full?.rehearsal && unfinishedCount > 0) {
       setAdvanceConfirmationOpen(true);
       return;
@@ -3034,12 +3084,15 @@ function PlayerGame() {
                     : 'quiet-action w-full'
                 }
                 type="button"
-                disabled={command.isPending}
+                aria-live="polite"
+                disabled={advanceControl.disabled}
                 onClick={requestMoveOn}
               >
-                {full.rehearsal
-                  ? en.game.nextRehearsalStep
-                  : en.game.organiserMoveOn}
+                {waitingForAdvanceMinimum
+                  ? en.coordinator.minimumMoveOnWait(advanceControl.waitSeconds)
+                  : full.rehearsal
+                    ? en.game.nextRehearsalStep
+                    : en.game.organiserMoveOn}
               </button>
             </div>
           </section>

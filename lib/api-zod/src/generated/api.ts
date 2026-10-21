@@ -56,6 +56,8 @@ export const startRehearsalResponseViewOneSeatCountMin = 0;
 
 export const startRehearsalResponseViewTwoIdMax = 128;
 
+export const startRehearsalResponseViewTwoCoordinatorMinimumAdvanceAtMin = 0;
+
 export const startRehearsalResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
 
 export const startRehearsalResponseViewTwoViewerSeatIdMax = 128;
@@ -153,6 +155,7 @@ export const StartRehearsalResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(startRehearsalResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorMinimumAdvanceAt": zod.number().int().min(startRehearsalResponseViewTwoCoordinatorMinimumAdvanceAtMin).nullish().describe('Server timestamp after which an organiser may advance the current phase.'),
   "coordinatorUndo": zod.union([zod.object({
   "expiresAt": zod.number().int().min(startRehearsalResponseViewTwoCoordinatorUndoOneExpiresAtMin)
 }),zod.null()]),
@@ -372,6 +375,8 @@ export const createGameResponseViewOneSeatCountMin = 0;
 
 export const createGameResponseViewTwoIdMax = 128;
 
+export const createGameResponseViewTwoCoordinatorMinimumAdvanceAtMin = 0;
+
 export const createGameResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
 
 export const createGameResponseViewTwoViewerSeatIdMax = 128;
@@ -469,6 +474,7 @@ export const CreateGameResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(createGameResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorMinimumAdvanceAt": zod.number().int().min(createGameResponseViewTwoCoordinatorMinimumAdvanceAtMin).nullish().describe('Server timestamp after which an organiser may advance the current phase.'),
   "coordinatorUndo": zod.union([zod.object({
   "expiresAt": zod.number().int().min(createGameResponseViewTwoCoordinatorUndoOneExpiresAtMin)
 }),zod.null()]),
@@ -835,6 +841,8 @@ export const getJoinRequestStatusResponseThreeGameViewOneSeatCountMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoIdMax = 128;
 
+export const getJoinRequestStatusResponseThreeGameViewTwoCoordinatorMinimumAdvanceAtMin = 0;
+
 export const getJoinRequestStatusResponseThreeGameViewTwoCoordinatorUndoOneExpiresAtMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoViewerSeatIdMax = 128;
@@ -938,6 +946,7 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorMinimumAdvanceAt": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoCoordinatorMinimumAdvanceAtMin).nullish().describe('Server timestamp after which an organiser may advance the current phase.'),
   "coordinatorUndo": zod.union([zod.object({
   "expiresAt": zod.number().int().min(getJoinRequestStatusResponseThreeGameViewTwoCoordinatorUndoOneExpiresAtMin)
 }),zod.null()]),
@@ -1378,6 +1387,8 @@ export const getGameViewResponseViewOneSeatCountMin = 0;
 
 export const getGameViewResponseViewTwoIdMax = 128;
 
+export const getGameViewResponseViewTwoCoordinatorMinimumAdvanceAtMin = 0;
+
 export const getGameViewResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
 
 export const getGameViewResponseViewTwoViewerSeatIdMax = 128;
@@ -1475,6 +1486,7 @@ export const GetGameViewResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(getGameViewResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorMinimumAdvanceAt": zod.number().int().min(getGameViewResponseViewTwoCoordinatorMinimumAdvanceAtMin).nullish().describe('Server timestamp after which an organiser may advance the current phase.'),
   "coordinatorUndo": zod.union([zod.object({
   "expiresAt": zod.number().int().min(getGameViewResponseViewTwoCoordinatorUndoOneExpiresAtMin)
 }),zod.null()]),
@@ -1697,6 +1709,8 @@ export const revealPrivateViewResponseViewOneSeatCountMin = 0;
 
 export const revealPrivateViewResponseViewTwoIdMax = 128;
 
+export const revealPrivateViewResponseViewTwoCoordinatorMinimumAdvanceAtMin = 0;
+
 export const revealPrivateViewResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
 
 export const revealPrivateViewResponseViewTwoViewerSeatIdMax = 128;
@@ -1794,6 +1808,7 @@ export const RevealPrivateViewResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(revealPrivateViewResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorMinimumAdvanceAt": zod.number().int().min(revealPrivateViewResponseViewTwoCoordinatorMinimumAdvanceAtMin).nullish().describe('Server timestamp after which an organiser may advance the current phase.'),
   "coordinatorUndo": zod.union([zod.object({
   "expiresAt": zod.number().int().min(revealPrivateViewResponseViewTwoCoordinatorUndoOneExpiresAtMin)
 }),zod.null()]),
@@ -2021,6 +2036,8 @@ export const submitGameCommandResponseViewOneSeatCountMin = 0;
 
 export const submitGameCommandResponseViewTwoIdMax = 128;
 
+export const submitGameCommandResponseViewTwoCoordinatorMinimumAdvanceAtMin = 0;
+
 export const submitGameCommandResponseViewTwoCoordinatorUndoOneExpiresAtMin = 0;
 
 export const submitGameCommandResponseViewTwoViewerSeatIdMax = 128;
@@ -2118,6 +2135,7 @@ export const SubmitGameCommandResponse = zod.object({
 }),zod.object({
   "id": zod.string().min(1).max(submitGameCommandResponseViewTwoIdMax),
   "canAdvancePhase": zod.boolean(),
+  "coordinatorMinimumAdvanceAt": zod.number().int().min(submitGameCommandResponseViewTwoCoordinatorMinimumAdvanceAtMin).nullish().describe('Server timestamp after which an organiser may advance the current phase.'),
   "coordinatorUndo": zod.union([zod.object({
   "expiresAt": zod.number().int().min(submitGameCommandResponseViewTwoCoordinatorUndoOneExpiresAtMin)
 }),zod.null()]),

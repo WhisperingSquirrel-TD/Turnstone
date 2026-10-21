@@ -68,8 +68,10 @@ test('coordinator can pause, extend and safely advance an active game', async ({
 }) => {
   const gameId = 'coordinator-console-test';
   let view = createView();
+  view = { ...view, coordinatorMinimumAdvanceAt: Date.now() + 5_000 };
   const commands: Array<Record<string, unknown>> = [];
   let delegateSeatIds: string[] = [];
+  let rejectNextAdvance = false;
   const pairingCode = 'A'.repeat(43);
   const responseSchemaCheck = gameViewResponseSchema.safeParse({
     serverNow: Date.now(),
@@ -116,6 +118,18 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   );
   await page.route(`**/games/${gameId}/commands`, async (route) => {
     const command = route.request().postDataJSON() as Record<string, unknown>;
+    if (command.type === 'AdvancePhase' && rejectNextAdvance) {
+      rejectNextAdvance = false;
+      view = {
+        ...view,
+        coordinatorMinimumAdvanceAt: Date.now() + 1_500,
+      };
+      await route.fulfill({
+        status: 409,
+        json: { error: 'Command rejected' },
+      });
+      return;
+    }
     commands.push(command);
     view = {
       ...view,
@@ -137,6 +151,10 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   });
   await page.route('**/socket.io/**', (route) => route.abort());
 
+  await page.addInitScript(() => {
+    const originalNow = Date.now.bind(Date);
+    Date.now = () => originalNow() + 120_000;
+  });
   await page.goto(`/coordinate/${gameId}`);
   const initialViewport = page.viewportSize();
   if (!initialViewport) {
@@ -144,6 +162,10 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   }
   const coordinatorConsole = page.getByTestId('coordinator-console');
   await expect(coordinatorConsole).toBeVisible();
+  const moveOnButton = page.getByTestId('button-coordinator-move-on');
+  await expect(moveOnButton).toBeDisabled();
+  await expect(moveOnButton).toHaveText(/^Ready in \d+$/);
+  await expect(moveOnButton).toBeEnabled({ timeout: 7_000 });
   await page.setViewportSize({ width: 320, height: 900 });
   expect(
     await page.evaluate(
@@ -286,7 +308,8 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await expect(page.getByTestId('button-coordinator-undo')).toHaveCount(0);
   expect(commands.at(-1)?.type).toBe('UndoCoordinatorAction');
 
-  await page.getByTestId('button-coordinator-move-on').click();
+  rejectNextAdvance = true;
+  await moveOnButton.click();
   await expect(
     page.getByText("3 players haven't finished. Move everyone on anyway?"),
   ).toBeVisible();
@@ -296,6 +319,19 @@ test('coordinator can pause, extend and safely advance an active game', async ({
     'ExtendPhase',
     'UndoCoordinatorAction',
   ]);
+  await page.getByRole('button', { name: 'Move everyone on anyway' }).click();
+  await expect(
+    page.getByText(
+      'This step needs a little longer. The countdown has been refreshed.',
+    ),
+  ).toBeVisible();
+  await expect(moveOnButton).toBeDisabled();
+  await expect(moveOnButton).toHaveText(/^Ready in \d+$/);
+  await expect(moveOnButton).toBeEnabled({ timeout: 5_000 });
+  await moveOnButton.click();
+  await expect(
+    page.getByText("3 players haven't finished. Move everyone on anyway?"),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Move everyone on anyway' }).click();
   await expect(page.getByTestId('coordinator-current-step')).toHaveText(
     'The verdict',

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FullView } from '@workspace/api-client-react';
 import { en } from './locale/en-GB';
+import { getAdvanceControlState, isAdvanceConflict } from './advance-control';
 import { secondsUntilServerDeadline, serverClockOffset } from './server-clock';
 
 export type CoordinatorCommand =
@@ -93,15 +94,6 @@ export function formatCoordinatorCountdown(
   return `${en.coordinator.timeLeft}: ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-function coordinatorMinimumWaitSeconds(
-  minimumAdvanceAt: number | null | undefined,
-  localNow: number,
-  offsetMs: number,
-): number {
-  if (minimumAdvanceAt == null) return 0;
-  return secondsUntilServerDeadline(minimumAdvanceAt, localNow, offsetMs);
-}
-
 const nonActivePhases = new Set<FullView['phase']>([
   'DRAFT',
   'LOBBY',
@@ -158,11 +150,11 @@ export function CoordinatorConsole({
   const [delegateError, setDelegateError] = useState('');
   const [delegateSaved, setDelegateSaved] = useState(false);
   const active = !nonActivePhases.has(view.phase);
-  const minimumWaitSeconds = coordinatorMinimumWaitSeconds(
-    view.coordinatorMinimumAdvanceAt,
+  const minimumWaitSeconds = getAdvanceControlState({
+    minimumAdvanceAt: view.coordinatorMinimumAdvanceAt,
     localNow,
     serverClockOffsetMs,
-  );
+  }).waitSeconds;
 
   useEffect(() => {
     let mounted = true;
@@ -196,7 +188,10 @@ export function CoordinatorConsole({
       (view.deadline === null && minimumWaitSeconds === 0)
     )
       return;
-    const timer = window.setInterval(() => setLocalNow(Date.now()), 1_000);
+    const timer = window.setInterval(
+      () => setLocalNow(Date.now()),
+      minimumWaitSeconds > 0 ? 100 : 1_000,
+    );
     return () => window.clearInterval(timer);
   }, [active, view.deadline, view.paused, minimumWaitSeconds]);
 
@@ -220,8 +215,12 @@ export function CoordinatorConsole({
     try {
       await onCommand(command);
       return true;
-    } catch {
-      setError(en.coordinator.error);
+    } catch (error) {
+      setError(
+        command.type === 'AdvancePhase' && isAdvanceConflict(error)
+          ? en.coordinator.advanceTooEarly
+          : en.coordinator.error,
+      );
       return false;
     } finally {
       setBusy(false);
@@ -592,27 +591,37 @@ export function CoordinatorConsole({
               </button>
             ))}
           </div>
-          {minimumWaitSeconds > 0 && (
-            <p
-              className="text-sm text-ash"
-              data-testid="coordinator-minimum-wait"
-              role="status"
-            >
-              {en.coordinator.minimumMoveOnWait(minimumWaitSeconds)}
-            </p>
-          )}
           <button
             className="entry-primary-action"
             data-testid="button-coordinator-move-on"
             type="button"
+            aria-label={en.game.organiserMoveOn}
+            aria-describedby={
+              minimumWaitSeconds > 0
+                ? 'coordinator-move-on-wait-status'
+                : undefined
+            }
+            aria-live="polite"
             disabled={busy || view.paused || minimumWaitSeconds > 0}
             onClick={() => {
               if (movePrompt) setConfirmMove(true);
               else void run({ type: 'AdvancePhase' });
             }}
           >
-            {en.game.organiserMoveOn}
+            {minimumWaitSeconds > 0
+              ? en.coordinator.minimumMoveOnWait(minimumWaitSeconds)
+              : en.game.organiserMoveOn}
           </button>
+          {minimumWaitSeconds > 0 && (
+            <span
+              id="coordinator-move-on-wait-status"
+              className="sr-only"
+              role="status"
+              aria-live="polite"
+            >
+              {en.coordinator.minimumMoveOnStatus(minimumWaitSeconds)}
+            </span>
+          )}
           <button
             className="entry-secondary-action"
             data-testid="button-coordinator-end-early"

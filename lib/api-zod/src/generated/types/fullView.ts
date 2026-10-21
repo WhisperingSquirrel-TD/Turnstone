@@ -26,6 +26,12 @@ export interface FullView {
      */
   id: string;
   canAdvancePhase: boolean;
+  /**
+     * Server timestamp after which an organiser may advance the current phase.
+     * @minimum 0
+     * @nullable
+     */
+  coordinatorMinimumAdvanceAt?: number | null;
   coordinatorUndo: FullViewCoordinatorUndo;
   /**
      * @minLength 1

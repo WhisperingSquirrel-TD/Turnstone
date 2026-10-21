@@ -408,12 +408,17 @@ describe('Milestone 1 deterministic engine', () => {
     });
     command(game, { type: 'StartGame' });
 
-    expect(
-      viewFor({ kind: 'player', seatId: 's0' }, game.state).canAdvancePhase,
-    ).toBe(true);
-    expect(
-      viewFor({ kind: 'player', seatId: 's1' }, game.state).canAdvancePhase,
-    ).toBe(false);
+    const humanView = viewFor({ kind: 'player', seatId: 's0' }, game.state);
+    expect(humanView.canAdvancePhase).toBe(true);
+    expect(humanView.coordinatorMinimumAdvanceAt).toBe(
+      game.state.phaseStarted +
+        game.state.config.privacy.shieldSeconds * 1_000 +
+        game.state.config.privacy.holdMs,
+    );
+    expect(JSON.stringify(humanView)).not.toMatch(/Traitor|Faithful/);
+    const botView = viewFor({ kind: 'player', seatId: 's1' }, game.state);
+    expect(botView.canAdvancePhase).toBe(false);
+    expect(botView).not.toHaveProperty('coordinatorMinimumAdvanceAt');
     expect(viewFor({ kind: 'coordinator' }, game.state).canAdvancePhase).toBe(
       false,
     );

@@ -39,8 +39,11 @@ export const en = {
     currentStep: 'Current step',
     paused: 'Paused',
     timeLeft: 'Time left',
-    minimumMoveOnWait: (seconds: number) =>
-      `You can move everyone on in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}.`,
+    minimumMoveOnWait: (seconds: number) => `Ready in ${seconds}`,
+    minimumMoveOnStatus: (seconds: number) =>
+      `Move everyone on in ${seconds} second${seconds === 1 ? '' : 's'}.`,
+    advanceTooEarly:
+      'This step needs a little longer. The countdown has been refreshed.',
     privateProgress: 'Private progress',
     progress: (done: number, total: number) => `${done} of ${total} done`,
     coCoordinatorHeading: 'Co-coordinator takeover',
