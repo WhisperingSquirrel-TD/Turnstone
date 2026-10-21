@@ -558,6 +558,7 @@ export const en = {
     voteCircleCardLabel: 'You voted for',
     voteCircleFullScreen: 'Show your vote card full screen',
     voteCircleCloseCard: 'Close vote card',
+    voteCircleOrientationHint: 'Turn your phone sideways to show the group',
     voteCircleYourTurn:
       'It’s your turn. Say who you voted for and why, then reveal your card.',
     voteCircleWaitingFor: (name: string) =>

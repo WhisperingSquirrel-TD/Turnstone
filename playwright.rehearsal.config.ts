@@ -6,7 +6,15 @@ const databaseUrl = process.env.DATABASE_URL;
 const sessionSecret = process.env.SESSION_SECRET;
 const rehearsalProfile = process.env.REHEARSAL_PROFILE ?? 'Pixel';
 const useIPhone = rehearsalProfile === 'iPhone';
-const rehearsalDevice = useIPhone ? devices['iPhone 13'] : devices['Pixel 7'];
+const useIPad = rehearsalProfile === 'iPad';
+const useWebKit = useIPhone || useIPad;
+if (!['Pixel', 'iPhone', 'iPad'].includes(rehearsalProfile))
+  throw new Error(`Unsupported rehearsal profile: ${rehearsalProfile}`);
+const rehearsalDevice = useIPhone
+  ? devices['iPhone 13']
+  : useIPad
+    ? devices['iPad (gen 7)']
+    : devices['Pixel 7'];
 const serverTestFlags = [
   '--test-only-force-human-removal',
   '--test-only-force-first-vote-tie',
@@ -27,8 +35,8 @@ export default defineConfig({
   expect: { timeout: 5_000 },
   use: {
     ...rehearsalDevice,
-    browserName: useIPhone ? 'webkit' : 'chromium',
-    ...(useIPhone && process.env.WEBKIT_TEST_EXECUTABLE
+    browserName: useWebKit ? 'webkit' : 'chromium',
+    ...(useWebKit && process.env.WEBKIT_TEST_EXECUTABLE
       ? {
           launchOptions: { executablePath: process.env.WEBKIT_TEST_EXECUTABLE },
         }

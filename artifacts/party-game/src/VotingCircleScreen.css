@@ -1,4 +1,12 @@
+:root {
+  --vote-card-dark-surface: #24211f;
+  --vote-card-dark-ink: #fafaf5;
+  --vote-card-light-surface: #fafaf5;
+  --vote-card-light-ink: #24211f;
+}
+
 .vote-circle-card {
+  appearance: none;
   box-sizing: border-box;
   display: grid;
   gap: 0.75rem;
@@ -10,11 +18,45 @@
   padding: clamp(1.25rem, 6vw, 3rem);
   text-align: center;
   width: 100%;
+  border: 2px solid var(--gilt);
+  background: var(--vote-card-dark-surface);
+  color: var(--vote-card-dark-ink);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
+}
+
+.game-shell[data-game-theme='day'] .vote-circle-card {
+  background: var(--vote-card-light-surface);
+  color: var(--vote-card-light-ink);
+}
+
+.vote-circle-card:hover {
+  box-shadow: 0 0 0 3px rgb(197 151 75 / 28%);
+  transform: translateY(-1px);
+}
+
+.vote-circle-card:active {
+  transform: scale(0.99);
+}
+
+.vote-circle-card:focus-visible {
+  outline: 3px solid var(--gilt);
+  outline-offset: 4px;
 }
 
 .vote-circle-card strong {
   font-size: clamp(2rem, 9vw, 4rem);
   line-height: 1.1;
+}
+
+.vote-circle-card__action {
+  font-size: 0.95rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .vote-circle-presenter {
@@ -31,8 +73,13 @@
   padding: max(1rem, env(safe-area-inset-top))
     max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom))
     max(1rem, env(safe-area-inset-left));
-  background: var(--game-page-background, var(--hearth));
-  color: var(--candle);
+  background: var(--vote-card-dark-surface);
+  color: var(--vote-card-dark-ink);
+}
+
+.game-shell[data-game-theme='day'] .vote-circle-presenter {
+  background: var(--vote-card-light-surface);
+  color: var(--vote-card-light-ink);
 }
 
 .vote-circle-presenter__close {
@@ -42,8 +89,15 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0.5rem 1rem;
-  border: 1px solid var(--gilt);
-  color: var(--candle);
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.vote-circle-presenter__close:focus-visible {
+  outline: 3px solid var(--gilt);
+  outline-offset: 3px;
 }
 
 .vote-circle-presenter__content {
@@ -61,10 +115,27 @@
 
 .vote-circle-presenter__content h2 {
   max-width: 100%;
-  font-size: clamp(3rem, min(22vw, 30dvh), 14rem);
+  font-size: clamp(2rem, 14vmin, 12rem);
   line-height: 0.95;
   overflow-wrap: anywhere;
   text-wrap: balance;
+}
+
+.vote-circle-presenter__orientation-hint {
+  display: none;
+  font-size: 1rem;
+}
+
+@media (orientation: portrait) {
+  .vote-circle-presenter__orientation-hint {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vote-circle-card {
+    transition: none;
+  }
 }
 
 html:has(.vote-circle-presenter),

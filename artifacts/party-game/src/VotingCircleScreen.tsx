@@ -14,6 +14,19 @@ type VotingCircleScreenProps = {
   isPending: boolean;
 };
 
+export function fitVoteCardNameFontSize(
+  name: string,
+  viewportWidth: number,
+  viewportHeight: number,
+): number {
+  const width = Math.max(1, viewportWidth - 48);
+  const shortestSide = Math.max(1, Math.min(viewportWidth, viewportHeight));
+  const characterCount = Math.max(1, Array.from(name.trim()).length);
+  const viewportFit = shortestSide * 0.2;
+  const widthFit = width / (characterCount * 0.62);
+  return Math.floor(Math.max(16, Math.min(192, viewportFit, widthFit)));
+}
+
 export function VotingCircleScreen({
   speakerSeatId,
   viewerSeatId,
@@ -29,41 +42,111 @@ export function VotingCircleScreen({
   const isMyTurn = speakerSeatId !== null && speakerSeatId === viewerSeatId;
   const [showingFullScreenCard, setShowingFullScreenCard] = useState(false);
   const closeVoteCardButton = useRef<HTMLButtonElement>(null);
+  const presenter = useRef<HTMLDivElement>(null);
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const tally = new Map<string, { name: string; count: number }>();
+  const canShowVoteCard =
+    Boolean(ownVoteTargetName) && isMyTurn && !viewerHasRevealed;
+  const nameFontSize =
+    viewportSize.width > 0 && viewportSize.height > 0 && ownVoteTargetName
+      ? fitVoteCardNameFontSize(
+          ownVoteTargetName,
+          viewportSize.width,
+          viewportSize.height,
+        )
+      : undefined;
+
+  useEffect(() => {
+    const updateViewport = () => {
+      const viewport = window.visualViewport;
+      setViewportSize({
+        width: viewport?.width ?? window.innerWidth,
+        height: viewport?.height ?? window.innerHeight,
+      });
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    window.addEventListener('orientationchange', updateViewport);
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.removeEventListener('orientationchange', updateViewport);
+      window.visualViewport?.removeEventListener('resize', updateViewport);
+    };
+  }, []);
 
   useEffect(() => {
     if (!showingFullScreenCard) return;
 
     closeVoteCardButton.current?.focus();
+    const inerted: Array<{
+      element: HTMLElement;
+      wasInert: boolean;
+      previousAriaHidden: string | null;
+    }> = [];
+    let branch: HTMLElement | null = presenter.current;
+    const dialogParent = presenter.current?.parentElement;
+    while (branch?.parentElement) {
+      const parent = branch.parentElement;
+      if (parent !== dialogParent) {
+        for (const child of Array.from(parent.children)) {
+          if (!(child instanceof HTMLElement) || child === branch) continue;
+          inerted.push({
+            element: child,
+            wasInert: child.inert,
+            previousAriaHidden: child.getAttribute('aria-hidden'),
+          });
+          child.inert = true;
+          child.setAttribute('aria-hidden', 'true');
+        }
+      }
+      if (parent === document.body) break;
+      branch = parent;
+    }
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setShowingFullScreenCard(false);
-      if (
-        document.fullscreenElement &&
-        typeof document.exitFullscreen === 'function'
-      ) {
-        void document.exitFullscreen().catch(() => undefined);
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeFullScreenCard();
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        closeVoteCardButton.current?.focus();
       }
     };
-    const onFullscreenChange = () => {
-      if (!document.fullscreenElement) setShowingFullScreenCard(false);
-    };
     document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('fullscreenchange', onFullscreenChange);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      for (const item of inerted) {
+        item.element.inert = item.wasInert;
+        if (item.previousAriaHidden === null) {
+          item.element.removeAttribute('aria-hidden');
+        } else {
+          item.element.setAttribute('aria-hidden', item.previousAriaHidden);
+        }
+      }
     };
   }, [showingFullScreenCard]);
 
-  function openFullScreenCard() {
+  async function openFullScreenCard() {
     setShowingFullScreenCard(true);
     const root = document.documentElement;
-    if (
-      !document.fullscreenElement &&
-      typeof root.requestFullscreen === 'function'
-    ) {
-      void root.requestFullscreen().catch(() => undefined);
+    try {
+      if (
+        !document.fullscreenElement &&
+        typeof root.requestFullscreen === 'function'
+      ) {
+        await root.requestFullscreen();
+      }
+    } catch {
+      // The overlay remains usable when fullscreen is unavailable.
+    }
+    try {
+      const orientation = window.screen.orientation as unknown as {
+        lock?: (value: 'landscape') => Promise<void>;
+      };
+      await orientation?.lock?.('landscape');
+    } catch {
+      // iOS Safari and some browser states do not permit orientation locking.
     }
   }
 
@@ -74,6 +157,14 @@ export function VotingCircleScreen({
       typeof document.exitFullscreen === 'function'
     ) {
       void document.exitFullscreen().catch(() => undefined);
+    }
+    try {
+      const orientation = window.screen.orientation as unknown as {
+        unlock?: () => void;
+      };
+      orientation?.unlock?.();
+    } catch {
+      // Unlocking is optional and unsupported on some devices.
     }
   }
 
@@ -104,27 +195,31 @@ export function VotingCircleScreen({
           {en.game.voteCircleInstruction}
         </p>
 
-        {ownVoteTargetName && (
-          <div
-            className="vote-circle-card border-2 border-gilt bg-stone text-candle"
-            aria-label={en.game.voteCircleCardLabel}
-            data-testid="vote-circle-card"
-          >
-            <span className="text-base">{en.game.voteCircleCardLabel}</span>
-            <strong className="display">{ownVoteTargetName}</strong>
-          </div>
-        )}
-
-        {ownVoteTargetName && isMyTurn && !viewerHasRevealed && (
-          <button
-            className="secondary-action mt-4 min-h-11 w-full"
-            type="button"
-            data-testid="button-open-vote-card"
-            onClick={openFullScreenCard}
-          >
-            {en.game.voteCircleFullScreen}
-          </button>
-        )}
+        {ownVoteTargetName &&
+          (canShowVoteCard ? (
+            <button
+              className="vote-circle-card"
+              type="button"
+              aria-label={`${en.game.voteCircleCardLabel} ${ownVoteTargetName}. ${en.game.voteCircleFullScreen}`}
+              data-testid="vote-circle-card"
+              onClick={() => void openFullScreenCard()}
+            >
+              <span className="text-base">{en.game.voteCircleCardLabel}</span>
+              <strong className="display">{ownVoteTargetName}</strong>
+              <span className="vote-circle-card__action">
+                {en.game.voteCircleFullScreen}
+              </span>
+            </button>
+          ) : (
+            <div
+              className="vote-circle-card"
+              aria-label={`${en.game.voteCircleCardLabel} ${ownVoteTargetName}`}
+              data-testid="vote-circle-card"
+            >
+              <span className="text-base">{en.game.voteCircleCardLabel}</span>
+              <strong className="display">{ownVoteTargetName}</strong>
+            </div>
+          ))}
 
         <p className="mt-4 text-base text-ash" role="status" aria-live="polite">
           {isMyTurn
@@ -170,6 +265,7 @@ export function VotingCircleScreen({
 
       {showingFullScreenCard && ownVoteTargetName && (
         <div
+          ref={presenter}
           className="vote-circle-presenter"
           role="dialog"
           aria-modal="true"
@@ -190,9 +286,18 @@ export function VotingCircleScreen({
               className="display"
               id="vote-circle-presenter-name"
               data-testid="vote-circle-fullscreen-name"
+              style={
+                nameFontSize ? { fontSize: `${nameFontSize}px` } : undefined
+              }
             >
               {ownVoteTargetName}
             </h2>
+            <p
+              className="vote-circle-presenter__orientation-hint"
+              data-testid="vote-circle-orientation-hint"
+            >
+              {en.game.voteCircleOrientationHint}
+            </p>
           </div>
         </div>
       )}

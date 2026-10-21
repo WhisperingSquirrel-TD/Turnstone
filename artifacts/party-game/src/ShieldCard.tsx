@@ -9,7 +9,7 @@ type ShieldCardProps = {
   onAcknowledge: () => void;
   onNotesDone: () => void;
   header: ReactNode;
-  footer: ReactNode;
+  footer?: ReactNode;
 };
 
 export const ShieldCard = forwardRef<HTMLDialogElement, ShieldCardProps>(

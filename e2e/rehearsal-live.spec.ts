@@ -311,7 +311,8 @@ async function handleShield(
           )
           .catch(() => null)
       : null;
-  await expect(shield.getByTestId('brand-footer-overlay')).toBeVisible();
+  await expect(shield.getByTestId('brand-footer-overlay')).toHaveCount(0);
+  await expect(page.getByTestId('brand-footer-shell')).toHaveCount(0);
   await expect(page.getByTestId('rehearsal-action-bar')).toHaveCount(0);
   const button = shield.getByRole('button', { name: 'I’m shielded' });
   await expect(button).toHaveAttribute('aria-disabled', 'false', {
@@ -1314,9 +1315,14 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       await expect(
         page.locator('header.public-shell-header .oathstone-wordmark'),
       ).toHaveCount(1);
-      await expect(page.getByTestId('brand-footer-shell')).toContainText(
-        'made by Stackstone Consulting',
-      );
+      const brandFooter = page.getByTestId('brand-footer-shell');
+      if (['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(phase)) {
+        await expect(brandFooter).toContainText(
+          'made by Stackstone Consulting',
+        );
+      } else {
+        await expect(brandFooter).toHaveCount(0);
+      }
       if (['DEBATE', 'VERDICT', 'DAWN'].includes(phase)) {
         await expect(
           page.getByText(/players have completed this part/),
@@ -1338,36 +1344,64 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             name: 'I’ve said who I voted for and why',
             exact: true,
           });
-          const showVoteCardButton = page.getByRole('button', {
-            name: 'Show your vote card full screen',
-            exact: true,
-          });
           await expect(votingCircle).toContainText(
             'Expand the card below to full screen and show it to the group when it is your turn.',
           );
           await expect(voteCard).toContainText('You voted for');
+          await expect(voteCard).toHaveAttribute('type', 'button');
+          await expect(voteCard).toHaveAttribute(
+            'aria-label',
+            /You voted for .+\. Show your vote card full screen/,
+          );
           await expect(revealButton).toBeVisible();
-          await expect(showVoteCardButton).toBeVisible();
+          await expect(brandFooter).toHaveCount(0);
 
           const originalViewport = page.viewportSize();
-          const voteCardLabel = voteCard.locator('span');
+          const voteCardLabel = voteCard.locator('span').first();
           const voteCardPlayer = voteCard.locator('strong');
+          await expect(
+            voteCard.locator('.vote-circle-card__action'),
+          ).toHaveText('Show your vote card full screen');
           const cardLabelText = await voteCardLabel.innerText();
           const cardPlayerText = await voteCardPlayer.innerText();
           if (originalViewport) {
-            await page.setViewportSize({ width: 390, height: 844 });
-            await expect(voteCard).toBeVisible();
-            await expect(voteCardLabel).toHaveText(cardLabelText);
-            await expect(voteCardPlayer).toHaveText(cardPlayerText);
-            await page.setViewportSize({ width: 844, height: 390 });
-            await expect(voteCard).toBeVisible();
-            await expect(voteCardLabel).toHaveText(cardLabelText);
-            await expect(voteCardPlayer).toHaveText(cardPlayerText);
+            for (const viewport of [
+              { width: 360, height: 640 },
+              { width: 390, height: 844 },
+              { width: 768, height: 1024 },
+            ]) {
+              await page.setViewportSize(viewport);
+              await expect(voteCard).toBeVisible();
+              await revealButton.scrollIntoViewIfNeeded();
+              await expect(revealButton).toBeVisible();
+              await expect(brandFooter).toHaveCount(0);
+              const actionBox = await revealButton.boundingBox();
+              expect(actionBox).not.toBeNull();
+              if (actionBox) {
+                expect(actionBox.y).toBeGreaterThanOrEqual(0);
+                expect(actionBox.y + actionBox.height).toBeLessThanOrEqual(
+                  viewport.height,
+                );
+              }
+              await expect(voteCardLabel).toHaveText(cardLabelText);
+              await expect(voteCardPlayer).toHaveText(cardPlayerText);
+            }
             await page.setViewportSize(originalViewport);
           }
 
           const revealedBefore = await revealRows.count();
-          await showVoteCardButton.click();
+          const browserErrors: string[] = [];
+          const collectConsoleError = (message: {
+            type(): string;
+            text(): string;
+          }) => {
+            if (message.type() === 'error') browserErrors.push(message.text());
+          };
+          const collectPageError = (error: Error) =>
+            browserErrors.push(error.message);
+          page.on('console', collectConsoleError);
+          page.on('pageerror', collectPageError);
+          await voteCard.click();
           const fullscreenApiAvailable = await page.evaluate(
             () =>
               typeof document.documentElement.requestFullscreen === 'function',
@@ -1386,8 +1420,26 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           await expect(
             fullScreenVoteCard.getByTestId('vote-circle-fullscreen-name'),
           ).toHaveText(cardPlayerText);
+          const closeVoteCardButton = page.getByRole('button', {
+            name: 'Close vote card',
+            exact: true,
+          });
+          await expect(closeVoteCardButton).toBeFocused();
           await expect(revealRows).toHaveCount(revealedBefore);
-          await expect(revealButton).not.toBeVisible();
+          const inertVoteCardBackground = votingCircle.locator(
+            ':scope > div[aria-hidden="true"]',
+          );
+          await expect(inertVoteCardBackground).toHaveAttribute(
+            'aria-hidden',
+            'true',
+          );
+          await expect(inertVoteCardBackground).toHaveAttribute('inert', '');
+          await expect(
+            page.getByRole('button', {
+              name: 'I’ve said who I voted for and why',
+              exact: true,
+            }),
+          ).toHaveCount(0);
 
           if (originalViewport) {
             for (const viewport of [
@@ -1395,27 +1447,83 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               { width: 844, height: 390 },
             ]) {
               await page.setViewportSize(viewport);
+              await page.evaluate(() =>
+                window.dispatchEvent(new Event('orientationchange')),
+              );
               await expect(fullScreenVoteCard).toBeVisible();
+              const presenterBox = await fullScreenVoteCard.boundingBox();
               const presentedName = await fullScreenVoteCard
                 .getByTestId('vote-circle-fullscreen-name')
                 .boundingBox();
+              const closeBox = await closeVoteCardButton.boundingBox();
+              expect(presenterBox).not.toBeNull();
               expect(presentedName).not.toBeNull();
-              if (presentedName) {
-                expect(presentedName.width).toBeLessThanOrEqual(viewport.width);
-                expect(presentedName.height).toBeLessThanOrEqual(
+              expect(closeBox).not.toBeNull();
+              if (presenterBox && presentedName && closeBox) {
+                expect(presenterBox.x).toBe(0);
+                expect(presenterBox.y).toBe(0);
+                expect(presenterBox.width).toBeCloseTo(viewport.width, 0);
+                expect(presenterBox.height).toBeCloseTo(viewport.height, 0);
+                expect(presentedName.x).toBeGreaterThanOrEqual(0);
+                expect(presentedName.y).toBeGreaterThanOrEqual(0);
+                expect(
+                  presentedName.x + presentedName.width,
+                ).toBeLessThanOrEqual(viewport.width);
+                expect(
+                  presentedName.y + presentedName.height,
+                ).toBeLessThanOrEqual(viewport.height);
+                const nameTextFits = await fullScreenVoteCard
+                  .getByTestId('vote-circle-fullscreen-name')
+                  .evaluate((element) => {
+                    const range = document.createRange();
+                    range.selectNodeContents(element);
+                    const textBounds = Array.from(range.getClientRects());
+                    return (
+                      textBounds.length > 0 &&
+                      textBounds.every(
+                        (text) =>
+                          text.left >= 0 &&
+                          text.right <= window.innerWidth &&
+                          text.top >= 0 &&
+                          text.bottom <= window.innerHeight,
+                      )
+                    );
+                  });
+                expect(nameTextFits).toBe(true);
+                expect(closeBox.x).toBeGreaterThanOrEqual(0);
+                expect(closeBox.y).toBeGreaterThanOrEqual(0);
+                expect(closeBox.x + closeBox.width).toBeLessThanOrEqual(
+                  viewport.width,
+                );
+                expect(closeBox.y + closeBox.height).toBeLessThanOrEqual(
                   viewport.height,
                 );
+              }
+              const orientationHint = fullScreenVoteCard.getByTestId(
+                'vote-circle-orientation-hint',
+              );
+              if (viewport.height > viewport.width) {
+                await expect(orientationHint).toBeVisible();
+              } else {
+                await expect(orientationHint).toBeHidden();
               }
             }
             await page.setViewportSize(originalViewport);
           }
 
-          await page
-            .getByRole('button', { name: 'Close vote card', exact: true })
-            .click();
+          await closeVoteCardButton.click();
           await expect(fullScreenVoteCard).toHaveCount(0);
           await expect(revealButton).toBeVisible();
           await expect(revealRows).toHaveCount(revealedBefore);
+          expect(browserErrors).toEqual([]);
+          page.off('console', collectConsoleError);
+          page.off('pageerror', collectPageError);
+
+          await voteCard.click();
+          await expect(fullScreenVoteCard).toBeVisible();
+          await page.keyboard.press('Escape');
+          await expect(fullScreenVoteCard).toHaveCount(0);
+          await expect(revealButton).toBeVisible();
           await revealButton.click();
           await expect
             .poll(() => revealRows.count(), { timeout: 10_000 })

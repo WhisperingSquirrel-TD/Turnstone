@@ -337,15 +337,31 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
             );
             const box = await last.boundingBox();
             const action = page.locator('.game-action-bar:visible');
+            const footer = page.getByTestId('brand-footer-shell');
+            const phase = await page
+              .getByTestId('player-game')
+              .getAttribute('data-phase');
+            const footerExpected = [
+              'DRAFT',
+              'LOBBY',
+              'FINISHED',
+              'ARCHIVED',
+            ].includes(phase ?? '');
+            if (footerExpected) {
+              await expect(footer).toBeVisible();
+            } else {
+              await expect(footer).toHaveCount(0);
+            }
             const stack = await (
-              (await action.count())
-                ? action
-                : page.getByTestId('brand-footer-shell')
+              (await action.count()) ? action : footer
             ).boundingBox();
+            const viewportHeight =
+              page.viewportSize()?.height ??
+              (await page.evaluate(() => window.innerHeight));
             expect(
               box!.y + box!.height,
               `${label}/${palette}/${width}: last action clear of bottom stack`,
-            ).toBeLessThanOrEqual(stack!.y + 1);
+            ).toBeLessThanOrEqual((stack?.y ?? viewportHeight) + 1);
           }
           const bar = page.locator('.game-action-bar:visible');
           if (await bar.count()) {
@@ -353,10 +369,20 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
               footerBox = await page
                 .getByTestId('brand-footer-shell')
                 .boundingBox();
-            expect(
-              Math.abs(barBox!.y + barBox!.height - footerBox!.y),
-            ).toBeLessThanOrEqual(1);
-            expect(barBox!.width).toBe(footerBox!.width);
+            if (footerBox) {
+              expect(
+                Math.abs(barBox!.y + barBox!.height - footerBox.y),
+              ).toBeLessThanOrEqual(1);
+              expect(barBox!.width).toBe(footerBox.width);
+            } else {
+              expect(
+                Math.abs(
+                  barBox!.y +
+                    barBox!.height -
+                    (page.viewportSize()?.height ?? 0),
+                ),
+              ).toBeLessThanOrEqual(1);
+            }
           }
         }
       }
@@ -1293,9 +1319,12 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   const footerBounds = await page
     .getByTestId('brand-footer-shell')
     .boundingBox();
+  await expect(page.getByTestId('brand-footer-shell')).toHaveCount(0);
+  expect(lastChoiceBounds!.y).toBeGreaterThanOrEqual(0);
   expect(lastChoiceBounds!.y + lastChoiceBounds!.height).toBeLessThanOrEqual(
-    footerBounds!.y,
+    page.viewportSize()?.height ?? 720,
   );
+  expect(footerBounds).toBeNull();
   await expect(
     page.getByRole('button', { name: 'Morgan', exact: true }),
   ).toHaveCount(0);

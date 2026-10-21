@@ -232,6 +232,7 @@ function Shell({
   privateRevealActive = false,
   connectionStatus = null,
   wakeLockFallback = false,
+  hideGameFooter = false,
   phase,
 }: {
   children: ReactNode;
@@ -240,6 +241,7 @@ function Shell({
   privateRevealActive?: boolean;
   connectionStatus?: GameConnectionState | null;
   wakeLockFallback?: boolean;
+  hideGameFooter?: boolean;
   phase?: string;
 }) {
   const navigate = useNavigate();
@@ -437,14 +439,18 @@ function Shell({
           {children}
         </BrandSurfaceContext.Provider>
       </main>
-      <BrandFooter
-        context={isPlayer ? 'game' : 'public'}
-        surface={isPlayer && theme === 'day' ? 'light' : 'dark'}
-        className={
-          isPlayer ? 'game-brand-footer' : 'mx-auto mt-8 w-full max-w-5xl py-3'
-        }
-        testId="brand-footer-shell"
-      />
+      {(!isPlayer || !hideGameFooter) && (
+        <BrandFooter
+          context={isPlayer ? 'game' : 'public'}
+          surface={isPlayer && theme === 'day' ? 'light' : 'dark'}
+          className={
+            isPlayer
+              ? 'game-brand-footer'
+              : 'mx-auto mt-8 w-full max-w-5xl py-3'
+          }
+          testId="brand-footer-shell"
+        />
+      )}
     </div>
   );
 }
@@ -2108,6 +2114,10 @@ function PlayerGame() {
     <Shell
       isPlayer
       phase={!isResuming ? full?.phase : undefined}
+      hideGameFooter={Boolean(
+        full &&
+        !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
+      )}
       privateMode={!isResuming && inPrivateMoment}
       privateRevealActive={!isResuming && held}
       wakeLockFallback={Boolean(activeGame && wakeLockFallback)}
@@ -3066,11 +3076,6 @@ function PlayerGame() {
                 </button>
               </div>
             </div>
-            <BrandFooter
-              context="game"
-              className="game-brand-footer-overlay"
-              testId="brand-footer-confirmation"
-            />
           </div>
         )}
         {!isResuming && full?.rehearsal && rehearsalGuideVisible && (
@@ -3127,13 +3132,6 @@ function PlayerGame() {
               setNotesOpen(false);
             }}
             header={<OathstonePlayerHeader />}
-            footer={
-              <BrandFooter
-                context="game"
-                className="game-brand-footer-overlay"
-                testId="brand-footer-overlay"
-              />
-            }
           />
         )}
         {hasPlayerSeat && full && (
