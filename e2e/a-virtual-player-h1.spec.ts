@@ -257,6 +257,11 @@ async function advanceAsOrganiser(
     exact: true,
   });
   await expect(moveOn).toBeVisible({ timeout: 20_000 });
+  if (phase === 'VOTE') {
+    await expect(
+      coordinatorPage.getByTestId('coordinator-progress'),
+    ).toHaveText(/^(\d+) of \1 done$/, { timeout: 20_000 });
+  }
   if (await moveOn.isDisabled()) {
     await expect(
       coordinatorPage.getByText(/^Move everyone on in \d+ seconds?\.$/),
@@ -404,7 +409,9 @@ async function attachFailureArtifacts({
   phaseTrail: string[];
 }): Promise<{ phase: string | null; errorMessage: string }> {
   const captureErrors: string[] = [];
-  const phase = await visiblePhase(page).catch(() => null);
+  const phase =
+    (await visiblePhase(page).catch(() => null)) ??
+    (await visibleCoordinatorPhase(page).catch(() => null));
   const errorMessage = scrubDiagnosticText(
     error instanceof Error ? error.message : String(error),
   );
@@ -503,6 +510,8 @@ async function attachFailureArtifacts({
         `- Player: ${identity}`,
         `- Phase: ${phase ?? 'not available'}`,
         `- Cause: ${errorMessage}`,
+        `- Failed responses: ${diagnostics.failedResponses.join('; ') || 'none'}`,
+        `- Failed requests: ${diagnostics.failedRequests.join('; ') || 'none'}`,
         `- Replay: \`${scenario.replayCommand}\``,
       ].join('\n'),
       contentType: 'text/markdown',
@@ -558,6 +567,7 @@ test('six virtual players complete a real game across desktop and phone contexts
     const organiser = scenario.players[0]!;
     const organiserPage = pages[0]!;
     activePlayer = organiser;
+    activePage = organiserPage;
     await organiserPage.goto('/');
     await organiserPage
       .getByRole('link', { name: 'Start a new game', exact: true })
@@ -611,6 +621,7 @@ test('six virtual players complete a real game across desktop and phone contexts
       const player = scenario.players[index]!;
       const page = pages[index]!;
       activePlayer = player;
+      activePage = page;
       await test.step(`join and approve ${player.id} (${player.persona})`, async () => {
         await page.goto('/');
         await page
@@ -654,6 +665,7 @@ test('six virtual players complete a real game across desktop and phone contexts
         });
         await expect(approve).toBeVisible({ timeout: 10_000 });
         await approve.click();
+        await expect(approve).toBeHidden({ timeout: 20_000 });
         await page
           .getByRole('button', { name: 'Check again', exact: true })
           .click();
@@ -759,10 +771,22 @@ test('six virtual players complete a real game across desktop and phone contexts
           const page = pages[index]!;
           const player = scenario.players[index]!;
           activePlayer = player;
+          activePage = page;
+          const outStatus = page.getByText(
+            "You're out. You can watch, but you can't vote or choose.",
+            { exact: true },
+          );
+          if (await outStatus.isVisible().catch(() => false)) continue;
           if (phase === 'FINAL_VOTE') {
-            await chooseToEndGame(page, testInfo, scenario, player);
+            expect(
+              await chooseToEndGame(page, testInfo, scenario, player),
+              `${player.id} could not submit their endgame choice.`,
+            ).toBe(true);
           } else {
-            await chooseFirstVisiblePlayer(page, testInfo, scenario, player);
+            expect(
+              await chooseFirstVisiblePlayer(page, testInfo, scenario, player),
+              `${player.id} could not submit their choice during ${phase}.`,
+            ).toBe(true);
           }
         }
         if (phase === 'VOTE' && Date.now() - phaseObservedAt < 4_000) {

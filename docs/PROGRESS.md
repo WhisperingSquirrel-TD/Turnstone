@@ -1,12 +1,12 @@
 # Status for reviewer
 
-**H1:** Verify #204 failed in all four generic browser profiles because they also ran the real-game H1 test against the mock browser setup, which has no game API; the lobby-code element therefore never appeared. The default profile now excludes this real-server-only test, while `playwright.rehearsal.config.ts` still selects it. A regression test confirms the routing; the local real-server rehearsal passes (6 separate contexts, desktop and Pixel Chromium; seed `h1-seed-6001`). Verify after this fix is pending.
+**H1:** Verify #204 failed because generic browser profiles ran the real-server test against a mock API; the default config now excludes it and the rehearsal config selects it. Verify #205 (`c95af3d`) then failed in `rehearsal-live` and `required-checks`: player 4 did not navigate after approval. The log showed no HTTP error. Likely test race: it tapped “Check again” before the organiser UI reflected approval. The test now waits for that visible completion, captures the failing player and safe HTTP diagnostics, skips eliminated players, requires living players to act, and waits for all-done vote progress. No test was weakened. Latest green remains Verify run `39593642394` on `3223876`; the fix awaits Verify.
 
 **Coordinator early-move guard:** The coordinator view uses server time, shows the private-minimum/SHADOW deadline wait and disables early move-on. The engine retains its deadline rejection; the timing is coordinator-only, with tests confirming player and presenter projections do not receive it.
 
-**Local checks:** 497 unit tests, 21 property tests, typechecks, lint, format and scenario report (0 failures across 2,571 games) pass. The server-coverage run was blocked by the shared development database returning three due-deadline claims where the isolation test expected one; the 85% threshold and tests were not changed. API workflow was restarted and is healthy. Physical phones and WebKit were not tested locally.
+**H1 local checks:** six-player real-server rehearsal passed in six separate desktop/Pixel contexts with seed `h1-seed-6003`; 94 targeted unit tests, typecheck, lint and format check pass. This does not verify iPhone WebKit.
 
-**Latest green:** GitHub Verify #193 (`8106efb`) passed all 19 jobs, including Pixel, desktop Chromium, iPad and iPhone WebKit, `rehearsal-live`, Lighthouse, audit, coverage-gated integration, all scenario shards and `required-checks`.
+**Latest green:** GitHub Verify completed successfully on `3223876` (run `39593642394`).
 
 **Verify #192 (`cf3df40`): RED; fixed in #193.** All four browser profiles passed, as did unit, static checks, property, integration, live rehearsal, Lighthouse and scenarios. `audit` found one high advisory, so `required-checks` failed. The job log showed only the count; reproducing the audit against npmjs identified `markdown-it` 14.3.2 (GHSA-gfr2-rv44-r23c, affected range `>=14.1.0 <14.3.3`) via `orval > typedoc`. The Replit registry had stale advisory data. Raised the workspace override to 14.3.3 and updated the lockfile; the public-registry audit passes with zero high or critical findings. Verify #193 is green.
 
