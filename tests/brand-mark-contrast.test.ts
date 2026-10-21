@@ -20,34 +20,32 @@ function contrastRatio(first: string, second: string): number {
 }
 
 describe('Stackstone mark contrast', () => {
-  it('keeps the monochrome light-theme mark above 3:1 on Candle and Ash', () => {
-    const theme = readFileSync('artifacts/party-game/src/theme.css', 'utf8');
-    const opacity = Number(
-      theme.match(
-        /\.brand-mark-small\s*\{\s*filter:\s*brightness\(0\)\s+opacity\(([\d.]+)\)/,
-      )?.[1],
+  it('keeps official light-mark fills above 3:1 on Candle and Ash', () => {
+    const svg = readFileSync(
+      new URL(
+        `../artifacts/party-game/public/${config.stackstoneIcons.onLight}`,
+        import.meta.url,
+      ),
+      'utf8',
     );
-    expect(opacity).toBeGreaterThan(0);
-    expect(opacity).toBeLessThanOrEqual(1);
+    const theme = readFileSync('artifacts/party-game/src/theme.css', 'utf8');
+    const fills = [...svg.matchAll(/\bfill="(#[\da-f]{6})"/gi)].map((match) =>
+      match[1]!.toLowerCase(),
+    );
+    const darkFills = fills.filter((fill) => relativeLuminance(fill) < 0.2);
+    expect(darkFills.length).toBeGreaterThan(0);
+
     for (const token of ['candle', 'ash']) {
       const background = theme.match(
         new RegExp(`--${token}:\\s*(#[\\da-f]{6})`, 'i'),
       )?.[1];
       expect(background).toBeDefined();
-      // brightness(0) makes every non-transparent SVG fill black; opacity
-      // composites that same mark colour over the actual light surface.
-      const foreground =
-        '#' +
-        background!
-          .slice(1)
-          .match(/../g)!
-          .map((channel) =>
-            Math.round(parseInt(channel, 16) * (1 - opacity))
-              .toString(16)
-              .padStart(2, '0'),
-          )
-          .join('');
-      expect(contrastRatio(foreground, background!)).toBeGreaterThanOrEqual(3);
+      for (const fill of darkFills) {
+        expect(
+          contrastRatio(fill, background!),
+          `${fill} against ${background} (--${token})`,
+        ).toBeGreaterThanOrEqual(3);
+      }
     }
   });
   it('gives every distinct mark fill at least 3:1 contrast on every mark background', () => {
