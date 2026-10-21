@@ -25,7 +25,11 @@ export const config = {
   siteOrigin,
   productionRpId: new URL(siteOrigin).hostname,
   apiOrigin: configuredApiOrigin,
-  appIconPath: 'brand/stackstone-icon-dark-outlined.svg',
+  appIconPath: 'brand/stackstone-icon-dark.svg',
+  stackstoneIcons: {
+    onLight: 'brand/stackstone-icon.svg',
+    onDark: 'brand/stackstone-icon-dark.svg',
+  },
   socialLinks: [] as const,
   preLaunch: deploymentMode.preLaunchNoindex && !deploymentMode.comingSoonMode,
   organisation: {

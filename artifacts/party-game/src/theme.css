@@ -93,10 +93,6 @@
   color: var(--gilt);
 }
 
-.game-shell[data-game-theme='day'] .brand-mark-small {
-  filter: brightness(0) opacity(0.76);
-}
-
 .game-display-settings {
   position: relative;
   font-size: 0.875rem;

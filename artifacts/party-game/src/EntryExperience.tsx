@@ -1519,6 +1519,7 @@ export function EntryExperience({
 
       <BrandFooter
         context="game"
+        surface="dark"
         className="entry-footer"
         testId="brand-footer-entry"
       />

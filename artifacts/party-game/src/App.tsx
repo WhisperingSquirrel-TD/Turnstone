@@ -47,7 +47,7 @@ import type {
   VisitorView,
 } from '@workspace/api-client-react';
 import { config } from '@/config';
-import { BrandFooter } from './BrandFooter';
+import { BrandFooter, BrandSurfaceContext } from './BrandFooter';
 import { GameConnectionStatus } from './GameConnectionStatus';
 import { PhaseClipOverlay } from './PhaseClipOverlay';
 import { NotesScreen } from './NotesScreen';
@@ -431,10 +431,15 @@ function Shell({
         tabIndex={-1}
         className={`mx-auto w-full max-w-5xl flex-1 py-10 sm:py-16${privateMode ? ' private-moment-main' : ''}${isPlayer ? ' game-shell-main' : ''}`}
       >
-        {children}
+        <BrandSurfaceContext.Provider
+          value={isPlayer && theme === 'day' ? 'light' : 'dark'}
+        >
+          {children}
+        </BrandSurfaceContext.Provider>
       </main>
       <BrandFooter
         context={isPlayer ? 'game' : 'public'}
+        surface={isPlayer && theme === 'day' ? 'light' : 'dark'}
         className={
           isPlayer ? 'game-brand-footer' : 'mx-auto mt-8 w-full max-w-5xl py-3'
         }

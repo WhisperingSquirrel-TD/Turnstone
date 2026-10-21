@@ -85,7 +85,7 @@ function renderPublicHeader(
 }
 
 function renderStackstoneFooterLink(basePath: string): string {
-  return `<a class="brand-credit-link inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.appIconPath}`)}" alt="" width="24" height="24"></a>`;
+  return `<a class="brand-credit-link inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.stackstoneIcons.onDark}`)}" alt="Stackstone Consulting" width="24" height="24"></a>`;
 }
 
 function renderPublicFooter(basePath: string, extra = ''): string {
