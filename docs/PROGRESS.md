@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**H1:** Local real-server rehearsal passes (6 separate browser contexts, desktop and Pixel Chromium; seed `h1-seed-6001`). The first replay found an overstrict wait assertion that could outlive the vote's minimum window while players reveal; it now checks the displayed wait against the button state. GitHub Verify is pending.
+**H1:** Verify #204 failed in all four generic browser profiles because they also ran the real-game H1 test against the mock browser setup, which has no game API; the lobby-code element therefore never appeared. The default profile now excludes this real-server-only test, while `playwright.rehearsal.config.ts` still selects it. A regression test confirms the routing; the local real-server rehearsal passes (6 separate contexts, desktop and Pixel Chromium; seed `h1-seed-6001`). Verify after this fix is pending.
 
 **Coordinator early-move guard:** The coordinator view uses server time, shows the private-minimum/SHADOW deadline wait and disables early move-on. The engine retains its deadline rejection; the timing is coordinator-only, with tests confirming player and presenter projections do not receive it.
 

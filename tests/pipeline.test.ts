@@ -369,6 +369,58 @@ describe('owner-approved delivery policy', () => {
     expect(output).not.toContain('rehearsal-live.spec.ts');
   });
 
+  it('runs virtual-player H1 only with the real-server rehearsal config', () => {
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      CI: 'true',
+      DATABASE_URL: 'postgresql://127.0.0.1:5432/oathstone_test',
+      SESSION_SECRET: 'test-session-secret-for-config-listing',
+    };
+    const standard = spawnSync(
+      'pnpm',
+      [
+        'exec',
+        'playwright',
+        'test',
+        '--config=playwright.config.ts',
+        '--project=desktop',
+        '--grep-invert',
+        '@rehearsal-live',
+        '--list',
+        'e2e/a-virtual-player-h1.spec.ts',
+      ],
+      { encoding: 'utf8', env, timeout: 15_000 },
+    );
+    const standardOutput = `${standard.stdout}\n${standard.stderr}`;
+
+    expect(standard.error).toBeUndefined();
+    expect(standard.status).toBe(1);
+    expect(standardOutput).toContain('No tests found.');
+    expect(standardOutput).not.toContain(
+      'six virtual players complete a real game',
+    );
+
+    const rehearsal = spawnSync(
+      'pnpm',
+      [
+        'exec',
+        'playwright',
+        'test',
+        '--config=playwright.rehearsal.config.ts',
+        '--list',
+        'e2e/a-virtual-player-h1.spec.ts',
+      ],
+      { encoding: 'utf8', env, timeout: 15_000 },
+    );
+    const rehearsalOutput = `${rehearsal.stdout}\n${rehearsal.stderr}`;
+
+    expect(rehearsal.error).toBeUndefined();
+    expect(rehearsal.status).toBe(0);
+    expect(rehearsalOutput).toContain(
+      'six virtual players complete a real game',
+    );
+  });
+
   it('uses Node 24-compatible pinned artifact actions in CI', () => {
     const workflow = readFileSync('.github/workflows/verify.yml', 'utf8');
     expect(workflow).toContain(

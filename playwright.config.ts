@@ -5,6 +5,7 @@ const csrfTestPort = Number(process.env.TEST_CSRF_PORT ?? 8081);
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: ['**/a-virtual-player-h1.spec.ts'],
   outputDir: 'generated-artifacts/playwright',
   reporter: [
     ['list'],
