@@ -328,6 +328,21 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
           });
         if (held) await page.mouse.up();
         if (!shielded && !held) {
+          const footer = page.getByTestId('brand-footer-shell');
+          const phase = await page
+            .getByTestId('player-game')
+            .getAttribute('data-phase');
+          const footerExpected = [
+            'DRAFT',
+            'LOBBY',
+            'FINISHED',
+            'ARCHIVED',
+          ].includes(phase ?? '');
+          if (footerExpected) {
+            await expect(footer).toBeVisible();
+          } else {
+            await expect(footer).toHaveCount(0);
+          }
           const last = page
             .locator('main button:visible:not(.game-action-bar button)')
             .last();
@@ -337,38 +352,23 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
             );
             const box = await last.boundingBox();
             const action = page.locator('.game-action-bar:visible');
-            const footer = page.getByTestId('brand-footer-shell');
-            const phase = await page
-              .getByTestId('player-game')
-              .getAttribute('data-phase');
-            const footerExpected = [
-              'DRAFT',
-              'LOBBY',
-              'FINISHED',
-              'ARCHIVED',
-            ].includes(phase ?? '');
-            if (footerExpected) {
-              await expect(footer).toBeVisible();
-            } else {
-              await expect(footer).toHaveCount(0);
-            }
-            const stack = await (
-              (await action.count()) ? action : footer
-            ).boundingBox();
+            const stack = (await action.count()) ? action : footer;
+            const stackBox =
+              (await stack.count()) > 0 ? await stack.boundingBox() : null;
             const viewportHeight =
               page.viewportSize()?.height ??
               (await page.evaluate(() => window.innerHeight));
             expect(
               box!.y + box!.height,
               `${label}/${palette}/${width}: last action clear of bottom stack`,
-            ).toBeLessThanOrEqual((stack?.y ?? viewportHeight) + 1);
+            ).toBeLessThanOrEqual((stackBox?.y ?? viewportHeight) + 1);
           }
           const bar = page.locator('.game-action-bar:visible');
           if (await bar.count()) {
-            const barBox = await bar.boundingBox(),
-              footerBox = await page
-                .getByTestId('brand-footer-shell')
-                .boundingBox();
+            const barBox = await bar.boundingBox();
+            const footerBox = footerExpected
+              ? await footer.boundingBox()
+              : null;
             if (footerBox) {
               expect(
                 Math.abs(barBox!.y + barBox!.height - footerBox.y),
@@ -1316,15 +1316,12 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
     element.scrollIntoView({ block: 'center' }),
   );
   const lastChoiceBounds = await lastChoice.boundingBox();
-  const footerBounds = await page
-    .getByTestId('brand-footer-shell')
-    .boundingBox();
-  await expect(page.getByTestId('brand-footer-shell')).toHaveCount(0);
+  const footer = page.getByTestId('brand-footer-shell');
+  await expect(footer).toHaveCount(0);
   expect(lastChoiceBounds!.y).toBeGreaterThanOrEqual(0);
   expect(lastChoiceBounds!.y + lastChoiceBounds!.height).toBeLessThanOrEqual(
     page.viewportSize()?.height ?? 720,
   );
-  expect(footerBounds).toBeNull();
   await expect(
     page.getByRole('button', { name: 'Morgan', exact: true }),
   ).toHaveCount(0);

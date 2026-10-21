@@ -614,18 +614,27 @@ async function submitPrivateChoice(
         document.dispatchEvent(new Event('visibilitychange'));
       });
       if (phaseBeforeChoice === 'SHADOW') {
+        const privateViewResponse = page.waitForResponse(
+          (response) =>
+            response.request().method() === 'POST' &&
+            new URL(response.url()).pathname ===
+              `/api/games/${gameId}/private-view`,
+          { timeout: 15_000 },
+        );
         await page
           .getByRole('button', {
             name: 'Tap to see your private screen again',
           })
           .click();
+        expect((await privateViewResponse).status()).toBe(200);
       }
       await expect(page.getByTestId('selected-choice')).toHaveText(
         `Your pick: ${selectedName}`,
+        { timeout: 15_000 },
       );
       await expect(
         page.getByRole('button', { name: 'Confirm', exact: true }),
-      ).toBeVisible();
+      ).toBeVisible({ timeout: 15_000 });
     }
     await page
       .getByRole('button', { name: 'Confirm', exact: true })
