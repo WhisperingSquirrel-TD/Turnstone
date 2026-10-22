@@ -114,7 +114,9 @@ export function PrivateChoiceControls({
                       : ''
                   }`}
                   data-choice-id={choice.id}
-                  disabled={choiceSelectionLocked || disabledChoiceIdSet.has(choice.id)}
+                  disabled={
+                    choiceSelectionLocked || disabledChoiceIdSet.has(choice.id)
+                  }
                   aria-label={choice.name}
                   aria-describedby={statusId}
                   aria-pressed={selected === choice.id}
@@ -141,7 +143,9 @@ export function PrivateChoiceControls({
                     : ''
                 }`}
                 data-choice-id={choice.id}
-                disabled={choiceSelectionLocked || disabledChoiceIdSet.has(choice.id)}
+                disabled={
+                  choiceSelectionLocked || disabledChoiceIdSet.has(choice.id)
+                }
                 aria-pressed={selected === choice.id}
                 onClick={() => onSelect(choice.id)}
               >

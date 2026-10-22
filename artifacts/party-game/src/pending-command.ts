@@ -61,6 +61,10 @@ export class PendingCommandStore<T> {
     if (this.get(operation, stepKey)) this.attempts.delete(operation);
   }
 
+  reject(operation: string, stepKey: string) {
+    if (this.get(operation, stepKey)) this.attempts.delete(operation);
+  }
+
   clearForStep(stepKey: string) {
     for (const [operation, attempt] of this.attempts) {
       if (attempt.stepKey !== stepKey) this.attempts.delete(operation);

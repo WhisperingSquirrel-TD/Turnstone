@@ -2031,8 +2031,10 @@ function PlayerGame() {
               idempotencyKey: idempotencyKey(),
             },
     ).payload;
+    let actionAccepted = false;
     try {
       await command.mutateAsync({ id, data: payload });
+      actionAccepted = true;
       command.reset();
       const acknowledgement = pendingCommands.getOrCreate(
         'choice-acknowledgement',
@@ -2068,7 +2070,7 @@ function PlayerGame() {
         setPrivateView(null);
       }
       await gameQuery.refetch();
-    } catch {
+    } catch (error) {
       command.reset();
       const latestView = (await gameQuery.refetch()).data?.view;
       if (latestView && isFullView(latestView)) {
@@ -2089,6 +2091,24 @@ function PlayerGame() {
           setCommandMessage('');
           return;
         }
+      }
+      const explicitlyRejected =
+        !actionAccepted &&
+        error instanceof Error &&
+        'status' in error &&
+        error.status === 409;
+      if (explicitlyRejected) {
+        pendingCommands.reject('player-choice', stepKey);
+        setCommandMessage(
+          view.phase === 'SHADOW'
+            ? en.game.chooseSomeoneElse
+            : view.phase === 'VOTE' || view.phase === 'FINAL_BANISH'
+              ? en.game.voteNotRecorded
+              : en.game.choiceNotRecorded,
+        );
+        setSelected('');
+        setConfirmChoice(false);
+        return;
       }
       setCommandMessage(en.game.retryUncertainAction);
     }

@@ -114,4 +114,21 @@ describe('PendingCommandStore', () => {
       'ack-key',
     );
   });
+
+  it('clears only a server-rejected attempt in the matching phase step', () => {
+    const store = new PendingCommandStore<{ idempotencyKey: string }>();
+    const rejected = store.getOrCreate('vote', 'game:VOTE:1', () => ({
+      idempotencyKey: 'vote-key',
+    }));
+    const acknowledgement = store.getOrCreate('ack', 'game:VOTE:1', () => ({
+      idempotencyKey: 'ack-key',
+    }));
+
+    store.reject('vote', 'game:VOTE:2');
+    expect(store.get('vote', 'game:VOTE:1')).toBe(rejected);
+
+    store.reject('vote', 'game:VOTE:1');
+    expect(store.get('vote', 'game:VOTE:1')).toBeNull();
+    expect(store.get('ack', 'game:VOTE:1')).toBe(acknowledgement);
+  });
 });

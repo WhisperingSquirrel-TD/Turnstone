@@ -1,8 +1,10 @@
 # Status for reviewer
 
-**Resilience change set 1 — this commit; Verify pending.** Votes, night choices and acknowledgements now keep their original payload and idempotency key in memory after an uncertain failure. Attempts are scoped to game, seat, phase, cycle, re-vote and night slot, and clear only on confirmed success or a step change. The selected choice stays locked while retrying, and the existing private-choice draft behaviour is unchanged. Tests cover a committed command with its response lost, proving exactly one stored event. Local targeted tests (12 passed), typecheck, test typecheck, lint and format passed.
+**Resilience set 1 follow-up — Verify pending.** Verify #220 failed `static-checks` (Prettier in `PrivateChoiceControls.tsx`) and all browser profiles on two 409-rejection cases. The cause was treating a definitive server refusal as an uncertain submission; this fix restores phase-specific rejection feedback and unlocks the choice, while uncertain failures still retry the exact payload and key. Local targeted unit tests (7/7), desktop and Pixel browser tests (2/2 each), typecheck, lint and formatting pass. iPhone WebKit could not launch locally because required system libraries are unavailable; Verify will check its profile.
 
-**Latest confirmed green:** GitHub Verify #219 (`978e82b`).
+**Latest confirmed green:** GitHub Verify #219 (`978e82b`); Verify for this fix is pending.
+
+**Real Practice clips:** Actual nightfall at SHADOW start and dawn at DAWN played in desktop and Pixel full-session runs.
 
 **H2 concurrency fix, 22 October:** Included in green Verify #219 (`978e82b`). Retry only optimistic-version conflicts for votes, night choices and private acknowledgements, with a finite 40-attempt bound; re-evaluate validation against the fresh state on every attempt. Three focused regression tests, scoped ESLint and formatting passed; test typecheck also passed. No thresholds, workflow files or server phase minimums changed.
 
