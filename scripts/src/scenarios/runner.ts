@@ -73,6 +73,16 @@ function schedulingTieBreak(seed: number): number {
   return (value ^ (value >>> 15)) >>> 0;
 }
 
+function schedulingWork(job: ScenarioJob): number {
+  // Inactive bots accumulate substantially longer public histories than
+  // active eliminators at the same seat count. This is an ordering heuristic,
+  // never a reported/projected duration or a change to the budget estimator.
+  const inactivity =
+    job.strategy === 'never-acts' || job.strategy === 'non-voter' ? 4 : 1;
+  const reveals = job.config.roundTable.revealStyle === 'one-by-one' ? 2 : 1;
+  return job.config.players.count ** 2 * inactivity * reveals;
+}
+
 export function partitionScenarioJobs(
   jobs: ScenarioJob[],
   shardCount: number,
@@ -83,7 +93,12 @@ export function partitionScenarioJobs(
 
   const groupById = new Map<
     string,
-    { jobs: ScenarioJob[]; originalIndex: number; estimatedCost: number }
+    {
+      jobs: ScenarioJob[];
+      originalIndex: number;
+      estimatedCost: number;
+      schedulingWork: number;
+    }
   >();
   jobs.forEach((job, originalIndex) => {
     const groupId = job.coverageRowId ?? `job:${job.seed}:${originalIndex}`;
@@ -91,14 +106,17 @@ export function partitionScenarioJobs(
       jobs: [],
       originalIndex,
       estimatedCost: 0,
+      schedulingWork: 0,
     };
     group.jobs.push(job);
     group.estimatedCost += job.config.players.count ** 2;
+    group.schedulingWork += schedulingWork(job);
     groupById.set(groupId, group);
   });
   const groups = [...groupById.values()].sort(
     (left, right) =>
       right.estimatedCost - left.estimatedCost ||
+      right.schedulingWork - left.schedulingWork ||
       schedulingTieBreak(left.jobs[0]!.seed) -
         schedulingTieBreak(right.jobs[0]!.seed) ||
       left.originalIndex - right.originalIndex,
@@ -115,6 +133,7 @@ export function partitionScenarioJobs(
     () => [] as ScenarioJob[],
   );
   const shardLoads = Array.from({ length: shardCount }, () => 0);
+  const schedulingLoads = Array.from({ length: shardCount }, () => 0);
 
   for (const group of groups) {
     let selectedShard = -1;
@@ -122,7 +141,9 @@ export function partitionScenarioJobs(
       if (shardGroups[index]! >= shardCapacity[index]!) continue;
       if (
         selectedShard === -1 ||
-        shardLoads[index]! < shardLoads[selectedShard]!
+        shardLoads[index]! < shardLoads[selectedShard]! ||
+        (shardLoads[index] === shardLoads[selectedShard] &&
+          schedulingLoads[index]! < schedulingLoads[selectedShard]!)
       ) {
         selectedShard = index;
       }
@@ -132,6 +153,7 @@ export function partitionScenarioJobs(
     shardJobs[selectedShard]!.push(...group.jobs);
     shardGroups[selectedShard]++;
     shardLoads[selectedShard] += group.estimatedCost;
+    schedulingLoads[selectedShard] += group.schedulingWork;
   }
 
   return shardJobs.map((shard) =>
@@ -153,8 +175,16 @@ export function partitionScenarioPlan(
   )
     throw new RangeError('Invalid scenario shard index or count');
 
+  const assignedJobs = new Set(
+    partitionScenarioJobs(
+      plan.flatMap((suite) => suite.jobs),
+      shardCount,
+    )[shardIndex]!,
+  );
   return plan.map((suite) => {
-    const jobs = partitionScenarioJobs(suite.jobs, shardCount)[shardIndex]!;
+    const jobs = suite.jobs
+      .filter((job) => assignedJobs.has(job))
+      .sort((left, right) => left.seed - right.seed);
     const coverageRowIds = [
       ...new Set(
         jobs.flatMap((job) => (job.coverageRowId ? [job.coverageRowId] : [])),
@@ -223,7 +253,7 @@ export async function runScenarioJobs(
   const workerCount = Math.min(availableParallelism(), 8, jobs.length);
   const queue = [...jobs].sort(
     (left, right) =>
-      right.config.players.count ** 2 - left.config.players.count ** 2 ||
+      schedulingWork(right) - schedulingWork(left) ||
       schedulingTieBreak(left.seed) - schedulingTieBreak(right.seed),
   );
   let nextJob = 0;

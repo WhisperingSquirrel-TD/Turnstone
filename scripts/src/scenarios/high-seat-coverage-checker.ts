@@ -39,6 +39,7 @@ export function verifyHighSeatPairwiseCoverage(
   }
 
   let total = 0;
+  const uncovered: string[] = [];
   for (const playerCount of HIGH_SEAT_COUNTS) {
     const seatRows = bySeat.get(playerCount)!;
     for (const row of seatRows) {
@@ -77,36 +78,6 @@ export function verifyHighSeatPairwiseCoverage(
             )
               continue;
             total++;
-          }
-        }
-      }
-    }
-  }
-
-  const uncovered: string[] = [];
-  for (const playerCount of HIGH_SEAT_COUNTS) {
-    for (let first = 1; first < RULE_FACTORS.length - 1; first++) {
-      for (let second = first + 1; second < RULE_FACTORS.length; second++) {
-        for (
-          let firstValue = 0;
-          firstValue < RULE_FACTORS[first]!.values.length;
-          firstValue++
-        ) {
-          for (
-            let secondValue = 0;
-            secondValue < RULE_FACTORS[second]!.values.length;
-            secondValue++
-          ) {
-            if (
-              !independentlyValidatePair(
-                playerCount,
-                first,
-                firstValue,
-                second,
-                secondValue,
-              )
-            )
-              continue;
             const key = `${playerCount}|${first}:${firstValue}|${second}:${secondValue}`;
             if (!observed.has(key)) uncovered.push(key);
           }

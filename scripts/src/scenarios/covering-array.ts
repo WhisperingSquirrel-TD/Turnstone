@@ -9,16 +9,28 @@ import type { GameConfig } from '@workspace/shared';
 type Interaction = {
   factorIndexes: [number, number, number];
   valueIndexes: [number, number, number];
-  key: string;
+  key: number;
 };
 
-function keyFor(
+const VALUE_BASE = Math.max(
+  ...RULE_FACTORS.map((factor) => factor.values.length),
+);
+const ASSIGNMENT_BASE = RULE_FACTORS.length * VALUE_BASE;
+
+export function interactionKey(
   factorIndexes: readonly number[],
   valueIndexes: readonly number[],
-): string {
-  return factorIndexes
-    .map((factorIndex, index) => `${factorIndex}:${valueIndexes[index]}`)
-    .join('|');
+): number {
+  // A mixed-radix, lossless encoding, not a hash. Avoid allocating millions
+  // of temporary strings while keeping exactly the same tuple identity.
+  return (
+    ((factorIndexes[0]! * VALUE_BASE + valueIndexes[0]!) * ASSIGNMENT_BASE +
+      factorIndexes[1]! * VALUE_BASE +
+      valueIndexes[1]!) *
+      ASSIGNMENT_BASE +
+    factorIndexes[2]! * VALUE_BASE +
+    valueIndexes[2]!
+  );
 }
 
 function allInteractions(): Interaction[] {
@@ -49,7 +61,7 @@ function allInteractions(): Interaction[] {
               result.push({
                 factorIndexes: indexes,
                 valueIndexes: values,
-                key: keyFor(indexes, values),
+                key: interactionKey(indexes, values),
               });
             }
           }
@@ -60,13 +72,13 @@ function allInteractions(): Interaction[] {
   return result;
 }
 
-function rowKeys(indices: readonly number[]): string[] {
-  const result: string[] = [];
+function rowKeys(indices: readonly number[]): number[] {
+  const result: number[] = [];
   for (let first = 0; first < indices.length - 2; first++) {
     for (let second = first + 1; second < indices.length - 1; second++) {
       for (let third = second + 1; third < indices.length; third++) {
         result.push(
-          keyFor(
+          interactionKey(
             [first, second, third],
             [indices[first]!, indices[second]!, indices[third]!],
           ),
@@ -113,7 +125,7 @@ export function generateConstrainedArray(seed: number): GameConfig[] {
   let attempts = 0;
 
   while (uncovered.size && rows.length < 250) {
-    let best: { config: GameConfig; keys: string[]; gain: number } | undefined;
+    let best: { config: GameConfig; keys: number[]; gain: number } | undefined;
     for (let candidate = 0; candidate < 8; candidate++) {
       const indices = RULE_FACTORS.map((factor) =>
         random(factor.values.length),

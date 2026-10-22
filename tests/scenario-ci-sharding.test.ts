@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { beforeAll, expect, it } from 'vitest';
 import {
   buildScenarioSuitePlan,
@@ -34,6 +35,16 @@ it('partitions the complete sample into disjoint scenario suites', () => {
 
   const seeds = suites.flatMap((suite) => suite.jobs.map((job) => job.seed));
   expect(new Set(seeds).size).toBe(seeds.length);
+  expect(
+    suites.map((suite) =>
+      createHash('sha256').update(JSON.stringify(suite.jobs)).digest('hex'),
+    ),
+  ).toEqual([
+    '18fde28b60ddc7e97d5877f07a9909933379a7a41a183535f8d4869f0fa1ff99',
+    'b25c0fdd7f7b1db1904b29cbb13a5a9ea0e3f2e76fd3389b8a04b3b63c3e2612',
+    'c1fdff1d438be54848a7a071552048142ee6541931b45756679ae56f1c2f8060',
+    '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+  ]);
 }, 120_000);
 
 it('builds only the requested suite for a matrix job', () => {

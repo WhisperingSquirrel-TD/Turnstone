@@ -1,6 +1,24 @@
 # Status for reviewer
 
-**Verify #224 repair ready:** H1 now passes on Pixel, including the approved night-screen recovery fix. Recovery regressions pass on Pixel and iPhone. Scenario batch: 2,572 games, zero failures; server coverage: 85.75% with the unchanged 85% gate. New CI result pending; later queue items remain held. Verify #224 is confirmed completed/failure.
+**Verify #225 failed — scenario runtime only:** rehearsal-live, all four browser profiles, static checks, unit, property, integration, Lighthouse, audit and all scenario assertions passed on `c77d68a`. Merge rejected shards 1 and 2 exceeding the unchanged five-minute budget; required-checks failed consequently. Further scenario optimisation is in progress. Next after green: finish Q6, resilience set 2, then H2 and stop.
+
+## Verify #225 result
+
+Run 39827804984 completed with failure. Shards 0–5 took 277,246 / 305,715 /
+321,875 / 219,447 / 281,395 / 244,517 ms, with zero game assertion failures.
+The merge log reports “Scenario shard 1 exceeded the five-minute time budget”;
+shard 2 also exceeds it. This is a runtime failure, not a scenario assertion or
+coverage-count failure. No threshold, scenario coverage or assertion is being
+relaxed. The rehearsal and night-screen recovery fixes now pass in GitHub.
+
+Repair ready for CI: lossless numeric tuple keys reduce planning allocations;
+independent coverage enumeration is retained, with duplicate pair validation
+removed. Global shard balancing now accounts for inactive bots and reveal work.
+All scenario configurations, seeds and unsharded jobs retain exact hashes.
+66 targeted tests pass; script/test typechecks, scoped lint and formatting pass.
+Local planning fell from 26,486 to 19,829 ms; final shard 2 completed 420 games
+with zero failures in 89,209 ms. Local hardware is not CI evidence: a new Verify
+must still prove all six shards below the unchanged 300,000 ms limit.
 
 ## Verify #224 diagnosis and repair evidence
 
