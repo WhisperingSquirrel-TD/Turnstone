@@ -4,13 +4,19 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { gameConfigSchema, roleSchema } from '@workspace/shared';
 import type { GameConfig } from '@workspace/shared';
-import { BOT_STRATEGIES } from './simulate';
+import { BOT_STRATEGIES, GOLDEN_ONLY_BOT_STRATEGIES } from './simulate';
+import type { BotStrategy } from './simulate';
+
+const scenarioStrategies: readonly string[] = [
+  ...BOT_STRATEGIES,
+  ...GOLDEN_ONLY_BOT_STRATEGIES,
+];
 
 export type GoldenScenario = {
   id: string;
   description: string;
   seed: number;
-  strategy: (typeof BOT_STRATEGIES)[number];
+  strategy: BotStrategy;
   config: GameConfig;
   expected: {
     phase: 'FINISHED';
@@ -56,9 +62,7 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
     !Number.isInteger(input.seed) ||
     input.seed < 0 ||
     typeof input.strategy !== 'string' ||
-    !BOT_STRATEGIES.includes(
-      input.strategy as (typeof BOT_STRATEGIES)[number],
-    ) ||
+    !scenarioStrategies.includes(input.strategy) ||
     input.expected.phase !== 'FINISHED' ||
     typeof input.expected.reason !== 'string' ||
     !Number.isInteger(input.expected.alive) ||
@@ -81,7 +85,7 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
     id: input.id,
     description: input.description,
     seed: input.seed,
-    strategy: input.strategy as (typeof BOT_STRATEGIES)[number],
+    strategy: input.strategy as BotStrategy,
     config: config.data,
     expected: {
       phase: 'FINISHED',

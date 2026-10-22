@@ -178,6 +178,17 @@ export function viewFor(
       winner: announcement.winner,
     };
   }
+  const previousSlotChoice =
+    state.phase === 'SHADOW' && state.shadowSlot === 2 && own
+      ? state.shadowPicks
+          .filter(
+            (pick) =>
+              pick.cycle === state.cycle &&
+              pick.slot === 1 &&
+              pick.seatId === own.id,
+          )
+          .sort((left, right) => right.seq - left.seq)[0]?.choice
+      : undefined;
   const voteCircleActive =
     state.phase === 'VERDICT' &&
     state.config.roundTable.revealStyle === 'speaker-circle' &&
@@ -365,10 +376,13 @@ export function viewFor(
                 name: seat.name,
                 role: seat.role!,
               })),
-            options: alive(state).map((seat) => ({
-              id: seat.id,
-              name: seat.name,
-            })),
+            options: (state.phase === 'SHADOW'
+              ? alive(state).filter((seat) => seat.id !== previousSlotChoice)
+              : alive(state).filter(
+                  (seat) =>
+                    seat.id !== own?.id && seat.id !== previousSlotChoice,
+                )
+            ).map((seat) => ({ id: seat.id, name: seat.name })),
             choices: isTraitor
               ? Object.fromEntries(
                   alive(state)

@@ -21,10 +21,12 @@ export const BOT_STRATEGIES = [
   'serial-disconnector',
   'coordinator-probes-for-secrets',
   'double-murder-split',
-  'faithful-self-predictor',
 ] as const;
 
-export type BotStrategy = (typeof BOT_STRATEGIES)[number];
+export const GOLDEN_ONLY_BOT_STRATEGIES = ['faithful-self-predictor'] as const;
+
+export type BotStrategy =
+  (typeof BOT_STRATEGIES)[number] | (typeof GOLDEN_ONLY_BOT_STRATEGIES)[number];
 export type CompleteGameOptions = {
   seed: number;
   strategy: BotStrategy;
@@ -490,6 +492,7 @@ export function runCompleteGame(
             other.status === 'alive' &&
             (other.id !== seat.id ||
               (options.strategy === 'faithful-self-predictor' &&
+                state.shadowSlot === 1 &&
                 seat.role === 'faithful')) &&
             other.id !==
               (state.shadowSlot === 2
@@ -507,6 +510,7 @@ export function runCompleteGame(
         if (candidates.length) {
           const target =
             options.strategy === 'faithful-self-predictor' &&
+            state.shadowSlot === 1 &&
             seat.role === 'faithful'
               ? seat
               : options.strategy === 'double-murder-split' &&

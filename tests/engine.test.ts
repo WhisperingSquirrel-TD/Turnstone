@@ -1078,6 +1078,21 @@ describe('Milestone 1 deterministic engine', () => {
       traitorTarget.id,
     );
 
+    const voteGame = fixture(6);
+    command(voteGame, { type: 'StartGame' });
+    advance(voteGame, 'VOTE');
+    const voteOwner = voteGame.state.seats.find(
+      (seat) => seat.status === 'alive' && seat.role === 'faithful',
+    )!;
+    const voteOptions = viewFor(
+      { kind: 'player', seatId: voteOwner.id, reveal: true },
+      voteGame.state,
+    ).private?.options;
+    expect(voteOptions?.map((option) => option.id)).not.toContain(voteOwner.id);
+    expect(voteOptions).toHaveLength(
+      voteGame.state.seats.filter((seat) => seat.status === 'alive').length - 1,
+    );
+
     const otherFaithfulView = viewFor(
       { kind: 'player', seatId: otherFaithful.id, reveal: true },
       game.state,
@@ -1118,6 +1133,92 @@ describe('Milestone 1 deterministic engine', () => {
         choice: traitorTarget.id,
       }),
     ]);
+  });
+  it('excludes each role’s first pick from the shared-shape second-slot list', () => {
+    const game = fixture(6, {
+      traitors: { murders: 2 },
+    });
+    command(game, { type: 'StartGame' });
+    advance(game, 'SHADOW');
+
+    const traitor = game.state.seats.find(
+      (seat) => seat.status === 'alive' && seat.role === 'traitor',
+    )!;
+    const faithful = game.state.seats.find(
+      (seat) => seat.status === 'alive' && seat.role === 'faithful',
+    )!;
+    const otherFaithful = game.state.seats.find(
+      (seat) =>
+        seat.status === 'alive' &&
+        seat.role === 'faithful' &&
+        seat.id !== faithful.id,
+    )!;
+    const living = game.state.seats.filter((seat) => seat.status === 'alive');
+    const traitorFirstPick = faithful.id;
+    const faithfulFirstPick = traitor.id;
+    game.state = {
+      ...game.state,
+      shadowSlot: 2,
+      shadowPicks: [
+        ...game.state.shadowPicks,
+        {
+          cycle: game.state.cycle,
+          slot: 1,
+          round: 1,
+          seatId: traitor.id,
+          choice: traitorFirstPick,
+          seq: game.state.version + 1,
+        },
+        {
+          cycle: game.state.cycle,
+          slot: 1,
+          round: 1,
+          seatId: otherFaithful.id,
+          choice: faithfulFirstPick,
+          seq: game.state.version + 2,
+        },
+      ],
+    };
+
+    const traitorOptions = viewFor(
+      { kind: 'player', seatId: traitor.id, reveal: true },
+      game.state,
+    ).private?.options;
+    const faithfulOptions = viewFor(
+      { kind: 'player', seatId: otherFaithful.id, reveal: true },
+      game.state,
+    ).private?.options;
+
+    expect(traitorOptions).toEqual(
+      living
+        .filter((seat) => seat.id !== traitorFirstPick)
+        .map(({ id, name }) => ({ id, name })),
+    );
+    expect(faithfulOptions).toEqual(
+      living
+        .filter((seat) => seat.id !== faithfulFirstPick)
+        .map(({ id, name }) => ({ id, name })),
+    );
+    expect(traitorOptions?.map(({ id }) => id)).toContain(traitor.id);
+    expect(faithfulOptions?.map(({ id }) => id)).toContain(otherFaithful.id);
+    expect(
+      traitorOptions?.every((option) => Object.keys(option).length === 2),
+    ).toBe(true);
+    expect(
+      faithfulOptions?.every((option) => Object.keys(option).length === 2),
+    ).toBe(true);
+    expect(
+      command(
+        game,
+        {
+          type: 'SubmitShadowChoice',
+          slot: 2,
+          choice: traitorFirstPick,
+        },
+        false,
+        { kind: 'player', seatId: traitor.id },
+      ),
+    ).toMatchObject({ ok: false, code: 'DUPLICATE_SHADOW_CHOICE' });
   });
   it('updates the private Traitor choice view as fellow Traitors pick', () => {
     const game = fixture(8, {

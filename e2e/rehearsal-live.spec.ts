@@ -472,7 +472,9 @@ async function submitPrivateChoice(
     expect(roster.viewerSeatId).toBeTruthy();
     const eligibleNames = roster.seats
       .filter(
-        (seat) => seat.status === 'alive' && seat.id !== roster.viewerSeatId,
+        (seat) =>
+          seat.status === 'alive' &&
+          (phaseBeforeChoice === 'SHADOW' || seat.id !== roster.viewerSeatId),
       )
       .map((seat) => seat.name);
     if (phaseBeforeChoice === 'SHADOW' && !shadowContext) {
@@ -508,7 +510,9 @@ async function submitPrivateChoice(
       : roster.seats
           .filter(
             (seat) =>
-              seat.status === 'alive' && seat.id !== roster.viewerSeatId,
+              seat.status === 'alive' &&
+              (phaseBeforeChoice === 'SHADOW' ||
+                seat.id !== roster.viewerSeatId),
           )
           .map((seat) => seat.name);
     expect(
@@ -519,11 +523,23 @@ async function submitPrivateChoice(
       expect(eligibleNames).toContain(name);
     }
     for (const seat of roster.seats.filter(
-      (seat) => seat.id === roster.viewerSeatId || seat.status !== 'alive',
+      (seat) =>
+        seat.status !== 'alive' ||
+        (seat.id === roster.viewerSeatId && phaseBeforeChoice !== 'SHADOW'),
     )) {
       await expect(
         choiceList.getByRole('button', { name: seat.name, exact: true }),
       ).toHaveCount(0);
+    }
+    if (phaseBeforeChoice === 'SHADOW') {
+      const viewerName = roster.seats.find(
+        (seat) => seat.id === roster.viewerSeatId,
+      )?.name;
+      if (!viewerName)
+        throw new Error('The current player has no roster name.');
+      await expect(
+        choiceList.getByRole('button', { name: viewerName, exact: true }),
+      ).toBeEnabled();
     }
     const selectableNames = roster.seats
       .filter(
@@ -559,12 +575,18 @@ async function submitPrivateChoice(
       for (const teammate of fellowTraitors) {
         expect(displayedNameSet.has(teammate)).toBe(true);
       }
-      selectedName = displayedNames.find((name) => !fellowTraitors.has(name));
+      const forbiddenTargets = new Set(fellowTraitors);
+      if (shadowContext.role === 'traitor' && viewerName)
+        forbiddenTargets.add(viewerName);
+      selectedName =
+        shadowContext.role === 'faithful' && viewerName
+          ? viewerName
+          : displayedNames.find((name) => !forbiddenTargets.has(name));
       if (!selectedName) {
         throw new Error('The private night list has no eligible target.');
       }
       nightAlternativeName = displayedNames.find(
-        (name) => name !== selectedName && !fellowTraitors.has(name),
+        (name) => name !== selectedName && !forbiddenTargets.has(name),
       );
     }
   }
@@ -592,6 +614,20 @@ async function submitPrivateChoice(
     await selectedChoice.evaluate((choice: HTMLButtonElement) =>
       choice.click(),
     );
+    const selectedChoiceId =
+      await selectedChoice.getAttribute('data-choice-id');
+    const savedChoiceDrafts = await page.evaluate(() => {
+      const drafts: Array<[string, string | null]> = [];
+      for (let index = 0; index < window.sessionStorage.length; index += 1) {
+        const key = window.sessionStorage.key(index);
+        if (key?.startsWith('oathstone:choice-draft:')) {
+          drafts.push([key, window.sessionStorage.getItem(key)]);
+        }
+      }
+      return drafts;
+    });
+    expect(savedChoiceDrafts).toHaveLength(1);
+    expect(savedChoiceDrafts[0]?.[1]).toBe(selectedChoiceId);
     await page
       .getByRole('button', { name: 'Review this choice' })
       .evaluate((button: HTMLButtonElement) => button.click());
@@ -639,6 +675,27 @@ async function submitPrivateChoice(
     await page
       .getByRole('button', { name: 'Confirm', exact: true })
       .evaluate((button: HTMLButtonElement) => button.click());
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          let draftCount = 0;
+          for (
+            let index = 0;
+            index < window.sessionStorage.length;
+            index += 1
+          ) {
+            if (
+              window.sessionStorage
+                .key(index)
+                ?.startsWith('oathstone:choice-draft:')
+            ) {
+              draftCount += 1;
+            }
+          }
+          return draftCount;
+        }),
+      )
+      .toBe(0);
 
     const waiting = page.getByTestId('waiting-for-everyone');
     if (phaseBeforeChoice === 'SHADOW') {
@@ -1601,6 +1658,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         if (dawnView.cycle === 1) {
           const { readGameEvents } = await import('@workspace/db/game-store');
           const events = await readGameEvents(activeGameId);
+          const rolesDealt = events.find(
+            (event) => event.type === 'RolesDealt',
+          );
           const nightStart = events.findIndex(
             (event) =>
               event.type === 'PhaseChanged' &&
@@ -1618,13 +1678,21 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           expect(nightStart).toBeGreaterThanOrEqual(0);
           expect(dawnResolvedIndex).toBeGreaterThan(nightStart);
           expect(viewerSeatId).toBeTruthy();
-          expect(firstNightPicks.length).toBeGreaterThan(0);
+          if (!rolesDealt)
+            throw new Error('The game did not record dealt roles.');
+          const traitorSeatIds = new Set(
+            Object.entries(rolesDealt.roles)
+              .filter(([, role]) => role === 'traitor')
+              .map(([seatId]) => seatId),
+          );
+          const traitorNightPicks = firstNightPicks.filter(
+            (event) =>
+              event.type === 'ShadowSubmitted' &&
+              traitorSeatIds.has(event.seatId),
+          );
+          expect(traitorNightPicks.length).toBeGreaterThan(0);
           expect(
-            firstNightPicks.every(
-              (event) =>
-                event.type !== 'ShadowSubmitted' ||
-                event.choice !== viewerSeatId,
-            ),
+            traitorNightPicks.every((event) => event.choice !== viewerSeatId),
           ).toBe(true);
           firstCycleNightSafe = true;
         }

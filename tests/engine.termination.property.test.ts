@@ -141,7 +141,20 @@ function runToFinish(
           const teammates = new Set(
             privateView.team.map((member) => member.id),
           );
-          options = options.filter((option) => !teammates.has(option.id));
+          options = options.filter(
+            (option) => option.id !== seat.id && !teammates.has(option.id),
+          );
+        }
+        if (game.state.shadowSlot === 2) {
+          const firstSlotChoice = game.state.shadowPicks
+            .filter(
+              (pick) =>
+                pick.cycle === cycle &&
+                pick.slot === 1 &&
+                pick.seatId === seat.id,
+            )
+            .sort((left, right) => right.seq - left.seq)[0]?.choice;
+          options = options.filter((option) => option.id !== firstSlotChoice);
         }
         const livingTraitors = game.state.seats.filter(
           (item) => item.status === 'alive' && item.role === 'traitor',

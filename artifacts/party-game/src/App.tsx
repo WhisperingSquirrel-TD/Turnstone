@@ -88,6 +88,13 @@ import {
 import { getPublicFacts } from './public-site-content';
 import { getAdvanceControlState, isAdvanceConflict } from './advance-control';
 import {
+  clearPrivateChoiceDraft,
+  clearStalePrivateChoiceDrafts,
+  createPrivateChoiceDraftKey,
+  readPrivateChoiceDraft,
+  writePrivateChoiceDraft,
+} from './private-choice-draft';
+import {
   secondsUntilServerDeadline,
   serverClockOffset,
   serverTimeNow,
@@ -1041,6 +1048,16 @@ function PlayerGame() {
     ['VOTE', 'SHADOW', 'FINAL_VOTE', 'FINAL_BANISH'].includes(full.phase),
   );
   const hasPlayerSeat = Boolean(full);
+  const privateChoiceDraftKey =
+    isActionPhase && ownSeat?.status === 'alive' && full?.viewerSeatId
+      ? createPrivateChoiceDraftKey({
+          gameId: id,
+          seatId: full.viewerSeatId,
+          phase: full.phase,
+          cycle: full.cycle,
+          slot: full.phase === 'SHADOW' ? full.shadowSlot : full.revote ? 1 : 0,
+        })
+      : null;
   const privateOptions = privateView?.options ?? [];
   const choices = orderChoiceOptions({
     choices:
@@ -1062,6 +1079,40 @@ function PlayerGame() {
     phase: full?.phase,
     seed: `${id}:${full?.viewerSeatId ?? ''}:${full?.phase ?? ''}:${full?.cycle ?? 0}:${full?.shadowSlot ?? 0}`,
   });
+  const choiceIdsSignature = JSON.stringify(
+    choices.map(({ id: seatId }) => seatId),
+  );
+  useEffect(() => {
+    if (!response) return;
+    try {
+      const storage = window.sessionStorage;
+      clearStalePrivateChoiceDrafts(storage, privateChoiceDraftKey);
+      if (!privateChoiceDraftKey || choices.length === 0) return;
+      const savedChoice = readPrivateChoiceDraft(
+        storage,
+        privateChoiceDraftKey,
+      );
+      if (!savedChoice) return;
+      const availableChoiceIds = new Set(
+        JSON.parse(choiceIdsSignature) as string[],
+      );
+      if (!availableChoiceIds.has(savedChoice)) {
+        clearPrivateChoiceDraft(storage, privateChoiceDraftKey);
+        if (selected === savedChoice) setSelected('');
+        return;
+      }
+      if (!selected) setSelected(savedChoice);
+    } catch {
+      // In-memory selection remains available when browser storage is blocked.
+    }
+  }, [
+    response,
+    privateChoiceDraftKey,
+    choiceIdsSignature,
+    privateView,
+    full?.version,
+    selected,
+  ]);
   const tieCandidateNames =
     full?.revote && (full.phase === 'VOTE' || full.phase === 'FINAL_BANISH')
       ? full.voteCandidates.flatMap((seatId) => {
@@ -1927,6 +1978,13 @@ function PlayerGame() {
         },
       });
       command.reset();
+      if (privateChoiceDraftKey) {
+        try {
+          clearPrivateChoiceDraft(window.sessionStorage, privateChoiceDraftKey);
+        } catch {
+          // The accepted choice remains in server state if storage is blocked.
+        }
+      }
       if (view.phase === 'SHADOW') {
         setActionDone(true);
         setCommandMessage('');
@@ -2143,6 +2201,17 @@ function PlayerGame() {
       setSelected(choiceId);
       setConfirmChoice(false);
       setCommandMessage('');
+      if (privateChoiceDraftKey) {
+        try {
+          writePrivateChoiceDraft(
+            window.sessionStorage,
+            privateChoiceDraftKey,
+            choiceId,
+          );
+        } catch {
+          // In-memory selection remains available when browser storage is blocked.
+        }
+      }
     },
     onReview: () => setConfirmChoice(true),
     onConfirm: () => void submitAction(),
