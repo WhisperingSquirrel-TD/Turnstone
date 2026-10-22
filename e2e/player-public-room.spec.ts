@@ -1416,6 +1416,219 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   ).toHaveCount(1);
 });
 
+test('Notes requests during SHADOW retain their purpose without acknowledging the night', async ({
+  page,
+}) => {
+  const gameId = 'shadow-notes-purpose';
+  const view: FullView = {
+    ...createPublicView(gameId),
+    phase: 'SHADOW',
+    shadowRound: 1,
+    shadowSlot: 1,
+  };
+  // A departed seat sees the public room during SHADOW, not the night shield.
+  view.seats = view.seats.map((seat) =>
+    seat.id === view.viewerSeatId ? { ...seat, status: 'departed' } : seat,
+  );
+  let notesRequests = 0;
+  const commands: unknown[] = [];
+  await page.route('**/socket.io/**', (route) => route.abort());
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      json: { csrfToken: 'test-csrf' },
+      headers: {
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
+      },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, (route) => {
+    commands.push(route.request().postDataJSON());
+    return route.fulfill({ status: 409, json: { error: 'Command rejected' } });
+  });
+  await page.route(`**/api/games/${gameId}/private-view`, (route) => {
+    expect(route.request().postDataJSON()).toEqual({ purpose: 'notes' });
+    notesRequests += 1;
+    // Preserve the server's independent eligibility gate for departed seats.
+    return route.fulfill({
+      status: 409,
+      json: { error: 'Private view unavailable' },
+    });
+  });
+  await page.goto(`/game/${gameId}`);
+  const rejectedNotes = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/api/games/${gameId}/private-view`) &&
+      response.status() === 409,
+  );
+  await page.getByTestId('button-open-notes').click();
+  await rejectedNotes;
+  expect(notesRequests).toBe(1);
+  expect(commands).toEqual([]);
+  await expect(page.getByTestId('private-choice-content')).toBeHidden();
+  await expect(
+    page.getByRole('dialog', { name: 'Shield your screen' }),
+  ).toBeHidden();
+});
+
+test('a shielded night automatically recovers a stale private view after delayed new-window acknowledgement', async ({
+  page,
+}) => {
+  const gameId = 'shadow-window-recovery';
+  let view: FullView = {
+    ...createPublicView(gameId),
+    phase: 'SHADOW',
+    cycle: 1,
+    shadowRound: 1,
+    shadowSlot: 1,
+    progress: { done: 0, total: 2 },
+  };
+  view.seats.push({ id: 'seat-sam', name: 'Sam', status: 'alive' });
+  let acknowledged = false;
+  let acknowledgementStarted = false;
+  let releaseAcknowledgement!: () => void;
+  const acknowledgementGate = new Promise<void>((resolve) => {
+    releaseAcknowledgement = resolve;
+  });
+  let unacknowledgedReads = 0;
+  let roundTwoReads = 0;
+  let holdOldRead = false;
+  let oldReadStarted = false;
+  let releaseOldRead!: () => void;
+  const oldReadGate = new Promise<void>((resolve) => {
+    releaseOldRead = resolve;
+  });
+  await page.route('**/socket.io/**', (route) => route.abort());
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      json: { csrfToken: 'test-csrf' },
+      headers: {
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
+      },
+    }),
+  );
+  const envelope = () => ({
+    serverNow: Date.now(),
+    version: view.version,
+    view,
+  });
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, async (route) => {
+    expect(route.request().postDataJSON().type).toBe('AcknowledgePrivate');
+    if (view.shadowRound === 2) {
+      acknowledgementStarted = true;
+      await acknowledgementGate;
+    }
+    acknowledged = true;
+    view = { ...view, version: view.version + 1 };
+    await route.fulfill({ json: envelope() });
+  });
+  await page.route(`**/api/games/${gameId}/private-view`, async (route) => {
+    if (!acknowledged) {
+      unacknowledgedReads += 1;
+      await route.fulfill({
+        status: 409,
+        json: { error: 'Private view unavailable' },
+      });
+      return;
+    }
+    if (view.shadowRound === 2 && ++roundTwoReads === 1) {
+      await route.fulfill({
+        status: 409,
+        json: {
+          error:
+            'The game changed while opening the private screen. Refresh and try again.',
+        },
+      });
+      return;
+    }
+    const responseView = view;
+    if (holdOldRead && responseView.shadowRound === 1) {
+      oldReadStarted = true;
+      await oldReadGate;
+    }
+    await route.fulfill({
+      json: {
+        serverNow: Date.now(),
+        version: responseView.version,
+        view: {
+          ...responseView,
+          private: {
+            role: 'faithful',
+            team: [],
+            options:
+              responseView.shadowRound === 1
+                ? [{ id: 'seat-jamie', name: 'Jamie' }]
+                : [{ id: 'seat-sam', name: 'Sam' }],
+            choices: {},
+            choiceSlots: [],
+            chat: [],
+            task: null,
+            minimumDurationMs: 5000,
+          },
+        },
+      },
+    });
+  });
+  await page.goto(`/game/${gameId}`);
+  const shield = page.getByRole('dialog', { name: 'Shield your screen' });
+  const confirmShield = shield.getByRole('button', { name: /i’m shielded/i });
+  await expect(confirmShield).toHaveAttribute('aria-disabled', 'false', {
+    timeout: 6500,
+  });
+  await confirmShield.click();
+  await expect(page.getByTestId('private-choice-content')).toBeVisible();
+  holdOldRead = true;
+  view = { ...view, version: view.version + 1 };
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect.poll(() => oldReadStarted).toBe(true);
+  acknowledged = false;
+  view = { ...view, version: view.version + 1, shadowRound: 2 };
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect.poll(() => acknowledgementStarted).toBe(true);
+  await expect(page.getByTestId('player-game')).toHaveAttribute(
+    'data-shadow-round',
+    '2',
+  );
+  await expect(shield).toBeHidden();
+  releaseAcknowledgement();
+  await expect.poll(() => roundTwoReads).toBeGreaterThanOrEqual(2);
+  await expect(page.getByTestId('private-choice-content')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Sam', exact: true }),
+  ).toBeEnabled();
+  const oldResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(`/api/games/${gameId}/private-view`) &&
+      response.status() === 200,
+  );
+  releaseOldRead();
+  await (await oldResponse).finished();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await expect(
+    page.getByRole('button', { name: 'Sam', exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole('button', { name: 'Jamie', exact: true }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: 'Tap to see your private screen again' }),
+  ).toBeHidden();
+  await expect(shield).toBeHidden();
+  expect(unacknowledgedReads).toBe(0);
+});
+
 for (const role of ['faithful', 'traitor'] as const) {
   test(
     role === 'traitor'

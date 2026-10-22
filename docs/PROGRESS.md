@@ -1,6 +1,8 @@
 # Status for reviewer
 
-**Verify #224 has failed jobs:** H1 expects Move-on enabled before voting, contrary to Q6's pending-player gate; scenario merge rejects shard 0 for exceeding the unchanged five-minute budget. All four browser profiles, static/unit/property/integration, Lighthouse and scenario assertions passed. Fixes are in progress; later queue items remain held. The run-level API still reported `in_progress` despite completed failed required-checks.
+**Verify #224 repair ready:** H1 now passes on Pixel, including the approved night-screen recovery fix. Recovery regressions pass on Pixel and iPhone. Scenario batch: 2,572 games, zero failures; server coverage: 85.75% with the unchanged 85% gate. New CI result pending; later queue items remain held. Verify #224 is confirmed completed/failure.
+
+## Verify #224 diagnosis and repair evidence
 
 Scenario-report diagnosis: the failed merge step reports **“Scenario shard 0 exceeded the five-minute time budget”**. This is a runtime-budget failure enforced by the merge step, not a failed game scenario or a reported count/coverage mismatch. All six scenario shard jobs passed their assertions. The five-minute limit and scenario coverage remain unchanged while the runtime cause is investigated.
 
@@ -12,7 +14,7 @@ seat-count-only scheduling and duplicated projections for unchanged states.
 
 H1 repair status: corrected pre-vote waiting expectations and verified real
 phase/window transitions (phase + SHADOW round/slot, not version/progress).
-The replay now reaches a confirmed product recovery fault: after SHADOW window
+The replay exposed a confirmed product recovery fault: after SHADOW window
 advance, private-view requests race new-window acknowledgements. Valid 409
 rejections are followed by a successful same-window private-view response, but
 the client remains covered. No timer bypass or harness reopen/retry was added.
@@ -27,8 +29,14 @@ pass; an identical nine-game slow workload improved from 23,376 to 13,539 ms.
 The complete local scenario batch now passes **2,572 games, zero failures,
 2,522 coverage rows** in 450,095 ms (unsharded sample run). This is not proof
 of the five-minute-per-shard CI budget; that still needs GitHub validation.
-The separately reported night-screen recovery fault is
-awaiting owner approval before product changes; no repair has been pushed.
+The separately reported night-screen recovery fault was approved for a
+separate test-first product fix on 22 October. The new regression failed
+before implementation, then passed with bounded private-view conflict retries
+and acknowledgement/window guards. Notes retains its separate request purpose;
+stale window responses cannot replace current choices. Five targeted Pixel
+browser tests, two iPhone regressions and 29 targeted unit/component tests pass.
+The real H1 Pixel replay (`h1-seed-6001`) passes end to end in 1.5 minutes.
+Server guards, timers, private-choice storage and command retry keys are unchanged.
 
 **Q6/Q7/Q8 status, 22 October:** pushed as `8167279`; Verify #224 failed as detailed above. Prior local checks passed: 602 unit tests, 21 property tests, 100 server-coverage tests (85.56%, threshold unchanged), the exhausted-slot HTTP retry test, 2,522 scenario coverage rows plus fault-fuzz/goldens, and Pixel/iPhone night geometry checks. Local passes do not override CI. Latest confirmed GitHub green remains Verify #223.
 

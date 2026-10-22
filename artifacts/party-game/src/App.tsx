@@ -875,6 +875,8 @@ function PlayerGame() {
   const shieldedShadowCycle = useRef<number | null>(null);
   const requestedShadowPrivateViewKey = useRef<string | null>(null);
   const currentShadowPrivateViewKeyRef = useRef<string | null>(null);
+  const acknowledgedShadowPrivateViewKey = useRef<string | null>(null);
+  const openingShadowPrivateViewKey = useRef<string | null>(null);
   const [shieldPending, setShieldPending] = useState(false);
   const [held, setHeld] = useState(false);
   const [roleSeen, setRoleSeen] = useState(false);
@@ -1273,6 +1275,40 @@ function PlayerGame() {
       ? `${id}:${full.cycle}:${full.shadowRound}:${full.shadowSlot}`
       : null;
   currentShadowPrivateViewKeyRef.current = shadowPrivateViewKey;
+  const revealAcknowledgedShadowWindow = useCallback(
+    async (key: string): Promise<GameViewResponse | null> => {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        if (
+          currentShadowPrivateViewKeyRef.current !== key ||
+          acknowledgedShadowPrivateViewKey.current !== key
+        )
+          return null;
+        try {
+          const response = await reveal.mutateAsync({ id });
+          const nextView = response.view;
+          if (
+            currentShadowPrivateViewKeyRef.current !== key ||
+            acknowledgedShadowPrivateViewKey.current !== key ||
+            !isFullView(nextView) ||
+            nextView.phase !== 'SHADOW' ||
+            `${id}:${nextView.cycle}:${nextView.shadowRound}:${nextView.shadowSlot}` !==
+              key
+          )
+            return null;
+          return response;
+        } catch (error) {
+          if (attempt === 4 || !isAdvanceConflict(error)) throw error;
+          // Other seats can advance the version between the server's private
+          // projection and undo-window CAS. Retry the read, never the choice.
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, 100 * (attempt + 1)),
+          );
+        }
+      }
+      return null;
+    },
+    [id, reveal.mutateAsync],
+  );
   const privateStepKey = full
     ? privateStepKeyFor({
         phase: full.phase,
@@ -1352,9 +1388,11 @@ function PlayerGame() {
     if (keepNightShield && shadowPrivateViewKey) {
       if (requestedShadowPrivateViewKey.current !== shadowPrivateViewKey) {
         requestedShadowPrivateViewKey.current = shadowPrivateViewKey;
+        openingShadowPrivateViewKey.current = shadowPrivateViewKey;
         setHoldMessage(en.game.privateLoading);
         void (async () => {
           try {
+            let acknowledged = false;
             for (let attempt = 0; attempt < 2; attempt += 1) {
               if (
                 currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey
@@ -1376,14 +1414,26 @@ function PlayerGame() {
                     idempotencyKey: idempotencyKey(),
                   }),
                 );
-                await command.mutateAsync({
+                const acknowledgementResponse = await command.mutateAsync({
                   id,
                   data: acknowledgement.payload,
                 });
+                const acknowledgedView = acknowledgementResponse.view;
+                if (
+                  currentShadowPrivateViewKeyRef.current !==
+                    shadowPrivateViewKey ||
+                  !isFullView(acknowledgedView) ||
+                  acknowledgedView.phase !== 'SHADOW' ||
+                  `${id}:${acknowledgedView.cycle}:${acknowledgedView.shadowRound}:${acknowledgedView.shadowSlot}` !==
+                    shadowPrivateViewKey
+                )
+                  return;
                 pendingCommands.confirm(
                   'private-phase-acknowledgement',
                   commandStepKey,
                 );
+                acknowledgedShadowPrivateViewKey.current = shadowPrivateViewKey;
+                acknowledged = true;
                 break;
               } catch {
                 // A competing bot update can invalidate the command version.
@@ -1391,10 +1441,17 @@ function PlayerGame() {
                 // enforces that acknowledgement succeeded before data is shown.
               }
             }
+            if (!acknowledged)
+              throw new Error('Private acknowledgement failed');
             if (currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey)
               return;
-            const response = await reveal.mutateAsync({ id });
-            if (currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey)
+            const response =
+              await revealAcknowledgedShadowWindow(shadowPrivateViewKey);
+            if (
+              !response ||
+              currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey ||
+              response.version < privateVersionRef.current
+            )
               return;
             const nextPrivateView = isFullView(response.view)
               ? response.view.private
@@ -1414,6 +1471,8 @@ function PlayerGame() {
             setHoldMessage(en.game.privateUnavailable);
             setPrivateCovered(true);
           } finally {
+            if (openingShadowPrivateViewKey.current === shadowPrivateViewKey)
+              openingShadowPrivateViewKey.current = null;
             if (
               currentShadowPrivateViewKeyRef.current === shadowPrivateViewKey
             ) {
@@ -1451,6 +1510,7 @@ function PlayerGame() {
     command.mutateAsync,
     command.reset,
     reveal.mutateAsync,
+    revealAcknowledgedShadowWindow,
     reveal.reset,
     full?.rehearsal,
     rehearsalGuideVisible,
@@ -1459,6 +1519,8 @@ function PlayerGame() {
   useEffect(() => {
     shieldedShadowCycle.current = null;
     requestedShadowPrivateViewKey.current = null;
+    acknowledgedShadowPrivateViewKey.current = null;
+    openingShadowPrivateViewKey.current = null;
     setRehearsalGuideDismissedSteps(new Set());
   }, [id]);
 
@@ -1796,7 +1858,7 @@ function PlayerGame() {
             idempotencyKey: idempotencyKey(),
           }),
         );
-        await command.mutateAsync({
+        const acknowledgementResponse = await command.mutateAsync({
           id,
           data: acknowledgement.payload,
         });
@@ -1805,12 +1867,30 @@ function PlayerGame() {
           commandStepKey,
         );
         command.reset();
+        if (full?.phase === 'SHADOW' && shadowPrivateViewKey) {
+          const acknowledgedView = acknowledgementResponse.view;
+          if (
+            currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey ||
+            !isFullView(acknowledgedView) ||
+            acknowledgedView.phase !== 'SHADOW' ||
+            `${id}:${acknowledgedView.cycle}:${acknowledgedView.shadowRound}:${acknowledgedView.shadowSlot}` !==
+              shadowPrivateViewKey
+          )
+            return;
+          acknowledgedShadowPrivateViewKey.current = shadowPrivateViewKey;
+        }
       }
       if (needsPrivateView) {
-        const response = await reveal.mutateAsync({
-          id,
-          ...(notesRequest ? { data: { purpose: 'notes' as const } } : {}),
-        });
+        const response =
+          !notesRequest && full?.phase === 'SHADOW' && shadowPrivateViewKey
+            ? await revealAcknowledgedShadowWindow(shadowPrivateViewKey)
+            : await reveal.mutateAsync({
+                id,
+                ...(notesRequest
+                  ? { data: { purpose: 'notes' as const } }
+                  : {}),
+              });
+        if (!response) return;
         privateVersionRef.current = response.version;
         nextPrivateView = isFullView(response.view)
           ? response.view.private
@@ -1954,11 +2034,16 @@ function PlayerGame() {
     )
       return;
     const shadowKey = shadowPrivateViewKey;
-    if (!shadowKey) return;
+    if (
+      !shadowKey ||
+      acknowledgedShadowPrivateViewKey.current !== shadowKey ||
+      openingShadowPrivateViewKey.current === shadowKey
+    )
+      return;
     let stale = false;
-    void reveal
-      .mutateAsync({ id })
+    void revealAcknowledgedShadowWindow(shadowKey)
       .then((response) => {
+        if (!response) return;
         const view = response.view;
         const privateData = isFullView(view) ? view.private : null;
         if (
@@ -1989,6 +2074,7 @@ function PlayerGame() {
     notesOpen,
     reveal.mutateAsync,
     reveal.reset,
+    revealAcknowledgedShadowWindow,
     token,
   ]);
 
