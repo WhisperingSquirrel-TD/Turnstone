@@ -1,12 +1,65 @@
 # Status for reviewer
 
-**Q6/Q7/Q8 status, 22 October:** local checks green; ready for Verify. 602 unit tests, 21 property tests, 100 server-coverage tests (85.56%, threshold unchanged), and the exhausted-slot HTTP retry test pass. Scenario batch passes all 2,522 coverage rows plus fault-fuzz and golden games. Pixel/iPhone night geometry checks pass for both roles/themes. Latest confirmed GitHub green: Verify #223; this change is not yet CI-approved.
+**Verify #224 has failed jobs:** H1 expects Move-on enabled before voting, contrary to Q6's pending-player gate; scenario merge rejects shard 0 for exceeding the unchanged five-minute budget. All four browser profiles, static/unit/property/integration, Lighthouse and scenario assertions passed. Fixes are in progress; later queue items remain held. The run-level API still reported `in_progress` despite completed failed required-checks.
+
+Scenario-report diagnosis: the failed merge step reports **“Scenario shard 0 exceeded the five-minute time budget”**. This is a runtime-budget failure enforced by the merge step, not a failed game scenario or a reported count/coverage mismatch. All six scenario shard jobs passed their assertions. The five-minute limit and scenario coverage remain unchanged while the runtime cause is investigated.
+
+Downloaded shard evidence: shards 0–5 took 416,334 / 282,414 / 334,464 /
+317,512 / 257,442 / 237,803 ms, respectively, with empty assertion-failure
+lists. The merge stops at the first over-budget shard; shard 0 is not the only
+over-budget shard. Investigation found uneven bot-strategy distribution under
+seat-count-only scheduling and duplicated projections for unchanged states.
+
+H1 repair status: corrected pre-vote waiting expectations and verified real
+phase/window transitions (phase + SHADOW round/slot, not version/progress).
+The replay now reaches a confirmed product recovery fault: after SHADOW window
+advance, private-view requests race new-window acknowledgements. Valid 409
+rejections are followed by a successful same-window private-view response, but
+the client remains covered. No timer bypass or harness reopen/retry was added.
+Replay seed: `h1-seed-6001`, Pixel, existing H1 command. Reported for approval
+before product edits. The server-coverage command now includes the Q6/Q7
+presence, automatic-handover and idempotency integration files: **120 tests
+pass, 85.75% lines**, unchanged 85% threshold.
+
+Repair validation so far: **614 unit tests pass**, application/test typechecks,
+lint and format checks pass. Scenario scheduling and projection-reuse regressions
+pass; an identical nine-game slow workload improved from 23,376 to 13,539 ms.
+The complete local scenario batch now passes **2,572 games, zero failures,
+2,522 coverage rows** in 450,095 ms (unsharded sample run). This is not proof
+of the five-minute-per-shard CI budget; that still needs GitHub validation.
+The separately reported night-screen recovery fault is
+awaiting owner approval before product changes; no repair has been pushed.
+
+**Q6/Q7/Q8 status, 22 October:** pushed as `8167279`; Verify #224 failed as detailed above. Prior local checks passed: 602 unit tests, 21 property tests, 100 server-coverage tests (85.56%, threshold unchanged), the exhausted-slot HTTP retry test, 2,522 scenario coverage rows plus fault-fuzz/goldens, and Pixel/iPhone night geometry checks. Local passes do not override CI. Latest confirmed GitHub green remains Verify #223.
 
 **Next Q6 work after Verify is green:** finish automatic organiser handover in the client (the server selects safely, but the panel still requires a claim tap), then prove the disconnected-player recovery journey through the real UI. No publication or SPEC §3 changes.
 
+## Owner-approved queue — 22 October 2026
+
+Work one change set at a time, tests first, without weakening checks or thresholds.
+Do not push while Verify is running; check each run once when it should have
+finished. Record the actual run number and next item after each push.
+
+1. Finish Q7, then Q6, in small green commits.
+2. Resilience set 2: volatile **Waiting to send**, identical words/layout for
+   every role, with Resend using the **original idempotency key and payload**.
+   No new persistence; preserve the existing choice-draft rules exactly.
+   Clear only on confirmed success, definitive rejection or phase change.
+   Test commit-then-dropped-response (one effect), dropped request, duplicate
+   resend and phase-change clearing.
+3. Replay H2 with `h2-seed-1201`, 12 players, Pixel. At the previous failure,
+   SubmitShadowChoice returned 200 and the private view confirmed the pick;
+   client/server were at version 113, SHADOW round 1, 11/11 complete.
+   First establish whether the harness waits for `coordinatorMinimumAdvanceAt`
+   as H1 does and whether it sends AdvancePhase. Capture evidence before
+   distinguishing a product fault from a harness fault. No production bypass;
+   record any required owner decision in QUESTIONS.
+4. **Stop after H2.** Do not start resilience sets 3–5, Round 7 or other work
+   without a new reviewer instruction. Do not change the Replit model mode.
+
 ## Current Q6 work — 22 October 2026
 
-- **Latest confirmed GitHub:** Verify #223 is green on `70055d4`. Q6 changes are local, not pushed or declared green.
+- **Latest confirmed GitHub:** Verify #223 is green on `70055d4`. Current changes were pushed as `8167279` through the existing GitHub integration after the saved Git credential failed. The remote file tree matches the locally tested tree exactly. No permissions changed; no CI-green claim yet. One delayed status check is scheduled.
 - Rebased the working changes by clean cherry-pick onto current main; preserved the old branch and stash. Excluded unrelated attachments and generated files from the clean snapshot.
 - Parallel checks found and corrected disconnect-grace timing, removed-role private projection leaks, stale sleeper activation after reinstatement, and unsafe automatic handover selection/transaction handling.
 - Local checks: application and test typechecks pass; 19 presence/handover integration tests pass; 20 organiser component tests pass; all six coordinator browser tests pass on Pixel Chromium and iPhone WebKit. Browser coordinator checks use routed fixtures, not proof of the entire real-server flow.

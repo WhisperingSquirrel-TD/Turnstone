@@ -64,6 +64,15 @@ export type ScenarioSuitePlan = {
 export { SCENARIO_SHARD_BUDGET_MS, SCENARIO_SHARD_COUNT };
 export { projectScenarioShardDurationMs };
 
+function schedulingTieBreak(seed: number): number {
+  // Avalanche the seed rather than using row order: row strategies repeat
+  // every nine rows, which aliases with six shards despite equal seat² loads.
+  let value = seed >>> 0;
+  value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
+  value = Math.imul(value ^ (value >>> 15), 0x735a2d97);
+  return (value ^ (value >>> 15)) >>> 0;
+}
+
 export function partitionScenarioJobs(
   jobs: ScenarioJob[],
   shardCount: number,
@@ -90,6 +99,8 @@ export function partitionScenarioJobs(
   const groups = [...groupById.values()].sort(
     (left, right) =>
       right.estimatedCost - left.estimatedCost ||
+      schedulingTieBreak(left.jobs[0]!.seed) -
+        schedulingTieBreak(right.jobs[0]!.seed) ||
       left.originalIndex - right.originalIndex,
   );
   const shardCapacity = Array.from(
@@ -210,31 +221,51 @@ export async function runScenarioJobs(
   if (!jobs.length)
     return { completed: 0, failureSeeds: [], failures: [], gameProfiles: [] };
   const workerCount = Math.min(availableParallelism(), 8, jobs.length);
-  const chunks = Array.from({ length: workerCount }, () => [] as ScenarioJob[]);
-  jobs.forEach((job, index) => chunks[index % workerCount]!.push(job));
-  const results = await Promise.all(
-    chunks.map(
-      (chunk) =>
-        new Promise<ScenarioWorkerResult>((resolve, reject) => {
-          const worker = new Worker(
-            new URL('./scenario-worker.ts', import.meta.url),
-            {
-              execArgv: process.execArgv,
-              workerData: { jobs: chunk },
-            },
-          );
-          worker.once('message', (result: ScenarioWorkerResult) => {
-            void worker.terminate();
-            resolve(result);
-          });
-          worker.once('error', reject);
-          worker.once('exit', (code) => {
-            if (code !== 0)
-              reject(new Error(`Scenario worker exited with code ${code}`));
-          });
-        }),
-    ),
+  const queue = [...jobs].sort(
+    (left, right) =>
+      right.config.players.count ** 2 - left.config.players.count ** 2 ||
+      schedulingTieBreak(left.seed) - schedulingTieBreak(right.seed),
   );
+  let nextJob = 0;
+  const workers: Worker[] = [];
+  let results: ScenarioWorkerResult[];
+  try {
+    const batches = await Promise.all(
+      Array.from(
+        { length: workerCount },
+        () =>
+          new Promise<ScenarioWorkerResult[]>((resolve, reject) => {
+            const worker = new Worker(
+              new URL('./scenario-worker.ts', import.meta.url),
+              {
+                execArgv: process.execArgv,
+                workerData: { jobs: [queue[nextJob++]!] },
+              },
+            );
+            workers.push(worker);
+            const completed: ScenarioWorkerResult[] = [];
+            let finished = false;
+            worker.on('message', (result: ScenarioWorkerResult) => {
+              completed.push(result);
+              if (nextJob < queue.length)
+                worker.postMessage([queue[nextJob++]!]);
+              else {
+                finished = true;
+                resolve(completed);
+              }
+            });
+            worker.once('error', reject);
+            worker.once('exit', (code) => {
+              if (!finished)
+                reject(new Error(`Scenario worker exited with code ${code}`));
+            });
+          }),
+      ),
+    );
+    results = batches.flat();
+  } finally {
+    await Promise.all(workers.map((worker) => worker.terminate()));
+  }
   const profileByPlayers = new Map<number, ScenarioGameProfile>();
   for (const profile of results.flatMap((result) => result.gameProfiles)) {
     const existing = profileByPlayers.get(profile.players) ?? {
@@ -504,6 +535,12 @@ export async function runEngineScenarioSuite(
   const coverageRowIds = [
     ...new Set(plan.flatMap((suite) => suite.coverageRowIds)),
   ].sort();
+  // One work-conserving pool spans all coverage suites. A slow last game in
+  // one suite must not leave the other workers idle behind a suite barrier.
+  const batch = await runScenarioJobs(plan.flatMap((suite) => suite.jobs));
+  report.failures.push(...batch.failures);
+  report.failureSeeds.push(...batch.failureSeeds);
+  report.gameProfiles = batch.gameProfiles;
   for (const suite of plan) {
     report.sweepCells += suite.sweepCells;
     report.sweepGames += suite.name === 'core-sweep' ? suite.jobs.length : 0;
@@ -513,20 +550,6 @@ export async function runEngineScenarioSuite(
     report.highSeatCoveringGames +=
       suite.name === 'high-seat-pairwise' ? suite.jobs.length : 0;
     report.failures.push(...suite.coverageFailures);
-
-    const batch = await runScenarioJobs(suite.jobs);
-    report.failures.push(...batch.failures);
-    report.failureSeeds.push(...batch.failureSeeds);
-    for (const profile of batch.gameProfiles) {
-      const existing = report.gameProfiles!.find(
-        (item) => item.players === profile.players,
-      );
-      if (existing) {
-        existing.games += profile.games;
-        existing.totalMs += profile.totalMs;
-        existing.maxMs = Math.max(existing.maxMs, profile.maxMs);
-      } else report.gameProfiles!.push({ ...profile });
-    }
 
     if (suite.fuzzGames > 0) {
       const fuzz = runFuzzBatch({

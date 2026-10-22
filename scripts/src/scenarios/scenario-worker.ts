@@ -63,5 +63,9 @@ function runJobs(jobs: readonly ScenarioJob[]): ScenarioWorkerResult {
 }
 
 if (!parentPort) throw new Error('Scenario worker requires a parent port');
+const port = parentPort;
+port.on('message', (jobs: ScenarioJob[]) => {
+  port.postMessage(runJobs(jobs));
+});
 const input = workerData as WorkerInput;
-parentPort.postMessage(runJobs(input.jobs));
+port.postMessage(runJobs(input.jobs));

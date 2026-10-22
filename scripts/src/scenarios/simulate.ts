@@ -9,6 +9,7 @@ import {
   viewFor,
 } from '@workspace/engine';
 import { gameConfigSchema } from '@workspace/shared';
+import type { FullView } from '@workspace/shared';
 import type { Actor, Context, Event, State } from '@workspace/engine';
 import { referenceReplay } from './reference-model';
 
@@ -114,7 +115,8 @@ export function scenarioRandom(seed: number): Context['random'] {
   };
 }
 
-function assertProjectionSafety(state: State): void {
+function assertProjectionSafety(state: State): FullView[] {
+  const livingPlayerViews: FullView[] = [];
   const allowedKeys = new Set<string>(VIEW_ALLOW_LIST);
   const visitorAllowedKeys = new Set<string>(VISITOR_VIEW_ALLOW_LIST);
   const players = state.seats.map((seat) => ({
@@ -144,6 +146,7 @@ function assertProjectionSafety(state: State): void {
     }
 
     const view = viewFor(viewer, state);
+    if (viewer.kind === 'player') livingPlayerViews.push(view);
     if (Object.keys(view).some((key) => !allowedKeys.has(key)))
       throw new Error('Projection contains a key outside its allow-list');
     const viewerSeat =
@@ -182,14 +185,11 @@ function assertProjectionSafety(state: State): void {
     )
       throw new Error('Non-Traitor projection contains Traitor choices');
   }
+  return livingPlayerViews;
 }
 
-function assertUniformCore(state: State): void {
+function assertUniformCore(state: State, views: readonly FullView[]): void {
   if (!['DEAL', 'SHADOW'].includes(state.phase)) return;
-  const living = state.seats.filter((seat) => seat.status === 'alive');
-  const views = living.map((seat) =>
-    viewFor({ kind: 'player', seatId: seat.id, reveal: true }, state),
-  );
   const minimumDurations = new Set(
     views.map((view) => view.private?.minimumDurationMs),
   );
@@ -218,8 +218,11 @@ function assertState(
   if (JSON.stringify(cursor.state) !== JSON.stringify(game.state))
     throw new Error('Event replay differs from the current state');
   cursor.stepChecks++;
-  assertProjectionSafety(game.state);
-  assertUniformCore(game.state);
+  // These projections are local to this assertion of this exact immutable
+  // state. Safety and uniformity inspect the same living-seat payloads, with
+  // no cache shared across states, games, viewers or reveal contexts.
+  const livingPlayerViews = assertProjectionSafety(game.state);
+  assertUniformCore(game.state, livingPlayerViews);
 }
 
 export function runCompleteGame(

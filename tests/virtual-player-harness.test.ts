@@ -3,10 +3,44 @@ import {
   buildVirtualPlayerScenario,
   createProgressWatchdog,
   createSeededRandom,
+  playerStepIdentity,
 } from '../e2e/support/virtual-player-harness';
 import { createTestOnlyRandom } from '../artifacts/api-server/src/test-only-random';
 
 describe('virtual-player harness helpers', () => {
+  it('identifies genuine phase, shadow round and shadow slot transitions', () => {
+    const firstWindow = {
+      phase: 'SHADOW',
+      shadowRound: '1',
+      shadowSlot: '1',
+      version: '62',
+      progressDone: '5',
+    };
+    const original = playerStepIdentity(firstWindow);
+    expect(original).not.toBeNull();
+    expect(playerStepIdentity({ ...firstWindow, phase: 'DAWN' })).not.toBe(
+      original,
+    );
+    expect(playerStepIdentity({ ...firstWindow, shadowRound: '2' })).not.toBe(
+      original,
+    );
+    expect(playerStepIdentity({ ...firstWindow, shadowSlot: '2' })).not.toBe(
+      original,
+    );
+    expect(
+      playerStepIdentity({
+        ...firstWindow,
+        version: '68',
+        progressDone: '0',
+      }),
+    ).toBe(original);
+    expect(playerStepIdentity({})).toBeNull();
+    expect(playerStepIdentity({ phase: 'SHADOW' })).toBeNull();
+    expect(
+      playerStepIdentity({ phase: 'VOTE', shadowRound: '2', shadowSlot: '2' }),
+    ).toBe(playerStepIdentity({ phase: 'VOTE' }));
+  });
+
   it('produces a repeatable seeded random stream', () => {
     const first = createSeededRandom('h1-seed-6001');
     const replay = createSeededRandom('h1-seed-6001');

@@ -20,6 +20,31 @@ export interface VirtualPlayerScenario {
 
 export type WatchdogObservation = 'waiting' | 'progressed' | 'stalled';
 
+export function playerStepIdentity(
+  dataset: Readonly<Record<string, string | undefined>>,
+): string | null {
+  if (!dataset.phase) return null;
+  if (dataset.phase !== 'SHADOW') return JSON.stringify([dataset.phase]);
+  if (!dataset.shadowRound || !dataset.shadowSlot) return null;
+  return JSON.stringify([
+    dataset.phase,
+    dataset.shadowRound,
+    dataset.shadowSlot,
+  ]);
+}
+
+export async function readPlayerStepIdentity(
+  page: Page,
+): Promise<string | null> {
+  const dataset = await page.evaluate(() => {
+    const game = document.querySelector<HTMLElement>(
+      '[data-testid="player-game"]',
+    );
+    return { ...game?.dataset };
+  });
+  return playerStepIdentity(dataset);
+}
+
 export function createSeededRandom(seed: string | number): () => number {
   let state = 2166136261;
   for (const character of String(seed)) {

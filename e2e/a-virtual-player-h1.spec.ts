@@ -11,6 +11,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import {
   buildVirtualPlayerScenario,
   playerScreenFingerprint,
+  readPlayerStepIdentity,
   waitForPlayerScreenChange,
   type VirtualPlayer,
   type VirtualPlayerScenario,
@@ -323,6 +324,12 @@ async function advanceAsOrganiser(
     await waitForPlayersOnPhase(playerPages, phaseAfterWait);
     return;
   }
+  await waitForPlayersOnPhase(playerPages, phase);
+  const previousSteps = await Promise.all(
+    playerPages.map(readPlayerStepIdentity),
+  );
+  if (previousSteps.some((identity) => identity === null))
+    throw new Error('Could not identify every player step before moving on.');
   await moveOn.click();
 
   const moveAnyway = coordinatorPage.getByRole('button', {
@@ -344,9 +351,15 @@ async function advanceAsOrganiser(
   for (let index = 0; index < playerPages.length; index += 1) {
     const player = scenario.players[index]!;
     setActivePlayer(player);
-    await expect(
-      playerPages[index]!.getByTestId('player-game'),
-    ).not.toHaveAttribute('data-phase', phase, { timeout: 20_000 });
+    await expect
+      .poll(
+        async () => {
+          const identity = await readPlayerStepIdentity(playerPages[index]!);
+          return identity !== null && identity !== previousSteps[index];
+        },
+        { timeout: 20_000 },
+      )
+      .toBe(true);
   }
 }
 
@@ -569,6 +582,7 @@ test('six virtual players complete a real game across desktop and phone contexts
   const pages: Page[] = [];
   const phaseTrail: string[] = [];
   const rolesByPlayer = new Map<string, 'Traitor' | 'Faithful'>();
+  const shieldedNightPlayers = new Set<string>();
   const activeTraces = new Set<BrowserContext>();
   const playerDiagnostics = new Map<string, PlayerDiagnostics>();
   const videoDir = testInfo.outputPath('virtual-player-videos');
@@ -754,6 +768,7 @@ test('six virtual players complete a real game across desktop and phone contexts
       if (!phaseTrail.includes(phase)) phaseTrail.push(phase);
       const phaseObservedAt = Date.now();
       if (phase === 'FINISHED' || phase === 'ARCHIVED') break;
+      if (phase !== 'SHADOW') shieldedNightPlayers.clear();
 
       if (phase === 'DEAL') {
         for (let index = 0; index < pages.length; index += 1) {
@@ -785,15 +800,25 @@ test('six virtual players complete a real game across desktop and phone contexts
         phase === 'FINAL_VOTE'
       ) {
         if (phase === 'VOTE') {
-          const waitMessage = coordinatorScreen.getByTestId(
-            'coordinator-minimum-wait',
-          );
+          const pendingPlayers = (
+            await Promise.all(
+              pages.map(
+                async (page) =>
+                  !(await page.getByTestId('player-fate').isVisible()),
+              ),
+            )
+          ).filter(Boolean).length;
+          await expect(
+            coordinatorScreen.getByTestId('coordinator-progress'),
+          ).toHaveText(`0 of ${pendingPlayers} done`);
           const moveOn = coordinatorScreen.getByTestId(
             'button-coordinator-move-on',
           );
-          if (await waitMessage.isVisible())
-            await expect(moveOn).toBeDisabled();
-          else await expect(moveOn).toBeEnabled();
+          // Q6 blocks advancement for pending votes, even without a minimum timer.
+          await expect(moveOn).toBeDisabled();
+          await expect(moveOn).toHaveText(
+            `Waiting for ${pendingPlayers} player${pendingPlayers === 1 ? '' : 's'}`,
+          );
         }
         if (phase === 'SHADOW') {
           for (let index = 0; index < pages.length; index += 1) {
@@ -806,7 +831,15 @@ test('six virtual players complete a real game across desktop and phone contexts
                 .catch(() => false)
             )
               continue;
-            await approvePrivacy(page);
+            // The night shield persists across tie-break rounds and slots.
+            if (shieldedNightPlayers.has(activePlayer.id)) {
+              await expect(
+                page.getByRole('dialog', { name: 'Shield your screen' }),
+              ).toBeHidden({ timeout: 20_000 });
+            } else {
+              await approvePrivacy(page);
+              shieldedNightPlayers.add(activePlayer.id);
+            }
           }
         }
         for (let index = 0; index < pages.length; index += 1) {
