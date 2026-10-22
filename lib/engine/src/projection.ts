@@ -70,6 +70,96 @@ export type ProjectionContext = {
   disconnectedSeatIds?: readonly string[];
 };
 
+type PublicLogEntry = FullView['publicLog'][number];
+const viewWithoutPublicLogSchema = fullViewSchema.omit({ publicLog: true });
+const viewKeys = Object.keys(fullViewSchema.shape);
+const validatedLogEntries = new WeakMap<
+  State['publicLog'][number],
+  { input: unknown; output: PublicLogEntry }
+>();
+
+function sameProjectedValue(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (
+    !left ||
+    !right ||
+    typeof left !== 'object' ||
+    typeof right !== 'object' ||
+    Array.isArray(left) !== Array.isArray(right)
+  )
+    return false;
+  const a = left as Record<string, unknown>;
+  const b = right as Record<string, unknown>;
+  const keys = Object.keys(a);
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every(
+      (key) => Object.hasOwn(b, key) && sameProjectedValue(a[key], b[key]),
+    )
+  );
+}
+
+function freezeLogEntry(entry: PublicLogEntry): PublicLogEntry {
+  if ('victims' in entry) {
+    entry.victims.forEach(Object.freeze);
+    Object.freeze(entry.victims);
+  }
+  if ('seat' in entry) Object.freeze(entry.seat);
+  return Object.freeze(entry);
+}
+
+function copyLogEntry(entry: PublicLogEntry): PublicLogEntry {
+  if ('victims' in entry)
+    return {
+      ...entry,
+      victims: entry.victims.map((victim) => ({ ...victim })),
+    };
+  if ('seat' in entry) return { ...entry, seat: { ...entry.seat } };
+  return { ...entry };
+}
+
+function parseProjectedView(
+  input: Record<string, unknown> & { publicLog: unknown[] },
+  sources: State['publicLog'],
+): FullView {
+  const { publicLog: rawLog, ...otherFields } = input;
+  let invalidLog = false;
+  const publicLog = rawLog.map((entry, index) => {
+    const source = sources[index]!;
+    const cached = validatedLogEntries.get(source);
+    // Compare fresh projected contents, including current seat names and nested
+    // victims. Neither state/version identity nor mutable source identity alone
+    // permits reuse. These privately owned snapshots never escape to callers.
+    if (cached && sameProjectedValue(cached.input, entry))
+      return copyLogEntry(cached.output);
+    const parsed = fullViewSchema.shape.publicLog.element.safeParse(entry);
+    if (!parsed.success) {
+      invalidLog = true;
+      return entry;
+    }
+    const output = freezeLogEntry(parsed.data);
+    validatedLogEntries.set(source, {
+      input: freezeLogEntry(entry as PublicLogEntry),
+      output,
+    });
+    return copyLogEntry(output);
+  });
+  // publicLog is an array constructed above; every element has been validated
+  // against the original element schema. All other fields still use the exact
+  // original schemas (including defaults, stripping and strict nested objects).
+  const parsed = viewWithoutPublicLogSchema.safeParse(otherFields);
+  if (invalidLog || !parsed.success)
+    // Preserve the original complete issues, paths and ordering on rejection.
+    return fullViewSchema.parse(input);
+  const fields: Record<string, unknown> = parsed.data;
+  const output: Record<string, unknown> = {};
+  // Preserve schema key order as well as values for JSON consumers.
+  for (const key of viewKeys)
+    if (key === 'publicLog') output[key] = publicLog;
+    else if (Object.hasOwn(fields, key)) output[key] = fields[key];
+  return output as FullView;
+}
+
 // Never spread state, seats or events: construct every field and nested field.
 export function viewFor(
   viewer: Extract<Viewer, { kind: 'visitor' }>,
@@ -208,7 +298,10 @@ export function viewFor(
   const voteSpeakerId = voteCircleActive
     ? (state.voteRevealOrder.find((id) => !state.revealed.includes(id)) ?? null)
     : null;
-  return fullViewSchema.parse({
+  const publicLogSources = (state.publicLog ?? []).filter(
+    (entry) => !presenter || entry.action !== 'finished',
+  );
+  const projected = {
     id: state.id,
     ...(ownSeatViewer ? { viewerSeatId: ownSeatViewer.id } : {}),
     canAdvancePhase: rehearsalOrganizer && voteSpeakerId === null,
@@ -328,124 +421,118 @@ export function viewFor(
       : {}),
     winner: presenter ? null : state.winner,
     publicAnnouncement,
-    publicLog: (state.publicLog ?? [])
-      .filter((entry) => !presenter || entry.action !== 'finished')
-      .map((entry) => {
-        if (
-          entry.action === 'seat_pin_reset' ||
-          entry.action === 'device_recovered'
-        )
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-            seatId: entry.seatId,
-            name:
-              state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
-          };
-        if (entry.action === 'dawn')
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-            victims: entry.victimIds.map((id) => ({
-              id,
-              name: state.seats.find((seat) => seat.id === id)?.name ?? '',
-            })),
-          };
-        if (entry.action === 'no_votes')
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-          };
-        if (entry.action === 'banishment')
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-            seat: {
-              id: entry.seatId,
-              name:
-                state.seats.find((seat) => seat.id === entry.seatId)?.name ??
-                '',
-            },
-          };
-        if (entry.action === 'seat_departed')
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-            seat: {
-              id: entry.seatId,
-              name:
-                state.seats.find((seat) => seat.id === entry.seatId)?.name ??
-                '',
-            },
-          };
-        if (
-          entry.action === 'seat_left_disconnected' ||
-          entry.action === 'seat_reinstated'
-        )
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-            seat: {
-              id: entry.seatId,
-              name:
-                state.seats.find((seat) => seat.id === entry.seatId)?.name ??
-                '',
-            },
-            ...(entry.action === 'seat_left_disconnected'
-              ? { reason: entry.reason }
-              : {}),
-          };
-        if (entry.action === 'coordinator_role_moved')
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-          };
-        if (
-          entry.action === 'phase_action_skipped' ||
-          entry.action === 'phase_action_skip_undone'
-        )
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-            seat: {
-              id: entry.seatId,
-              name:
-                state.seats.find((seat) => seat.id === entry.seatId)?.name ??
-                '',
-            },
-            phase: entry.phase,
-            ...(entry.action === 'phase_action_skipped'
-              ? { reason: entry.reason }
-              : {}),
-          };
-        if (entry.action === 'schedule_shift')
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-            minutes: entry.minutes,
-          };
-        if (entry.action === 'coordinator_undo')
-          return {
-            seq: entry.seq,
-            at: entry.at,
-            action: entry.action,
-          };
+    publicLog: publicLogSources.map((entry) => {
+      if (
+        entry.action === 'seat_pin_reset' ||
+        entry.action === 'device_recovered'
+      )
         return {
           seq: entry.seq,
           at: entry.at,
           action: entry.action,
-          winner: entry.winner,
+          seatId: entry.seatId,
+          name:
+            state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
         };
-      }),
+      if (entry.action === 'dawn')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          victims: entry.victimIds.map((id) => ({
+            id,
+            name: state.seats.find((seat) => seat.id === id)?.name ?? '',
+          })),
+        };
+      if (entry.action === 'no_votes')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+        };
+      if (entry.action === 'banishment')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          seat: {
+            id: entry.seatId,
+            name:
+              state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
+          },
+        };
+      if (entry.action === 'seat_departed')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          seat: {
+            id: entry.seatId,
+            name:
+              state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
+          },
+        };
+      if (
+        entry.action === 'seat_left_disconnected' ||
+        entry.action === 'seat_reinstated'
+      )
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          seat: {
+            id: entry.seatId,
+            name:
+              state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
+          },
+          ...(entry.action === 'seat_left_disconnected'
+            ? { reason: entry.reason }
+            : {}),
+        };
+      if (entry.action === 'coordinator_role_moved')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+        };
+      if (
+        entry.action === 'phase_action_skipped' ||
+        entry.action === 'phase_action_skip_undone'
+      )
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          seat: {
+            id: entry.seatId,
+            name:
+              state.seats.find((seat) => seat.id === entry.seatId)?.name ?? '',
+          },
+          phase: entry.phase,
+          ...(entry.action === 'phase_action_skipped'
+            ? { reason: entry.reason }
+            : {}),
+        };
+      if (entry.action === 'schedule_shift')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          minutes: entry.minutes,
+        };
+      if (entry.action === 'coordinator_undo')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+        };
+      return {
+        seq: entry.seq,
+        at: entry.at,
+        action: entry.action,
+        winner: entry.winner,
+      };
+    }),
     coordinatorAlerts:
       viewer.kind === 'coordinator'
         ? (state.coordinatorAlerts ?? []).map((alert) => ({
@@ -648,5 +735,6 @@ export function viewFor(
             })),
           }
         : null,
-  });
+  };
+  return parseProjectedView(projected, publicLogSources);
 }

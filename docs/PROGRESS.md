@@ -1,6 +1,81 @@
 # Status for reviewer
 
-**Verify #225 failed — scenario runtime only:** rehearsal-live, all four browser profiles, static checks, unit, property, integration, Lighthouse, audit and all scenario assertions passed on `c77d68a`. Merge rejected shards 1 and 2 exceeding the unchanged five-minute budget; required-checks failed consequently. Further scenario optimisation is in progress. Next after green: finish Q6, resilience set 2, then H2 and stop.
+**Projection repair ready for Verify:** matched two-CPU shard 5 improved from 361,222 to 195,846 ms, all 420 games passing. Full local checks pass: 632 unit, 21 property, 120 server tests; coverage 85.75% (85% unchanged), typechecks, lint and formatting. #226 remains failed; the new run must prove CI runtime. Next after green: finish Q6, resilience set 2, then H2 and stop.
+
+## Approved projection optimisation
+
+The owner approved a separate test-first projection change after profiling.
+Public-log validation is reused only after comparing freshly projected contents
+with a privately owned validated snapshot. Current names, nested values and
+viewer filtering still apply. Returned entries are independent mutable copies.
+Other fields retain their original schemas; invalid input falls back to the
+original complete parser, preserving error paths and ordering.
+
+The first regression failed before implementation (11 validations rather than
+3). Thirteen new regressions cover mutation, repaired invalid input, nested
+names/victims, cross-state dependencies, output poisoning, all 14 log variants,
+stripping, aggregate errors, viewer context and presenter filtering.
+100 targeted tests passed. All 6,305 projections in the slow reference game
+matched the old implementation byte-for-byte, including JSON key order; the
+complete game result hash was unchanged.
+
+With the same two-CPU affinity and profiler settings, shard 5 wall time fell
+45.8% (361,222 → 195,846 ms), worker time 337,010 → 174,998 ms,
+and process CPU 698.68 → 371.86 s. All 420 games passed, identical row
+IDs/configurations/seeds/strategies and complete reports apart from timings.
+This local result does not replace GitHub Verify.
+
+Final local verification: 632 unit tests, 21 property tests and 120 server tests
+passed; line coverage 85.75%, unchanged 85% gate. Full application/test
+typechecks, lint and formatting passed. API restarted cleanly and the public
+preview renders. No rule, schema contract, workflow or timing threshold changed.
+
+## Approved slow-shard profiling result
+
+Restricted to CPUs 0–1 on workspace Node 24.13.0: this emulates CPU capacity,
+not the exact GitHub runner. All 420 games passed every assertion; unique
+coverage rows exactly match Verify #226 shard 5.
+
+| Measurement                                 | Result               |
+| ------------------------------------------- | -------------------- |
+| Total diagnostic wall time                  | 361,222 ms           |
+| Planning/preflight                          | 24,213 ms            |
+| Worker pool                                 | 337,010 ms           |
+| Process CPU / peak RSS                      | 698.68 s / 925 MiB   |
+| Projection/schema-validation worker samples | 71.25%               |
+| Other projection worker samples             | 11.39%               |
+| Garbage collection                          | 6.92%                |
+| Pool overhead/slack                         | approximately 578 ms |
+
+This is diagnostic evidence, **not** a pass against the unchanged 300,000 ms
+budget. A focused 40-seat never-acts game spent 38,665 of 40,162 ms inside
+player-view projection: 6,305 projections over 22 cycles and 7,114 events,
+including 18,690,840 projected-log-entry visits. There were no duplicate
+identical-state/viewer calls to remove with another same-state cache.
+
+The evidence points to repeated public-log projection/schema work, rather
+than idle workers. Scenario-only balancing could distribute history-heavy
+games more evenly (including serial-disconnector), but does not reduce total
+CPU work. A production projection optimisation would be a separate product
+change requiring approval and tests proving exact output and secrecy
+equivalence. Neither option has been implemented in this profiling step.
+
+Replay:
+`taskset -c 0,1 node --import tsx scripts/src/scenarios/runner.ts --sample --shard-index=5 --shard-count=6 --partial-report=/tmp/verify226-replay5.json`
+
+Local evidence: `/tmp/verify226-profile/summary.json`, `report.json`,
+`analysis.json`, `projection-phases.json`, `rows.jsonl` and CPU profiles.
+The interrupted preliminary trace is excluded from completed-run results.
+
+## Verify #226 result
+
+Run 39835615537 on `6f9f5c1` completed with failure. Shards 0–5 took
+169,025 / 273,299 / 287,957 / 285,519 / 216,440 / 316,667 ms,
+respectively, with zero game assertion failures. Merge reports “Scenario shard 5
+exceeded the five-minute time budget”. This is a runtime failure, not a coverage
+count or game failure. Numeric tuple allocation and global workload balancing
+improved local performance but have not proved reliable margin on GitHub.
+No tests, scenario counts, time thresholds or workflows have been weakened.
 
 ## Verify #225 result
 

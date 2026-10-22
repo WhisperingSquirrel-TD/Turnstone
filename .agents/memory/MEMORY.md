@@ -21,3 +21,4 @@
 - [WebKit cookie verification](webkit-cookie-verification.md) — test cookie delivery through a real proxied endpoint, not Playwright route headers.
 - [Clean working branches](clean-work-branches.md) — fetch current main and inspect outgoing history; preserve local work without pushing unrelated attachments or test output.
 - [Git connection authentication](github-connection-auth.md) — saved CLI credentials and the configured GitHub integration can differ; verify exact trees and never evade permission restrictions.
+- [Scenario runtime profiling](scenario-runtime-profiling.md) — use matched CPU-limited profiles to distinguish scheduling overhead from repeated projection work; CI remains the runtime authority.
