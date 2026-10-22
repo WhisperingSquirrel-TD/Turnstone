@@ -3,6 +3,14 @@ import { join } from 'node:path';
 import { expect, it } from 'vitest';
 
 const clipDirectory = join(process.cwd(), 'artifacts/party-game/public/clips');
+const requiredPhaseClips = [
+  'nightfall.webm',
+  'nightfall.mp4',
+  'nightfall-poster.webp',
+  'dawn.webm',
+  'dawn.mp4',
+  'dawn-poster.webp',
+];
 const sharedPosters = ['nightfall-poster.webp', 'dawn-poster.webp'];
 const formatBundles = [
   {
@@ -14,6 +22,11 @@ const formatBundles = [
     files: ['nightfall.mp4', 'dawn.mp4', ...sharedPosters],
   },
 ];
+
+it('includes the owner-supplied nightfall and dawn clips in both formats', async () => {
+  const names = await readdir(clipDirectory);
+  expect(names).toEqual(expect.arrayContaining(requiredPhaseClips));
+});
 
 it.each(formatBundles)(
   'keeps the supplied $format clips and posters under 450 KiB',
