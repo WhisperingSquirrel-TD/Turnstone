@@ -199,10 +199,13 @@ export function CoordinatorConsole({
       (view.deadline === null && minimumWaitSeconds === 0)
     )
       return;
-    const timer = window.setInterval(() => {
-      const nextLocalNow = Date.now();
-      setClockSample((current) => ({ ...current, localNow: nextLocalNow }));
-    }, minimumWaitSeconds > 0 ? 100 : 1_000);
+    const timer = window.setInterval(
+      () => {
+        const nextLocalNow = Date.now();
+        setClockSample((current) => ({ ...current, localNow: nextLocalNow }));
+      },
+      minimumWaitSeconds > 0 ? 100 : 1_000,
+    );
     return () => window.clearInterval(timer);
   }, [active, view.deadline, view.paused, minimumWaitSeconds]);
 

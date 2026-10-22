@@ -144,9 +144,10 @@ async function playAndSkipPhaseClip(
     );
   });
   if (process.env.REHEARSAL_USE_REAL_CLIPS === 'true')
-    expect(canPlayClip, 'the real owner-supplied clips should be playable').toBe(
-      true,
-    );
+    expect(
+      canPlayClip,
+      'the real owner-supplied clips should be playable',
+    ).toBe(true);
   await expect
     .poll(async () =>
       page
