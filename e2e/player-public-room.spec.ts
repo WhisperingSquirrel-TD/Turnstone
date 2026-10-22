@@ -24,6 +24,45 @@ async function browserStorageText(page: Page): Promise<string> {
   });
 }
 
+async function expectOnlyCurrentChoiceIdStored(
+  page: Page,
+  phase: 'VOTE' | 'SHADOW',
+  choiceId: string,
+) {
+  const storage = await page.evaluate(() => {
+    const entries = (store: Storage) =>
+      Array.from({ length: store.length }, (_, index) => {
+        const key = store.key(index);
+        return {
+          key: key ?? '',
+          value: key === null ? '' : (store.getItem(key) ?? ''),
+        };
+      });
+    return {
+      local: entries(window.localStorage),
+      session: entries(window.sessionStorage),
+    };
+  });
+  const draftPrefix = 'oathstone:choice-draft:';
+  const drafts = storage.session.filter(({ key }) =>
+    key.startsWith(draftPrefix),
+  );
+  expect(drafts).toHaveLength(1);
+  expect(drafts[0].key).toMatch(
+    new RegExp(`^${draftPrefix}[^:]+:[^:]+:${phase}:\\d+:\\d+$`),
+  );
+  expect(drafts[0].value).toBe(choiceId);
+
+  const otherStorageText = JSON.stringify([
+    ...storage.local,
+    ...storage.session.filter(({ key }) => !key.startsWith(draftPrefix)),
+  ]);
+  expect(otherStorageText).not.toContain(choiceId);
+  expect(otherStorageText).not.toMatch(
+    /Jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
+  );
+}
+
 test('game-clock colours and Always dark keep text accessible in both palettes', async ({
   page,
 }) => {
@@ -1332,9 +1371,7 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   await expect(
     page.getByText('Your pick: Jamie', { exact: true }),
   ).toBeVisible();
-  expect(await browserStorageText(page)).not.toMatch(
-    /seat-jamie|Jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
-  );
+  await expectOnlyCurrentChoiceIdStored(page, 'VOTE', 'seat-jamie');
   await expect(
     choiceList.getByRole('button', { name: 'Jamie', exact: true }),
   ).toHaveAttribute('aria-pressed', 'true');
@@ -1874,9 +1911,7 @@ test('mobile players retain an unfinished private night choice after backgroundi
   await expect(
     page.getByText('Your pick: Jamie', { exact: true }),
   ).toBeVisible();
-  expect(await browserStorageText(page)).not.toMatch(
-    /seat-jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
-  );
+  await expectOnlyCurrentChoiceIdStored(page, 'SHADOW', 'seat-jamie');
 
   const awayCases = [
     { durationMs: 30_000, suspend: 'visibility', resume: 'visibility' },
@@ -1950,12 +1985,7 @@ test('mobile players retain an unfinished private night choice after backgroundi
     await expect(
       page.getByText('Your pick: Jamie', { exact: true }),
     ).toBeVisible();
-    expect(await browserStorageText(page)).not.toMatch(
-      /seat-jamie|Jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
-    );
-    expect(await browserStorageText(page)).not.toMatch(
-      /seat-jamie|Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
-    );
+    await expectOnlyCurrentChoiceIdStored(page, 'SHADOW', 'seat-jamie');
   }
 
   for (const viewport of [
