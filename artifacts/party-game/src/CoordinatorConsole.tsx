@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FullView } from '@workspace/api-client-react';
 import { en } from './locale/en-GB';
 import { getAdvanceControlState, isAdvanceConflict } from './advance-control';
@@ -94,6 +94,14 @@ export function formatCoordinatorCountdown(
   return `${en.coordinator.timeLeft}: ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+function sampleCoordinatorClock(serverNow: number) {
+  const localNow = Date.now();
+  return {
+    localNow,
+    offsetMs: serverClockOffset(serverNow, localNow),
+  };
+}
+
 const nonActivePhases = new Set<FullView['phase']>([
   'DRAFT',
   'LOBBY',
@@ -127,11 +135,10 @@ export function CoordinatorConsole({
   }>;
   onHeartbeat: () => Promise<void>;
 }) {
-  const [localNow, setLocalNow] = useState(() => Date.now());
-  const serverClockOffsetMs = useMemo(
-    () => serverClockOffset(view.serverNow, Date.now()),
-    [view.serverNow],
+  const [clockSample, setClockSample] = useState(() =>
+    sampleCoordinatorClock(view.serverNow),
   );
+  const { localNow, offsetMs: serverClockOffsetMs } = clockSample;
   const [confirmMove, setConfirmMove] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [departingSeatId, setDepartingSeatId] = useState<string | null>(null);
@@ -155,6 +162,10 @@ export function CoordinatorConsole({
     localNow,
     serverClockOffsetMs,
   }).waitSeconds;
+
+  useEffect(() => {
+    setClockSample(sampleCoordinatorClock(view.serverNow));
+  }, [view.serverNow]);
 
   useEffect(() => {
     let mounted = true;
@@ -188,10 +199,10 @@ export function CoordinatorConsole({
       (view.deadline === null && minimumWaitSeconds === 0)
     )
       return;
-    const timer = window.setInterval(
-      () => setLocalNow(Date.now()),
-      minimumWaitSeconds > 0 ? 100 : 1_000,
-    );
+    const timer = window.setInterval(() => {
+      const nextLocalNow = Date.now();
+      setClockSample((current) => ({ ...current, localNow: nextLocalNow }));
+    }, minimumWaitSeconds > 0 ? 100 : 1_000);
     return () => window.clearInterval(timer);
   }, [active, view.deadline, view.paused, minimumWaitSeconds]);
 

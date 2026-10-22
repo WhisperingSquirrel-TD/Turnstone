@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  completePhaseClipFade,
   isPhaseClipEligible,
   phaseClipMarkerKey,
   phaseClipSources,
@@ -244,6 +245,14 @@ export function PhaseClipOverlay({
     }
     const identity = phaseClipMarkerKey(gameId, cycle, phase);
     const previous = previousPhase.current;
+    if (
+      previous &&
+      (previous.gameId !== gameId || previous.identity !== identity) &&
+      fadeTimer.current !== null
+    ) {
+      window.clearTimeout(fadeTimer.current);
+      fadeTimer.current = null;
+    }
     const phaseChangedWhileVisible =
       enabled &&
       previous?.gameId === gameId &&
@@ -341,13 +350,17 @@ export function PhaseClipOverlay({
       });
 
     const close = () => {
+      if (activeAttemptKey.current !== attempt.key) return;
       if (playbackTimer.current) window.clearTimeout(playbackTimer.current);
       if (fadeTimer.current) window.clearTimeout(fadeTimer.current);
       setFading(true);
       fadeTimer.current = window.setTimeout(() => {
-        setAttempt(null);
-        setVisible(false);
-        setFading(false);
+        completePhaseClipFade(activeAttemptKey.current, attempt.key, () => {
+          fadeTimer.current = null;
+          setAttempt(null);
+          setVisible(false);
+          setFading(false);
+        });
       }, FADE_MS);
     };
     closeRef.current = close;

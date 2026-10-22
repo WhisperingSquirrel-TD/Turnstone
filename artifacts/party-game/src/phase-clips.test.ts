@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   isPhaseClipEligible,
   phaseClipMarkerKey,
@@ -25,6 +25,28 @@ const eligibleInput = {
 };
 
 describe('public phase clips', () => {
+  it('does not let an old fade timeout close a replacement phase clip', () => {
+    const closeCurrentAttempt = vi.fn();
+
+    expect(
+      completePhaseClipFade(
+        'game-a:1:SHADOW',
+        'game-a:1:VERDICT',
+        closeCurrentAttempt,
+      ),
+    ).toBe(false);
+    expect(closeCurrentAttempt).not.toHaveBeenCalled();
+
+    expect(
+      completePhaseClipFade(
+        'game-a:1:SHADOW',
+        'game-a:1:SHADOW',
+        closeCurrentAttempt,
+      ),
+    ).toBe(true);
+    expect(closeCurrentAttempt).toHaveBeenCalledTimes(1);
+  });
+
   it('maps only public events, requiring public verdict and winner data', () => {
     expect(publicPhaseClipFor('DEAL')).toBe('game-start');
     expect(publicPhaseClipFor('SHADOW')).toBe('nightfall');

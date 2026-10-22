@@ -143,6 +143,10 @@ async function playAndSkipPhaseClip(
       media.canPlayType('video/webm; codecs="vp9"'),
     );
   });
+  if (process.env.REHEARSAL_USE_REAL_CLIPS === 'true')
+    expect(canPlayClip, 'the real owner-supplied clips should be playable').toBe(
+      true,
+    );
   await expect
     .poll(async () =>
       page
@@ -921,7 +925,8 @@ async function rejectStuckZero(page: Page, phase: Phase): Promise<void> {
 test('plays a full rehearsal from the player screen with no presenter or refresh @rehearsal-live', async ({
   page,
 }) => {
-  await installPhaseClipFixtures(page);
+  if (process.env.REHEARSAL_USE_REAL_CLIPS !== 'true')
+    await installPhaseClipFixtures(page);
   test.setTimeout(150_000);
   const wakeLockNotice =
     'Your screen may lock during play. Tap it to keep the game visible.';

@@ -1,5 +1,5 @@
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   CoordinatorConsole,
   formatCoordinatorCountdown,
@@ -57,6 +57,36 @@ describe('CoordinatorConsole', () => {
     expect(html).toContain('End game early');
     expect(html).not.toContain('Practice player');
     expect(html).not.toContain('Traitor');
+  });
+
+  it('pairs the initial local time with its server-clock offset sample', () => {
+    const localSample = view.serverNow - 500;
+    const clock = vi
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(localSample)
+      .mockReturnValueOnce(view.serverNow);
+
+    try {
+      const html = renderToString(
+        <CoordinatorConsole
+          view={view}
+          presenterPath="/tv/test"
+          onCreatePresenterPairing={async () => ({
+            code: 'A'.repeat(43),
+            expiresAt: 1_800_000_600_000,
+          })}
+          onCommand={async () => {}}
+          onLoadCoordinatorDelegates={onLoadCoordinatorDelegates}
+          onSaveCoordinatorDelegates={onSaveCoordinatorDelegates}
+          onHeartbeat={onHeartbeat}
+        />,
+      );
+
+      expect(html).toContain('Time left: 0:30');
+      expect(clock).toHaveBeenCalledTimes(1);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it('disables move-on and shows the countdown on the action', () => {

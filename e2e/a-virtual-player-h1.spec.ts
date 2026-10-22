@@ -137,6 +137,30 @@ async function approvePrivacy(page: Page): Promise<void> {
   await expect(shieldDialog).toBeHidden({ timeout: 20_000 });
 }
 
+async function waitForApprovedSeat(page: Page): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  const gameUrl = /\/game\//;
+
+  while (!gameUrl.test(page.url()) && Date.now() < deadline) {
+    const checkAgain = page.getByRole('button', {
+      name: 'Check again',
+      exact: true,
+    });
+    const visible = await checkAgain.isVisible().catch(() => false);
+    const enabled = visible
+      ? await checkAgain.isEnabled().catch(() => false)
+      : false;
+    if (!visible || !enabled) {
+      await page.waitForTimeout(100);
+      continue;
+    }
+    await checkAgain.click();
+    await page.waitForTimeout(250);
+  }
+
+  await expect(page).toHaveURL(gameUrl, { timeout: 1_000 });
+}
+
 async function revealRoleAndAcknowledge(
   page: Page,
 ): Promise<'Traitor' | 'Faithful'> {
@@ -682,10 +706,7 @@ test('six virtual players complete a real game across desktop and phone contexts
         await expect(approve).toBeVisible({ timeout: 10_000 });
         await approve.click();
         await expect(approve).toBeHidden({ timeout: 20_000 });
-        await page
-          .getByRole('button', { name: 'Check again', exact: true })
-          .click();
-        await page.waitForURL(/\/game\//, { timeout: 30_000 });
+        await waitForApprovedSeat(page);
       });
     }
 

@@ -54,6 +54,16 @@ export function phaseClipMarkerKey(
   return `${gameId}:${cycle}:${phase}`;
 }
 
+export function completePhaseClipFade(
+  activeAttemptKey: string | null,
+  closingAttemptKey: string,
+  complete: () => void,
+): boolean {
+  if (activeAttemptKey !== closingAttemptKey) return false;
+  complete();
+  return true;
+}
+
 export function phaseClipSources(
   clip: PhaseClipName,
   supportsVp9: boolean,

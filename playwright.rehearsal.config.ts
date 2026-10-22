@@ -6,16 +6,19 @@ const databaseUrl = process.env.DATABASE_URL;
 const sessionSecret = process.env.SESSION_SECRET;
 const rehearsalProfile = process.env.REHEARSAL_PROFILE ?? 'Pixel';
 const virtualPlayerSeed = process.env.VIRTUAL_PLAYER_SEED;
+const useDesktop = rehearsalProfile === 'Desktop';
 const useIPhone = rehearsalProfile === 'iPhone';
 const useIPad = rehearsalProfile === 'iPad';
 const useWebKit = useIPhone || useIPad;
-if (!['Pixel', 'iPhone', 'iPad'].includes(rehearsalProfile))
+if (!['Desktop', 'Pixel', 'iPhone', 'iPad'].includes(rehearsalProfile))
   throw new Error(`Unsupported rehearsal profile: ${rehearsalProfile}`);
-const rehearsalDevice = useIPhone
-  ? devices['iPhone 13']
-  : useIPad
-    ? devices['iPad (gen 7)']
-    : devices['Pixel 7'];
+const rehearsalDevice = useDesktop
+  ? devices['Desktop Chrome']
+  : useIPhone
+    ? devices['iPhone 13']
+    : useIPad
+      ? devices['iPad (gen 7)']
+      : devices['Pixel 7'];
 const serverTestFlags = [
   '--test-only-force-human-removal',
   '--test-only-force-first-vote-tie',
