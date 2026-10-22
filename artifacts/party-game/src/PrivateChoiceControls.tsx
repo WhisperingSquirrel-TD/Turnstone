@@ -15,6 +15,7 @@ export type PrivateChoiceControlsProps = {
   choices: PrivateChoiceOption[];
   selected: string;
   confirmChoice: boolean;
+  choiceSelectionLocked?: boolean;
   choiceSubmitted?: boolean;
   isPending: boolean;
   hasToken: boolean;
@@ -32,6 +33,7 @@ export function PrivateChoiceControls({
   choices,
   selected,
   confirmChoice,
+  choiceSelectionLocked = false,
   choiceSubmitted = false,
   isPending,
   hasToken,
@@ -112,7 +114,7 @@ export function PrivateChoiceControls({
                       : ''
                   }`}
                   data-choice-id={choice.id}
-                  disabled={disabledChoiceIdSet.has(choice.id)}
+                  disabled={choiceSelectionLocked || disabledChoiceIdSet.has(choice.id)}
                   aria-label={choice.name}
                   aria-describedby={statusId}
                   aria-pressed={selected === choice.id}
@@ -139,7 +141,7 @@ export function PrivateChoiceControls({
                     : ''
                 }`}
                 data-choice-id={choice.id}
-                disabled={disabledChoiceIdSet.has(choice.id)}
+                disabled={choiceSelectionLocked || disabledChoiceIdSet.has(choice.id)}
                 aria-pressed={selected === choice.id}
                 onClick={() => onSelect(choice.id)}
               >
@@ -175,15 +177,21 @@ export function PrivateChoiceControls({
               disabled={isPending || !hasToken}
               onClick={onConfirm}
             >
-              {isPending ? en.game.recording : en.game.confirm}
+              {isPending
+                ? en.game.recording
+                : choiceSelectionLocked
+                  ? en.game.retryChoice
+                  : en.game.confirm}
             </button>
-            <button
-              type="button"
-              className="quiet-action flex-1"
-              onClick={onChooseAgain}
-            >
-              {en.game.chooseAgain}
-            </button>
+            {!choiceSelectionLocked && (
+              <button
+                type="button"
+                className="quiet-action flex-1"
+                onClick={onChooseAgain}
+              >
+                {en.game.chooseAgain}
+              </button>
+            )}
           </div>
         </div>
       )}

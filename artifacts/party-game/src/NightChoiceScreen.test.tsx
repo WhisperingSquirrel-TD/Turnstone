@@ -152,4 +152,35 @@ describe('NightChoiceScreen', () => {
       faithfulHtml.match(/data-testid="private-choice-list"/g),
     ).toHaveLength(1);
   });
+
+  it('locks the selected target while keeping the same-command retry available', () => {
+    const html = renderToString(
+      <NightChoiceScreen
+        {...controls}
+        choices={[
+          { id: 'seat-a', name: 'Alex' },
+          { id: 'seat-b', name: 'Blair' },
+        ]}
+        selected="seat-a"
+        confirmChoice
+        choiceSelectionLocked
+        slotLabel="First choice"
+        prompt="Who will the Traitors take tonight?"
+        statusLines={['You picked: Alex', '', '', '']}
+      />,
+    );
+    const choices = html.match(/<button[^>]*data-choice-id="[^"]+"[^>]*>/g);
+    const retryButton = html.match(
+      /<button[^>]*>Retry this choice<\/button>/,
+    )?.[0];
+
+    expect(choices).toHaveLength(2);
+    expect(choices?.every((button) => button.includes('disabled=""'))).toBe(
+      true,
+    );
+    expect(html).toContain('Your pick: Alex');
+    expect(retryButton).toBeDefined();
+    expect(retryButton).not.toContain('disabled');
+    expect(html).not.toContain('Choose again');
+  });
 });

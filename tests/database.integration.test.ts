@@ -1516,6 +1516,57 @@ it('appends versioned events transactionally and deduplicates idempotent retries
   }
 });
 
+it('retries a committed command after its response is lost without duplicating the event', async () => {
+  const gameId = randomUUID();
+  const createdEvent = eventSchema.parse({
+    seq: 1,
+    at: 1_800_000_000_000,
+    schemaVersion: 1,
+    type: 'GameCreated',
+    id: gameId,
+    config: gameConfigSchema.parse({}),
+  });
+  const joinedEvent = eventSchema.parse({
+    seq: 2,
+    at: 1_800_000_000_001,
+    schemaVersion: 1,
+    type: 'SeatJoined',
+    seatId: 'seat-after-lost-response',
+    name: 'A player',
+  });
+  const requestData = {
+    gameId,
+    expectedVersion: 1,
+    actorId: 'coordinator:test',
+    idempotencyKey: 'commit-response-lost',
+    requestHash: 'same-command-payload',
+    events: [joinedEvent],
+  };
+
+  try {
+    await createGameWithEvent({
+      event: createdEvent,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'lost-response-create',
+      requestHash: 'lost-response-create',
+    });
+
+    // The first call commits, but its result is deliberately discarded as if
+    // the network response had been lost after the server committed.
+    await appendGameEvents(requestData);
+    const retry = await appendGameEvents(requestData);
+
+    expect(retry).toEqual({ ok: true, version: 2, duplicate: true });
+    const events = await readGameEvents(gameId);
+    expect(events).toEqual([createdEvent, joinedEvent]);
+    expect(events.filter((event) => event.type === 'SeatJoined')).toHaveLength(
+      1,
+    );
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
 it('persists, expires, invalidates, and atomically consumes coordinator undo windows', async () => {
   const gameId = randomUUID();
   const now = 1_800_000_100_000;

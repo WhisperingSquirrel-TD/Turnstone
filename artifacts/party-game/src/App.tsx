@@ -38,6 +38,7 @@ import {
   useGetGameView,
   useRevealPrivateView,
   useSubmitGameCommand,
+  type GameCommandInput,
 } from '@workspace/api-client-react';
 import { requiresPrivacyShield } from './privacy-shield-policy';
 import type {
@@ -94,6 +95,7 @@ import {
   readPrivateChoiceDraft,
   writePrivateChoiceDraft,
 } from './private-choice-draft';
+import { gameCommandStepKey, PendingCommandStore } from './pending-command';
 import {
   secondsUntilServerDeadline,
   serverClockOffset,
@@ -149,6 +151,17 @@ const requestHeaders = (token: string | null) => ({
   headers: new Headers(token ? { 'X-CSRF-Token': token } : undefined),
 });
 const idempotencyKey = () => crypto.randomUUID();
+function choiceIdFromCommand(data: GameCommandInput | undefined) {
+  if (data?.type === 'SubmitVote' && typeof data.target === 'string')
+    return data.target;
+  if (
+    (data?.type === 'SubmitShadowChoice' ||
+      data?.type === 'SubmitEndgameVote') &&
+    typeof data.choice === 'string'
+  )
+    return data.choice;
+  return '';
+}
 type WakeLockSentinelLike = { release: () => Promise<void> };
 type NavigatorWithWakeLock = Navigator & {
   wakeLock?: { request: (type: 'screen') => Promise<WakeLockSentinelLike> };
@@ -912,9 +925,28 @@ function PlayerGame() {
     mutation: { gcTime: 0 },
   });
   const command = useSubmitGameCommand({ request, mutation: { gcTime: 0 } });
+  const pendingCommandsRef =
+    useRef<PendingCommandStore<GameCommandInput> | null>(null);
+  if (pendingCommandsRef.current === null)
+    pendingCommandsRef.current = new PendingCommandStore<GameCommandInput>();
+  const pendingCommands = pendingCommandsRef.current;
   const response = gameQuery.data;
   const view = response?.view;
   const full = view && isFullView(view) ? view : null;
+  const commandStepKey = full
+    ? gameCommandStepKey({
+        gameId: id,
+        viewerSeatId: full.viewerSeatId ?? null,
+        phase: full.phase,
+        cycle: full.cycle,
+        revote: full.revote,
+        shadowRound: full.shadowRound,
+        shadowSlot: full.shadowSlot,
+      })
+    : '';
+  useEffect(() => {
+    if (commandStepKey) pendingCommands.clearForStep(commandStepKey);
+  }, [commandStepKey, pendingCommands]);
   const visitor = view && !isFullView(view) ? (view as VisitorView) : null;
   const responseServerNow = response?.serverNow;
   const advanceClockOffsetMs = useMemo(
@@ -1326,13 +1358,22 @@ function PlayerGame() {
                   : null;
               if (latestShadowKey !== shadowPrivateViewKey) return;
               try {
-                await command.mutateAsync({
-                  id,
-                  data: {
+                const acknowledgement = pendingCommands.getOrCreate(
+                  'private-phase-acknowledgement',
+                  commandStepKey,
+                  () => ({
                     type: 'AcknowledgePrivate',
                     idempotencyKey: idempotencyKey(),
-                  },
+                  }),
+                );
+                await command.mutateAsync({
+                  id,
+                  data: acknowledgement.payload,
                 });
+                pendingCommands.confirm(
+                  'private-phase-acknowledgement',
+                  commandStepKey,
+                );
                 break;
               } catch {
                 // A competing bot update can invalidate the command version.
@@ -1393,6 +1434,8 @@ function PlayerGame() {
     full?.phase,
     full?.cycle,
     shadowPrivateViewKey,
+    commandStepKey,
+    pendingCommands,
     id,
     gameQuery.refetch,
     command.mutateAsync,
@@ -1735,13 +1778,22 @@ function PlayerGame() {
       const notesRequest = notesOpen && !phaseIsPrivate;
       const needsPrivateView = notesRequest || full?.phase === 'SHADOW';
       if (phaseIsPrivate) {
-        await command.mutateAsync({
-          id,
-          data: {
+        const acknowledgement = pendingCommands.getOrCreate(
+          'private-phase-acknowledgement',
+          commandStepKey,
+          () => ({
             type: 'AcknowledgePrivate',
             idempotencyKey: idempotencyKey(),
-          },
+          }),
+        );
+        await command.mutateAsync({
+          id,
+          data: acknowledgement.payload,
         });
+        pendingCommands.confirm(
+          'private-phase-acknowledgement',
+          commandStepKey,
+        );
         command.reset();
       }
       if (needsPrivateView) {
@@ -1946,9 +1998,20 @@ function PlayerGame() {
 
   async function submitAction() {
     const view = gameQuery.data?.view;
-    if (!view || !isFullView(view) || !selected || !token) return;
+    if (!view || !isFullView(view) || !token) return;
+    const stepKey = gameCommandStepKey({
+      gameId: id,
+      viewerSeatId: view.viewerSeatId ?? null,
+      phase: view.phase,
+      cycle: view.cycle,
+      revote: view.revote,
+      shadowRound: view.shadowRound,
+      shadowSlot: view.shadowSlot,
+    });
+    const pendingAction = pendingCommands.get('player-choice', stepKey);
+    if (!selected && !pendingAction) return;
     setCommandMessage('');
-    const payload =
+    const payload = pendingCommands.getOrCreate('player-choice', stepKey, () =>
       view.phase === 'VOTE' || view.phase === 'FINAL_BANISH'
         ? {
             type: 'SubmitVote',
@@ -1966,17 +2029,25 @@ function PlayerGame() {
               type: 'SubmitEndgameVote',
               choice: selected,
               idempotencyKey: idempotencyKey(),
-            };
+            },
+    ).payload;
     try {
       await command.mutateAsync({ id, data: payload });
       command.reset();
-      await command.mutateAsync({
-        id,
-        data: {
+      const acknowledgement = pendingCommands.getOrCreate(
+        'choice-acknowledgement',
+        stepKey,
+        () => ({
           type: 'AcknowledgePrivate',
           idempotencyKey: idempotencyKey(),
-        },
+        }),
+      );
+      await command.mutateAsync({
+        id,
+        data: acknowledgement.payload,
       });
+      pendingCommands.confirm('player-choice', stepKey);
+      pendingCommands.confirm('choice-acknowledgement', stepKey);
       command.reset();
       if (privateChoiceDraftKey) {
         try {
@@ -2000,26 +2071,26 @@ function PlayerGame() {
     } catch {
       command.reset();
       const latestView = (await gameQuery.refetch()).data?.view;
-      if (
-        latestView &&
-        isFullView(latestView) &&
-        latestView.phase !== view.phase
-      ) {
-        clearPrivate();
-        setSelected('');
-        setConfirmChoice(false);
-        setCommandMessage('');
-        return;
+      if (latestView && isFullView(latestView)) {
+        const latestStepKey = gameCommandStepKey({
+          gameId: id,
+          viewerSeatId: latestView.viewerSeatId ?? null,
+          phase: latestView.phase,
+          cycle: latestView.cycle,
+          revote: latestView.revote,
+          shadowRound: latestView.shadowRound,
+          shadowSlot: latestView.shadowSlot,
+        });
+        if (latestStepKey !== stepKey) {
+          pendingCommands.clearForStep(latestStepKey);
+          clearPrivate();
+          setSelected('');
+          setConfirmChoice(false);
+          setCommandMessage('');
+          return;
+        }
       }
-      setCommandMessage(
-        view.phase === 'SHADOW'
-          ? en.game.chooseSomeoneElse
-          : view.phase === 'VOTE' || view.phase === 'FINAL_BANISH'
-            ? en.game.voteNotRecorded
-            : en.game.choiceNotRecorded,
-      );
-      setSelected('');
-      setConfirmChoice(false);
+      setCommandMessage(en.game.retryUncertainAction);
     }
   }
 
@@ -2189,15 +2260,32 @@ function PlayerGame() {
     }
   }
 
+  const pendingChoiceAttempt = pendingCommands.get(
+    'player-choice',
+    commandStepKey,
+  );
+  const choiceRetryPending = Boolean(
+    pendingChoiceAttempt ||
+    pendingCommands.get('choice-acknowledgement', commandStepKey),
+  );
+  const selectedForControls =
+    selected || choiceIdFromCommand(pendingChoiceAttempt?.payload);
   const choiceControlProps = {
     choices,
-    selected,
-    confirmChoice,
+    selected: selectedForControls,
+    confirmChoice: confirmChoice || choiceRetryPending,
+    choiceSelectionLocked: choiceRetryPending || command.isPending,
     isPending: command.isPending,
     hasToken: Boolean(token),
     commandMessage,
     onSelect: (choiceId: string) => {
-      if (choiceId !== selected) setActionDone(false);
+      if (
+        command.isPending ||
+        pendingCommands.get('player-choice', commandStepKey) ||
+        pendingCommands.get('choice-acknowledgement', commandStepKey)
+      )
+        return;
+      if (choiceId !== selectedForControls) setActionDone(false);
       setSelected(choiceId);
       setConfirmChoice(false);
       setCommandMessage('');
@@ -2215,7 +2303,9 @@ function PlayerGame() {
     },
     onReview: () => setConfirmChoice(true),
     onConfirm: () => void submitAction(),
-    onChooseAgain: () => setConfirmChoice(false),
+    onChooseAgain: () => {
+      if (!choiceRetryPending) setConfirmChoice(false);
+    },
   };
 
   const showOrganiserBar = Boolean(
@@ -2758,14 +2848,23 @@ function PlayerGame() {
                         onClick={async () => {
                           setCommandMessage('');
                           try {
-                            await command.mutateAsync({
-                              id,
-                              data: {
+                            const acknowledgement = pendingCommands.getOrCreate(
+                              'role-ready-acknowledgement',
+                              commandStepKey,
+                              () => ({
                                 type: 'AcknowledgePrivate',
                                 ready: true,
                                 idempotencyKey: idempotencyKey(),
-                              },
+                              }),
+                            );
+                            await command.mutateAsync({
+                              id,
+                              data: acknowledgement.payload,
                             });
+                            pendingCommands.confirm(
+                              'role-ready-acknowledgement',
+                              commandStepKey,
+                            );
                             setRoleSeen(false);
                             setActionDone(true);
                             command.reset();

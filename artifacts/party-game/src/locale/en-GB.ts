@@ -853,6 +853,7 @@ export const en = {
     yourPick: (name: string) => `Your pick: ${name}`,
     confirmChoice: 'Confirm this choice?',
     recording: 'Recording…',
+    retryChoice: 'Retry this choice',
     confirm: 'Confirm',
     chooseAgain: 'Choose again',
     recorded: 'Your choice has been recorded.',
@@ -861,6 +862,8 @@ export const en = {
       'Your vote was not recorded. The game may have moved on; please try again.',
     choiceNotRecorded:
       'Your choice was not recorded. The game may have moved on; please try again.',
+    retryUncertainAction:
+      'We could not confirm whether your choice was recorded. Try again to resend the same choice.',
     endGame: 'End the game',
     continueGame: 'Continue playing',
     installButton: 'Install as app',
