@@ -116,6 +116,12 @@ async function playAndSkipPhaseClip(
         readyState: video.readyState,
         error: video.error?.code ?? null,
       })),
+      clipDebug:
+        (window as Window & { __phaseClipDebug?: string[] }).__phaseClipDebug ??
+        [],
+      playedMarkers: Object.keys(sessionStorage)
+        .filter((key) => key.startsWith('oathstone-phase-clip:'))
+        .map((key) => [key, sessionStorage.getItem(key)]),
     };
   });
   await expect(overlay, JSON.stringify(diagnostics)).toBeVisible({
@@ -525,7 +531,7 @@ async function submitPrivateChoice(
     for (const seat of roster.seats.filter(
       (seat) =>
         seat.status !== 'alive' ||
-        (seat.id === roster.viewerSeatId && phaseBeforeChoice !== 'SHADOW'),
+        (phaseBeforeChoice !== 'SHADOW' && seat.id === roster.viewerSeatId),
     )) {
       await expect(
         choiceList.getByRole('button', { name: seat.name, exact: true }),
@@ -2131,10 +2137,20 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           if (expectedClip.name === 'nightfall') sawNightfallClip = true;
           if (expectedClip.name === 'dawn') sawDawnClip = true;
         } else {
-          await expect(page.getByTestId('phase-clip-overlay')).toHaveCount(0);
-          if (clipSkipMode === 'reduced-motion')
+          if (clipSkipMode === 'reduced-motion') {
+            const overlay = page.getByTestId('phase-clip-overlay');
+            await expect(overlay).toBeVisible();
+            await expect(overlay).toHaveAttribute(
+              'data-clip-poster-only',
+              'true',
+            );
+            await expect(overlay.locator('video')).toHaveCount(0);
             sawReducedMotionClipSkip = true;
-          if (clipSkipMode === 'clips-off') sawClipsOffClipSkip = true;
+          }
+          if (clipSkipMode === 'clips-off') {
+            await expect(page.getByTestId('phase-clip-overlay')).toHaveCount(0);
+            sawClipsOffClipSkip = true;
+          }
         }
       }
       if (inspectFirstCycleRevoteAfterAdvance) {

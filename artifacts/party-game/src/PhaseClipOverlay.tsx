@@ -5,6 +5,8 @@ import {
   phaseClipSources,
   publicPhaseClipFor,
   shouldPrefetchPhaseClips,
+  shouldShowPhaseClipPoster,
+  type PhaseClipName,
 } from './phase-clips';
 
 type NetworkInformation = {
@@ -19,10 +21,12 @@ type ClipProps = {
   cycle?: number;
   phaseStartedAt?: number;
   serverNow?: number;
+  winner?: string | null;
+  publicVerdict?: boolean;
 };
 
 type Attempt = {
-  clip: 'nightfall' | 'dawn';
+  clip: PhaseClipName;
   key: string;
   supportsVp9: boolean;
   phase: string;
@@ -30,6 +34,9 @@ type Attempt = {
   phaseStartedAt: number | undefined;
   serverNow: number | undefined;
   gameId: string;
+  winner?: string | null;
+  publicVerdict: boolean;
+  posterOnly: boolean;
 };
 
 const SESSION_MARKER_PREFIX = 'oathstone-phase-clip:';
@@ -101,11 +108,15 @@ export function PhaseClipOverlay({
   cycle,
   phaseStartedAt,
   serverNow,
+  winner,
+  publicVerdict = false,
 }: ClipProps) {
   const [environmentVersion, setEnvironmentVersion] = useState(0);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [visible, setVisible] = useState(false);
   const [fading, setFading] = useState(false);
+  const activeAttemptKey = useRef<string | null>(null);
+  activeAttemptKey.current = attempt?.key ?? null;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const previousPhase = useRef<{ gameId: string; identity: string } | null>(
     null,
@@ -169,7 +180,14 @@ export function PhaseClipOverlay({
     let fallbackTimer: number | null = null;
     const prefetch = async () => {
       const vp9 = supportsVp9();
-      const clips = ['nightfall', 'dawn'] as const;
+      const clips = [
+        'nightfall',
+        'dawn',
+        'verdict',
+        'gameover-faithful',
+        'gameover-traitor',
+        'game-start',
+      ] as const;
       await Promise.all(
         clips.flatMap((clip) => {
           const files = phaseClipSources(clip, vp9);
@@ -238,7 +256,7 @@ export function PhaseClipOverlay({
       return;
     }
 
-    const clip = publicPhaseClipFor(phase);
+    const clip = publicPhaseClipFor(phase, winner, publicVerdict);
     if (!clip) {
       setAttempt(null);
       setVisible(false);
@@ -246,18 +264,28 @@ export function PhaseClipOverlay({
     }
     const key = phaseClipMarkerKey(gameId, cycle, phase);
     const preferences = browserPreferences();
+    const posterOnly = shouldShowPhaseClipPoster(preferences);
     if (
       attemptedKeys.current.has(key) ||
       pendingKeys.current.has(key) ||
       !isPhaseClipEligible({
         gameId,
         phase,
+        winner,
+        publicVerdict,
         cycle,
         phaseStartedAt,
         serverNow: serverNow ?? Number.NaN,
         phaseChangedWhileVisible,
         documentVisible: document.visibilityState === 'visible',
         ...preferences,
+        ...(posterOnly
+          ? {
+              prefersReducedMotion: false,
+              saveData: false,
+              effectiveType: '4g',
+            }
+          : {}),
         clipsOff: clipsDisabledByUrl(),
         alreadyPlayed: sessionHasPlayed(key),
         startup: 'pending',
@@ -277,6 +305,9 @@ export function PhaseClipOverlay({
       cycle,
       phaseStartedAt,
       serverNow,
+      winner,
+      publicVerdict,
+      posterOnly,
     });
   }, [
     enabled,
@@ -285,17 +316,19 @@ export function PhaseClipOverlay({
     cycle,
     phaseStartedAt,
     serverNow,
+    winner,
+    publicVerdict,
     environmentVersion,
   ]);
 
   useEffect(() => {
     if (!attempt) return;
-    const video = videoRef.current;
-    if (!video) return;
     const stillEligible = () =>
       isPhaseClipEligible({
         gameId: attempt.gameId,
         phase: attempt.phase,
+        winner: attempt.winner,
+        publicVerdict: attempt.publicVerdict,
         cycle: attempt.cycle,
         phaseStartedAt: attempt.phaseStartedAt,
         serverNow: attempt.serverNow ?? Number.NaN,
@@ -318,7 +351,20 @@ export function PhaseClipOverlay({
       }, FADE_MS);
     };
     closeRef.current = close;
+    if (attempt.posterOnly) {
+      pendingKeys.current.delete(attempt.key);
+      attemptedKeys.current.add(attempt.key);
+      rememberPlayed(attempt.key);
+      setVisible(true);
+      playbackTimer.current = window.setTimeout(close, MAX_PLAYBACK_MS);
+      return () => {
+        if (playbackTimer.current) window.clearTimeout(playbackTimer.current);
+      };
+    }
+    const video = videoRef.current;
+    if (!video) return;
     const onPlaying = () => {
+      if (activeAttemptKey.current !== attempt.key) return;
       if (!stillEligible()) {
         pendingKeys.current.delete(attempt.key);
         setAttempt(null);
@@ -332,6 +378,7 @@ export function PhaseClipOverlay({
       playbackTimer.current = window.setTimeout(close, MAX_PLAYBACK_MS);
     };
     const onFailure = () => {
+      if (activeAttemptKey.current !== attempt.key) return;
       if (startupTimer.current) window.clearTimeout(startupTimer.current);
       pendingKeys.current.delete(attempt.key);
       attemptedKeys.current.add(attempt.key);
@@ -358,6 +405,7 @@ export function PhaseClipOverlay({
     <div
       aria-hidden="true"
       data-clip-name={attempt.clip}
+      data-clip-poster-only={attempt.posterOnly ? 'true' : 'false'}
       data-phase-key={attempt.key}
       data-testid="phase-clip-overlay"
       onClick={() => closeRef.current()}
@@ -371,29 +419,45 @@ export function PhaseClipOverlay({
         opacity: visible && !fading ? 1 : 0,
         pointerEvents: visible && !fading ? 'auto' : 'none',
         position: 'fixed',
-        transition: `opacity ${FADE_MS}ms ease-out`,
+        transition: browserPreferences().prefersReducedMotion
+          ? 'none'
+          : `opacity ${FADE_MS}ms ease-out`,
         zIndex: 10000,
       }}
     >
-      <video
-        disablePictureInPicture
-        disableRemotePlayback
-        muted
-        playsInline
-        poster={files.poster}
-        preload="auto"
-        ref={videoRef}
-        style={{
-          display: 'block',
-          height: '100%',
-          objectFit: 'cover',
-          width: '100%',
-        }}
-      >
-        {files.sources.map((source) => (
-          <source key={source.type} src={source.src} type={source.type} />
-        ))}
-      </video>
+      {attempt.posterOnly ? (
+        <img
+          alt=""
+          src={files.poster}
+          style={{
+            display: 'block',
+            height: '100%',
+            objectFit: 'cover',
+            width: '100%',
+          }}
+        />
+      ) : (
+        <video
+          key={attempt.key}
+          disablePictureInPicture
+          disableRemotePlayback
+          muted
+          playsInline
+          poster={files.poster}
+          preload="auto"
+          ref={videoRef}
+          style={{
+            display: 'block',
+            height: '100%',
+            objectFit: 'cover',
+            width: '100%',
+          }}
+        >
+          {files.sources.map((source) => (
+            <source key={source.type} src={source.src} type={source.type} />
+          ))}
+        </video>
+      )}
     </div>
   );
 }

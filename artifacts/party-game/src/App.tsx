@@ -2249,10 +2249,14 @@ function PlayerGame() {
       }
     >
       <PhaseClipOverlay
-        enabled={Boolean(activeGame && !isResuming)}
+        enabled={Boolean(
+          !isResuming && (activeGame || full?.phase === 'FINISHED'),
+        )}
         gameId={id}
         phase={full?.phase}
         cycle={full?.cycle}
+        winner={full?.winner}
+        publicVerdict={full?.publicAnnouncement?.kind === 'verdict'}
         phaseStartedAt={
           full
             ? (full as FullView & { phaseStartedAt?: number }).phaseStartedAt
