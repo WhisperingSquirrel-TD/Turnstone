@@ -137,7 +137,9 @@ async function approvePrivacy(page: Page): Promise<void> {
   await expect(shieldDialog).toBeHidden({ timeout: 20_000 });
 }
 
-async function revealRoleAndAcknowledge(page: Page): Promise<void> {
+async function revealRoleAndAcknowledge(
+  page: Page,
+): Promise<'Traitor' | 'Faithful'> {
   const seal = page.getByRole('button', {
     name: 'Hold the seal to see your role',
     exact: true,
@@ -146,19 +148,20 @@ async function revealRoleAndAcknowledge(page: Page): Promise<void> {
 
   await seal.hover();
   await page.mouse.down();
-  await expect(
-    page.getByRole('heading', { name: /^(Traitor|Faithful)$/ }),
-  ).toBeVisible({
-    timeout: 10_000,
+  const roleHeading = page.getByRole('heading', {
+    name: /^(Traitor|Faithful)$/,
   });
+  await expect(roleHeading).toBeVisible({ timeout: 10_000 });
+  const role = (await roleHeading.textContent())?.trim();
+  if (role !== 'Traitor' && role !== 'Faithful')
+    throw new Error('The role reveal did not contain a recognised role.');
   await page.mouse.up();
-  await expect(
-    page.getByRole('heading', { name: /^(Traitor|Faithful)$/ }),
-  ).toBeHidden();
+  await expect(roleHeading).toBeHidden();
   const done = page.getByRole('button', { name: 'Done', exact: true });
   await expect(done).toBeVisible();
   await done.click();
   await expect(done).toBeHidden({ timeout: 20_000 });
+  return role;
 }
 
 async function chooseFirstVisiblePlayer(
@@ -166,11 +169,23 @@ async function chooseFirstVisiblePlayer(
   testInfo: Parameters<typeof waitForPlayerScreenChange>[1],
   scenario: VirtualPlayerScenario,
   player: VirtualPlayer,
+  preferredName?: string,
 ): Promise<boolean> {
   const choices = page.getByRole('button', { name: playerNamePattern });
   const buttons = await choices.all();
   let selected: (typeof buttons)[number] | undefined;
+  if (preferredName) {
+    const selfChoice = page.getByRole('button', {
+      name: preferredName,
+      exact: true,
+    });
+    await expect(selfChoice).toBeVisible();
+    await expect(selfChoice).toBeEnabled();
+    selected = selfChoice;
+  }
   for (const button of buttons) {
+    if (selected) break;
+    if ((await button.innerText()).trim() === player.name) continue;
     if (
       (await button.isVisible().catch(() => false)) &&
       (await button.isEnabled().catch(() => false))
@@ -529,6 +544,7 @@ test('six virtual players complete a real game across desktop and phone contexts
   const contexts: BrowserContext[] = [];
   const pages: Page[] = [];
   const phaseTrail: string[] = [];
+  const rolesByPlayer = new Map<string, 'Traitor' | 'Faithful'>();
   const activeTraces = new Set<BrowserContext>();
   const playerDiagnostics = new Map<string, PlayerDiagnostics>();
   const videoDir = testInfo.outputPath('virtual-player-videos');
@@ -723,7 +739,10 @@ test('six virtual players complete a real game across desktop and phone contexts
           const page = pages[index]!;
           activePlayer = scenario.players[index]!;
           await approvePrivacy(page);
-          await revealRoleAndAcknowledge(page);
+          rolesByPlayer.set(
+            scenario.players[index]!.id,
+            await revealRoleAndAcknowledge(page),
+          );
         }
         activePlayer = organiser;
         activePage = coordinatorScreen;
@@ -759,11 +778,13 @@ test('six virtual players complete a real game across desktop and phone contexts
           for (let index = 0; index < pages.length; index += 1) {
             activePlayer = scenario.players[index]!;
             const page = pages[index]!;
-            const outStatus = page.getByText(
-              "You're out. You can watch, but you can't vote or choose.",
-              { exact: true },
-            );
-            if (await outStatus.isVisible().catch(() => false)) continue;
+            if (
+              await page
+                .getByTestId('player-fate')
+                .isVisible()
+                .catch(() => false)
+            )
+              continue;
             await approvePrivacy(page);
           }
         }
@@ -772,11 +793,32 @@ test('six virtual players complete a real game across desktop and phone contexts
           const player = scenario.players[index]!;
           activePlayer = player;
           activePage = page;
-          const outStatus = page.getByText(
-            "You're out. You can watch, but you can't vote or choose.",
-            { exact: true },
-          );
-          if (await outStatus.isVisible().catch(() => false)) continue;
+          if (
+            await page
+              .getByTestId('player-fate')
+              .isVisible()
+              .catch(() => false)
+          )
+            continue;
+          if (phase === 'SHADOW') {
+            const role = rolesByPlayer.get(player.id);
+            if (!role)
+              throw new Error(`No role was recorded for ${player.id}.`);
+            await expect(
+              page.getByText(
+                role === 'Faithful'
+                  ? 'Who do you think the Traitors will take tonight?'
+                  : 'Who will the Traitors take tonight?',
+                { exact: true },
+              ),
+            ).toBeVisible();
+            const selfOption = page.getByRole('button', {
+              name: player.name,
+              exact: true,
+            });
+            await expect(selfOption).toBeVisible();
+            await expect(selfOption).toBeEnabled();
+          }
           if (phase === 'FINAL_VOTE') {
             expect(
               await chooseToEndGame(page, testInfo, scenario, player),
@@ -784,7 +826,16 @@ test('six virtual players complete a real game across desktop and phone contexts
             ).toBe(true);
           } else {
             expect(
-              await chooseFirstVisiblePlayer(page, testInfo, scenario, player),
+              await chooseFirstVisiblePlayer(
+                page,
+                testInfo,
+                scenario,
+                player,
+                phase === 'SHADOW' &&
+                  rolesByPlayer.get(player.id) === 'Faithful'
+                  ? player.name
+                  : undefined,
+              ),
               `${player.id} could not submit their choice during ${phase}.`,
             ).toBe(true);
           }

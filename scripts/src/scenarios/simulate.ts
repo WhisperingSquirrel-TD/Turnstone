@@ -21,6 +21,7 @@ export const BOT_STRATEGIES = [
   'serial-disconnector',
   'coordinator-probes-for-secrets',
   'double-murder-split',
+  'faithful-self-predictor',
 ] as const;
 
 export type BotStrategy = (typeof BOT_STRATEGIES)[number];
@@ -366,6 +367,11 @@ export function runCompleteGame(
     if (options.strategy === 'aggressive-traitor' && actor.role === 'traitor')
       candidates = candidates.filter((seat) => seat.role !== 'traitor');
     if (
+      options.strategy === 'faithful-self-predictor' &&
+      actor.role === 'faithful'
+    )
+      candidates = candidates.filter((seat) => seat.role === 'faithful');
+    if (
       options.strategy === 'cautious-faithful' &&
       actor.role === 'faithful' &&
       candidates.some((seat) => seat.publicRole && seat.role === 'traitor')
@@ -482,7 +488,9 @@ export function runCompleteGame(
         const candidates = state.seats.filter(
           (other) =>
             other.status === 'alive' &&
-            other.id !== seat.id &&
+            (other.id !== seat.id ||
+              (options.strategy === 'faithful-self-predictor' &&
+                seat.role === 'faithful')) &&
             other.id !==
               (state.shadowSlot === 2
                 ? state.shadowPicks
@@ -498,12 +506,15 @@ export function runCompleteGame(
         );
         if (candidates.length) {
           const target =
-            options.strategy === 'double-murder-split' &&
-            seat.role === 'traitor'
-              ? candidates
-                  .filter((candidate) => candidate.role === 'faithful')
-                  .sort((left, right) => left.id.localeCompare(right.id))[0]
-              : candidates[pickIndex(candidates.length, state, index)];
+            options.strategy === 'faithful-self-predictor' &&
+            seat.role === 'faithful'
+              ? seat
+              : options.strategy === 'double-murder-split' &&
+                  seat.role === 'traitor'
+                ? candidates
+                    .filter((candidate) => candidate.role === 'faithful')
+                    .sort((left, right) => left.id.localeCompare(right.id))[0]
+                : candidates[pickIndex(candidates.length, state, index)];
           if (!target) continue;
           issue(
             {

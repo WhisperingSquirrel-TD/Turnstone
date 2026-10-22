@@ -526,7 +526,7 @@ export function decide(
           !alive(state).some(
             (seat) =>
               seat.id === cmd.choice &&
-              seat.id !== actingSeat!.id &&
+              (actingSeat!.role === 'faithful' || seat.id !== actingSeat!.id) &&
               (actingSeat!.role !== 'traitor' || seat.role !== 'traitor'),
           )
         )

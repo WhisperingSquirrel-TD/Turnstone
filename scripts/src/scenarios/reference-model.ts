@@ -634,7 +634,7 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
           phase !== 'SHADOW' ||
           eventSlot !== shadowSlot ||
           eventRound !== shadowRound ||
-          player.id === target.id ||
+          (player.role !== 'faithful' && player.id === target.id) ||
           (player.role === 'traitor' && target.role === 'traitor') ||
           previousSlotPick === event.choice
         )

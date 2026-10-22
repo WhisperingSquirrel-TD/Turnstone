@@ -26,6 +26,7 @@ export type GoldenScenario = {
     noVoteRevote?: boolean;
     abstainedEndgameBanishment?: boolean;
     doubleMurderSplit?: boolean;
+    faithfulSelfPrediction?: boolean;
   };
 };
 
@@ -69,6 +70,7 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
       'noVoteRevote',
       'abstainedEndgameBanishment',
       'doubleMurderSplit',
+      'faithfulSelfPrediction',
     ].some(
       (key) =>
         assertions?.[key] !== undefined && typeof assertions[key] !== 'boolean',
@@ -112,6 +114,9 @@ function parseScenario(input: unknown, filename: string): GoldenScenario {
               : {}),
             ...(typeof assertions.doubleMurderSplit === 'boolean'
               ? { doubleMurderSplit: assertions.doubleMurderSplit }
+              : {}),
+            ...(typeof assertions.faithfulSelfPrediction === 'boolean'
+              ? { faithfulSelfPrediction: assertions.faithfulSelfPrediction }
               : {}),
           },
         }),

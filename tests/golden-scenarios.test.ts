@@ -135,6 +135,39 @@ it('replays every implemented complete-game golden scenario exactly', () => {
       expect(hasSplitAfterShadowRevote(result.events), scenario.id).toBe(true);
     if (scenario.assertions?.doubleMurderSplit)
       expect(hasDoubleMurderSplit(result.events), scenario.id).toBe(true);
+    if (scenario.assertions?.faithfulSelfPrediction) {
+      const roles = new Map<string, string>();
+      for (const event of result.events) {
+        if (event.type === 'RolesDealt')
+          for (const [seatId, role] of Object.entries(event.roles))
+            roles.set(seatId, role);
+      }
+      const faithfulSelfPredictions = result.events.flatMap((event) =>
+        event.type === 'ShadowSubmitted' &&
+        roles.get(event.seatId) === 'faithful' &&
+        event.choice === event.seatId
+          ? [event]
+          : [],
+      );
+      expect(faithfulSelfPredictions.length, scenario.id).toBeGreaterThan(0);
+      const resolvedPicks = result.events
+        .filter((event) => event.type === 'MurderSlotResolved')
+        .flatMap((event) => event.picks);
+      expect(
+        resolvedPicks.every((pick) => roles.get(pick.seatId) === 'traitor'),
+        scenario.id,
+      ).toBe(true);
+      expect(
+        resolvedPicks.some((pick) =>
+          faithfulSelfPredictions.some(
+            (prediction) =>
+              prediction.seatId === pick.seatId &&
+              prediction.choice === pick.choice,
+          ),
+        ),
+        scenario.id,
+      ).toBe(false);
+    }
     const abstentionOutcomes = findAbstentionOutcomes(result.events);
     for (const assertion of [
       'noVoteRound',

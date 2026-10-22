@@ -1,0 +1,34 @@
+id: faithful-self-prediction
+description: A Faithful may privately predict themselves without affecting the game.
+seed: 20261022
+strategy: faithful-self-predictor
+config:
+  players:
+    count: 6
+  traitors:
+    number: 1
+    sleeper: false
+    recruitment: off
+    murders: 1
+    victimDecision: first
+    timeoutChoice: none
+  missions:
+    enabled: false
+    shields: off
+  roundTable:
+    tieRule: revote-random
+    revealStyle: all
+  endgame:
+    size: 4
+    parity: false
+  schedule:
+    format: quick
+    plannedCycles: 4
+expected:
+  phase: FINISHED
+  winner: traitor
+  reason: two-players
+  alive: 2
+  eliminated: 4
+assertions:
+  faithfulSelfPrediction: true
