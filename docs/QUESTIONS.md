@@ -90,77 +90,151 @@ later experiment, limited to one game-server instance.
 
 ## Q6 — Living players who miss a phase action
 
-**Status:** Proposal for owner approval only. No implementation or SPEC §3
-change has been made.
+**Status:** Owner-directed proposal awaiting reviewer confirmation of final
+wording. Documentation only: no implementation or SPEC §3 change.
 
-**Current behaviour:** Live phases can advance by organiser action or at the
-scheduled deadline. The organiser may move on after the server minimum, with a
-confirmation if players are unfinished; the deadline scheduler also advances
-with unfinished players. Missing normal-vote ballots remain absent; no votes
-means nobody is banished. Missing night choices use the configured decision
-and timeout fallback. A missing private acknowledgement is not turned into a
-vote or penalty. Rehearsal remains player-paced.
+**Current behaviour (verified):** A live phase can advance by organiser action
+or at its scheduled deadline. The organiser's advance is subject to the
+server-side minimum; the scheduler currently advances at the deadline even
+with unfinished players. Missing normal-vote ballots remain absent, and a vote
+with no ballots banishes nobody. Missing night choices use the configured
+decision and timeout fallback. A missing private acknowledgement is not
+converted into a vote or penalty. Rehearsal remains player-paced.
 
-**Proposed rule:** If the scheduled deadline arrives while a living player has
-not submitted the phase action, keep the phase open. Show the same count-only
-status to every player, regardless of role; the organiser alone sees the
-pending names. Allow late submissions during the grace period. After a
-60-second grace period, offer organiser actions for each pending seat:
+After a dealt game, `MarkDeparted` uses the normal departure removal path and
+immediately runs the existing win check. That path can reveal a departed
+player's role when the configured departure-reveal rule says “now”; this
+proposal requires disconnect removal to keep the role hidden regardless of
+that setting.
 
-- **Wait longer** — wait another 60 seconds.
-- **Skip [name]’s action** — count it as no action; keep the seat in the game
-  and do not fabricate a ballot, choice or acknowledgement.
-- **Remove [name] from the game** — remove the seat without revealing its role
-  or side.
+The existing win check has no separate “too few players to continue” or
+“no winner” result. It awards a Faithful win when no living Traitor remains;
+if at least one Traitor remains, it awards a Traitor win at two or fewer living
+players, or at configured parity. Thus the current zero-living-seat case falls
+through the no-living-Traitors branch and awards a Faithful win. No new winner
+rule is proposed here; this edge case is flagged for owner confirmation below.
 
-The phase resolves only after every remaining living player has submitted or
-the organiser has explicitly skipped their action. A removed seat is no longer
-expected to act. Recompute win conditions immediately after removal and end
-the game if they are met. A returning player keeps the same seat unless
-removed; a removed seat cannot reclaim it.
+**Proposed rule:** A living player's phase action remains pending until they
+submit, the organiser skips it under the disconnected-seat rule below, or the
+seat is removed. At a scheduled deadline, the phase does not advance while
+actions remain pending. Every role sees the same count-only status; only the
+organiser's restricted control view shows names of pending players. `Move
+everyone on` remains visibly disabled while anyone is pending and displays
+only the count, such as `Waiting for 1 player`.
 
-**Proposed shared copy:**
+The existing phase minimum remains a hard lower bound. A scheduled deadline
+that arrives while actions are pending is held, not discarded. Once no action
+is pending and the minimum has elapsed, the already-due scheduled advance may
+proceed; if the organiser chooses `Wait longer`, the server extends the wait
+by 60 seconds. All timing and connection checks use server time.
 
-- `Waiting for 1 player`
-- `Waiting for {count} players`
+Skip and Remove are available only for a pending seat that the server has
+observed continuously disconnected for at least 60 seconds. They are never
+available for a connected player or the current organiser's own seat. A
+reconnected player is no longer eligible for either action and can submit
+while the phase remains open. The 60-second disconnected grace is separate
+from, and cannot shorten, the phase minimum.
 
-**Proposed organiser copy:**
+**Proposed organiser actions, safest first:**
 
-- `Wait longer` — `Wait another 60 seconds.`
-- `Skip [name]’s action` — `They stay in the game. This counts as no action.`
-- `Remove [name] from the game` — `Their role will not be revealed.`
-- Removal confirmation: `Remove [name] from the game? Their role will remain
-unknown to the group.`
-- Public log: `[name] left the game. Their role remains unknown to the group.`
+1. **Wait longer** — show before use: `Give [name] another 60 seconds to
+return. No action is skipped or seat removed; the phase stays open.`
+   Selecting it extends the server-timed wait by 60 seconds.
+2. **Skip [name]’s action** — show before use: `This counts as no action.
+[Name] stays in the game. You can undo this before the phase resolves.`
+   Require confirmation: `Skip [name]’s action? They stay in the game; this
+counts as no action and can be undone before the phase resolves.` Provide
+   `Undo skip` until the phase resolves. A skip does not create a ballot,
+   choice, acknowledgement or penalty beyond the existing no-action rules.
+3. **Remove [name] from the game** — show before use: `This removes [name]
+from the game. If this removal itself meets an existing end condition, the
+game ends and a winner is announced; otherwise the game continues. Their
+role and side will remain unknown.` Require confirmation with the same
+   implications. Proposed recovery: `Let them back in` until the next phase
+   starts; this reinstatement window and whether the player may complete the
+   pending action still require owner confirmation.
 
-The count-only status and all player projections must be role-neutral. Pending
-names are visible only to the organiser. Removal must keep that seat’s role and
-side hidden in every player, presenter, recap and end-of-game role projection.
-The public log records the departure without a role or side.
+Removal immediately re-runs the existing win checks. It ends the game only if
+that removal itself triggers an existing terminal rule or the current rules
+cannot continue with the resulting player count; otherwise play continues.
+When a terminal rule fires, announce its winner, but never show the removed
+player's role or side in the public log, recap, winner announcement, final
+role list or any other projection. Represent the removed seat only as `left
+the game`. The disclosure must not depend on `departureReveal`.
+
+Every skip and removal gets a public, role-neutral log entry with reason
+`disconnected`. Proposed wording:
+
+- Skip: `[name]’s action was skipped (disconnected).`
+- Remove: `[name] left the game (disconnected).`
+
+Pending names are shown only in the organiser's pending-action controls; all
+other player and presenter views show counts only. Organiser controls and
+screens have identical structure and wording whether the organiser is a
+Traitor or Faithful. They confer logistics only and no access to private
+information.
+
+**Organiser dropout:** When an organiser is disconnected and a handover is
+needed, give control to the configured second organiser if they are live and
+connected. Otherwise the server selects a live, connected, in-game player at
+random; no client may nominate or influence the selection. Removed, departed,
+spectator and other out-of-game seats are ineligible. The successor receives
+the same restricted, blind logistics controls, using the existing takeover
+capability model. The original organiser returns as a normal player; control
+returns only if the current organiser explicitly hands it back.
+
+If the only connected player is the pending player, they may submit their own
+action but cannot skip or remove themselves, even if they are the organiser.
+They may receive server-assigned organiser control if eligible, but that does
+not change this restriction. If no live connected in-game player is eligible
+for handover, no client is made organiser and the phase remains held until an
+eligible player reconnects. The scheduled deadline cannot bypass the hold.
 
 **Tests required before implementation:**
 
-1. Before the grace period ends, all roles see the same count-only waiting line;
-   player and presenter views contain no pending names, roles, ballots or
-   choices, while the organiser sees the names.
-2. A late action during the grace period is accepted once, clears that player
-   from the pending list, and does not duplicate an event. The phase cannot
-   advance while any action remains pending.
-3. At 60 seconds, organiser-only Wait longer, Skip and Remove controls appear.
-   Wait longer resets the server-timed grace period. Skip adds no ballot,
-   choice or acknowledgement, leaves the seat alive, and resolves using the
-   existing no-action rules.
-4. Removal writes only the proposed role-neutral public log entry, immediately
-   recalculates the result, and never reveals the removed seat’s role or side
-   in player, presenter, recap or final views, including when removal ends the
-   game.
-5. A player returning before removal recovers the same seat and pending action.
-   A removed player cannot recover that seat. Cover deadline boundaries with
-   server-clock offsets and pause/resume.
+1. All roles see the same count-only waiting status and disabled advance
+   control while an action is pending; player and presenter views reveal no
+   pending names, roles, ballots or choices; only the organiser sees the
+   pending names. Compare Traitor and Faithful organiser views.
+2. A connected but slow player cannot be skipped or removed. Verify no action
+   appears before 59 seconds disconnected, then the correct actions appear at
+   60 seconds of server-observed disconnection. The organiser cannot target
+   their own seat.
+3. `Wait longer` shows its implications before use and extends the wait by
+   exactly 60 server-timed seconds without shortening the minimum or changing
+   the pending action.
+4. Skip shows its implications and requires confirmation; it counts as no
+   action, leaves the seat in game, can be undone before resolution, and cannot
+   be undone after resolution. No ballot, choice or acknowledgement is
+   fabricated; public logging is role-neutral and says `disconnected`.
+5. Remove shows its implications and requires confirmation. If removal does
+   not trigger an existing terminal condition, the game continues; if it does,
+   the existing winner is announced. The removed seat appears only as `left
+the game`; scan every player, presenter, public log, recap, winner and final
+   role view for role/side leakage.
+6. Test the proposed reinstatement before the next phase starts and rejection
+   after it starts, including whether the pending action can be completed;
+   keep this expected behaviour gated on owner confirmation.
+7. Test the existing phase minimum and scheduled deadline together: the
+   minimum is never bypassed; a due deadline stays held while actions are
+   pending and resumes only when pending actions are resolved. Include pause,
+   resume, late submit, skip undo and server-clock offset boundaries.
+8. Test organiser dropout: second organiser takes precedence when eligible;
+   otherwise the server chooses a connected, living in-game player, never an
+   out-of-game seat and never a client-selected target. The successor receives
+   no private data. The returning organiser has no control until an explicit
+   handback.
+9. Test the only-connected-player cases: a pending living player can submit
+   but cannot skip or remove themselves; an out-of-game connected viewer is
+   not selected; with no eligible connected player, the phase and scheduled
+   advance remain held until reconnection.
+10. Test current win outcomes at zero, one, two and three living players under
+    the existing role/parity cases. In particular, capture the current
+    zero-living Faithful-win result without changing it until the owner decides.
 
-**Open owner decisions:** What happens if removal leaves fewer than the
-minimum number of players? How does organiser phone dropout interact with
-coordinator handover? If removal ends the game, could announcing the winning
-side indirectly reveal the removed player’s side, contrary to the no-reveal
-rule? Should skipping a DEAL acknowledgement leave the private role card
-available to that seat on return?
+**Open approval points:** Confirm the proposed reinstatement window and whether
+a returning player may finish the pending action; confirm how the server-random
+organiser fallback interacts with Q3's existing strict-majority approval;
+confirm whether the current Faithful win at zero living seats is intended.
+Also decide whether a skipped DEAL acknowledgement leaves that seat's private
+role card available on return.
