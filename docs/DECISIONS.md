@@ -1411,6 +1411,26 @@ The canonical Stackstone palette is unchanged. The day button mixes 12% Candle i
 
 **Consequence:** Undo works across process restarts and concurrent instances, and cannot silently erase later player actions. The window is consumed atomically with the undo event.
 
+## D92 — No living Faithful and exhausted night slots (owner, 22 October 2026)
+
+**Decision:** Q7 is resolved by an immediate Traitor win after banishment,
+murder, removal or departure leaves no living Faithful, independent of parity.
+The approved zero-living-seat behaviour is unchanged.
+
+An exhausted second murder slot still appears for every seat with identical
+layout, copy and timing. Accept a Traitor's submission, or absence of one, and
+resolve that slot without a victim. No additional acknowledgement or different
+public progress is allowed. Remaining role numbers must not be disclosed.
+
+**Why:** The owner requires the game to progress without the absence of a second
+murder revealing how many Traitors or Faithful remain. This supersedes Q7's
+proposed private acknowledgement. SPEC section 3 is unchanged.
+
+**Q8 clarification, 22 October:** the deadline no-action default applies to every
+role only in a slot with no valid target; it resolves without a victim. Valid
+slots retain their configured timeout fallback. Neither case changes screens,
+wording or timing by role.
+
 ## D91 — Product renamed to Oathstone (owner decision, 19 October 2026)
 
 **Context:** The owner chose Oathstone after a trade mark screen found an identical registration for the former product name in an adjacent class. The owner reports Oathstone is clear. Nothing has been published and no DNS has been set.

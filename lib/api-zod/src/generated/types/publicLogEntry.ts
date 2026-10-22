@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { Phase } from './phase';
 import type { Role } from './role';
 
 export type PublicLogEntry = {
@@ -45,6 +46,56 @@ export type PublicLogEntry = {
   /** @minimum 0 */
   at: number;
   action: 'banishment';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'seat_left_disconnected';
+  reason: 'disconnected';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'seat_reinstated';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'coordinator_role_moved';
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'phase_action_skipped';
+  phase: Phase;
+  reason: 'disconnected';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'phase_action_skip_undone';
+  phase: Phase;
   seat: {
   id: string;
   name: string;

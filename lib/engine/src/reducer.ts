@@ -57,6 +57,9 @@ export function evolve(previous: State | null, input: unknown): State {
       deal: null,
       acks: [],
       readySeats: [],
+      skippedActions: [],
+      disconnectedRemovals: [],
+      hiddenRoleSeatIds: [],
       votes: {},
       revealed: [],
       voteRevealOrder: [],
@@ -94,6 +97,9 @@ export function evolve(previous: State | null, input: unknown): State {
     version: event.seq,
     publicLog: previous.publicLog ?? [],
     coordinatorAlerts: previous.coordinatorAlerts ?? [],
+    skippedActions: previous.skippedActions ?? [],
+    disconnectedRemovals: previous.disconnectedRemovals ?? [],
+    hiddenRoleSeatIds: previous.hiddenRoleSeatIds ?? [],
   };
   switch (event.type) {
     case 'SeatJoined':
@@ -173,6 +179,13 @@ export function evolve(previous: State | null, input: unknown): State {
       }
       state.phase = event.phase;
       state.readySeats = [];
+      state.skippedActions = [];
+      state.disconnectedRemovals = state.disconnectedRemovals.map(
+        (removal) => ({
+          ...removal,
+          restorable: false,
+        }),
+      );
       state.phaseStarted = event.at;
       state.deadline = event.deadline;
       state.shadowEndAt = event.shadowEndAt;
@@ -211,6 +224,82 @@ export function evolve(previous: State | null, input: unknown): State {
         ];
       scheduleCompletedEndgameVote(state, event.at);
       break;
+    case 'PhaseActionSkipped': {
+      const seat = previous.seats.find(
+        (candidate) => candidate.id === event.seatId,
+      );
+      if (
+        !seat ||
+        seat.status !== 'alive' ||
+        previous.phase !== event.phase ||
+        previous.cycle !== event.cycle
+      )
+        throw new Error('Invalid skipped phase action');
+      const matchesCurrentAction = (skip: State['skippedActions'][number]) =>
+        skip.seatId === event.seatId &&
+        skip.phase === event.phase &&
+        skip.cycle === event.cycle &&
+        (event.phase !== 'SHADOW' ||
+          (skip.shadowSlot === event.shadowSlot &&
+            skip.shadowRound === event.shadowRound));
+      if (previous.skippedActions.some(matchesCurrentAction))
+        throw new Error('Phase action already skipped');
+      state.skippedActions = [
+        ...previous.skippedActions,
+        {
+          seatId: event.seatId,
+          phase: event.phase,
+          cycle: event.cycle,
+          ...(event.shadowSlot === undefined
+            ? {}
+            : { shadowSlot: event.shadowSlot }),
+          ...(event.shadowRound === undefined
+            ? {}
+            : { shadowRound: event.shadowRound }),
+        },
+      ];
+      state.publicLog = [
+        ...state.publicLog,
+        {
+          seq: event.seq,
+          at: event.at,
+          action: 'phase_action_skipped',
+          seatId: event.seatId,
+          phase: event.phase,
+          reason: 'disconnected',
+        },
+      ];
+      break;
+    }
+    case 'PhaseActionSkipUndone': {
+      const matchesCurrentAction = (skip: State['skippedActions'][number]) =>
+        skip.seatId === event.seatId &&
+        skip.phase === event.phase &&
+        skip.cycle === event.cycle &&
+        (event.phase !== 'SHADOW' ||
+          (skip.shadowSlot === event.shadowSlot &&
+            skip.shadowRound === event.shadowRound));
+      const skipped = previous.skippedActions.some(matchesCurrentAction);
+      const seat = previous.seats.find(
+        (candidate) => candidate.id === event.seatId,
+      );
+      if (!skipped || !seat || seat.status !== 'alive')
+        throw new Error('No current phase action skip to undo');
+      state.skippedActions = previous.skippedActions.filter(
+        (skip) => !matchesCurrentAction(skip),
+      );
+      state.publicLog = [
+        ...state.publicLog,
+        {
+          seq: event.seq,
+          at: event.at,
+          action: 'phase_action_skip_undone',
+          seatId: event.seatId,
+          phase: event.phase,
+        },
+      ];
+      break;
+    }
     case 'VoteSubmitted':
       state.votes = { ...previous.votes, [event.seatId]: event.target };
       break;
@@ -294,6 +383,7 @@ export function evolve(previous: State | null, input: unknown): State {
       state.deadline = event.deadline;
       state.shadow = {};
       state.acks = [];
+      state.skippedActions = [];
       break;
     case 'ShadowSlotAdvanced':
       if (
@@ -310,6 +400,7 @@ export function evolve(previous: State | null, input: unknown): State {
       state.shadowEndAt = event.shadowEndAt;
       state.shadow = {};
       state.acks = [];
+      state.skippedActions = [];
       break;
     case 'MurderSlotResolved':
       state.murderResolutions = [
@@ -429,6 +520,122 @@ export function evolve(previous: State | null, input: unknown): State {
       delete state.shadow[event.seatId];
       break;
     }
+    case 'DisconnectedSeatRemoved': {
+      const seat = previous.seats.find(
+        (candidate) => candidate.id === event.seatId,
+      );
+      if (!seat || seat.status !== 'alive')
+        throw new Error('Invalid disconnected removal event');
+      state.seats = previous.seats.map((candidate) =>
+        candidate.id === event.seatId
+          ? { ...candidate, status: 'departed', publicRole: false }
+          : candidate,
+      );
+      state.hiddenRoleSeatIds = [
+        ...new Set([...previous.hiddenRoleSeatIds, event.seatId]),
+      ];
+      state.disconnectedRemovals = [
+        ...previous.disconnectedRemovals,
+        {
+          seatId: event.seatId,
+          phase: event.phase,
+          cycle: event.cycle,
+          restorable: true,
+          wasPublicRole: seat.publicRole,
+        },
+      ];
+      state.publicLog = [
+        ...state.publicLog,
+        {
+          seq: event.seq,
+          at: event.at,
+          action: 'seat_left_disconnected',
+          seatId: event.seatId,
+          reason: 'disconnected',
+        },
+      ];
+      state.taskAssignments = previous.taskAssignments.map((task) =>
+        task.seatId === event.seatId && task.status === 'assigned'
+          ? { ...task, status: 'void' }
+          : task,
+      );
+      state.votes = { ...previous.votes };
+      delete state.votes[event.seatId];
+      state.endVotes = { ...previous.endVotes };
+      delete state.endVotes[event.seatId];
+      state.shadow = { ...previous.shadow };
+      delete state.shadow[event.seatId];
+      state.acks = previous.acks.filter((seatId) => seatId !== event.seatId);
+      state.readySeats = (previous.readySeats ?? []).filter(
+        (seatId) => seatId !== event.seatId,
+      );
+      state.skippedActions = previous.skippedActions.filter(
+        (skip) => skip.seatId !== event.seatId,
+      );
+      break;
+    }
+    case 'DisconnectedSeatReinstated': {
+      const removal = previous.disconnectedRemovals.find(
+        (candidate) =>
+          candidate.seatId === event.seatId &&
+          candidate.phase === event.phase &&
+          candidate.cycle === event.cycle &&
+          candidate.restorable,
+      );
+      const seat = previous.seats.find(
+        (candidate) => candidate.id === event.seatId,
+      );
+      if (!removal || !seat || seat.status !== 'departed')
+        throw new Error('Invalid disconnected reinstatement event');
+      state.seats = previous.seats.map((candidate) =>
+        candidate.id === event.seatId
+          ? {
+              ...candidate,
+              status: 'alive',
+              publicRole: removal.wasPublicRole,
+            }
+          : candidate,
+      );
+      if (
+        state.seats.some(
+          (candidate) =>
+            candidate.status === 'alive' && candidate.role === 'traitor',
+        )
+      )
+        state.pendingSleeper = false;
+      state.hiddenRoleSeatIds = previous.hiddenRoleSeatIds.filter(
+        (seatId) => seatId !== event.seatId,
+      );
+      state.disconnectedRemovals = previous.disconnectedRemovals.map(
+        (candidate) =>
+          candidate === removal
+            ? { ...candidate, restorable: false }
+            : candidate,
+      );
+      state.skippedActions = previous.skippedActions.filter(
+        (skip) => skip.seatId !== event.seatId,
+      );
+      state.publicLog = [
+        ...state.publicLog,
+        {
+          seq: event.seq,
+          at: event.at,
+          action: 'seat_reinstated',
+          seatId: event.seatId,
+        },
+      ];
+      break;
+    }
+    case 'CoordinatorRoleMoved':
+      state.publicLog = [
+        ...state.publicLog,
+        {
+          seq: event.seq,
+          at: event.at,
+          action: 'coordinator_role_moved',
+        },
+      ];
+      break;
     case 'ShieldsAllocated':
       state.shields = event.holders;
       break;
@@ -514,6 +721,7 @@ export function evolve(previous: State | null, input: unknown): State {
       state.phase = 'FINISHED';
       state.votes = {};
       state.revealed = [];
+      state.skippedActions = [];
       state.winner = event.winner;
       state.reason = event.reason;
       state.publicAnnouncement = {
@@ -568,6 +776,9 @@ function normalizeSnapshot(snapshot: State): State {
     shadowPicks?: unknown;
     voteRevealOrder?: unknown;
     voteContext?: unknown;
+    skippedActions?: unknown;
+    disconnectedRemovals?: unknown;
+    hiddenRoleSeatIds?: unknown;
   };
   if (legacy.shadowPicks !== undefined && !Array.isArray(legacy.shadowPicks))
     throw new Error('Stored snapshot shadow picks are invalid');
@@ -582,12 +793,33 @@ function normalizeSnapshot(snapshot: State): State {
     legacy.voteContext !== 'final'
   )
     throw new Error('Stored snapshot vote context is invalid');
+  if (
+    legacy.skippedActions !== undefined &&
+    !Array.isArray(legacy.skippedActions)
+  )
+    throw new Error('Stored snapshot skipped actions are invalid');
+  if (
+    legacy.disconnectedRemovals !== undefined &&
+    !Array.isArray(legacy.disconnectedRemovals)
+  )
+    throw new Error('Stored snapshot disconnected removals are invalid');
+  if (
+    legacy.hiddenRoleSeatIds !== undefined &&
+    !Array.isArray(legacy.hiddenRoleSeatIds)
+  )
+    throw new Error('Stored snapshot hidden role ids are invalid');
   return {
     ...snapshot,
     shadowPicks: (legacy.shadowPicks as State['shadowPicks'] | undefined) ?? [],
     voteRevealOrder: (legacy.voteRevealOrder as string[] | undefined) ?? [],
     voteContext:
       (legacy.voteContext as State['voteContext'] | undefined) ?? 'cycle',
+    skippedActions:
+      (legacy.skippedActions as State['skippedActions'] | undefined) ?? [],
+    disconnectedRemovals:
+      (legacy.disconnectedRemovals as
+        State['disconnectedRemovals'] | undefined) ?? [],
+    hiddenRoleSeatIds: (legacy.hiddenRoleSeatIds as string[] | undefined) ?? [],
   };
 }
 

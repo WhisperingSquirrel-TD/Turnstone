@@ -155,6 +155,7 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
     const remainingSeats = living().length - previousMurders;
     const remainingFaithful = remainingSeats - traitors.length;
     return (
+      (traitors.length > 0 && remainingFaithful === 0) ||
       remainingSeats <= 2 ||
       (config!.endgame.parity && traitors.length >= remainingFaithful)
     );
@@ -167,9 +168,11 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
       return { winner: 'faithful', reason: 'no-traitors' };
     }
     if (dealt && traitors.length > 0) {
+      const faithfulCount = aliveSeats.length - traitors.length;
+      if (faithfulCount === 0)
+        return { winner: 'traitor', reason: 'no-faithful' };
       if (aliveSeats.length <= 2)
         return { winner: 'traitor', reason: 'two-players' };
-      const faithfulCount = aliveSeats.length - traitors.length;
       if (config!.endgame.parity && traitors.length >= faithfulCount)
         return { winner: 'traitor', reason: 'parity' };
     }

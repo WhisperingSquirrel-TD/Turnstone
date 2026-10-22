@@ -15,6 +15,8 @@ import {
   type Result,
   type Phase,
   type Seat,
+  isActionSkipped,
+  pendingActionSeatIds,
 } from './model';
 import { getMinimumAdvanceAt } from './phase-timing';
 import { evolve } from './reducer';
@@ -22,6 +24,10 @@ import { roleDeal } from './deal';
 const coordinatorCommands = new Set([
   'AdvancePhase',
   'StartGame',
+  'SkipPendingAction',
+  'UndoPendingActionSkip',
+  'RemoveDisconnectedSeat',
+  'ReinstateDisconnectedSeat',
   'MarkDeparted',
   'AllocatePower',
   'Pause',
@@ -220,16 +226,32 @@ export function decide(
       } else
         emit('GameFinished', { winner: 'faithful', reason: 'no-traitors' });
     } else if (
+      !living.some((seat) => seat.role === 'faithful') ||
       living.length <= 2 ||
       (state!.config.endgame.parity &&
         traitors.length >= living.length - traitors.length)
     ) {
       emit('GameFinished', {
         winner: 'traitor',
-        reason: living.length <= 2 ? 'two-players' : 'parity',
+        reason: !living.some((seat) => seat.role === 'faithful')
+          ? 'no-faithful'
+          : living.length <= 2
+            ? 'two-players'
+            : 'parity',
       });
     }
   };
+  const secondMurderSlotExhausted = () =>
+    state!.phase === 'SHADOW' &&
+    state!.shadowSlot === 2 &&
+    !alive(state!).some(
+      (seat) =>
+        seat.role === 'faithful' &&
+        !state!.murderResolutions.some(
+          (resolution) =>
+            resolution.cycle === state!.cycle && resolution.chosen === seat.id,
+        ),
+    );
   const deal = (redeal: boolean) => {
     emit('RolesDealt', roleDeal(state!, ctx, redeal));
   };
@@ -306,7 +328,17 @@ export function decide(
             (state!.config.roundTable.revealRole === 'not-endgame' &&
               !finalBanishment));
     emit('SeatRemoved', { seatId, reason, publicRole });
-    if (!(reason === 'banished' && state!.phase === 'VERDICT')) checkWin();
+    const living = alive(state!);
+    const noFaithfulRemain =
+      living.some((seat) => seat.role === 'traitor') &&
+      !living.some((seat) => seat.role === 'faithful');
+    // Other verdict wins retain their existing announcement cadence. The
+    // owner's no-Faithful rule is terminal on the removal event itself.
+    if (
+      noFaithfulRemain ||
+      !(reason === 'banished' && state!.phase === 'VERDICT')
+    )
+      checkWin();
   };
   const nextVoteSpeaker = () => {
     const current = state;
@@ -386,6 +418,8 @@ export function decide(
         )
       )
         return error('WRONG_PHASE');
+      if (isActionSkipped(state, actingSeat!.id))
+        return error('ACTION_SKIPPED');
       emit('PrivateAcknowledged', {
         seatId: actingSeat!.id,
         ...(cmd.ready === true ? { ready: true } : {}),
@@ -397,6 +431,39 @@ export function decide(
         )
       )
         assignTasks(1, [actingSeat!]);
+      break;
+    case 'SkipPendingAction':
+      if (!pendingActionSeatIds(state).includes(cmd.seatId))
+        return error('ACTION_NOT_PENDING');
+      emit('PhaseActionSkipped', {
+        seatId: cmd.seatId,
+        phase: state.phase,
+        cycle: state.cycle,
+        ...(state.phase === 'SHADOW'
+          ? {
+              shadowSlot: state.shadowSlot as 1 | 2,
+              shadowRound: state.shadowRound as 1 | 2,
+            }
+          : {}),
+      });
+      break;
+    case 'UndoPendingActionSkip':
+      if (
+        !alive(state).some((seat) => seat.id === cmd.seatId) ||
+        !isActionSkipped(state, cmd.seatId)
+      )
+        return error('SKIP_NOT_FOUND');
+      emit('PhaseActionSkipUndone', {
+        seatId: cmd.seatId,
+        phase: state.phase,
+        cycle: state.cycle,
+        ...(state.phase === 'SHADOW'
+          ? {
+              shadowSlot: state.shadowSlot as 1 | 2,
+              shadowRound: state.shadowRound as 1 | 2,
+            }
+          : {}),
+      });
       break;
     case 'SubmitTaskReport': {
       if (state.phase !== 'SHADOW') return error('WRONG_PHASE');
@@ -427,6 +494,42 @@ export function decide(
         });
       break;
     }
+    case 'RemoveDisconnectedSeat': {
+      const seat = alive(state).find(
+        (candidate) => candidate.id === cmd.seatId,
+      );
+      if (!seat) return error('INVALID_TARGET');
+      if (['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(state.phase))
+        return error('WRONG_PHASE');
+      if (!pendingActionSeatIds(state).includes(seat.id))
+        return error('NO_PENDING_ACTION');
+      emit('DisconnectedSeatRemoved', {
+        seatId: seat.id,
+        phase: state.phase,
+        cycle: state.cycle,
+      });
+      checkWin();
+      break;
+    }
+    case 'ReinstateDisconnectedSeat': {
+      if (!state) return error('NO_GAME');
+      const phase = state.phase;
+      const cycle = state.cycle;
+      const removal = state.disconnectedRemovals.find(
+        (candidate) =>
+          candidate.seatId === cmd.seatId &&
+          candidate.phase === phase &&
+          candidate.cycle === cycle &&
+          candidate.restorable,
+      );
+      if (!removal) return error('REINSTATEMENT_WINDOW_CLOSED');
+      emit('DisconnectedSeatReinstated', {
+        seatId: cmd.seatId,
+        phase,
+        cycle,
+      });
+      break;
+    }
     case 'RequestRedeal':
       if (
         !state.deal ||
@@ -441,7 +544,13 @@ export function decide(
     case 'SubmitVote': {
       if (!['VOTE', 'FINAL_BANISH'].includes(state.phase))
         return error('WRONG_PHASE');
-      if (state.deadline !== null && ctx.now >= state.deadline)
+      if (isActionSkipped(state, actingSeat!.id))
+        return error('ACTION_SKIPPED');
+      if (
+        state.deadline !== null &&
+        ctx.now >= state.deadline &&
+        !pendingActionSeatIds(state).includes(actingSeat!.id)
+      )
         return error('DEADLINE_PASSED');
       if (
         cmd.target === actingSeat!.id ||
@@ -470,11 +579,21 @@ export function decide(
     }
     case 'SubmitShadowChoice':
       if (state.phase !== 'SHADOW') return error('WRONG_PHASE');
-      if (state.deadline !== null && ctx.now >= state.deadline)
+      if (isActionSkipped(state, actingSeat!.id))
+        return error('ACTION_SKIPPED');
+      if (
+        state.deadline !== null &&
+        ctx.now >= state.deadline &&
+        !pendingActionSeatIds(state).includes(actingSeat!.id)
+      )
         return error('DEADLINE_PASSED');
       {
         const slot = cmd.slot ?? state.shadowSlot;
         if (slot !== state.shadowSlot) return error('WRONG_SHADOW_SLOT');
+        // This is private target validation only: do not auto-acknowledge
+        // Traitors or change pending seats/progress based on hidden roles.
+        const exhausted =
+          actingSeat!.role === 'traitor' && secondMurderSlotExhausted();
         const firstSlotChoice =
           slot === 2
             ? state.shadowPicks
@@ -486,7 +605,7 @@ export function decide(
                 )
                 .sort((left, right) => right.seq - left.seq)[0]?.choice
             : undefined;
-        if (firstSlotChoice === cmd.choice)
+        if (!exhausted && firstSlotChoice === cmd.choice)
           return error('DUPLICATE_SHADOW_CHOICE');
         if (
           state.config.tasks.enabled &&
@@ -523,6 +642,7 @@ export function decide(
         )
           return error('TASK_REPORT_REQUIRED');
         if (
+          !exhausted &&
           !alive(state).some(
             (seat) =>
               seat.id === cmd.choice &&
@@ -603,7 +723,13 @@ export function decide(
       break;
     case 'SubmitEndgameVote':
       if (state.phase !== 'FINAL_VOTE') return error('WRONG_PHASE');
-      if (state.deadline !== null && ctx.now >= state.deadline)
+      if (isActionSkipped(state, actingSeat!.id))
+        return error('ACTION_SKIPPED');
+      if (
+        state.deadline !== null &&
+        ctx.now >= state.deadline &&
+        !pendingActionSeatIds(state).includes(actingSeat!.id)
+      )
         return error('DEADLINE_PASSED');
       emit('EndgameVote', { seatId: actingSeat!.id, choice: cmd.choice });
       break;
@@ -627,6 +753,17 @@ export function decide(
         ctx.now < state.deadline
       )
         return error('DEADLINE_NOT_DUE');
+      // Slot two reaches its scheduled resolution for every role, regardless
+      // of hidden target eligibility. Keep actual pending/progress unchanged;
+      // the existing resolver applies the configured fallback (or no target
+      // when exhausted). Before the deadline every role still needs an action.
+      const secondSlotDeadlineDue =
+        state.phase === 'SHADOW' &&
+        state.shadowSlot === 2 &&
+        state.deadline !== null &&
+        ctx.now >= state.deadline;
+      if (!secondSlotDeadlineDue && pendingActionSeatIds(state).length)
+        return error('PENDING_ACTIONS');
       if (state.phase === 'DRAFT') {
         enter('LOBBY');
         break;
@@ -862,6 +999,7 @@ export function decide(
           const remainingSeats = alive(state).length - previousMurders;
           const remainingFaithful = remainingSeats - livingTraitors.length;
           const gameEndedBeforeSlot =
+            (remainingFaithful === 0 && livingTraitors.length > 0) ||
             remainingSeats <= 2 ||
             (state.config.endgame.parity &&
               livingTraitors.length >= remainingFaithful);
@@ -986,7 +1124,8 @@ export function decide(
             const gameEndsAfterSlot =
               outcome === 'game-ended' ||
               (outcome === 'murdered' &&
-                (seatsAfterSlot <= 2 ||
+                ((faithfulAfterSlot === 0 && livingTraitors.length > 0) ||
+                  seatsAfterSlot <= 2 ||
                   (state.config.endgame.parity &&
                     livingTraitors.length >= faithfulAfterSlot)));
             if (gameEndsAfterSlot) {

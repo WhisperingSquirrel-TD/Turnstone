@@ -27,10 +27,10 @@ config:
     plannedCycles: 1
 expected:
   phase: FINISHED
-  winner: faithful
-  reason: no-traitors
-  alive: 3
-  eliminated: 4
+  winner: traitor
+  reason: two-players
+  alive: 2
+  eliminated: 5
 assertions:
   noVoteRound: true
   noVoteInitialRound: true

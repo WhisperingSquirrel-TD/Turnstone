@@ -25,6 +25,6 @@ config:
 expected:
   phase: FINISHED
   winner: traitor
-  reason: two-players
+  reason: no-faithful
   alive: 2
   eliminated: 6

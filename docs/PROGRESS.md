@@ -1,10 +1,26 @@
 # Status for reviewer
 
+**Q6/Q7/Q8 status, 22 October:** local checks green; ready for Verify. 602 unit tests, 21 property tests, 100 server-coverage tests (85.56%, threshold unchanged), and the exhausted-slot HTTP retry test pass. Scenario batch passes all 2,522 coverage rows plus fault-fuzz and golden games. Pixel/iPhone night geometry checks pass for both roles/themes. Latest confirmed GitHub green: Verify #223; this change is not yet CI-approved.
+
+**Next Q6 work after Verify is green:** finish automatic organiser handover in the client (the server selects safely, but the panel still requires a claim tap), then prove the disconnected-player recovery journey through the real UI. No publication or SPEC §3 changes.
+
+## Current Q6 work — 22 October 2026
+
+- **Latest confirmed GitHub:** Verify #223 is green on `70055d4`. Q6 changes are local, not pushed or declared green.
+- Rebased the working changes by clean cherry-pick onto current main; preserved the old branch and stash. Excluded unrelated attachments and generated files from the clean snapshot.
+- Parallel checks found and corrected disconnect-grace timing, removed-role private projection leaks, stale sleeper activation after reinstatement, and unsafe automatic handover selection/transaction handling.
+- Local checks: application and test typechecks pass; 19 presence/handover integration tests pass; 20 organiser component tests pass; all six coordinator browser tests pass on Pixel Chromium and iPhone WebKit. Browser coordinator checks use routed fixtures, not proof of the entire real-server flow.
+- **Original Q7 blocker fixed:** the unchanged scenario-vote-targets regression completes under the approved immediate no-Faithful win rule. Independent oracle updated; aggressive-Traitor golden changes only its finish reason from `two-players` to `no-faithful`.
+- **Q8 resolved:** removed the early exhausted-Traitor-only exemption. Before deadline, ordinary action gating applies to every role. At the normal second-slot deadline, exhausted slots complete without a victim; valid slots use their configured fallback. The original timing-privacy regression now passes unchanged. Final unit run: **602 passed** with two workers; no timeout/assertion was relaxed.
+- Q6 integration repairs preserve explicit majority takeover alongside automatic dropout selection, await socket presence cleanup, and avoid the presence/cascade-delete deadlock. All 100 server-coverage tests pass, 85.56% line coverage. No workflow or threshold changes.
+- **Fresh real Practice clip report, 22 October:** full real-server sessions passed on Desktop Chromium (2.0 minutes) and Pixel Chromium (1.9 minutes), using `REHEARSAL_USE_REAL_CLIPS=true`. Both reached and verified actual nightfall playback at SHADOW and dawn playback at DAWN, muted/inline overlays, nightfall tap-to-skip and dawn automatic close. Real-asset mode bypasses fixture interception and requires supported video decoding plus the playback marker. These are browser-emulated profiles, not a physical Pixel device. No assertions changed or retries used.
+- Replay: `REHEARSAL_USE_REAL_CLIPS=true REHEARSAL_PROFILE=Desktop bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts e2e/rehearsal-live.spec.ts --grep 'plays a full rehearsal from the player screen'` (repeat with `REHEARSAL_PROFILE=Pixel`).
+
 **Verify #220 resolved:** #220 failed on Prettier formatting and missing specific feedback for definitive 409 rejections. The fix was pushed in `2e8a806`; Verify #221 attempt 2 is green, including all four browser profiles and required-checks.
 
-**Offline-player proposal:** Q6 in `docs/QUESTIONS.md` is for owner review only. No code or SPEC §3 changes. Minimum-player handling, organiser dropout and related role-redaction questions remain open. Do not begin Set 2 before owner approval.
+**Offline-player approval:** Q6 implementation was approved with the five owner decisions. Implementation is in progress locally; SPEC §3 remains unchanged. Q7 is a newly found edge case, not a request to reapprove Q6.
 
-**Real Practice clips:** Actual nightfall at SHADOW start and dawn at DAWN played in desktop and Pixel full-session runs.
+**Practice clip verification:** The fresh runs above supersede the earlier playback report and verify the integrated Q6 working tree.
 
 **H2 concurrency fix, 22 October:** Included in green Verify #219 (`978e82b`). Retry only optimistic-version conflicts for votes, night choices and private acknowledgements, with a finite 40-attempt bound; re-evaluate validation against the fresh state on every attempt. Three focused regression tests, scoped ESLint and formatting passed; test typecheck also passed. No thresholds, workflow files or server phase minimums changed.
 

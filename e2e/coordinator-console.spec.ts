@@ -35,6 +35,15 @@ function createView(): FullView {
     ],
     commitment: null,
     progress: { done: 1, total: 4 },
+    // Three disconnected actions have already been skipped, not cast as votes.
+    actionStatus: { waiting: 0, total: 4 },
+    coordinatorPendingSeats: [],
+    coordinatorSkippedSeats: [
+      { id: 'seat-alex', name: 'Alex' },
+      { id: 'seat-jamie', name: 'Jamie' },
+      { id: 'seat-sam', name: 'Sam' },
+    ],
+    coordinatorRestorableSeats: [],
     votedSeatIds: [],
     voteCandidates: [],
     ballots: {},
@@ -139,8 +148,12 @@ test('coordinator can pause, extend and safely advance an active game', async ({
       ...(command.type === 'ExtendPhase' && typeof command.minutes === 'number'
         ? { deadline: (view.deadline ?? Date.now()) + command.minutes * 60_000 }
         : {}),
-      ...(command.type === 'AdvancePhase' ? { phase: 'VERDICT' } : {}),
-      ...(command.type === 'EndGameEarly' ? { phase: 'FINISHED' } : {}),
+      ...(command.type === 'AdvancePhase'
+        ? { phase: 'VERDICT', coordinatorSkippedSeats: [] }
+        : {}),
+      ...(command.type === 'EndGameEarly'
+        ? { phase: 'FINISHED', coordinatorSkippedSeats: [] }
+        : {}),
       ...(command.type === 'UndoCoordinatorAction'
         ? { coordinatorUndo: null }
         : {}),
@@ -355,11 +368,189 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   expect(commands.at(-1)?.type).toBe('EndGameEarly');
 });
 
+test('coordinator waits, confirms disconnected actions, undoes a skip and restores a removed seat', async ({
+  page,
+}) => {
+  const gameId = 'coordinator-console-test';
+  const alex = { id: 'seat-alex', name: 'Alex', disconnected: false };
+  const jamie = { id: 'seat-jamie', name: 'Jamie', disconnected: true };
+  let view: FullView = {
+    ...createView(),
+    coordinatorUndo: null,
+    progress: { done: 2, total: 4 },
+    actionStatus: { waiting: 2, total: 4 },
+    votedSeatIds: ['seat-morgan', 'seat-sam'],
+    coordinatorPendingSeats: [alex, jamie],
+    coordinatorSkippedSeats: [],
+    coordinatorRestorableSeats: [],
+  };
+  const commands: Array<{ type: string; seatId: string }> = [];
+  await page.route('**/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
+  );
+  await page.route(`**/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/delegates`, (route) =>
+    route.fulfill({ json: { limit: 1, seatIds: [] } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/presence`, (route) =>
+    route.fulfill({ json: { status: 'online' } }),
+  );
+  await page.route(`**/games/${gameId}/commands`, async (route) => {
+    const command = route.request().postDataJSON() as {
+      type: string;
+      seatId: string;
+    };
+    expect(command.seatId).toBe(jamie.id);
+    commands.push(command);
+    switch (command.type) {
+      case 'SkipPendingAction':
+        view = {
+          ...view,
+          actionStatus: { waiting: 1, total: 4 },
+          coordinatorPendingSeats: [alex],
+          coordinatorSkippedSeats: [{ id: jamie.id, name: jamie.name }],
+        };
+        break;
+      case 'UndoPendingActionSkip':
+        view = {
+          ...view,
+          actionStatus: { waiting: 2, total: 4 },
+          coordinatorPendingSeats: [alex, jamie],
+          coordinatorSkippedSeats: [],
+        };
+        break;
+      case 'RemoveDisconnectedSeat':
+        view = {
+          ...view,
+          seats: view.seats.map((seat) =>
+            seat.id === jamie.id ? { ...seat, status: 'departed' } : seat,
+          ),
+          progress: { done: 2, total: 3 },
+          actionStatus: { waiting: 1, total: 3 },
+          coordinatorPendingSeats: [alex],
+          coordinatorRestorableSeats: [{ id: jamie.id, name: jamie.name }],
+        };
+        break;
+      case 'ReinstateDisconnectedSeat':
+        view = {
+          ...view,
+          seats: view.seats.map((seat) =>
+            seat.id === jamie.id ? { ...seat, status: 'alive' } : seat,
+          ),
+          progress: { done: 2, total: 4 },
+          actionStatus: { waiting: 2, total: 4 },
+          coordinatorPendingSeats: [alex, jamie],
+          coordinatorRestorableSeats: [],
+        };
+        break;
+      default:
+        throw new Error(`Unexpected pending action command: ${command.type}`);
+    }
+    view = { ...view, version: view.version + 1 };
+    const response = { serverNow: Date.now(), version: view.version, view };
+    expect(gameViewResponseSchema.safeParse(response).success).toBe(true);
+    await route.fulfill({ json: response });
+  });
+  await page.route('**/socket.io/**', (route) => route.abort());
+
+  await page.goto(`/coordinate/${gameId}`);
+  const controls = page.getByTestId('pending-player-controls');
+  await expect(controls).toBeVisible();
+  await expect(page.getByTestId('button-coordinator-move-on')).toBeDisabled();
+  await expect(page.getByTestId('button-coordinator-move-on')).toHaveText(
+    'Waiting for 2 players',
+  );
+  const graceRow = controls.getByTestId('row-pending-seat-alex');
+  await expect(graceRow).toContainText(
+    'options become available after 60 seconds',
+  );
+  await expect(graceRow.locator('button')).toHaveCount(0);
+  const disconnectedRow = controls.getByTestId('row-pending-seat-jamie');
+  await expect(disconnectedRow.locator('button').first()).toHaveText(
+    'Wait longer',
+  );
+  await controls.getByTestId('button-wait-seat-jamie').click();
+  expect(commands).toEqual([]);
+  await expect(disconnectedRow).toContainText('keeps their action pending');
+
+  await controls.getByTestId('button-skip-seat-jamie').click();
+  const confirmation = controls.getByTestId('confirmation-pending-seat-jamie');
+  await expect(confirmation).toContainText(
+    "Skip Jamie's action? They stay in the game and this counts as no action.",
+  );
+  await expect(confirmation).toContainText(
+    'You can undo the skip before the phase resolves. The public log records it as disconnected.',
+  );
+  await expect(
+    controls.getByTestId('button-confirm-remove-seat-jamie'),
+  ).toHaveCount(0);
+  expect(commands).toEqual([]);
+  await controls.getByTestId('button-wait-confirmation-seat-jamie').click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(disconnectedRow).toBeVisible();
+  expect(commands).toEqual([]);
+  await controls.getByTestId('button-skip-seat-jamie').click();
+  await controls.getByTestId('button-confirm-skip-seat-jamie').click();
+  await expect(controls.getByTestId('row-skipped-seat-jamie')).toBeVisible();
+  await expect(confirmation).toHaveCount(0);
+  await expect(page.getByTestId('button-coordinator-move-on')).toHaveText(
+    'Waiting for 1 player',
+  );
+  await controls.getByTestId('button-undo-skip-seat-jamie').click();
+  await expect(disconnectedRow).toBeVisible();
+  await expect(controls.getByTestId('row-skipped-seat-jamie')).toHaveCount(0);
+
+  await controls.getByTestId('button-remove-seat-jamie').click();
+  await expect(confirmation).toContainText(
+    'Their role and side stay unknown. They can return until the next phase starts.',
+  );
+  await expect(confirmation).toContainText(
+    'This may end the game if the removal settles the result, in which case a winner will be announced.',
+  );
+  await expect(
+    controls.getByTestId('button-confirm-skip-seat-jamie'),
+  ).toHaveCount(0);
+  expect(commands.map((command) => command.type)).toEqual([
+    'SkipPendingAction',
+    'UndoPendingActionSkip',
+  ]);
+  await controls.getByTestId('button-confirm-remove-seat-jamie').click();
+  await expect(controls.getByTestId('row-restorable-seat-jamie')).toContainText(
+    'They can still complete their pending action if they return before the next phase starts.',
+  );
+  await expect(confirmation).toHaveCount(0);
+  await controls.getByTestId('button-reinstate-seat-jamie').click();
+  await expect(disconnectedRow).toBeVisible();
+  await expect(controls.getByTestId('row-restorable-seat-jamie')).toHaveCount(
+    0,
+  );
+  await expect(page.getByTestId('button-coordinator-move-on')).toHaveText(
+    'Waiting for 2 players',
+  );
+  expect(commands.map((command) => command.type)).toEqual([
+    'SkipPendingAction',
+    'UndoPendingActionSkip',
+    'RemoveDisconnectedSeat',
+    'ReinstateDisconnectedSeat',
+  ]);
+});
+
 test('a living player can request a blind majority takeover', async ({
   page,
 }) => {
   const gameId = 'coordinator-console-test';
-  const view = { ...createView(), phase: 'DEBATE' } as FullView;
+  const view = {
+    ...createView(),
+    phase: 'DEBATE',
+    coordinatorSkippedSeats: [],
+  } as FullView;
   const status = {
     eligible: true,
     mode: 'majority',

@@ -16,6 +16,7 @@ const view: CoordinatorConsoleView = {
   deadline: 1_800_000_030_000,
   serverNow: 1_800_000_000_000,
   progress: { done: 3, total: 8 },
+  actionStatus: { waiting: 0, total: 8 },
   seats: [],
   publicLog: [],
   coordinatorAlerts: [],

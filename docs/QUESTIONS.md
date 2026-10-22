@@ -1,5 +1,58 @@
 # Open owner questions
 
+## Q7 — Required night action with no eligible target
+
+**Found 22 October 2026 while implementing Q6.** The unchanged
+`pnpm exec vitest run tests/scenario-vote-targets.test.ts` reaches cycle 5,
+SHADOW slot 1 round 1, with six living Traitors and parity victory disabled.
+Every living seat is required to act, but Traitors may target neither themselves
+nor another Traitor. There is no legal submit and the phase cannot progress.
+The same issue needs consideration in a second murder slot after eligible
+targets have been exhausted.
+
+**Resolved by the owner, 22 October 2026:** after every banishment, murder,
+removal and departure, if no living Faithful remains, the Traitors win
+immediately, regardless of parity. Existing zero-living-seat behaviour stays
+unchanged under Q6. This replaces the proposed extra acknowledgement.
+
+For an exhausted second murder slot, every seat still sees every configured
+slot with identical layout, copy and timing. Accept whatever a Traitor submits,
+or nothing, for an exhausted slot; treat it as complete and resolve no victim.
+No extra screen/button, different wording/timing, role-dependent public count,
+or disclosure of remaining role numbers is permitted.
+
+**Required tests:** parity on/off wins; exhausted slot completes with no victim;
+role-neutral DOM, timing, projections and public log; existing scenario-vote-targets
+completes without weakened assertions; idempotent retries.
+
+**Status:** Rule resolved; implementation and verification in progress. SPEC §3
+remains unchanged. See SPEC §33 and decision D92.
+
+## Q8 — Reconciling Q7 no-submission completion with Q6 waiting privacy
+
+**Finding, 22 October 2026:** the new failing regression
+`tests/q7-rules.test.ts` → “does not reveal hidden eligibility through a deadline
+transition without a submission” constructs two second-slot states with identical
+public progress, deadline and submissions. Only hidden eligibility differs.
+At the same deadline, Q7's exhausted-Traitor exemption advances one state to the
+second window; Q6's required-action gate keeps the other in the first window.
+The public transition therefore distinguishes hidden eligibility even though
+the projected counts, screens and configured slots remain identical.
+
+The organiser UI also still disables advance while the actual pending count is
+nonzero. Enabling it based on the exemption would expose another eligibility
+signal; moving the same check into the scheduler does not remove the signal.
+
+**Owner/reviewer ruling, 22 October 2026:** use the same deadline no-action
+default for every role, only for a slot with no valid target. That slot resolves
+with no victim. Timing, screens and public state remain identical for every role.
+Slots with valid targets retain the configured timeout fallback unchanged.
+Add tests for both cases; no extra screen or acknowledgement.
+
+**Status:** Resolved; implementation and verification in progress. The privacy
+regression remains intact. No push until the changes pass checks and any running
+Verify has finished.
+
 ## Q3 — How to designate a co-coordinator for takeover
 
 **Question:** How should the organiser choose the seat that receives the

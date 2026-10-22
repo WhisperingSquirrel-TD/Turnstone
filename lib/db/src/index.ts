@@ -23,3 +23,4 @@ export type { PoolClient } from 'pg';
 
 export * from './schema';
 export * from './seat-access-store';
+export * from './seat-presence-store';

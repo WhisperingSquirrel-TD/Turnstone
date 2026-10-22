@@ -21,6 +21,12 @@ import {
   readLatestGameSnapshot,
 } from '@workspace/db/game-store';
 import { getOpenGameInviteCode } from '@workspace/db/seat-access-store';
+import {
+  disconnectGameSeatConnection,
+  areGameSeatsDisconnected,
+  touchGameSeatConnection,
+  upsertGameSeatConnection,
+} from '@workspace/db/seat-presence-store';
 
 export type RealtimeOptions = {
   allowedOrigins: readonly string[];
@@ -36,10 +42,24 @@ export type RealtimeOptions = {
   onError?: () => void;
 };
 
-function projectViewer(viewer: Viewer, state: State, lobbyCode: string | null) {
-  return viewer.kind === 'visitor'
-    ? viewFor({ kind: 'visitor' }, state)
-    : viewFor(viewer, state, { lobbyCode });
+async function projectViewer(
+  viewer: Viewer,
+  state: State,
+  lobbyCode: string | null,
+  serverNow: number,
+) {
+  if (viewer.kind === 'visitor') return viewFor({ kind: 'visitor' }, state);
+  const disconnectedSeatIds =
+    viewer.kind === 'coordinator'
+      ? await areGameSeatsDisconnected({
+          gameId: state.id,
+          seatIds: state.seats
+            .filter((seat) => seat.status === 'alive')
+            .map((seat) => seat.id),
+          now: serverNow,
+        })
+      : [];
+  return viewFor(viewer, state, { lobbyCode, disconnectedSeatIds });
 }
 
 function encodedGameRoom(gameId: string): string {
@@ -76,6 +96,7 @@ export async function attachRealtime(
   let notificationErrorHandler: (() => void) | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let closed = false;
+  const pendingPresenceTasks = new Set<Promise<void>>();
   const io = new Server(httpServer, {
     cors: {
       origin: [...options.allowedOrigins],
@@ -130,7 +151,7 @@ export async function attachRealtime(
       const response = gameViewResponseSchema.parse({
         serverNow,
         version: state.version,
-        view: projectViewer(viewer, state, lobbyCode),
+        view: await projectViewer(viewer, state, lobbyCode, serverNow),
       });
       socket.emit('game:view', response);
     }
@@ -220,70 +241,132 @@ export async function attachRealtime(
   });
 
   io.on('connection', (socket) => {
+    let seatPresence:
+      { connectionId: string; gameId: string; seatId: string } | undefined;
+    let presenceQueue = Promise.resolve();
+    const enqueuePresenceTask = (task: () => Promise<void>) => {
+      // Watch, heartbeat and disconnect must commit in socket order. In
+      // particular, disconnect cannot finish before an in-flight watch inserts
+      // its connection, nor can a second watch overwrite that connection.
+      const pending = presenceQueue.then(task);
+      pendingPresenceTasks.add(pending);
+      presenceQueue = pending.catch(() => options.onError?.());
+      void pending.then(
+        () => pendingPresenceTasks.delete(pending),
+        () => pendingPresenceTasks.delete(pending),
+      );
+      return presenceQueue;
+    };
+    const removeSeatPresence = async () => {
+      const current = seatPresence;
+      seatPresence = undefined;
+      if (current)
+        await disconnectGameSeatConnection(
+          current.connectionId,
+          options.now?.() ?? Date.now(),
+        );
+    };
+    socket.conn.on('packet', (packet) => {
+      if (packet.type !== 'pong' || closed) return;
+      const seenAt = options.now?.() ?? Date.now();
+      void enqueuePresenceTask(async () => {
+        if (seatPresence)
+          await touchGameSeatConnection(seatPresence.connectionId, seenAt);
+      });
+    });
+    socket.on('disconnect', () => {
+      void enqueuePresenceTask(removeSeatPresence);
+    });
     socket.on(
       'game:watch',
-      async (input: unknown, acknowledgement?: (response: unknown) => void) => {
-        try {
-          const parsed = gameWatchSchema.safeParse(input);
-          if (!parsed.success) {
-            acknowledgement?.({ error: 'Invalid request' });
-            return;
+      (input: unknown, acknowledgement?: (response: unknown) => void) => {
+        void enqueuePresenceTask(async () => {
+          try {
+            if (closed || !socket.connected) return;
+            const parsed = gameWatchSchema.safeParse(input);
+            if (!parsed.success) {
+              acknowledgement?.({ error: 'Invalid request' });
+              return;
+            }
+            const gameId = parsed.data.gameId;
+            const authenticatedGameId = socket.data.authenticatedGameId as
+              string | undefined;
+            if (authenticatedGameId && authenticatedGameId !== gameId) {
+              acknowledgement?.({ error: 'Not found' });
+              return;
+            }
+            const viewer = await options.resolveViewer(
+              socket.handshake.headers,
+              gameId,
+            );
+            if (viewer.kind === 'visitor') {
+              acknowledgement?.({ error: 'Not found' });
+              socket.disconnect(true);
+              return;
+            }
+            const state = await loadGameState(gameId);
+            const seatId =
+              viewer.kind === 'player' || viewer.kind === 'ghost'
+                ? viewer.seatId
+                : undefined;
+            const seatAuthorised = Boolean(
+              seatId && state?.seats.some((seat) => seat.id === seatId),
+            );
+            const gameAuthorised =
+              viewer.kind === 'presenter' ||
+              viewer.kind === 'coordinator' ||
+              (options.authoriseGame &&
+                (await options.authoriseGame(viewer, gameId)));
+            if (!state || (!seatAuthorised && !gameAuthorised)) {
+              acknowledgement?.({ error: 'Not found' });
+              return;
+            }
+            await removeSeatPresence();
+            if (
+              viewer.kind === 'player' &&
+              seatId &&
+              state.seats.some(
+                (seat) => seat.id === seatId && seat.status === 'alive',
+              )
+            ) {
+              // Each watch keeps its own disconnect evidence, even if this socket
+              // switches seats/games or resubscribes later.
+              const connectionId = `socket:${socket.id}:${randomUUID()}`;
+              await upsertGameSeatConnection({
+                connectionId,
+                gameId,
+                seatId,
+                seenAt: options.now?.() ?? Date.now(),
+              });
+              seatPresence = { connectionId, gameId, seatId };
+              if (closed || !socket.connected) {
+                await removeSeatPresence();
+                return;
+              }
+            }
+            const serverNow = options.now?.() ?? Date.now();
+            const previousRoom = socket.data.gameRoom as string | undefined;
+            if (previousRoom) await socket.leave(previousRoom);
+            const room = encodedGameRoom(gameId);
+            socket.data.gameId = gameId;
+            socket.data.gameRoom = room;
+            await socket.join(room);
+            const lobbyCode =
+              state.phase === 'LOBBY' &&
+              (viewer.kind === 'player' || viewer.kind === 'presenter')
+                ? await getOpenGameInviteCode(state.id, serverNow)
+                : null;
+            const response = gameViewResponseSchema.parse({
+              serverNow,
+              version: state.version,
+              view: await projectViewer(viewer, state, lobbyCode, serverNow),
+            });
+            socket.emit('game:view', response);
+            acknowledgement?.({ ok: true });
+          } catch {
+            acknowledgement?.({ error: 'Service unavailable' });
           }
-          const gameId = parsed.data.gameId;
-          const authenticatedGameId = socket.data.authenticatedGameId as
-            string | undefined;
-          if (authenticatedGameId && authenticatedGameId !== gameId) {
-            acknowledgement?.({ error: 'Not found' });
-            return;
-          }
-          const viewer = await options.resolveViewer(
-            socket.handshake.headers,
-            gameId,
-          );
-          if (viewer.kind === 'visitor') {
-            acknowledgement?.({ error: 'Not found' });
-            socket.disconnect(true);
-            return;
-          }
-          const state = await loadGameState(gameId);
-          const seatId =
-            viewer.kind === 'player' || viewer.kind === 'ghost'
-              ? viewer.seatId
-              : undefined;
-          const seatAuthorised = Boolean(
-            seatId && state?.seats.some((seat) => seat.id === seatId),
-          );
-          const gameAuthorised =
-            viewer.kind === 'presenter' ||
-            viewer.kind === 'coordinator' ||
-            (options.authoriseGame &&
-              (await options.authoriseGame(viewer, gameId)));
-          if (!state || (!seatAuthorised && !gameAuthorised)) {
-            acknowledgement?.({ error: 'Not found' });
-            return;
-          }
-          const serverNow = options.now?.() ?? Date.now();
-          const previousRoom = socket.data.gameRoom as string | undefined;
-          if (previousRoom) await socket.leave(previousRoom);
-          const room = encodedGameRoom(gameId);
-          socket.data.gameId = gameId;
-          socket.data.gameRoom = room;
-          await socket.join(room);
-          const lobbyCode =
-            state.phase === 'LOBBY' &&
-            (viewer.kind === 'player' || viewer.kind === 'presenter')
-              ? await getOpenGameInviteCode(state.id, serverNow)
-              : null;
-          const response = gameViewResponseSchema.parse({
-            serverNow,
-            version: state.version,
-            view: projectViewer(viewer, state, lobbyCode),
-          });
-          socket.emit('game:view', response);
-          acknowledgement?.({ ok: true });
-        } catch {
-          acknowledgement?.({ error: 'Service unavailable' });
-        }
+        });
       },
     );
   });
@@ -296,7 +379,7 @@ export async function attachRealtime(
         JSON.stringify({ gameId, source: instanceId }),
       ]);
     },
-    close(): Promise<void> {
+    async close(): Promise<void> {
       closed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (notificationClient) {
@@ -307,7 +390,11 @@ export async function attachRealtime(
         notificationClient.release();
       }
       notificationClient = null;
-      return new Promise((resolve) => io.close(() => resolve()));
+      await new Promise<void>((resolve) => io.close(() => resolve()));
+      // Socket.IO's close callback does not await async disconnect listeners.
+      // Drain them before callers delete games or shut down the database pool.
+      while (pendingPresenceTasks.size > 0)
+        await Promise.allSettled([...pendingPresenceTasks]);
     },
   };
 }

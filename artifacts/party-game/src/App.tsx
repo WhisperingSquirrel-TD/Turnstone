@@ -780,6 +780,16 @@ function publicLogMessage(entry: FullView['publicLog'][number]): string {
     return en.game.publicLogBanishment(entry.seat.name);
   if (entry.action === 'seat_departed')
     return en.game.publicLogSeatDeparted(entry.seat.name);
+  if (entry.action === 'seat_left_disconnected')
+    return en.game.publicLogDisconnectedSeatLeft(entry.seat.name);
+  if (entry.action === 'seat_reinstated')
+    return en.game.publicLogSeatReinstated(entry.seat.name);
+  if (entry.action === 'coordinator_role_moved')
+    return en.game.publicLogCoordinatorRoleMoved;
+  if (entry.action === 'phase_action_skipped')
+    return en.game.publicLogPhaseActionSkipped(entry.seat.name);
+  if (entry.action === 'phase_action_skip_undone')
+    return en.game.publicLogPhaseActionSkipUndone(entry.seat.name);
   if (entry.action === 'schedule_shift')
     return en.game.publicLogScheduleShift(entry.minutes);
   if (entry.action === 'coordinator_undo')
@@ -2130,7 +2140,12 @@ function PlayerGame() {
   }
 
   async function moveOn() {
-    if (!full?.canAdvancePhase || advanceControl.disabled) return;
+    if (
+      !full?.canAdvancePhase ||
+      advanceControl.disabled ||
+      (full.actionStatus?.waiting ?? 0) > 0
+    )
+      return;
     const currentPhase = full.phase;
     setCommandMessage('');
     try {
@@ -2145,7 +2160,9 @@ function PlayerGame() {
         return;
       }
       if (!latestView.canAdvancePhase) {
-        setCommandMessage(en.game.moveOnFailed);
+        setCommandMessage(
+          latestView.actionStatus.waiting > 0 ? '' : en.game.moveOnFailed,
+        );
         return;
       }
       const latestLocalNow = Date.now();
@@ -2204,11 +2221,20 @@ function PlayerGame() {
     } catch (error) {
       command.reset();
       const refreshed = await gameQuery.refetch();
+      if (refreshed.data?.serverNow !== undefined) {
+        serverClockOffsetMs.current = serverClockOffset(
+          refreshed.data.serverNow,
+          Date.now(),
+        );
+      }
+      const refreshedView = refreshed.data?.view;
       setCommandMessage(
-        refreshed.data?.view.phase === full.phase
-          ? isAdvanceConflict(error)
-            ? en.coordinator.advanceTooEarly
-            : en.game.moveOnFailed
+        refreshedView?.phase === full.phase
+          ? isFullView(refreshedView) && refreshedView.actionStatus.waiting > 0
+            ? ''
+            : isAdvanceConflict(error)
+              ? en.coordinator.advanceTooEarly
+              : en.game.moveOnFailed
           : '',
       );
       setAdvanceLocalNow(Date.now());
@@ -2216,7 +2242,12 @@ function PlayerGame() {
   }
 
   function requestMoveOn() {
-    if (advanceControl.disabled) return;
+    if (
+      advanceControl.disabled ||
+      !full?.canAdvancePhase ||
+      (full.actionStatus?.waiting ?? 0) > 0
+    )
+      return;
     if (!full?.rehearsal && unfinishedCount > 0) {
       setAdvanceConfirmationOpen(true);
       return;
@@ -2329,7 +2360,7 @@ function PlayerGame() {
   };
 
   const showOrganiserBar = Boolean(
-    full?.canAdvancePhase &&
+    (full?.canAdvancePhase || full?.coordinatorPendingSeats !== undefined) &&
     !(full.voteCircle && full.voteCircle.speakerSeatId !== null) &&
     !isResuming &&
     activeGame &&
@@ -3277,14 +3308,22 @@ function PlayerGame() {
                 }
                 type="button"
                 aria-live="polite"
-                disabled={advanceControl.disabled}
+                disabled={
+                  advanceControl.disabled ||
+                  !full.canAdvancePhase ||
+                  full.actionStatus.waiting > 0
+                }
                 onClick={requestMoveOn}
               >
-                {waitingForAdvanceMinimum
-                  ? en.coordinator.minimumMoveOnWait(advanceControl.waitSeconds)
-                  : full.rehearsal
-                    ? en.game.nextRehearsalStep
-                    : en.game.organiserMoveOn}
+                {full.actionStatus.waiting > 0
+                  ? en.coordinator.waitingForPlayers(full.actionStatus.waiting)
+                  : waitingForAdvanceMinimum
+                    ? en.coordinator.minimumMoveOnWait(
+                        advanceControl.waitSeconds,
+                      )
+                    : full.rehearsal
+                      ? en.game.nextRehearsalStep
+                      : en.game.organiserMoveOn}
               </button>
             </div>
           </section>

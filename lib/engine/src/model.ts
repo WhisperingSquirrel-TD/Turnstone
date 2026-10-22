@@ -70,6 +70,21 @@ export type State = {
   } | null;
   acks: string[];
   readySeats?: string[];
+  skippedActions: {
+    seatId: string;
+    phase: Phase;
+    cycle: number;
+    shadowSlot?: 1 | 2;
+    shadowRound?: 1 | 2;
+  }[];
+  disconnectedRemovals: {
+    seatId: string;
+    phase: Phase;
+    cycle: number;
+    restorable: boolean;
+    wasPublicRole: boolean;
+  }[];
+  hiddenRoleSeatIds: string[];
   votes: Record<string, string>;
   revealed: string[];
   voteRevealOrder: string[];
@@ -140,6 +155,39 @@ export type State = {
     | {
         seq: number;
         at: number;
+        action: 'seat_left_disconnected';
+        seatId: string;
+        reason: 'disconnected';
+      }
+    | {
+        seq: number;
+        at: number;
+        action: 'seat_reinstated';
+        seatId: string;
+      }
+    | {
+        seq: number;
+        at: number;
+        action: 'coordinator_role_moved';
+      }
+    | {
+        seq: number;
+        at: number;
+        action: 'phase_action_skipped';
+        seatId: string;
+        phase: Phase;
+        reason: 'disconnected';
+      }
+    | {
+        seq: number;
+        at: number;
+        action: 'phase_action_skip_undone';
+        seatId: string;
+        phase: Phase;
+      }
+    | {
+        seq: number;
+        at: number;
         action: 'no_votes';
       }
     | {
@@ -184,3 +232,61 @@ export type Result =
   { ok: true; events: Event[] } | { ok: false; code: string };
 export const alive = (state: State) =>
   state.seats.filter((seat) => seat.status === 'alive');
+
+export function pendingActionSeatIds(state: State): string[] {
+  const living = alive(state);
+  switch (state.phase) {
+    case 'DEAL':
+      return living
+        .filter(
+          (seat) =>
+            !(state.readySeats ?? []).includes(seat.id) &&
+            !isActionSkipped(state, seat.id),
+        )
+        .map((seat) => seat.id);
+    case 'VOTE':
+    case 'FINAL_BANISH':
+      return living
+        .filter(
+          (seat) =>
+            state.votes[seat.id] === undefined &&
+            !isActionSkipped(state, seat.id),
+        )
+        .map((seat) => seat.id);
+    case 'FINAL_VOTE':
+      return living
+        .filter(
+          (seat) =>
+            state.endVotes[seat.id] === undefined &&
+            !isActionSkipped(state, seat.id),
+        )
+        .map((seat) => seat.id);
+    case 'SHADOW':
+      return living
+        .filter(
+          (seat) =>
+            !state.shadowPicks.some(
+              (pick) =>
+                pick.cycle === state.cycle &&
+                pick.slot === state.shadowSlot &&
+                pick.round === state.shadowRound &&
+                pick.seatId === seat.id,
+            ) && !isActionSkipped(state, seat.id),
+        )
+        .map((seat) => seat.id);
+    default:
+      return [];
+  }
+}
+
+export function isActionSkipped(state: State, seatId: string): boolean {
+  return state.skippedActions.some(
+    (skip) =>
+      skip.seatId === seatId &&
+      skip.phase === state.phase &&
+      skip.cycle === state.cycle &&
+      (state.phase !== 'SHADOW' ||
+        (skip.shadowSlot === state.shadowSlot &&
+          skip.shadowRound === state.shadowRound)),
+  );
+}

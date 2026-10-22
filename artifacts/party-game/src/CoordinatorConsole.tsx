@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FullView } from '@workspace/api-client-react';
 import { en } from './locale/en-GB';
+import { PendingPlayerControls } from './PendingPlayerControls';
 import { getAdvanceControlState, isAdvanceConflict } from './advance-control';
 import { secondsUntilServerDeadline, serverClockOffset } from './server-clock';
 
@@ -10,6 +11,10 @@ export type CoordinatorCommand =
   | { type: 'Resume' }
   | { type: 'ExtendPhase'; minutes: 1 | 5 | 15 }
   | { type: 'MarkDeparted'; seatId: string }
+  | { type: 'SkipPendingAction'; seatId: string }
+  | { type: 'UndoPendingActionSkip'; seatId: string }
+  | { type: 'RemoveDisconnectedSeat'; seatId: string }
+  | { type: 'ReinstateDisconnectedSeat'; seatId: string }
   | { type: 'EndGameEarly' }
   | { type: 'UndoCoordinatorAction' };
 
@@ -21,6 +26,10 @@ export interface CoordinatorConsoleView {
   serverNow: number;
   coordinatorMinimumAdvanceAt?: number | null;
   progress: FullView['progress'];
+  actionStatus: FullView['actionStatus'];
+  coordinatorPendingSeats?: FullView['coordinatorPendingSeats'];
+  coordinatorSkippedSeats?: FullView['coordinatorSkippedSeats'];
+  coordinatorRestorableSeats?: FullView['coordinatorRestorableSeats'];
   seats: FullView['seats'];
   publicLog: FullView['publicLog'];
   coordinatorAlerts: FullView['coordinatorAlerts'];
@@ -39,6 +48,16 @@ function formatPublicUpdate(entry: FullView['publicLog'][number]): string {
     return en.game.publicLogBanishment(entry.seat.name);
   if (entry.action === 'seat_departed')
     return en.game.publicLogSeatDeparted(entry.seat.name);
+  if (entry.action === 'seat_left_disconnected')
+    return en.game.publicLogDisconnectedSeatLeft(entry.seat.name);
+  if (entry.action === 'seat_reinstated')
+    return en.game.publicLogSeatReinstated(entry.seat.name);
+  if (entry.action === 'coordinator_role_moved')
+    return en.game.publicLogCoordinatorRoleMoved;
+  if (entry.action === 'phase_action_skipped')
+    return en.game.publicLogPhaseActionSkipped(entry.seat.name);
+  if (entry.action === 'phase_action_skip_undone')
+    return en.game.publicLogPhaseActionSkipUndone(entry.seat.name);
   if (entry.action === 'schedule_shift')
     return en.game.publicLogScheduleShift(entry.minutes);
   if (entry.action === 'coordinator_undo')
@@ -373,6 +392,13 @@ export function CoordinatorConsole({
           </dd>
         </div>
       </dl>
+      <PendingPlayerControls
+        pendingSeats={view.coordinatorPendingSeats ?? []}
+        skippedSeats={view.coordinatorSkippedSeats ?? []}
+        restorableSeats={view.coordinatorRestorableSeats ?? []}
+        busy={busy}
+        onCommand={run}
+      />
       <section
         className="mt-7 grid gap-3"
         aria-labelledby="coordinator-seats-heading"
@@ -616,15 +642,22 @@ export function CoordinatorConsole({
                 : undefined
             }
             aria-live="polite"
-            disabled={busy || view.paused || minimumWaitSeconds > 0}
+            disabled={
+              busy ||
+              view.paused ||
+              minimumWaitSeconds > 0 ||
+              view.actionStatus.waiting > 0
+            }
             onClick={() => {
               if (movePrompt) setConfirmMove(true);
               else void run({ type: 'AdvancePhase' });
             }}
           >
-            {minimumWaitSeconds > 0
-              ? en.coordinator.minimumMoveOnWait(minimumWaitSeconds)
-              : en.game.organiserMoveOn}
+            {view.actionStatus.waiting > 0
+              ? en.coordinator.waitingForPlayers(view.actionStatus.waiting)
+              : minimumWaitSeconds > 0
+                ? en.coordinator.minimumMoveOnWait(minimumWaitSeconds)
+                : en.game.organiserMoveOn}
           </button>
           {minimumWaitSeconds > 0 && (
             <span
@@ -658,7 +691,12 @@ export function CoordinatorConsole({
           <button
             className="entry-primary-action"
             type="button"
-            disabled={busy || view.paused || minimumWaitSeconds > 0}
+            disabled={
+              busy ||
+              view.paused ||
+              minimumWaitSeconds > 0 ||
+              view.actionStatus.waiting > 0
+            }
             onClick={async () => {
               if (await run({ type: 'AdvancePhase' })) setConfirmMove(false);
             }}

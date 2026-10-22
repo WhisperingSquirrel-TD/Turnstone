@@ -1045,6 +1045,7 @@ components:
         - seats
         - commitment
         - progress
+        - actionStatus
         - votedSeatIds
         - voteCandidates
         - ballots
@@ -1142,6 +1143,45 @@ components:
             total:
               type: integer
               minimum: 0
+        actionStatus:
+          type: object
+          additionalProperties: false
+          required: [waiting, total]
+          properties:
+            waiting:
+              type: integer
+              minimum: 0
+            total:
+              type: integer
+              minimum: 0
+        coordinatorPendingSeats:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name, disconnected]
+            properties:
+              id: { type: string, minLength: 1, maxLength: 128 }
+              name: { type: string }
+              disconnected: { type: boolean }
+        coordinatorRestorableSeats:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name]
+            properties:
+              id: { type: string, minLength: 1, maxLength: 128 }
+              name: { type: string }
+        coordinatorSkippedSeats:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name]
+            properties:
+              id: { type: string, minLength: 1, maxLength: 128 }
+              name: { type: string }
         votedSeatIds:
           type: array
           maxItems: 40
@@ -1410,6 +1450,73 @@ components:
             seq: { type: integer, minimum: 1 }
             at: { type: integer, minimum: 0 }
             action: { type: string, const: banishment }
+            seat:
+              type: object
+              additionalProperties: false
+              required: [id, name]
+              properties:
+                id: { type: string }
+                name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, seat, reason]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: seat_left_disconnected }
+            reason: { type: string, const: disconnected }
+            seat:
+              type: object
+              additionalProperties: false
+              required: [id, name]
+              properties:
+                id: { type: string }
+                name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, seat]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: seat_reinstated }
+            seat:
+              type: object
+              additionalProperties: false
+              required: [id, name]
+              properties:
+                id: { type: string }
+                name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: coordinator_role_moved }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, seat, phase, reason]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: phase_action_skipped }
+            phase: { $ref: '#/components/schemas/Phase' }
+            reason: { type: string, const: disconnected }
+            seat:
+              type: object
+              additionalProperties: false
+              required: [id, name]
+              properties:
+                id: { type: string }
+                name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, seat, phase]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: phase_action_skip_undone }
+            phase: { $ref: '#/components/schemas/Phase' }
             seat:
               type: object
               additionalProperties: false

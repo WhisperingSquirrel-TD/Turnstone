@@ -91,6 +91,7 @@ import {
 } from './session-auth';
 import { security } from './middlewares/security';
 import { staticClient } from './static-client';
+import { canOrganiserActOnDisconnectedSeat } from './disconnected-seat-policy';
 import {
   coordinatorInactivityWindowMs,
   isCoordinatorUnavailableForAction,
@@ -236,10 +237,24 @@ async function projectState(state: State, viewer: Viewer) {
           getOpenGameInviteCode(state.id, Date.now()),
       )
     : null;
+  const disconnectedSeatIds =
+    viewer.kind === 'coordinator' ||
+    (viewer.kind === 'host' && !state.config.basics.coordinatorPlays)
+      ? await import('@workspace/db/seat-presence-store').then(
+          ({ areGameSeatsDisconnected }) =>
+            areGameSeatsDisconnected({
+              gameId: state.id,
+              seatIds: state.seats
+                .filter((seat) => seat.status === 'alive')
+                .map((seat) => seat.id),
+              now: serverNow,
+            }),
+        )
+      : [];
   const view =
     viewer.kind === 'visitor'
       ? viewFor({ kind: 'visitor' }, state)
-      : viewFor(viewer, state, { lobbyCode });
+      : viewFor(viewer, state, { lobbyCode, disconnectedSeatIds });
   if (viewer.kind === 'coordinator' && 'id' in view) {
     const { getGameUndoStatus } = await import('@workspace/db/game-store');
     view.coordinatorUndo = await getGameUndoStatus(
@@ -1770,6 +1785,14 @@ export function createApp(
         sendError(response, 409, entryFailureMessages.recoveryConflict);
         return;
       }
+      const { upsertGameSeatConnection } =
+        await import('@workspace/db/seat-presence-store');
+      await upsertGameSeatConnection({
+        connectionId: `initial:${seat.id}`,
+        gameId: invite.gameId,
+        seatId: seat.id,
+        seenAt: now,
+      });
       response.cookie(cookieNameForGame(invite.gameId), sessionToken, {
         httpOnly: true,
         secure: options.secureCookies ?? false,
@@ -1948,6 +1971,14 @@ export function createApp(
         await publishGame(gameId);
       }
 
+      const { upsertGameSeatConnection } =
+        await import('@workspace/db/seat-presence-store');
+      await upsertGameSeatConnection({
+        connectionId: `initial:${seatId}`,
+        gameId,
+        seatId,
+        seenAt: now,
+      });
       const current = await loadGameState(gameId);
       if (!current?.seats.some((seat) => seat.id === seatId)) {
         if (createdAccess) await deleteSeatAccess(gameId, seatId);
@@ -2308,8 +2339,10 @@ export function createApp(
         now,
         hasPendingJoinRequest,
       );
-      const { getCoordinatorTakeoverRecord } =
-        await import('@workspace/db/coordinator-access-store');
+      const {
+        getCoordinatorTakeoverRecord,
+        reserveAutomaticCoordinatorHandover,
+      } = await import('@workspace/db/coordinator-access-store');
       const record = await getCoordinatorTakeoverRecord(gameId, now);
       if (!record) {
         sendError(response, 404, 'Not found');
@@ -2320,18 +2353,41 @@ export function createApp(
         lastSeenAt: record.lastSeenAt,
         actionNeeded,
       });
-      const coCoordinator = record.delegateSeatIds.includes(seat.id);
-      const mode = !unavailable
-        ? null
-        : record.delegateSeatIds.length > 0
-          ? coCoordinator
-            ? 'co-coordinator'
-            : null
-          : 'majority';
       const livingSeatIds = state.seats
         .filter((candidate) => candidate.status === 'alive')
         .map((candidate) => candidate.id);
-      const requestRecord = record.request;
+      const manualRequest =
+        record.request?.status === 'pending' ||
+        record.request?.status === 'approved'
+          ? record.request
+          : null;
+      const automaticMode = unavailable && actionNeeded && !manualRequest;
+      let automaticTargetSeatId: string | null = null;
+      if (automaticMode) {
+        const { listConnectedSeatIds } =
+          await import('@workspace/db/seat-presence-store');
+        const connectedSeatIds = await listConnectedSeatIds({ gameId, now });
+        const handover = await reserveAutomaticCoordinatorHandover({
+          id: randomUUID(),
+          gameId,
+          delegateSeatIds: record.delegateSeatIds,
+          livingSeatIds,
+          connectedSeatIds,
+          now,
+          inactiveRequestCutoff: now - coordinatorInactivityWindowMs,
+          expiresAt: now + coordinatorTakeoverRequestDurationMs,
+          actionNeeded,
+        });
+        automaticTargetSeatId = handover?.targetSeatId ?? null;
+      }
+      const mode = !unavailable
+        ? null
+        : manualRequest
+          ? 'majority'
+          : automaticTargetSeatId === seat.id
+            ? 'co-coordinator'
+            : null;
+      const requestRecord = manualRequest;
       const livingVotes = requestRecord?.votes.filter((vote) =>
         livingSeatIds.includes(vote.seatId),
       );
@@ -2345,7 +2401,7 @@ export function createApp(
           ? 'pending'
           : requestRecord?.status;
       const canClaimDelegate =
-        mode === 'co-coordinator' && requestRecord === null;
+        mode === 'co-coordinator' && automaticTargetSeatId === seat.id;
       const canClaimMajority =
         mode === 'majority' &&
         effectiveRequestStatus === 'approved' &&
@@ -2586,30 +2642,72 @@ export function createApp(
         sendError(response, 409, 'Takeover is not currently available');
         return;
       }
+      const livingSeatIds = state.seats
+        .filter((candidate) => candidate.status === 'alive')
+        .map((candidate) => candidate.id);
+      const { listConnectedSeatIds } =
+        await import('@workspace/db/seat-presence-store');
+      const {
+        reserveAutomaticCoordinatorHandover,
+        claimAutomaticCoordinatorHandover,
+        claimCoordinatorTakeover,
+      } = await import('@workspace/db/coordinator-access-store');
       const token = randomBytes(32).toString('base64url');
-      const input = {
-        gameId,
-        tokenHash: createHash('sha256').update(token).digest('hex'),
-        sessionExpiresAt: now + seatSessionDurationMs,
-        inactiveRequestCutoff: now - coordinatorInactivityWindowMs,
-        now,
-        actionNeeded,
-      };
-      const { claimCoordinatorAsDelegate, claimCoordinatorTakeover } =
-        await import('@workspace/db/coordinator-access-store');
-      const transferred = parsed.data.requestId
-        ? await claimCoordinatorTakeover({
-            ...input,
-            requestId: parsed.data.requestId,
+      const manualRequest =
+        record.request?.status === 'pending' ||
+        record.request?.status === 'approved'
+          ? record.request
+          : null;
+      let transferred = false;
+      if (manualRequest) {
+        // Never fall back to automatic selection around a pending/approved
+        // explicit request, including claims by delegates or other players.
+        if (
+          parsed.data.requestId === manualRequest.id &&
+          manualRequest.requesterSeatId === seat.id &&
+          manualRequest.status === 'approved'
+        )
+          transferred = await claimCoordinatorTakeover({
+            gameId,
+            tokenHash: createHash('sha256').update(token).digest('hex'),
+            sessionExpiresAt: now + seatSessionDurationMs,
+            inactiveRequestCutoff: now - coordinatorInactivityWindowMs,
+            now,
+            actionNeeded,
+            requestId: manualRequest.id,
             requesterSeatId: seat.id,
-            livingSeatIds: state.seats
-              .filter((candidate) => candidate.status === 'alive')
-              .map((candidate) => candidate.id),
-          })
-        : await claimCoordinatorAsDelegate({
-            ...input,
-            seatId: seat.id,
+            livingSeatIds,
           });
+      } else {
+        const connectedSeatIds = await listConnectedSeatIds({ gameId, now });
+        // Without an explicit request, every claim uses server selection. A
+        // nonselected delegate cannot bypass it by claiming directly.
+        const reservation = await reserveAutomaticCoordinatorHandover({
+          id: randomUUID(),
+          gameId,
+          delegateSeatIds: record.delegateSeatIds,
+          livingSeatIds,
+          connectedSeatIds,
+          now,
+          inactiveRequestCutoff: now - coordinatorInactivityWindowMs,
+          expiresAt: now + coordinatorTakeoverRequestDurationMs,
+          actionNeeded,
+        });
+        if (reservation?.targetSeatId === seat.id)
+          transferred = await claimAutomaticCoordinatorHandover({
+            gameId,
+            tokenHash: createHash('sha256').update(token).digest('hex'),
+            sessionExpiresAt: now + seatSessionDurationMs,
+            inactiveRequestCutoff: now - coordinatorInactivityWindowMs,
+            now,
+            actionNeeded,
+            requestId: reservation.id,
+            seatId: seat.id,
+            livingSeatIds,
+            connectedSeatIds,
+            expectedVersion: state.version,
+          });
+      }
       if (!transferred) {
         sendError(response, 409, 'Takeover is not currently available');
         return;
@@ -2977,6 +3075,56 @@ export function createApp(
       if (!state) {
         sendError(response, 404, 'Not found');
         return;
+      }
+      if (
+        !previous &&
+        (parsed.data.type === 'SkipPendingAction' ||
+          parsed.data.type === 'RemoveDisconnectedSeat')
+      ) {
+        const targetSeatId = parsed.data.seatId;
+        const playerViewer = await viewerForRequest(request);
+        const { getCoordinatorTakeoverRecord } =
+          await import('@workspace/db/coordinator-access-store');
+        const currentCoordinator = await getCoordinatorTakeoverRecord(
+          gameId,
+          options.testOnlyNow?.() ?? Date.now(),
+        );
+        const organiserSeatId =
+          currentCoordinator?.holderSeatId ??
+          (playerViewer.kind === 'player' ? playerViewer.seatId : undefined);
+        if (organiserSeatId && organiserSeatId === targetSeatId) {
+          sendError(response, 403, 'You cannot skip or remove your own seat.');
+          return;
+        }
+        const { areGameSeatsDisconnected } =
+          await import('@workspace/db/seat-presence-store');
+        const disconnected = await areGameSeatsDisconnected({
+          gameId,
+          seatIds: [targetSeatId],
+          now: options.testOnlyNow?.() ?? Date.now(),
+        });
+        const targetIsAlive = state.seats.some(
+          (seat) => seat.id === targetSeatId && seat.status === 'alive',
+        );
+        if (
+          !canOrganiserActOnDisconnectedSeat({
+            targetSeatId,
+            organiserSeatId,
+            seatIsAlive: targetIsAlive,
+            seatIsDisconnected: disconnected.includes(targetSeatId),
+          })
+        ) {
+          if (!targetIsAlive) {
+            sendError(response, 409, 'That player is no longer in the game.');
+            return;
+          }
+          sendError(
+            response,
+            409,
+            'That player has not been disconnected for 60 seconds. Wait, or ask them to reconnect before skipping or removing them.',
+          );
+          return;
+        }
       }
       if (!previous && parsed.data.type === 'UndoCoordinatorAction') {
         const now = options.testOnlyNow?.() ?? Date.now();

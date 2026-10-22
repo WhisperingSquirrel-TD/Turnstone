@@ -40,6 +40,10 @@ export const commandSchema = z.union([
   command('Pause'),
   command('Resume'),
   command('AcknowledgePrivate', { ready: z.boolean().optional() }),
+  command('SkipPendingAction', { seatId: id }),
+  command('UndoPendingActionSkip', { seatId: id }),
+  command('RemoveDisconnectedSeat', { seatId: id }),
+  command('ReinstateDisconnectedSeat', { seatId: id }),
   command('RequestRedeal'),
   command('SubmitVote', { target: id }),
   command('RevealVote'),
@@ -110,6 +114,20 @@ export const eventSchema = z.discriminatedUnion('type', [
     redeal: z.boolean(),
   }),
   event('PrivateAcknowledged', { seatId: id, ready: z.boolean().optional() }),
+  event('PhaseActionSkipped', {
+    seatId: id,
+    phase: phaseSchema,
+    cycle: z.number().int().nonnegative(),
+    shadowSlot: z.union([z.literal(1), z.literal(2)]).optional(),
+    shadowRound: z.union([z.literal(1), z.literal(2)]).optional(),
+  }),
+  event('PhaseActionSkipUndone', {
+    seatId: id,
+    phase: phaseSchema,
+    cycle: z.number().int().nonnegative(),
+    shadowSlot: z.union([z.literal(1), z.literal(2)]).optional(),
+    shadowRound: z.union([z.literal(1), z.literal(2)]).optional(),
+  }),
   event('VoteSubmitted', { seatId: id, target: id }),
   event('VoteRevealed', { seatId: id }),
   event('VoteSkipped', {}),
@@ -194,6 +212,17 @@ export const eventSchema = z.discriminatedUnion('type', [
     reason: z.enum(['banished', 'murdered', 'departed']),
     publicRole: z.boolean(),
   }),
+  event('DisconnectedSeatRemoved', {
+    seatId: id,
+    phase: phaseSchema,
+    cycle: z.number().int().nonnegative(),
+  }),
+  event('DisconnectedSeatReinstated', {
+    seatId: id,
+    phase: phaseSchema,
+    cycle: z.number().int().nonnegative(),
+  }),
+  event('CoordinatorRoleMoved', {}),
   event('ShieldsAllocated', { holders: z.array(id) }),
   event('DawnResolved', { victims: z.array(id), protected: z.array(id) }),
   event('Paused', {
@@ -309,6 +338,49 @@ const publicLogEntrySchema = z.discriminatedUnion('action', [
     .object({
       seq: z.number().int().positive(),
       at: z.number().int().nonnegative(),
+      action: z.literal('seat_left_disconnected'),
+      seat: z.object({ id, name: z.string() }).strict(),
+      reason: z.literal('disconnected'),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
+      action: z.literal('seat_reinstated'),
+      seat: z.object({ id, name: z.string() }).strict(),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
+      action: z.literal('coordinator_role_moved'),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
+      action: z.literal('phase_action_skipped'),
+      seat: z.object({ id, name: z.string() }).strict(),
+      phase: phaseSchema,
+      reason: z.literal('disconnected'),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
+      action: z.literal('phase_action_skip_undone'),
+      seat: z.object({ id, name: z.string() }).strict(),
+      phase: phaseSchema,
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
       action: z.literal('schedule_shift'),
       minutes: z.number().int().positive(),
     })
@@ -378,6 +450,43 @@ export const fullViewSchema = z
     ),
     commitment: z.string().nullable(),
     progress: z.object({ done: z.number(), total: z.number() }).strict(),
+    actionStatus: z
+      .object({
+        waiting: z.number().int().nonnegative(),
+        total: z.number().int().nonnegative(),
+      })
+      .strict(),
+    coordinatorPendingSeats: z
+      .array(
+        z
+          .object({
+            id,
+            name: z.string(),
+            disconnected: z.boolean(),
+          })
+          .strict(),
+      )
+      .optional(),
+    coordinatorRestorableSeats: z
+      .array(
+        z
+          .object({
+            id,
+            name: z.string(),
+          })
+          .strict(),
+      )
+      .optional(),
+    coordinatorSkippedSeats: z
+      .array(
+        z
+          .object({
+            id,
+            name: z.string(),
+          })
+          .strict(),
+      )
+      .optional(),
     votedSeatIds: z.array(id).max(40),
     voteCandidates: z.array(id),
     ballots: z.record(id),

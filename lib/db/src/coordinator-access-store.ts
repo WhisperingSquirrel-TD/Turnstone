@@ -1,5 +1,13 @@
-import { and, desc, eq, gt, inArray, isNull } from 'drizzle-orm';
+import { randomInt } from 'node:crypto';
+import { and, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { eventSchema } from '@workspace/shared';
 import { db } from './index';
+import {
+  gameDeadlines,
+  gameEvents,
+  gameUndoWindows,
+  games,
+} from './schema/game-runtime';
 import {
   gameCoordinatorCapabilities,
   gameCoordinatorDelegates,
@@ -49,7 +57,11 @@ export async function touchCoordinatorPresence(input: {
       .where(
         and(
           eq(gameCoordinatorTakeovers.gameId, input.gameId),
-          inArray(gameCoordinatorTakeovers.status, ['pending', 'approved']),
+          inArray(gameCoordinatorTakeovers.status, [
+            'pending',
+            'approved',
+            'automatic',
+          ]),
           gt(gameCoordinatorTakeovers.expiresAt, new Date(input.now)),
         ),
       );
@@ -61,9 +73,17 @@ export async function listCoordinatorDelegates(
   gameId: string,
 ): Promise<string[]> {
   const rows = await db
-    .select({ seatId: gameCoordinatorDelegates.seatId })
+    .select({
+      seatId: gameCoordinatorDelegates.seatId,
+      assignedAt: gameCoordinatorDelegates.assignedAt,
+    })
     .from(gameCoordinatorDelegates)
     .where(eq(gameCoordinatorDelegates.gameId, gameId));
+  rows.sort(
+    (left, right) =>
+      left.assignedAt.getTime() - right.assignedAt.getTime() ||
+      left.seatId.localeCompare(right.seatId),
+  );
   return rows.map((row) => row.seatId);
 }
 
@@ -107,7 +127,11 @@ export async function replaceCoordinatorDelegates(input: {
       .where(
         and(
           eq(gameCoordinatorTakeovers.gameId, input.gameId),
-          inArray(gameCoordinatorTakeovers.status, ['pending', 'approved']),
+          inArray(gameCoordinatorTakeovers.status, [
+            'pending',
+            'approved',
+            'automatic',
+          ]),
         ),
       );
     return true;
@@ -119,12 +143,14 @@ export async function getCoordinatorTakeoverRecord(
   now: number,
 ): Promise<{
   lastSeenAt: number | null;
+  holderSeatId: string | null;
   delegateSeatIds: string[];
   request: CoordinatorTakeoverRecord | null;
 } | null> {
   const [capability] = await db
     .select({
       lastSeenAt: gameCoordinatorCapabilities.lastSeenAt,
+      holderSeatId: gameCoordinatorCapabilities.holderSeatId,
     })
     .from(gameCoordinatorCapabilities)
     .where(
@@ -143,15 +169,23 @@ export async function getCoordinatorTakeoverRecord(
     .where(
       and(
         eq(gameCoordinatorTakeovers.gameId, gameId),
-        inArray(gameCoordinatorTakeovers.status, ['pending', 'approved']),
+        inArray(gameCoordinatorTakeovers.status, [
+          'pending',
+          'approved',
+          'automatic',
+        ]),
         gt(gameCoordinatorTakeovers.expiresAt, new Date(now)),
       ),
     )
-    .orderBy(desc(gameCoordinatorTakeovers.createdAt))
+    .orderBy(
+      sql`case when ${gameCoordinatorTakeovers.status} = 'automatic' then 1 else 0 end`,
+      desc(gameCoordinatorTakeovers.createdAt),
+    )
     .limit(1);
   if (!request)
     return {
       lastSeenAt: capability.lastSeenAt.getTime(),
+      holderSeatId: capability.holderSeatId,
       delegateSeatIds,
       request: null,
     };
@@ -164,6 +198,7 @@ export async function getCoordinatorTakeoverRecord(
     .where(eq(gameCoordinatorTakeoverVotes.requestId, request.id));
   return {
     lastSeenAt: capability.lastSeenAt.getTime(),
+    holderSeatId: capability.holderSeatId,
     delegateSeatIds,
     request: {
       id: request.id,
@@ -173,6 +208,268 @@ export async function getCoordinatorTakeoverRecord(
       votes,
     },
   };
+}
+
+export async function reserveAutomaticCoordinatorHandover(input: {
+  id: string;
+  gameId: string;
+  delegateSeatIds: string[];
+  livingSeatIds: string[];
+  connectedSeatIds: string[];
+  now: number;
+  inactiveRequestCutoff: number;
+  expiresAt: number;
+  actionNeeded: boolean;
+}): Promise<{ id: string; targetSeatId: string } | null> {
+  if (!input.actionNeeded) return null;
+  const now = new Date(input.now);
+  return db.transaction(async (transaction) => {
+    const [capability] = await transaction
+      .select({
+        lastSeenAt: gameCoordinatorCapabilities.lastSeenAt,
+        holderSeatId: gameCoordinatorCapabilities.holderSeatId,
+      })
+      .from(gameCoordinatorCapabilities)
+      .where(
+        and(
+          eq(gameCoordinatorCapabilities.gameId, input.gameId),
+          isNull(gameCoordinatorCapabilities.revokedAt),
+          gt(gameCoordinatorCapabilities.expiresAt, now),
+        ),
+      )
+      .for('update')
+      .limit(1);
+    if (
+      !capability ||
+      capability.lastSeenAt.getTime() > input.inactiveRequestCutoff
+    )
+      return null;
+
+    // An explicit majority request owns this takeover until it resolves or
+    // expires. Serialize this decision with request creation on the capability.
+    const [manualRequest] = await transaction
+      .select({ id: gameCoordinatorTakeovers.id })
+      .from(gameCoordinatorTakeovers)
+      .where(
+        and(
+          eq(gameCoordinatorTakeovers.gameId, input.gameId),
+          inArray(gameCoordinatorTakeovers.status, ['pending', 'approved']),
+          gt(gameCoordinatorTakeovers.expiresAt, now),
+        ),
+      )
+      .limit(1);
+    if (manualRequest) return null;
+
+    const [existing] = await transaction
+      .select({
+        id: gameCoordinatorTakeovers.id,
+        targetSeatId: gameCoordinatorTakeovers.requesterSeatId,
+      })
+      .from(gameCoordinatorTakeovers)
+      .where(
+        and(
+          eq(gameCoordinatorTakeovers.gameId, input.gameId),
+          eq(gameCoordinatorTakeovers.status, 'automatic'),
+          gt(gameCoordinatorTakeovers.expiresAt, now),
+        ),
+      )
+      .for('update')
+      .limit(1);
+    const connectedLivingSeats = [...new Set(input.connectedSeatIds)]
+      .filter(
+        (seatId) =>
+          input.livingSeatIds.includes(seatId) &&
+          seatId !== capability.holderSeatId,
+      )
+      .sort();
+    if (existing && connectedLivingSeats.includes(existing.targetSeatId))
+      return { id: existing.id, targetSeatId: existing.targetSeatId };
+
+    const preferredDelegate = input.delegateSeatIds.find((seatId) =>
+      connectedLivingSeats.includes(seatId),
+    );
+    const targetSeatId =
+      preferredDelegate ??
+      (connectedLivingSeats.length
+        ? connectedLivingSeats[randomInt(connectedLivingSeats.length)]
+        : undefined);
+    await transaction
+      .update(gameCoordinatorTakeovers)
+      .set({ status: 'cancelled', resolvedAt: now })
+      .where(
+        and(
+          eq(gameCoordinatorTakeovers.gameId, input.gameId),
+          eq(gameCoordinatorTakeovers.status, 'automatic'),
+        ),
+      );
+    if (!targetSeatId) return null;
+    await transaction.insert(gameCoordinatorTakeovers).values({
+      id: input.id,
+      gameId: input.gameId,
+      requesterSeatId: targetSeatId,
+      status: 'automatic',
+      expiresAt: new Date(input.expiresAt),
+      createdAt: now,
+    });
+    return { id: input.id, targetSeatId };
+  });
+}
+
+export async function claimAutomaticCoordinatorHandover(input: {
+  requestId: string;
+  gameId: string;
+  seatId: string;
+  tokenHash: string;
+  sessionExpiresAt: number;
+  now: number;
+  inactiveRequestCutoff: number;
+  livingSeatIds: string[];
+  connectedSeatIds: string[];
+  actionNeeded: boolean;
+  expectedVersion: number;
+}): Promise<boolean> {
+  if (
+    !input.actionNeeded ||
+    !input.livingSeatIds.includes(input.seatId) ||
+    !input.connectedSeatIds.includes(input.seatId)
+  )
+    return false;
+  const now = new Date(input.now);
+  return db.transaction(async (transaction) => {
+    // Lock in the same order as game writes, then reservation/presence writes.
+    const [game] = await transaction
+      .select({ version: games.version })
+      .from(games)
+      .where(eq(games.id, input.gameId))
+      .for('update')
+      .limit(1);
+    if (!game || game.version !== input.expectedVersion) return false;
+    const [capability] = await transaction
+      .select({
+        lastSeenAt: gameCoordinatorCapabilities.lastSeenAt,
+        holderSeatId: gameCoordinatorCapabilities.holderSeatId,
+      })
+      .from(gameCoordinatorCapabilities)
+      .where(
+        and(
+          eq(gameCoordinatorCapabilities.gameId, input.gameId),
+          isNull(gameCoordinatorCapabilities.revokedAt),
+          gt(gameCoordinatorCapabilities.expiresAt, now),
+        ),
+      )
+      .for('update')
+      .limit(1);
+    if (
+      !capability ||
+      capability.holderSeatId === input.seatId ||
+      capability.lastSeenAt.getTime() > input.inactiveRequestCutoff
+    )
+      return false;
+    const [manualRequest] = await transaction
+      .select({ id: gameCoordinatorTakeovers.id })
+      .from(gameCoordinatorTakeovers)
+      .where(
+        and(
+          eq(gameCoordinatorTakeovers.gameId, input.gameId),
+          inArray(gameCoordinatorTakeovers.status, ['pending', 'approved']),
+          gt(gameCoordinatorTakeovers.expiresAt, now),
+        ),
+      )
+      .limit(1);
+    if (manualRequest) return false;
+    const [request] = await transaction
+      .select({ id: gameCoordinatorTakeovers.id })
+      .from(gameCoordinatorTakeovers)
+      .where(
+        and(
+          eq(gameCoordinatorTakeovers.id, input.requestId),
+          eq(gameCoordinatorTakeovers.gameId, input.gameId),
+          eq(gameCoordinatorTakeovers.requesterSeatId, input.seatId),
+          eq(gameCoordinatorTakeovers.status, 'automatic'),
+          gt(gameCoordinatorTakeovers.expiresAt, now),
+        ),
+      )
+      .for('update')
+      .limit(1);
+    if (!request) return false;
+
+    // The public event and capability rotation commit together. Any event write
+    // failure rolls back the claim, leaving the old capability and reservation
+    // intact for a retry. Never persist the capability in the public payload.
+    const event = eventSchema.parse({
+      schemaVersion: 1,
+      seq: game.version + 1,
+      at: input.now,
+      type: 'CoordinatorRoleMoved',
+    });
+    await transaction.insert(gameEvents).values({
+      gameId: input.gameId,
+      seq: event.seq,
+      type: event.type,
+      payload: event,
+      recordedAt: now,
+    });
+    await transaction
+      .update(games)
+      .set({ version: event.seq, updatedAt: now })
+      .where(eq(games.id, input.gameId));
+    await transaction
+      .update(gameUndoWindows)
+      .set({ invalidatedAt: now })
+      .where(
+        and(
+          eq(gameUndoWindows.gameId, input.gameId),
+          isNull(gameUndoWindows.invalidatedAt),
+        ),
+      );
+    // Replace active timers like a normal game append. Updating only their
+    // version would let an already-running stale worker complete the new timer.
+    const deadlines = await transaction
+      .update(gameDeadlines)
+      .set({ completedAt: now, claimedUntil: null, claimToken: null })
+      .where(
+        and(
+          eq(gameDeadlines.gameId, input.gameId),
+          isNull(gameDeadlines.completedAt),
+        ),
+      )
+      .returning({ kind: gameDeadlines.kind, dueAt: gameDeadlines.dueAt });
+    if (deadlines.length > 0)
+      await transaction.insert(gameDeadlines).values(
+        deadlines.map((deadline) => ({
+          gameId: input.gameId,
+          kind: deadline.kind,
+          dueAt: deadline.dueAt,
+          version: event.seq,
+        })),
+      );
+    const updated = await transaction
+      .update(gameCoordinatorCapabilities)
+      .set({
+        tokenHash: input.tokenHash,
+        holderSeatId: input.seatId,
+        lastSeenAt: now,
+        expiresAt: new Date(input.sessionExpiresAt),
+      })
+      .where(
+        and(
+          eq(gameCoordinatorCapabilities.gameId, input.gameId),
+          isNull(gameCoordinatorCapabilities.revokedAt),
+          gt(gameCoordinatorCapabilities.expiresAt, now),
+        ),
+      )
+      .returning({ gameId: gameCoordinatorCapabilities.gameId });
+    if (updated.length !== 1)
+      throw new Error('Coordinator capability rotation failed');
+    await transaction
+      .update(gameCoordinatorTakeovers)
+      .set({ status: 'completed', resolvedAt: now })
+      .where(eq(gameCoordinatorTakeovers.id, input.requestId));
+    await transaction
+      .delete(gameCoordinatorDelegates)
+      .where(eq(gameCoordinatorDelegates.gameId, input.gameId));
+    return true;
+  });
 }
 
 export async function createCoordinatorTakeoverRequest(input: {
@@ -220,6 +517,17 @@ export async function createCoordinatorTakeoverRequest(input: {
       )
       .limit(1);
     if (existing) return false;
+    // Explicit manual requests supersede an unclaimed automatic reservation.
+    // The capability lock also prevents a concurrent automatic claim.
+    await transaction
+      .update(gameCoordinatorTakeovers)
+      .set({ status: 'cancelled', resolvedAt: new Date(input.now) })
+      .where(
+        and(
+          eq(gameCoordinatorTakeovers.gameId, input.gameId),
+          eq(gameCoordinatorTakeovers.status, 'automatic'),
+        ),
+      );
     await transaction.insert(gameCoordinatorTakeovers).values({
       id: input.id,
       gameId: input.gameId,

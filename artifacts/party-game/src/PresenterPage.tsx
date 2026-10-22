@@ -95,6 +95,16 @@ function publicUpdate(entry: FullView['publicLog'][number]): string {
     return en.game.publicLogBanishment(entry.seat.name);
   if (entry.action === 'seat_departed')
     return en.game.publicLogSeatDeparted(entry.seat.name);
+  if (entry.action === 'seat_left_disconnected')
+    return en.game.publicLogDisconnectedSeatLeft(entry.seat.name);
+  if (entry.action === 'seat_reinstated')
+    return en.game.publicLogSeatReinstated(entry.seat.name);
+  if (entry.action === 'coordinator_role_moved')
+    return en.game.publicLogCoordinatorRoleMoved;
+  if (entry.action === 'phase_action_skipped')
+    return en.game.publicLogPhaseActionSkipped(entry.seat.name);
+  if (entry.action === 'phase_action_skip_undone')
+    return en.game.publicLogPhaseActionSkipUndone(entry.seat.name);
   if (entry.action === 'schedule_shift')
     return en.game.publicLogScheduleShift(entry.minutes);
   if (entry.action === 'coordinator_undo')

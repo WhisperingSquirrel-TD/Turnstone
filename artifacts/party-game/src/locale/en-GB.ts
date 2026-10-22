@@ -40,12 +40,32 @@ export const en = {
     paused: 'Paused',
     timeLeft: 'Time left',
     minimumMoveOnWait: (seconds: number) => `Ready in ${seconds}`,
+    waitingForPlayers: (count: number) =>
+      `Waiting for ${count} ${count === 1 ? 'player' : 'players'}`,
     minimumMoveOnStatus: (seconds: number) =>
       `Move everyone on in ${seconds} second${seconds === 1 ? '' : 's'}.`,
     advanceTooEarly:
       'This step needs a little longer. The countdown has been refreshed.',
     privateProgress: 'Private progress',
     progress: (done: number, total: number) => `${done} of ${total} done`,
+    pendingActionsHeading: 'Players still needed',
+    pendingActionsCount: (count: number) =>
+      `Waiting for ${count} ${count === 1 ? 'player' : 'players'}. The phase will not end until everyone living has acted.`,
+    pendingActionsGrace:
+      'If a player is disconnected, options become available after 60 seconds.',
+    pendingActionDisconnected: 'Disconnected for at least 60 seconds.',
+    waitLonger: 'Wait longer',
+    skipPendingAction: 'Skip this action',
+    removeDisconnectedPlayer: 'Remove from the game',
+    skipActionConfirmation: (name: string) =>
+      `Skip ${name}'s action? They stay in the game and this counts as no action. You can undo the skip before the phase resolves. The public log records it as disconnected.`,
+    removeSeatConfirmation: (name: string) =>
+      `Remove ${name} from the game? Their role and side stay unknown. They can return until the next phase starts. This may end the game if the removal settles the result, in which case a winner will be announced. Otherwise, the game continues.`,
+    confirmSkip: 'Confirm skip',
+    confirmRemove: 'Confirm removal',
+    restorePendingSeat: 'Let them back in',
+    restorePendingSeatHelp:
+      'They can still complete their pending action if they return before the next phase starts.',
     coCoordinatorHeading: 'Co-coordinator takeover',
     coCoordinatorCountLabel: 'Co-coordinator seats',
     coCoordinatorDecrease: 'Decrease co-coordinator seats',
@@ -628,6 +648,15 @@ export const en = {
         : 'No one was taken.',
     publicLogBanishment: (name: string) => `${name} was banished.`,
     publicLogSeatDeparted: (name: string) => `${name} was marked as departed.`,
+    publicLogDisconnectedSeatLeft: (name: string) =>
+      `${name} left the game after a disconnection. Nobody knows their role.`,
+    publicLogSeatReinstated: (name: string) => `${name} returned to the game.`,
+    publicLogCoordinatorRoleMoved:
+      'The organiser role moved to another player.',
+    publicLogPhaseActionSkipped: (name: string) =>
+      `${name}’s pending action was skipped after a disconnection.`,
+    publicLogPhaseActionSkipUndone: (name: string) =>
+      `${name}’s pending action was restored.`,
     publicLogScheduleShift: (minutes: number) =>
       `The schedule has been shifted by ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
     publicLogCoordinatorUndo: 'The coordinator reversed the last action.',

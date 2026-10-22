@@ -8,7 +8,12 @@ import {
   commitment,
 } from '../lib/engine/src/index';
 import { eventSchema, gameConfigSchema } from '../lib/shared/src/index';
-import { fixture, command, advance } from './support/engine';
+import {
+  fixture,
+  command,
+  advance,
+  skipPendingPlayerActions,
+} from './support/engine';
 
 describe('Milestone 1 deterministic engine', () => {
   it('holds coordinator move-on until the enforced SHADOW deadline', () => {
@@ -17,6 +22,7 @@ describe('Milestone 1 deterministic engine', () => {
       ...game.state,
       phase: 'SHADOW' as const,
       phaseStarted: 1_000,
+      shadowSlot: 1 as const,
       shadowRound: 2 as const,
       deadline: 0,
     };
@@ -39,6 +45,7 @@ describe('Milestone 1 deterministic engine', () => {
     );
     game.state = state;
     game.context.now = privateMinimum + 1;
+    skipPendingPlayerActions(game);
     expect(
       command(game, { type: 'AdvancePhase' }, false, { kind: 'coordinator' }),
     ).toMatchObject({ ok: false, code: 'SHADOW_WINDOW_NOT_DUE' });
@@ -870,6 +877,7 @@ describe('Milestone 1 deterministic engine', () => {
       game.state.config.privacy.shieldSeconds * 1000 +
       game.state.config.privacy.holdMs +
       1;
+    skipPendingPlayerActions(game);
     expect(command(game, { type: 'AdvancePhase' }, false)).toMatchObject({
       ok: false,
       code: 'SHADOW_WINDOW_NOT_DUE',
@@ -2190,6 +2198,7 @@ describe('Milestone 1 deterministic engine', () => {
       game.state.phaseStarted +
       game.state.config.privacy.shieldSeconds * 1000 +
       game.state.config.privacy.holdMs;
+    skipPendingPlayerActions(game);
     const early = command(game, { type: 'AdvancePhase' }, false);
     expect(early).toMatchObject({
       ok: false,

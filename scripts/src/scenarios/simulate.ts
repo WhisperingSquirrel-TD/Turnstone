@@ -2,6 +2,7 @@ import {
   assertInvariants,
   decide,
   evolve,
+  pendingActionSeatIds,
   replay,
   VIEW_ALLOW_LIST,
   VISITOR_VIEW_ALLOW_LIST,
@@ -445,7 +446,7 @@ export function runCompleteGame(
       state.seats.forEach((seat, index) => {
         if (!strategySkipsSeat(index, state))
           issue(
-            { type: 'AcknowledgePrivate' },
+            { type: 'AcknowledgePrivate', ready: true },
             { kind: 'player', seatId: seat.id },
           );
       });
@@ -551,6 +552,18 @@ export function runCompleteGame(
 
     const current = game.state!;
     if (current.phase === 'FINISHED') break;
+    for (const seatId of pendingActionSeatIds(current)) {
+      const seatIndex = current.seats.findIndex((seat) => seat.id === seatId);
+      const deliberatelyAbsent =
+        strategySkipsSeat(seatIndex, current) ||
+        (options.strategy === 'non-voter' &&
+          ['VOTE', 'FINAL_BANISH', 'FINAL_VOTE'].includes(current.phase));
+      if (!deliberatelyAbsent)
+        throw new Error(
+          `Bot did not complete its ${current.phase} action for ${seatId}`,
+        );
+      issue({ type: 'SkipPendingAction', seatId }, { kind: 'coordinator' });
+    }
     context.now =
       Math.max(
         current.deadline ?? context.now,

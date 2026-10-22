@@ -357,6 +357,56 @@ export type PublicLogEntry = {
   seq: number;
   /** @minimum 0 */
   at: number;
+  action: 'seat_left_disconnected';
+  reason: 'disconnected';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'seat_reinstated';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'coordinator_role_moved';
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'phase_action_skipped';
+  phase: Phase;
+  reason: 'disconnected';
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
+  action: 'phase_action_skip_undone';
+  phase: Phase;
+  seat: {
+  id: string;
+  name: string;
+};
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
   action: 'seat_departed';
   seat: {
   id: string;
@@ -499,6 +549,41 @@ export type FullViewProgress = {
   total: number;
 };
 
+export type FullViewActionStatus = {
+  /** @minimum 0 */
+  waiting: number;
+  /** @minimum 0 */
+  total: number;
+};
+
+export type FullViewCoordinatorPendingSeatsItem = {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  id: string;
+  name: string;
+  disconnected: boolean;
+};
+
+export type FullViewCoordinatorRestorableSeatsItem = {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  id: string;
+  name: string;
+};
+
+export type FullViewCoordinatorSkippedSeatsItem = {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  id: string;
+  name: string;
+};
+
 export type FullViewBallots = {[key: string]: string};
 
 export type FullViewVoteCircle = {
@@ -604,6 +689,10 @@ export interface FullView {
   /** @nullable */
   commitment: string | null;
   progress: FullViewProgress;
+  actionStatus: FullViewActionStatus;
+  coordinatorPendingSeats?: FullViewCoordinatorPendingSeatsItem[];
+  coordinatorRestorableSeats?: FullViewCoordinatorRestorableSeatsItem[];
+  coordinatorSkippedSeats?: FullViewCoordinatorSkippedSeatsItem[];
   /**
      * @maxItems 40
      * @items.minLength 1

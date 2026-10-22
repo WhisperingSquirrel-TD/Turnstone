@@ -7,7 +7,11 @@
  */
 import type { CoordinatorAlert } from './coordinatorAlert';
 import type { FairnessView } from './fairnessView';
+import type { FullViewActionStatus } from './fullViewActionStatus';
 import type { FullViewBallots } from './fullViewBallots';
+import type { FullViewCoordinatorPendingSeatsItem } from './fullViewCoordinatorPendingSeatsItem';
+import type { FullViewCoordinatorRestorableSeatsItem } from './fullViewCoordinatorRestorableSeatsItem';
+import type { FullViewCoordinatorSkippedSeatsItem } from './fullViewCoordinatorSkippedSeatsItem';
 import type { FullViewCoordinatorUndo } from './fullViewCoordinatorUndo';
 import type { FullViewEndRule } from './fullViewEndRule';
 import type { FullViewProgress } from './fullViewProgress';
@@ -79,6 +83,10 @@ export interface FullView {
   /** @nullable */
   commitment: string | null;
   progress: FullViewProgress;
+  actionStatus: FullViewActionStatus;
+  coordinatorPendingSeats?: FullViewCoordinatorPendingSeatsItem[];
+  coordinatorRestorableSeats?: FullViewCoordinatorRestorableSeatsItem[];
+  coordinatorSkippedSeats?: FullViewCoordinatorSkippedSeatsItem[];
   /**
      * @maxItems 40
      * @items.minLength 1

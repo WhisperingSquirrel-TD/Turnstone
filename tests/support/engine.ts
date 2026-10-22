@@ -1,6 +1,7 @@
 import {
   decide,
   evolve,
+  pendingActionSeatIds,
   type Context,
   type State,
   type Event,
@@ -61,6 +62,20 @@ export function command(
   succeed = true,
   actor: Actor = { kind: 'coordinator' },
 ) {
+  if (succeed && payload.type === 'AdvancePhase') {
+    // Engine scenarios that intentionally omit player input now exercise an
+    // explicit acknowledgement or skip before advancing the phase.
+    for (const seatId of pendingActionSeatIds(game.state)) {
+      if (game.state.phase === 'DEAL') {
+        command(game, { type: 'AcknowledgePrivate', ready: true }, true, {
+          kind: 'player',
+          seatId,
+        });
+      } else {
+        command(game, { type: 'SkipPendingAction', seatId });
+      }
+    }
+  }
   const result = decide(
     game.state,
     {
@@ -84,6 +99,19 @@ export function advance(game: TestGame, phase: State['phase']) {
     i < 100 && game.state.phase !== phase && game.state.phase !== 'FINISHED';
     i++
   ) {
+    for (const seatId of pendingActionSeatIds(game.state)) {
+      if (game.state.phase === 'DEAL') {
+        command(game, { type: 'AcknowledgePrivate', ready: true }, true, {
+          kind: 'player',
+          seatId,
+        });
+      } else {
+        // Headless engine tests advance past unanswered actions by exercising
+        // the same explicit skip event available to an authorised coordinator.
+        // Server tests separately enforce the disconnect grace period.
+        command(game, { type: 'SkipPendingAction', seatId });
+      }
+    }
     game.context.now =
       game.state.deadline !== null
         ? game.state.deadline + 1
@@ -95,4 +123,9 @@ export function advance(game: TestGame, phase: State['phase']) {
   }
   if (game.state.phase !== phase)
     throw new Error(`Did not reach ${phase}: ${game.state.phase}`);
+}
+
+export function skipPendingPlayerActions(game: TestGame) {
+  for (const seatId of pendingActionSeatIds(game.state))
+    command(game, { type: 'SkipPendingAction', seatId });
 }

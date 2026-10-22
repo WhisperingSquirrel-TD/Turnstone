@@ -5,7 +5,7 @@ import {
   type VisitorView,
   type View,
 } from '../../shared/src/index';
-import { alive, type State } from './model';
+import { alive, pendingActionSeatIds, type State } from './model';
 import { getCoordinatorMinimumAdvanceAt } from './phase-timing';
 
 export type Viewer =
@@ -47,6 +47,10 @@ export const VIEW_ALLOW_LIST = [
   'seats',
   'commitment',
   'progress',
+  'actionStatus',
+  'coordinatorPendingSeats',
+  'coordinatorRestorableSeats',
+  'coordinatorSkippedSeats',
   'votedSeatIds',
   'voteCandidates',
   'ballots',
@@ -63,6 +67,7 @@ export const VIEW_ALLOW_LIST = [
 
 export type ProjectionContext = {
   lobbyCode?: string | null;
+  disconnectedSeatIds?: readonly string[];
 };
 
 // Never spread state, seats or events: construct every field and nested field.
@@ -108,7 +113,14 @@ export function viewFor(
     context.lobbyCode
       ? context.lobbyCode
       : undefined;
-  const reveal = Boolean(viewer.reveal && (player || host || spectator));
+  const pendingActions = pendingActionSeatIds(state);
+  const disconnectedSeatIds = new Set(context.disconnectedSeatIds ?? []);
+  const coordinator = viewer.kind === 'coordinator' || host;
+  const reveal = Boolean(
+    viewer.reveal &&
+    (player || host || spectator) &&
+    !(own && state.hiddenRoleSeatIds.includes(own.id)),
+  );
   const isTraitor = player && own?.role === 'traitor';
   const rehearsalOrganizer =
     (viewer.kind === 'player' || viewer.kind === 'ghost') &&
@@ -228,6 +240,7 @@ export function viewFor(
     seats: state.seats.map((seat) => {
       const visible =
         !presenter &&
+        !state.hiddenRoleSeatIds.includes(seat.id) &&
         (ended || (host && reveal) || (spectator && reveal) || seat.publicRole);
       return {
         id: seat.id,
@@ -250,10 +263,52 @@ export function viewFor(
               ? alive(state).filter((seat) =>
                   (state.readySeats ?? []).includes(seat.id),
                 ).length
-              : alive(state).filter((seat) => state.acks.includes(seat.id))
-                  .length,
+              : state.phase === 'SHADOW'
+                ? alive(state).length - pendingActionSeatIds(state).length
+                : alive(state).filter((seat) => state.acks.includes(seat.id))
+                    .length,
       total: alive(state).length,
     },
+    actionStatus: {
+      waiting: pendingActions.length,
+      total: alive(state).length,
+    },
+    ...(coordinator
+      ? {
+          coordinatorPendingSeats: pendingActions
+            .map((seatId) => state.seats.find((seat) => seat.id === seatId))
+            .filter((seat): seat is NonNullable<typeof seat> => Boolean(seat))
+            .map((seat) => ({
+              id: seat.id,
+              name: seat.name,
+              disconnected: disconnectedSeatIds.has(seat.id),
+            })),
+          coordinatorRestorableSeats: state.disconnectedRemovals
+            .filter(
+              (removal) =>
+                removal.restorable &&
+                removal.phase === state.phase &&
+                removal.cycle === state.cycle,
+            )
+            .map((removal) =>
+              state.seats.find((seat) => seat.id === removal.seatId),
+            )
+            .filter((seat): seat is NonNullable<typeof seat> => Boolean(seat))
+            .map((seat) => ({ id: seat.id, name: seat.name })),
+          coordinatorSkippedSeats: state.skippedActions
+            .filter(
+              (skip) =>
+                skip.phase === state.phase &&
+                skip.cycle === state.cycle &&
+                (state.phase !== 'SHADOW' ||
+                  (skip.shadowSlot === state.shadowSlot &&
+                    skip.shadowRound === state.shadowRound)),
+            )
+            .map((skip) => state.seats.find((seat) => seat.id === skip.seatId))
+            .filter((seat): seat is NonNullable<typeof seat> => Boolean(seat))
+            .map((seat) => ({ id: seat.id, name: seat.name })),
+        }
+      : {}),
     votedSeatIds:
       !presenter && (state.phase === 'VOTE' || state.phase === 'FINAL_BANISH')
         ? alive(state)
@@ -328,6 +383,49 @@ export function viewFor(
                 '',
             },
           };
+        if (
+          entry.action === 'seat_left_disconnected' ||
+          entry.action === 'seat_reinstated'
+        )
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+            seat: {
+              id: entry.seatId,
+              name:
+                state.seats.find((seat) => seat.id === entry.seatId)?.name ??
+                '',
+            },
+            ...(entry.action === 'seat_left_disconnected'
+              ? { reason: entry.reason }
+              : {}),
+          };
+        if (entry.action === 'coordinator_role_moved')
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+          };
+        if (
+          entry.action === 'phase_action_skipped' ||
+          entry.action === 'phase_action_skip_undone'
+        )
+          return {
+            seq: entry.seq,
+            at: entry.at,
+            action: entry.action,
+            seat: {
+              id: entry.seatId,
+              name:
+                state.seats.find((seat) => seat.id === entry.seatId)?.name ??
+                '',
+            },
+            phase: entry.phase,
+            ...(entry.action === 'phase_action_skipped'
+              ? { reason: entry.reason }
+              : {}),
+          };
         if (entry.action === 'schedule_shift')
           return {
             seq: entry.seq,
@@ -370,7 +468,11 @@ export function viewFor(
                 ? alive(state).filter((seat) => seat.role === 'traitor')
                 : []
             )
-              .filter((seat) => seat.role !== null)
+              .filter(
+                (seat) =>
+                  seat.role !== null &&
+                  !state.hiddenRoleSeatIds.includes(seat.id),
+              )
               .map((seat) => ({
                 id: seat.id,
                 name: seat.name,
@@ -419,15 +521,21 @@ export function viewFor(
               }),
             ),
             chat: host
-              ? state.chat.map((item) => ({
-                  seatId: item.seatId,
-                  text: item.text,
-                  seq: item.seq,
-                }))
+              ? state.chat
+                  .filter(
+                    (item) => !state.hiddenRoleSeatIds.includes(item.seatId),
+                  )
+                  .map((item) => ({
+                    seatId: item.seatId,
+                    text: item.text,
+                    seq: item.seq,
+                  }))
               : isTraitor
                 ? state.chat
                     .filter(
-                      (item) => item.seq >= (own?.traitorSince ?? Infinity),
+                      (item) =>
+                        item.seq >= (own?.traitorSince ?? Infinity) &&
+                        !state.hiddenRoleSeatIds.includes(item.seatId),
                     )
                     .map((item) => ({
                       seatId: item.seatId,
@@ -477,7 +585,7 @@ export function viewFor(
           }
         : null,
     fairness:
-      !presenter && ended && state.deal
+      !presenter && ended && state.deal && state.hiddenRoleSeatIds.length === 0
         ? {
             salt: state.deal.salt,
             roles: state.deal.roles,

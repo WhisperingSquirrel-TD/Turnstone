@@ -54,6 +54,7 @@ import {
   findCoordinatorSession,
   getCoordinatorTakeoverRecord,
 } from '../lib/db/src/coordinator-access-store';
+import { upsertGameSeatConnection } from '../lib/db/src/seat-presence-store';
 import {
   advance as advanceFixture,
   command as applyFixtureCommand,
@@ -543,6 +544,13 @@ it('supports designated and majority logistics takeovers without exposing secret
         seatId: seat.id,
         expiresAt: fixedNow + 60 * 60_000,
       });
+      // Takeover eligibility is based on connected seats, not merely sessions.
+      await upsertGameSeatConnection({
+        connectionId: `socket:takeover:${seat.id}`,
+        gameId,
+        seatId: seat.id,
+        seenAt: fixedNow,
+      });
     }
     const originalCoordinatorCookie = cookieValues(
       created.headers['set-cookie'],
@@ -779,6 +787,23 @@ it('supports designated and majority logistics takeovers without exposing secret
           where game_id = ${gameId}`,
     );
 
+    const { reserveAutomaticCoordinatorHandover } =
+      await import('../lib/db/src/coordinator-access-store');
+    const reserveAutomatic = () =>
+      reserveAutomaticCoordinatorHandover({
+        id: randomUUID(),
+        gameId,
+        delegateSeatIds: [],
+        livingSeatIds: seats.map((seat) => seat.id),
+        connectedSeatIds: seats.map((seat) => seat.id),
+        now: fixedNow,
+        inactiveRequestCutoff: fixedNow - 120_000,
+        expiresAt: fixedNow + 60_000,
+        actionNeeded: true,
+      });
+    // An explicit majority request must also work after automatic dropout has
+    // selected (but not yet transferred to) a connected recipient.
+    expect(await reserveAutomatic()).not.toBeNull();
     const requested = await request(app)
       .post(`/api/games/${gameId}/takeover`)
       .set('Cookie', postHeaders(0).Cookie)
@@ -787,6 +812,24 @@ it('supports designated and majority logistics takeovers without exposing secret
     expect(requested.status).toBe(201);
     const requestId = requested.body.requestId as string;
     expect(requested.body.status).toBe('pending');
+    expect(await reserveAutomatic()).toBeNull();
+    const pendingStatus = await request(app)
+      .get(`/api/games/${gameId}/takeover`)
+      .set('Cookie', seatCookie(2));
+    expect(pendingStatus.status).toBe(200);
+    expect(pendingStatus.body).toMatchObject({
+      eligible: true,
+      mode: 'majority',
+      canVote: true,
+      canClaim: false,
+      request: { id: requestId, status: 'pending', yesVotes: 1 },
+    });
+    await request(app)
+      .post(`/api/games/${gameId}/takeover/claim`)
+      .set('Cookie', postHeaders(0).Cookie)
+      .set('X-CSRF-Token', csrfToken)
+      .send({ requestId })
+      .expect(409, { error: 'Takeover is not currently available' });
     const firstApproval = await request(app)
       .post(`/api/games/${gameId}/takeover/vote`)
       .set('Cookie', postHeaders(2).Cookie)
@@ -799,6 +842,7 @@ it('supports designated and majority logistics takeovers without exposing secret
       .set('X-CSRF-Token', csrfToken)
       .send({ requestId, approve: true });
     expect(secondApproval.body.status).toBe('approved');
+    expect(await reserveAutomatic()).toBeNull();
     await request(app)
       .post(`/api/games/${gameId}/takeover/vote`)
       .set('Cookie', postHeaders(4).Cookie)
@@ -858,6 +902,9 @@ it('supports designated and majority logistics takeovers without exposing secret
       ),
     ).toBe(true);
 
+    // Automatic handover appends a public event, so synchronize the fixture
+    // before appending a subsequent coordinator action.
+    state = replay(await readGameEvents(gameId));
     const departedSeatId = seats[4]!.id;
     const departureEvent = eventSchema.parse({
       seq: state.version + 1,
@@ -2533,6 +2580,7 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
       .set('X-CSRF-Token', csrfToken)
       .send({
         type: 'AcknowledgePrivate',
+        ready: true,
         idempotencyKey: randomUUID(),
       });
     expect(acknowledgement.status).toBe(200);
@@ -2640,7 +2688,7 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
       });
       const player = state.seats.find((seat) => seat.name === 'Morgan');
       expect(player).toBeDefined();
-      let playerCommand: Record<string, unknown> | null = null;
+      const playerCommands: Record<string, unknown>[] = [];
       const privatePhases = [
         'DEAL',
         'SHADOW',
@@ -2648,14 +2696,22 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
         'FINAL_VOTE',
         'FINAL_BANISH',
       ];
-      if (player!.status !== 'alive') {
-        playerCommand = null;
-      } else if (
+      if (
+        player!.status === 'alive' &&
         privatePhases.includes(state.phase) &&
         !state.acks.includes(player!.id)
       )
-        playerCommand = { type: 'AcknowledgePrivate' };
-      else if (state.phase === 'SHADOW' && !state.shadow[player!.id]) {
+        playerCommands.push({
+          type: 'AcknowledgePrivate',
+          ...(state.phase === 'DEAL' ? { ready: true } : {}),
+        });
+      // Acknowledging a private screen is not the action itself. Complete the
+      // human's choice as well before asking the coordinator to advance.
+      if (
+        player!.status === 'alive' &&
+        state.phase === 'SHADOW' &&
+        !state.shadow[player!.id]
+      ) {
         const candidates = state.seats.filter(
           (seat) =>
             seat.status === 'alive' &&
@@ -2665,25 +2721,42 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
         );
         const target = candidates[0];
         if (target)
-          playerCommand = {
+          playerCommands.push({
             type: 'SubmitShadowChoice',
             choice: target.id,
-          };
+          });
       } else if (
+        player!.status === 'alive' &&
         (state.phase === 'VOTE' || state.phase === 'FINAL_BANISH') &&
         !state.votes[player!.id]
       ) {
         const target = state.seats.find(
-          (seat) => seat.status === 'alive' && seat.id !== player!.id,
+          (seat) =>
+            seat.status === 'alive' &&
+            seat.id !== player!.id &&
+            (state.candidates.length === 0 ||
+              state.candidates.includes(seat.id)),
         );
-        if (target) playerCommand = { type: 'SubmitVote', target: target.id };
-      } else if (state.phase === 'FINAL_VOTE' && !state.endVotes[player!.id]) {
-        playerCommand = {
+        if (target)
+          playerCommands.push({ type: 'SubmitVote', target: target.id });
+      } else if (
+        player!.status === 'alive' &&
+        state.phase === 'FINAL_VOTE' &&
+        !state.endVotes[player!.id]
+      ) {
+        playerCommands.push({
           type: 'SubmitEndgameVote',
           choice: 'continue',
-        };
+        });
+      } else if (
+        state.phase === 'VERDICT' &&
+        state.voteRevealOrder.find(
+          (seatId) => !state.revealed.includes(seatId),
+        ) === player!.id
+      ) {
+        playerCommands.push({ type: 'RevealVote' });
       }
-      if (playerCommand) {
+      for (const playerCommand of playerCommands) {
         const submitted = await request(app)
           .post(`/api/games/${gameId}/commands`)
           .set('Cookie', shieldedCookie)
@@ -2722,7 +2795,14 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
         .get(`/api/games/${gameId}/view`)
         .set('Cookie', cookie);
       expect(beforeMoveView.status).toBe(200);
-      expect(beforeMoveView.body.view.canAdvancePhase).toBe(true);
+      expect(
+        beforeMoveView.body.view.canAdvancePhase,
+        JSON.stringify({
+          phase: afterBots.phase,
+          voteRevealOrder: afterBots.voteRevealOrder,
+          revealed: afterBots.revealed,
+        }),
+      ).toBe(true);
       const movedOn = await request(app)
         .post(`/api/games/${gameId}/commands`)
         .set('Cookie', shieldedCookie)
@@ -3087,6 +3167,21 @@ it('pushes whole projected views only after an authenticated socket joins a serv
     expect(firstView.version).toBe(2);
     expect(firstView.view.seats).toHaveLength(1);
     expect(firstView.view.private).toBeNull();
+    // Resubscriptions can arrive while a previous watch is still writing
+    // presence. They must not orphan an earlier connection row.
+    const watchAgain = () =>
+      new Promise<unknown>((resolve) =>
+        client!.emit('game:watch', { gameId }, resolve),
+      );
+    expect(await Promise.all([watchAgain(), watchAgain()])).toEqual([
+      { ok: true },
+      { ok: true },
+    ]);
+    const activeConnections = await db.execute(sql`
+      select connection_id from game_seat_connections
+      where game_id = ${gameId} and connection_id like 'socket:%'
+    `);
+    expect(activeConnections.rows).toHaveLength(1);
 
     const secondSeat = eventSchema.parse({
       seq: 3,
@@ -3134,7 +3229,19 @@ it('pushes whole projected views only after an authenticated socket joins a serv
     client?.disconnect();
     await realtime.close();
     await publisherRealtime.close();
-    await db.execute(sql`delete from games where id = ${gameId}`);
+    try {
+      const connections = await db.execute(sql`
+        select connection_id from game_seat_connections
+        where game_id = ${gameId}
+      `);
+      expect(connections.rows).toEqual([
+        {
+          connection_id: `disconnected:${JSON.stringify([gameId, 'seat-1'])}`,
+        },
+      ]);
+    } finally {
+      await db.execute(sql`delete from games where id = ${gameId}`);
+    }
   }
 });
 

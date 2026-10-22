@@ -367,6 +367,24 @@ Never show the old generic “x of y players have completed this part” line. S
 
 The real-server, eight-seat rehearsal reaches results without a presenter or manual refresh. Its tests cover no shield on banishment votes, the verdict lead line, forced ties, one shield per night, first-day-and-night human safety, watch mode after a forced removal, second-person fate copy, commentary on every step, day/night theme changes, and AA contrast. Night uniformity checks compare all four fixed-height lines and text-length bands across roles and themes. Playwright screenshots cover the required viewports and both themes; the action bar/footer and header bounds are checked visually.
 
+## 33. No living Faithful and exhausted night slots [Owner, 22 October 2026]
+
+After every banishment, murder, removal and departure, no living Faithful
+remaining means an immediate Traitor win, whatever the parity setting.
+The separately approved zero-living-seat behaviour remains unchanged.
+
+Every seat's night screen retains every configured slot, with identical layout,
+copy and timing for every role. If the second murder slot has no valid target,
+accept whatever a Traitor submits (or nothing), consider that slot complete and
+resolve it with no victim. Do not add an acknowledgement screen, button or
+different wording. Neither public progress nor any other surface may disclose
+remaining role counts beyond already-public facts. Retries remain idempotent.
+
+At the deadline, a slot with no valid target uses the same no-action default for
+every role and resolves with no victim. This exception applies only to exhausted
+slots. A slot with valid targets retains its configured timeout fallback.
+Screens, timing and public state remain role-neutral in both cases.
+
 ## 32. No unexplained repeated choices [Owner, 16 October 2026]
 
 Before a game asks people to choose again or asks more than one question, every phone shows the same role-neutral explanation before the choices open. The explanation is derived from shared game state, not the viewer's role.

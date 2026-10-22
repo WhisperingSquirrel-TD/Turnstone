@@ -134,6 +134,7 @@ test('private role is requested only during a hold and is removed on release', a
     seats: [{ id: 'human-seat', name: 'Morgan', status: 'alive' }],
     commitment: null,
     progress: { done: 0, total: 5 },
+    actionStatus: { waiting: 5, total: 5 },
     votedSeatIds: [],
     ballots: {},
     voteCandidates: [],
@@ -160,7 +161,10 @@ test('private role is requested only during a hold and is removed on release', a
     const data = route.request().postDataJSON();
     if (data.type === 'AcknowledgePrivate') {
       readinessAcknowledgements.push(data.ready === true);
-      if (data.ready === true) publicView.progress.done = 1;
+      if (data.ready === true) {
+        publicView.progress.done = 1;
+        publicView.actionStatus.waiting = 4;
+      }
     }
     await route.fulfill({
       status: 200,
@@ -294,6 +298,7 @@ test('notes show one privacy line without nested scrolling or excess top space',
     seats: [{ id: 'human-seat', name: 'Morgan', status: 'alive' }],
     commitment: null,
     progress: { done: 0, total: 1 },
+    actionStatus: { waiting: 0, total: 1 },
     votedSeatIds: [],
     voteCandidates: [],
     ballots: {},
@@ -453,6 +458,7 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     seats: [{ id: 'human-seat', name: 'Morgan', status: 'alive' }],
     commitment: null,
     progress: { done: 0, total: 5 },
+    actionStatus: { waiting: 5, total: 5 },
     votedSeatIds: [],
     ballots: {},
     voteCandidates: [],
@@ -687,6 +693,7 @@ test('game wordmark stays top-left and active-play actions stay unobstructed', a
     })),
     commitment: null,
     progress: { done: 0, total: 1 },
+    actionStatus: { waiting: 0, total: 12 },
     votedSeatIds: [],
     voteCandidates: [],
     ballots: {},

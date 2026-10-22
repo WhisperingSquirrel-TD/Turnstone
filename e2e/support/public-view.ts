@@ -31,6 +31,7 @@ export function createPublicView(gameId: string): FullView {
     ],
     commitment: null,
     progress: { done: 0, total: 2 },
+    actionStatus: { waiting: 0, total: 2 },
     votedSeatIds: [],
     voteCandidates: [],
     ballots: {},

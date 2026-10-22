@@ -19,3 +19,4 @@
 - [Production CSP verification](production-csp-verification.md) — test built Node output in Chromium and WebKit; Vite and successful hydration can miss blocked resources.
 - [Workflow listener ownership](workflow-listener-ownership.md) — an HTTP 200 can come from an old process after restart; verify the new instance actually binds.
 - [WebKit cookie verification](webkit-cookie-verification.md) — test cookie delivery through a real proxied endpoint, not Playwright route headers.
+- [Clean working branches](clean-work-branches.md) — fetch current main and inspect outgoing history; preserve local work without pushing unrelated attachments or test output.
