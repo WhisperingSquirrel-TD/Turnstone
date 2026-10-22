@@ -87,3 +87,80 @@ resynchronization and shared realtime state before use.
 
 **Status:** Unresolved documentation detail; Autoscale/scale-to-zero remains a
 later experiment, limited to one game-server instance.
+
+## Q6 — Living players who miss a phase action
+
+**Status:** Proposal for owner approval only. No implementation or SPEC §3
+change has been made.
+
+**Current behaviour:** Live phases can advance by organiser action or at the
+scheduled deadline. The organiser may move on after the server minimum, with a
+confirmation if players are unfinished; the deadline scheduler also advances
+with unfinished players. Missing normal-vote ballots remain absent; no votes
+means nobody is banished. Missing night choices use the configured decision
+and timeout fallback. A missing private acknowledgement is not turned into a
+vote or penalty. Rehearsal remains player-paced.
+
+**Proposed rule:** If the scheduled deadline arrives while a living player has
+not submitted the phase action, keep the phase open. Show the same count-only
+status to every player, regardless of role; the organiser alone sees the
+pending names. Allow late submissions during the grace period. After a
+60-second grace period, offer organiser actions for each pending seat:
+
+- **Wait longer** — wait another 60 seconds.
+- **Skip [name]’s action** — count it as no action; keep the seat in the game
+  and do not fabricate a ballot, choice or acknowledgement.
+- **Remove [name] from the game** — remove the seat without revealing its role
+  or side.
+
+The phase resolves only after every remaining living player has submitted or
+the organiser has explicitly skipped their action. A removed seat is no longer
+expected to act. Recompute win conditions immediately after removal and end
+the game if they are met. A returning player keeps the same seat unless
+removed; a removed seat cannot reclaim it.
+
+**Proposed shared copy:**
+
+- `Waiting for 1 player`
+- `Waiting for {count} players`
+
+**Proposed organiser copy:**
+
+- `Wait longer` — `Wait another 60 seconds.`
+- `Skip [name]’s action` — `They stay in the game. This counts as no action.`
+- `Remove [name] from the game` — `Their role will not be revealed.`
+- Removal confirmation: `Remove [name] from the game? Their role will remain
+unknown to the group.`
+- Public log: `[name] left the game. Their role remains unknown to the group.`
+
+The count-only status and all player projections must be role-neutral. Pending
+names are visible only to the organiser. Removal must keep that seat’s role and
+side hidden in every player, presenter, recap and end-of-game role projection.
+The public log records the departure without a role or side.
+
+**Tests required before implementation:**
+
+1. Before the grace period ends, all roles see the same count-only waiting line;
+   player and presenter views contain no pending names, roles, ballots or
+   choices, while the organiser sees the names.
+2. A late action during the grace period is accepted once, clears that player
+   from the pending list, and does not duplicate an event. The phase cannot
+   advance while any action remains pending.
+3. At 60 seconds, organiser-only Wait longer, Skip and Remove controls appear.
+   Wait longer resets the server-timed grace period. Skip adds no ballot,
+   choice or acknowledgement, leaves the seat alive, and resolves using the
+   existing no-action rules.
+4. Removal writes only the proposed role-neutral public log entry, immediately
+   recalculates the result, and never reveals the removed seat’s role or side
+   in player, presenter, recap or final views, including when removal ends the
+   game.
+5. A player returning before removal recovers the same seat and pending action.
+   A removed player cannot recover that seat. Cover deadline boundaries with
+   server-clock offsets and pause/resume.
+
+**Open owner decisions:** What happens if removal leaves fewer than the
+minimum number of players? How does organiser phone dropout interact with
+coordinator handover? If removal ends the game, could announcing the winning
+side indirectly reveal the removed player’s side, contrary to the no-reveal
+rule? Should skipping a DEAL acknowledgement leave the private role card
+available to that seat on return?

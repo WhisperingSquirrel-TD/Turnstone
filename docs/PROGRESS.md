@@ -1,8 +1,8 @@
 # Status for reviewer
 
-**Resilience set 1 follow-up — Verify pending.** Verify #220 failed `static-checks` (Prettier in `PrivateChoiceControls.tsx`) and all browser profiles on two 409-rejection cases. The cause was treating a definitive server refusal as an uncertain submission; this fix restores phase-specific rejection feedback and unlocks the choice, while uncertain failures still retry the exact payload and key. Local targeted unit tests (7/7), desktop and Pixel browser tests (2/2 each), typecheck, lint and formatting pass. iPhone WebKit could not launch locally because required system libraries are unavailable; Verify will check its profile.
+**Verify #220 resolved:** #220 failed on Prettier formatting and missing specific feedback for definitive 409 rejections. The fix was pushed in `2e8a806`; Verify #221 attempt 2 is green, including all four browser profiles and required-checks.
 
-**Latest confirmed green:** GitHub Verify #219 (`978e82b`); Verify for this fix is pending.
+**Offline-player proposal:** Q6 in `docs/QUESTIONS.md` is for owner review only. No code or SPEC §3 changes. Minimum-player handling, organiser dropout and related role-redaction questions remain open. Do not begin Set 2 before owner approval.
 
 **Real Practice clips:** Actual nightfall at SHADOW start and dawn at DAWN played in desktop and Pixel full-session runs.
 
