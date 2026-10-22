@@ -3018,7 +3018,15 @@ export function createApp(
         }
         await publishGame(gameId);
       } else if (!previous) {
-        const attempts = parsed.data.type === 'AcknowledgePrivate' ? 4 : 1;
+        const voteSubmission = parsed.data.type === 'SubmitVote';
+        const shadowChoiceSubmission =
+          parsed.data.type === 'SubmitShadowChoice';
+        const retriesVersionConflicts =
+          voteSubmission || shadowChoiceSubmission;
+        const privateAcknowledgement =
+          parsed.data.type === 'AcknowledgePrivate';
+        const attempts =
+          retriesVersionConflicts || privateAcknowledgement ? 40 : 1;
         let committed = false;
         for (let attempt = 0; attempt < attempts; attempt += 1) {
           const now = options.testOnlyNow?.() ?? Date.now();
@@ -3067,16 +3075,16 @@ export function createApp(
             committed = true;
             break;
           }
-          if (
-            parsed.data.type !== 'AcknowledgePrivate' ||
-            attempt + 1 === attempts
-          ) {
+          const retryableConflict =
+            stored.code === 'VERSION_CONFLICT' &&
+            (privateAcknowledgement || retriesVersionConflicts);
+          if (!retryableConflict || attempt + 1 === attempts) {
             sendError(response, 409, 'Command rejected');
             return;
           }
-          // Rehearsal bots can write concurrently with this acknowledgement.
-          // Re-evaluate against the latest state rather than losing the tap to
-          // an optimistic-version conflict.
+          // Re-evaluate concurrent acknowledgements, votes and night choices
+          // against the latest state rather than losing a valid tap to a
+          // version conflict.
           state = await loadGameState(gameId);
           if (!state) {
             sendError(response, 404, 'Not found');
