@@ -2604,6 +2604,8 @@ test('private Notes hide after background and idle, then return with one tap', a
   const gameId = 'notes-cover-restore';
   const publicView = createPublicView(gameId);
   let privateRequests = 0;
+  const consoleMessages: string[] = [];
+  page.on('console', (message) => consoleMessages.push(message.text()));
   await page.route('**/api/csrf', (route) =>
     route.fulfill({
       status: 200,
@@ -2651,6 +2653,9 @@ test('private Notes hide after background and idle, then return with one tap', a
   const notes = page.getByTestId('private-notes-content');
   await expect.poll(() => privateRequests).toBe(1);
   await expect(notes).toBeVisible();
+  const draft = 'NOTES_RELEASE_SENTINEL';
+  const noteField = page.getByRole('textbox', { name: 'Write a note' });
+  await noteField.fill(draft);
 
   await page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', {
@@ -2683,6 +2688,7 @@ test('private Notes hide after background and idle, then return with one tap', a
   await restore.click();
   await expect.poll(() => privateRequests).toBe(2);
   await expect(notes).toBeVisible();
+  await expect(noteField).toHaveValue(draft);
 
   await page.clock.fastForward(30_001);
   await expect(notes).toHaveCount(0);
@@ -2690,6 +2696,30 @@ test('private Notes hide after background and idle, then return with one tap', a
   await restore.click();
   await expect.poll(() => privateRequests).toBe(3);
   await expect(notes).toBeVisible();
+  await expect(noteField).toHaveValue(draft);
+
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(notes).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText(draft);
+  const storageText = await page.evaluate(() =>
+    JSON.stringify({
+      local: Object.keys(localStorage).map((key) => [
+        key,
+        localStorage.getItem(key),
+      ]),
+      session: Object.keys(sessionStorage).map((key) => [
+        key,
+        sessionStorage.getItem(key),
+      ]),
+    }),
+  );
+  expect(storageText).not.toContain(draft);
+  expect(consoleMessages.join('\n')).not.toContain(draft);
+
+  await page.getByTestId('button-open-notes').click();
+  await expect.poll(() => privateRequests).toBe(4);
+  await expect(notes).toBeVisible();
+  await expect(noteField).toHaveValue('');
 });
 
 test('held role text stays above the seal in compact phone viewports', async ({

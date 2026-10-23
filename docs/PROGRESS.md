@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green: Verify #243 (`131fce1`); confirmed successful on GitHub main.**
+**Latest green: Verify #244 (`4d250b9`); confirmed successful on GitHub main.**
 
 **Round 6 Q9 follow-up:** #240 failed only because two harness pacing gaps measured 2,099 ms against the 2,100 ms minimum; #241 passed after adding 100 ms of scheduling headroom. No 429 occurred in the final rehearsal, and no rate limit or assertion changed.
 
@@ -12,9 +12,13 @@
 
 **Round 6 Resilience 3:** already covered on `main` by the away/resume implementation. The player refetches on `online`, `pageshow`, visible `visibilitychange` and focus; the browser test covers 30 seconds, 5 minutes, 1 hour offline/online, overnight return, and a delayed resync response. Verify #243 passed with this code.
 
-**Round 6 Resilience 4:** adaptive polling is implemented locally for organiser join-request, coordinator-access and takeover-status checks. Failures back off exponentially with jitter; 429 responses honour `Retry-After`; successful polls restore the prior cadence. Unit and browser regressions pass locally. No server limits or rules changed. Verify is pending.
+**Round 6 Resilience 4:** complete on `4d250b9`; Verify #244 passed. Adaptive polling covers organiser join-request, coordinator-access and takeover-status checks. Failures back off exponentially with jitter; 429 responses honour `Retry-After`; successful polls restore the prior cadence. Unit, typecheck, lint, formatting and browser regressions passed. No server limits or rules changed.
 
-**Next:** after Resilience 4 is green, do Round 6 Resilience 5, then the Notes hold-to-reveal section; stop there.
+**Round 6 Resilience 5:** already implemented and covered by Verify #243: the player status visibly changes to “Reconnecting...” on network loss and returns to “Online” only after the game view resyncs. The real-server rehearsal asserts both transitions.
+
+**Round 6 Notes:** the draft now clears when the player presses Done. A new browser regression proved it stayed in the textarea after closing and reopening before the fix; the fixed flow passes on all four browser profiles. It also checks the released text is absent from the DOM, local/session storage and browser console. Temporary privacy covers still allow a player to return to the open Notes screen. Verify is pending.
+
+**Next:** after Notes is pushed and green, begin Round 7 Stage 1 design-only, then stop for owner approval. Do not implement individual screen redesigns before approval.
 
 **Push isolation:** `99da77a` is on `main`; the push contained progress documentation, virtual-player harness/tests and the pipeline regression test. Attached content and generated Playwright artifacts were excluded.
 
@@ -50,6 +54,21 @@ cadence. Transient failures increase the delay with jitter; 429 responses wait
 at least the server’s `Retry-After` value and add bounded jitter. A successful
 poll resets the back-off. In-flight refresh triggers coalesce into one follow-up.
 The work is client-only and does not change rate limits.
+
+### Resilience set 5
+
+The visible reconnecting indicator was already implemented. The app shows the
+connection status in its player shell, and the real-server rehearsal checks
+offline → “Reconnecting...” → “Online” after resync. Verify #243 passed; no
+additional code change was needed.
+
+### Notes hold-to-reveal cleanup
+
+Explicitly finishing Notes now clears its in-memory draft as well as the
+private view; the note is not written to browser storage or application logs.
+The existing temporary-cover behaviour is preserved so a player can return to
+an open Notes screen before pressing Done. The regression passed on desktop
+Chromium, iPad WebKit, Pixel Chromium and iPhone WebKit; Verify is pending.
 
 ### Verify #230 H1 step-identity correction
 

@@ -2447,6 +2447,12 @@ function PlayerGame() {
     setNotesStatus(en.game.notesSaved);
   }
 
+  function closeNotes() {
+    clearPrivate();
+    setNotesOpen(false);
+    setNotesDraft('');
+  }
+
   async function installApp() {
     try {
       const outcome = await install.install();
@@ -3275,10 +3281,7 @@ function PlayerGame() {
                       <button
                         className="primary-action w-full"
                         type="button"
-                        onClick={() => {
-                          clearPrivate();
-                          setNotesOpen(false);
-                        }}
+                        onClick={closeNotes}
                       >
                         {en.game.notesDone}
                       </button>
@@ -3609,10 +3612,7 @@ function PlayerGame() {
             hasToken={Boolean(token)}
             showNotesDone={notesOpen && !phaseIsPrivate}
             onAcknowledge={() => void acknowledge()}
-            onNotesDone={() => {
-              clearPrivate();
-              setNotesOpen(false);
-            }}
+            onNotesDone={closeNotes}
             header={<OathstonePlayerHeader />}
           />
         )}
