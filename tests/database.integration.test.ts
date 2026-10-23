@@ -5403,6 +5403,135 @@ it('allows forty seats on one IP to vote and retry each command idempotently', a
   }
 }, 30_000);
 
+it.each([
+  { seatCount: 40, revealCommands: 40, aggregateLimit: 80 },
+  { seatCount: 15, revealCommands: 15, aggregateLimit: 30 },
+])(
+  'does not throttle one playing organiser seat for $revealCommands reveals and five other commands in a $seatCount-seat game',
+  async ({ seatCount, revealCommands, aggregateLimit }) => {
+    const gameId = randomUUID();
+    const game = createFixture(seatCount, {
+      missions: { enabled: false },
+      roundTable: { revealStyle: 'speaker-circle' },
+    });
+    game.context.now = Math.max(
+      Date.now() + 24 * 60 * 60_000,
+      game.context.now,
+    );
+    applyFixtureCommand(game, { type: 'StartGame' });
+    advanceFixture(game, 'VOTE');
+    const firstSeat = game.state.seats[0]!;
+    const secondSeat = game.state.seats[1]!;
+    for (const seat of game.state.seats)
+      applyFixtureCommand(
+        game,
+        {
+          type: 'SubmitVote',
+          target: seat.id === firstSeat.id ? secondSeat.id : firstSeat.id,
+        },
+        true,
+        { kind: 'player', seatId: seat.id },
+      );
+    advanceFixture(game, 'VERDICT');
+
+    const organiserSeatId = game.state.voteRevealOrder[0];
+    expect(organiserSeatId).toBeDefined();
+    const observedLimits = new Set<number>();
+    const app = createApp(async () => {}, {
+      resolveViewer: (req) => ({
+        kind: 'player',
+        seatId: req.header('x-test-seat') ?? organiserSeatId!,
+      }),
+      rateLimitSecret: `integration-test-organiser-burst-${randomUUID()}`,
+      consumeRateLimit: async (bucketHash, limit, windowMs) => {
+        observedLimits.add(limit);
+        return consumeRateLimit(bucketHash, limit, windowMs);
+      },
+    });
+
+    try {
+      let expectedVersion = await seedGameFromFixture(
+        gameId,
+        game,
+        `coordinator:organiser-burst-${seatCount}`,
+      );
+      const burstStartedAt = Date.now();
+      const firstReveal = await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .set('x-test-seat', organiserSeatId!)
+        .send({
+          type: 'RevealVote',
+          expectedVersion,
+          idempotencyKey: `organiser-reveal-first-${randomUUID()}`,
+        })
+        .expect(200);
+      expectedVersion = firstReveal.body.version as number;
+
+      const remainingReveals = await Promise.all(
+        Array.from({ length: revealCommands - 1 }, (_, index) =>
+          request(app)
+            .post(`/api/games/${gameId}/commands`)
+            .set('x-test-seat', organiserSeatId!)
+            .send({
+              type: 'RevealVote',
+              expectedVersion,
+              idempotencyKey: `organiser-reveal-${index}-${randomUUID()}`,
+            }),
+        ),
+      );
+      expect(Date.now() - burstStartedAt).toBeLessThan(5_000);
+      expect(
+        remainingReveals.every((response) => response.status !== 429),
+      ).toBe(true);
+      expect(
+        remainingReveals.every((response) =>
+          [200, 409].includes(response.status),
+        ),
+      ).toBe(true);
+
+      const targets = game.state.seats.filter(
+        (seat) => seat.id !== organiserSeatId,
+      );
+      const otherCommands = [
+        { type: 'AcknowledgePrivate' },
+        { type: 'SubmitVote', target: targets[0]!.id },
+        { type: 'SubmitShadowChoice', choice: targets[0]!.id },
+        { type: 'SubmitEndgameVote', choice: 'continue' },
+        { type: 'PostTraitorMessage', text: 'Rate-limit burst check' },
+      ];
+      const otherResponses = await Promise.all(
+        otherCommands.map((command, index) =>
+          request(app)
+            .post(`/api/games/${gameId}/commands`)
+            .set('x-test-seat', organiserSeatId!)
+            .send({
+              ...command,
+              expectedVersion,
+              idempotencyKey: `organiser-other-${index}-${randomUUID()}`,
+            }),
+        ),
+      );
+      expect(otherResponses.every((response) => response.status !== 429)).toBe(
+        true,
+      );
+      expect(
+        otherResponses.every((response) =>
+          [200, 409].includes(response.status),
+        ),
+      ).toBe(true);
+      expect(Date.now() - burstStartedAt).toBeLessThan(60_000);
+      expect([...observedLimits].sort((left, right) => left - right)).toEqual(
+        [60, aggregateLimit, Math.min(400, Math.max(120, 8 * seatCount))].sort(
+          (left, right) => left - right,
+        ),
+      );
+    } finally {
+      await db.execute(sql`delete from games where id = ${gameId}`);
+    }
+  },
+  30_000,
+);
+
 it('allows forty same-IP private acknowledgements and one retry each', async () => {
   const gameId = randomUUID();
   const game = createFixture(40, { missions: { enabled: false } });

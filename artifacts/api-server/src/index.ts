@@ -114,6 +114,7 @@ const app = createApp(
     processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
     ...(environment.NODE_ENV === 'test'
       ? {
+          testOnlyRateLimitDiagnostics: true,
           onRateLimitRejected: (diagnostic: {
             scope: string;
             bucketFingerprint: string;

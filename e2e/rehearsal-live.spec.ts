@@ -245,6 +245,8 @@ async function latestServerPhase(
   phase: string;
   cycle: number;
   version: number;
+  shadowRound?: number;
+  shadowSlot?: number;
   progress: { done: number; total: number };
   viewerSeatId?: string;
   voteCandidates?: string[];
@@ -267,6 +269,8 @@ async function latestServerPhase(
           phase: string;
           cycle: number;
           version: number;
+          shadowRound?: number;
+          shadowSlot?: number;
           progress: { done: number; total: number };
           viewerSeatId?: string;
           voteCandidates?: string[];
@@ -608,16 +612,26 @@ async function submitPrivateChoice(
     exact: true,
   });
   const commandStatuses: number[] = [];
+  const privateRestoreResponses: string[] = [];
   const recordCommandStatus = (response: {
     url(): string;
     status(): number;
-    request(): { method(): string };
+    request(): { method(): string; postDataJSON(): unknown };
   }) => {
-    if (
-      response.request().method() === 'POST' &&
-      new URL(response.url()).pathname.endsWith('/commands')
-    ) {
+    const request = response.request();
+    const pathname = new URL(response.url()).pathname;
+    if (request.method() === 'POST' && pathname.endsWith('/private-view')) {
+      privateRestoreResponses.push(`private-view:${response.status()}`);
+    }
+    if (request.method() === 'POST' && pathname.endsWith('/commands')) {
       commandStatuses.push(response.status());
+      try {
+        const body = request.postDataJSON() as { type?: unknown };
+        if (body.type === 'AcknowledgePrivate')
+          privateRestoreResponses.push(`ack:${response.status()}`);
+      } catch {
+        // Ignore non-JSON command payloads; never record command values.
+      }
     }
   };
   page.on('response', recordCommandStatus);
@@ -647,6 +661,11 @@ async function submitPrivateChoice(
       await expect(
         page.getByRole('button', { name: 'Confirm', exact: true }),
       ).toBeVisible();
+      const shadowWindowBeforeBackground =
+        phaseBeforeChoice === 'SHADOW'
+          ? await latestServerPhase(page, gameId)
+          : null;
+      privateRestoreResponses.length = 0;
       await page.evaluate(() => {
         Object.defineProperty(document, 'visibilityState', {
           configurable: true,
@@ -674,7 +693,52 @@ async function submitPrivateChoice(
             name: 'Tap to see your private screen again',
           })
           .click();
-        expect((await privateViewResponse).status()).toBe(200);
+        const privateView = await privateViewResponse;
+        const privateViewError = privateView.ok()
+          ? ''
+          : await privateView.text();
+        let publicStateAfterReopen: Awaited<
+          ReturnType<typeof latestServerPhase>
+        > | null = null;
+        try {
+          publicStateAfterReopen = await latestServerPhase(page, gameId);
+        } catch {
+          // Keep the original private-view failure if public diagnostics fail.
+        }
+        const privateViewResponseIndex = privateRestoreResponses.findIndex(
+          (response) => response.startsWith('private-view:'),
+        );
+        const windowDiagnostics = `window before=${JSON.stringify(
+          shadowWindowBeforeBackground && {
+            phase: shadowWindowBeforeBackground.phase,
+            cycle: shadowWindowBeforeBackground.cycle,
+            shadowRound: shadowWindowBeforeBackground.shadowRound,
+            shadowSlot: shadowWindowBeforeBackground.shadowSlot,
+          },
+        )}; window after=${JSON.stringify(
+          publicStateAfterReopen && {
+            phase: publicStateAfterReopen.phase,
+            cycle: publicStateAfterReopen.cycle,
+            shadowRound: publicStateAfterReopen.shadowRound,
+            shadowSlot: publicStateAfterReopen.shadowSlot,
+            progress: publicStateAfterReopen.progress,
+            viewerStatus: publicStateAfterReopen.seats.find(
+              (seat) => seat.id === publicStateAfterReopen.viewerSeatId,
+            )?.status,
+          },
+        )}`;
+        expect(
+          privateViewResponseIndex,
+          `Private restore responses: ${privateRestoreResponses.join(', ')}; ${windowDiagnostics}`,
+        ).toBeGreaterThanOrEqual(0);
+        expect(
+          privateRestoreResponses.slice(0, privateViewResponseIndex),
+          `Private restore responses: ${privateRestoreResponses.join(', ')}; ${windowDiagnostics}`,
+        ).toContain('ack:200');
+        expect(
+          privateView.status(),
+          `Private-view response: ${privateViewError}; ${windowDiagnostics}`,
+        ).toBe(200);
       }
       await expect(page.getByTestId('selected-choice')).toHaveText(
         `Your pick: ${selectedName}`,
@@ -871,9 +935,12 @@ async function advanceIfStillOn(
   );
   await page.getByRole('button', { name: 'Next step', exact: true }).click();
   const advanceResponse = await advanceResponsePromise;
+  const rateLimitDiagnostic = await advanceResponse.headerValue(
+    'x-test-rate-limit-diagnostic',
+  );
   expect(
     advanceResponse.ok(),
-    `AdvancePhase returned HTTP ${advanceResponse.status()} for ${phase}.`,
+    `AdvancePhase returned HTTP ${advanceResponse.status()} for ${phase}.${rateLimitDiagnostic ? ` Limiter diagnostic: ${rateLimitDiagnostic}.` : ''}`,
   ).toBe(true);
   try {
     await expect
@@ -930,6 +997,25 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
   if (process.env.REHEARSAL_USE_REAL_CLIPS !== 'true')
     await installPhaseClipFixtures(page);
   test.setTimeout(150_000);
+  const minimumHumanThinkTimeMs = 2_100;
+  const commandForwardTimes: number[] = [];
+  let lastCommandForwardAt = 0;
+  let commandForwardQueue = Promise.resolve();
+  await page.route('**/api/games/**/commands', async (route) => {
+    const queuedForward = commandForwardQueue.then(async () => {
+      const waitMs = Math.max(
+        0,
+        lastCommandForwardAt + minimumHumanThinkTimeMs - Date.now(),
+      );
+      if (waitMs > 0)
+        await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
+      lastCommandForwardAt = Date.now();
+      commandForwardTimes.push(lastCommandForwardAt);
+      await route.continue();
+    });
+    commandForwardQueue = queuedForward.catch(() => undefined);
+    await queuedForward;
+  });
   const wakeLockNotice =
     'Your screen may lock during play. Tap it to keep the game visible.';
   const { db } = await import('@workspace/db');
@@ -949,6 +1035,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
   const socketHttpDetails: string[] = [];
   const socketRequestDetails: string[] = [];
   const privateHttpStatuses: string[] = [];
+  const rateLimitDiagnostics: string[] = [];
+  const rateLimitDiagnosticReads: Promise<void>[] = [];
   page.on('response', (response) => {
     const pathname = new URL(response.url()).pathname;
     if (
@@ -973,6 +1061,18 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         `${pathname.endsWith('/private-view') ? 'private-view' : `command${commandType}`}:${response.status()}`,
       );
       if (privateHttpStatuses.length > 12) privateHttpStatuses.shift();
+      if (pathname.endsWith('/commands') && response.status() === 429) {
+        const observedCommand = commandType.slice(1) || 'unparsed';
+        rateLimitDiagnosticReads.push(
+          response
+            .headerValue('x-test-rate-limit-diagnostic')
+            .then((diagnostic) => {
+              rateLimitDiagnostics.push(
+                `${observedCommand}: ${diagnostic ?? 'missing test diagnostic'}`,
+              );
+            }),
+        );
+      }
     }
   });
   const observeSocketPacket = (payload: unknown) => {
@@ -1603,7 +1703,33 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           await page.keyboard.press('Escape');
           await expect(fullScreenVoteCard).toHaveCount(0);
           await expect(revealButton).toBeVisible();
+          const revealCommandResponse = page.waitForResponse((response) => {
+            if (
+              response.request().method() !== 'POST' ||
+              !new URL(response.url()).pathname.endsWith('/commands')
+            )
+              return false;
+            try {
+              const body = response.request().postDataJSON() as {
+                type?: unknown;
+              };
+              return body.type === 'RevealVote';
+            } catch {
+              return false;
+            }
+          });
           await revealButton.click();
+          const revealResponse = await revealCommandResponse;
+          const limiterDiagnostic =
+            revealResponse.status() === 429
+              ? await revealResponse.headerValue('x-test-rate-limit-diagnostic')
+              : null;
+          expect(
+            revealResponse.status(),
+            `RevealVote response was ${revealResponse.status()}${
+              limiterDiagnostic ? ` (${limiterDiagnostic})` : ''
+            }`,
+          ).toBe(200);
           await expect
             .poll(() => revealRows.count(), { timeout: 10_000 })
             .toBeGreaterThan(revealedBefore);
@@ -2123,12 +2249,13 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       try {
         await advanceIfStillOn(page, activeGameId, phase, phaseStartedAt);
       } catch (error) {
+        await Promise.all(rateLimitDiagnosticReads);
         const message =
           error instanceof Error
             ? error.message
             : 'Unknown phase transition error';
         throw new Error(
-          `${message} Socket diagnostics: ${socketConnections} connection(s), ${socketFramesReceived} frame(s), ${socketGameViewFramesReceived} game-view frame(s), ${socketErrors} error(s), ${socketCloses} close(s), seat cookie present=${socketSeatCookieSeen}, requests ${socketRequestDetails.join(' | ') || 'none'}, HTTP ${socketHttpDetails.join(' | ') || 'none'}.`,
+          `${message} Rate-limit diagnostics: ${rateLimitDiagnostics.join(' | ') || 'none'}. Socket diagnostics: ${socketConnections} connection(s), ${socketFramesReceived} frame(s), ${socketGameViewFramesReceived} game-view frame(s), ${socketErrors} error(s), ${socketCloses} close(s), seat cookie present=${socketSeatCookieSeen}, requests ${socketRequestDetails.join(' | ') || 'none'}, HTTP ${socketHttpDetails.join(' | ') || 'none'}.`,
           { cause: error },
         );
       }
@@ -2377,6 +2504,19 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     `);
     expect(Number(presenterSessions.rows[0]?.count)).toBe(0);
     expect(Number(presenterPairings.rows[0]?.count)).toBe(0);
+    await Promise.all(rateLimitDiagnosticReads);
+    expect(
+      rateLimitDiagnostics,
+      'The human-paced rehearsal should not hit a gameplay rate limit.',
+    ).toEqual([]);
+    const tooFastGaps = commandForwardTimes
+      .slice(1)
+      .map((time, index) => time - commandForwardTimes[index]!)
+      .filter((gap) => gap < minimumHumanThinkTimeMs);
+    expect(
+      tooFastGaps,
+      `Commands must be spaced by ${minimumHumanThinkTimeMs} ms; observed short gaps: ${tooFastGaps.join(', ')}.`,
+    ).toEqual([]);
   } finally {
     if (gameId) {
       await page.close().catch(() => undefined);

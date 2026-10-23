@@ -132,6 +132,8 @@ export type AppOptions = {
     limit: number,
     windowMs: number,
   ) => Promise<boolean>;
+  /** Test-only opt-in for diagnostic response headers; never enabled in production. */
+  testOnlyRateLimitDiagnostics?: boolean;
   onRateLimitRejected?: (diagnostic: RateLimitRejectionDiagnostic) => void;
   deploymentMode?: DeploymentMode;
 };
@@ -434,6 +436,7 @@ export function createApp(
     subject: string,
     limit: number,
     command?: Pick<RateLimitRejectionDiagnostic, 'commandType' | 'actorSeatId'>,
+    diagnosticResponse?: Response,
   ): Promise<boolean> {
     if (!options.rateLimitSecret) return true;
     const { consumeRateLimit } = options.consumeRateLimit
@@ -443,17 +446,26 @@ export function createApp(
       .update(`${scope}\u0000${subject}`)
       .digest('hex');
     const allowed = await consumeRateLimit(bucketHash, limit, 60_000);
-    if (!allowed && command && options.onRateLimitRejected) {
-      try {
-        options.onRateLimitRejected({
-          ...command,
-          scope,
-          bucketFingerprint: bucketHash.slice(0, 12),
-          subjectKind: subject.startsWith('ip:') ? 'ip' : 'actor',
-          limit,
-        });
-      } catch {
-        // Diagnostic sinks must not change command rate-limit behaviour.
+    if (!allowed && command) {
+      const diagnostic: RateLimitRejectionDiagnostic = {
+        ...command,
+        scope,
+        bucketFingerprint: bucketHash.slice(0, 12),
+        subjectKind: subject.startsWith('ip:') ? 'ip' : 'actor',
+        limit,
+      };
+      if (options.onRateLimitRejected) {
+        try {
+          options.onRateLimitRejected(diagnostic);
+        } catch {
+          // Diagnostic sinks must not change command rate-limit behaviour.
+        }
+      }
+      if (options.testOnlyRateLimitDiagnostics) {
+        diagnosticResponse?.setHeader(
+          'X-Test-Rate-Limit-Diagnostic',
+          JSON.stringify(diagnostic),
+        );
       }
     }
     return allowed;
@@ -485,12 +497,14 @@ export function createApp(
     commandActorId: string,
     commandType: string,
     actorSeatId?: string,
+    response?: Response,
   ): Promise<boolean> {
     return consumeRateLimitForSubject(
       `command-${commandType}`,
       `actor:${commandActorId}`,
       60,
       { commandType, ...(actorSeatId ? { actorSeatId } : {}) },
+      response,
     );
   }
 
@@ -499,6 +513,7 @@ export function createApp(
     commandType: string,
     actorSeatId: string | undefined,
     seatCount: number,
+    response?: Response,
   ): Promise<boolean> {
     if (!actorSeatId) return true;
     const limits = gameplayCommandRateLimits(seatCount);
@@ -507,6 +522,7 @@ export function createApp(
       `actor:${commandActorId}`,
       limits.perSeatAggregatePerMinute,
       { commandType, actorSeatId },
+      response,
     );
   }
 
@@ -516,6 +532,7 @@ export function createApp(
     seatCount: number,
     commandType: string,
     actorSeatId?: string,
+    response?: Response,
   ): Promise<boolean> {
     const limits = gameplayCommandRateLimits(seatCount);
     return consumeRateLimitForSubject(
@@ -523,6 +540,7 @@ export function createApp(
       `${rateLimitIp(request)}\u0000game:${gameId}`,
       limits.sharedIpPerMinute,
       { commandType, ...(actorSeatId ? { actorSeatId } : {}) },
+      response,
     );
   }
 
@@ -3151,6 +3169,7 @@ export function createApp(
           commandActorId,
           parsed.data.type,
           actorSeatId,
+          response,
         ))
       ) {
         sendCommandRateLimitError(response);
@@ -3168,6 +3187,7 @@ export function createApp(
           parsed.data.type,
           actorSeatId,
           state.seats.length,
+          response,
         ))
       ) {
         sendCommandRateLimitError(response);
@@ -3180,6 +3200,7 @@ export function createApp(
           state.seats.length,
           parsed.data.type,
           actorSeatId,
+          response,
         ))
       ) {
         sendCommandRateLimitError(response);

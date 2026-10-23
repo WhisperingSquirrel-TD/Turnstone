@@ -1849,7 +1849,7 @@ function PlayerGame() {
     return () => window.clearInterval(timer);
   }, [gameQuery.data]);
 
-  async function acknowledge() {
+  async function acknowledge(restoringPrivate = false) {
     const pendingAcknowledgement = pendingCommands.get(
       'private-phase-acknowledgement',
       commandStepKey,
@@ -1857,8 +1857,8 @@ function PlayerGame() {
     if (
       !token ||
       shieldPending ||
-      shieldCountdown > 0 ||
-      (!shieldRequired && !pendingAcknowledgement)
+      (!restoringPrivate &&
+        (shieldCountdown > 0 || (!shieldRequired && !pendingAcknowledgement)))
     )
       return;
     setShieldPending(true);
@@ -1866,7 +1866,8 @@ function PlayerGame() {
     try {
       let nextPrivateView: PrivateView | null = null;
       const notesRequest = notesOpen && !phaseIsPrivate;
-      const needsPrivateView = notesRequest || full?.phase === 'SHADOW';
+      const needsPrivateView =
+        restoringPrivate || notesRequest || full?.phase === 'SHADOW';
       if (phaseIsPrivate) {
         const acknowledgementResponse = await pendingCommands.send(
           'private-phase-acknowledgement',
@@ -1936,6 +1937,10 @@ function PlayerGame() {
     if (!full || !token || !inPrivateMoment || !privateCovered) return;
     if (full.phase === 'VOTE' || full.phase === 'FINAL_BANISH') {
       setPrivateCovered(false);
+      return;
+    }
+    if (phaseIsPrivate) {
+      await acknowledge(true);
       return;
     }
     setShieldPending(true);

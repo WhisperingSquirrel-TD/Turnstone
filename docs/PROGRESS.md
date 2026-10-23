@@ -1,8 +1,16 @@
 # Status for reviewer
 
-**Latest green: Verify #238 (`a41dfb1`). Q9's owner-approved authenticated-command limits and Retry-After handling are implemented locally. Local checks pass: 663 unit tests; 130 server tests; 85.98% line coverage against the unchanged 85% threshold; typechecks, lint, formatting and production build. Q9 has not run in Verify yet.**
+**Latest green: Verify #238 (`a41dfb1`). Q9 limits are on main (`6346c90`); Verify #239 failed only in `rehearsal-live` (artifact `playwright-rehearsal-39957318836-1`).**
 
-**Push safety:** local commit `dd91a93` contains attached content and generated Playwright artifacts; it will not be pushed. The Q9 commit is being isolated directly on `a41dfb1`, with only its code, tests and documentation.
+**Queue correction:** resilience set 2 landed in `a41dfb1` and passed #238; it is complete, not queued.
+
+**Evidence:** the rehearsal’s single `RevealVote` returned 429 at the approved 30/minute per-seat aggregate cap, with no app retry. No limits changed. New real-server tests pass: a single playing seat sent 40 reveals plus five other command types in a 40-seat game, and 15 plus five in a 15-seat game, with no 429; calls completed within the specified windows.
+
+**Local checks:** 133 server tests passed; line coverage is 86.01% against the unchanged 85% gate. Test typecheck, ESLint and formatting pass. Pixel and desktop Chromium full rehearsals passed with the real nightfall and dawn clips. These are browser emulations, not physical-phone tests.
+
+**Next:** confirm no Verify is running, push only the isolated intended files, and check that run once. After green Verify, H2 (`h2-seed-1201`) is the only queued item.
+
+**Push isolation:** current work is based on `origin/main` at `6346c90`; the separate local backup containing attached content and generated Playwright artifacts will not be pushed.
 
 ### Verify #234–#237 rehearsal diagnostics
 
@@ -278,7 +286,7 @@ finished. Record the actual run number and next item after each push.
 
 **H2 concurrency fix, 22 October:** Included in green Verify #219 (`978e82b`). Retry only optimistic-version conflicts for votes, night choices and private acknowledgements, with a finite 40-attempt bound; re-evaluate validation against the fresh state on every attempt. Three focused regression tests, scoped ESLint and formatting passed; test typecheck also passed. No thresholds, workflow files or server phase minimums changed.
 
-**H2 full replay remains OPEN (owner-approved partial delivery).** Seed `h2-seed-1201`, 12 players, Pixel run fails waiting for SHADOW advancement. At the stuck player's capture, SubmitShadowChoice returned 200 and private-view confirmed one recorded pick; server and DOM both reported version 113, SHADOW round 1, 11/11 completed. Screen retained the selected name and Review this choice. Private-view refreshes included 409s; the player's command responses were successful. The organiser's advance outcome is not established by that player's trace, so neither a display fault nor a wait-only fault is proved. No speculative product fix or relaxed assertion is included. H2 remains open; this resilience change does not alter its replay assertion or fix the unresolved wait. Replay: `VIRTUAL_PLAYER_SEED=h2-seed-1201 VIRTUAL_PLAYER_COUNT=12 REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h2 --timeout=540000`. Next: resilience change set 2 after this Verify is green.
+**H2 full replay remains OPEN (owner-approved partial delivery).** Seed `h2-seed-1201`, 12 players, Pixel run fails waiting for SHADOW advancement. At the stuck player's capture, SubmitShadowChoice returned 200 and private-view confirmed one recorded pick; server and DOM both reported version 113, SHADOW round 1, 11/11 completed. Screen retained the selected name and Review this choice. Private-view refreshes included 409s; the player's command responses were successful. The organiser's advance outcome is not established by that player's trace, so neither a display fault nor a wait-only fault is proved. No speculative product fix or relaxed assertion is included. H2 remains open; resilience set 2 has since landed and passed Verify #238, but does not alter its replay assertion or fix the unresolved wait. Replay: `VIRTUAL_PLAYER_SEED=h2-seed-1201 VIRTUAL_PLAYER_COUNT=12 REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h2 --timeout=540000`. Next: finish the current Q9 rehearsal verification, then H2.
 
 **Phase clips, batch 1:** Added owner-supplied nightfall and dawn MP4/WebM videos and posters. Asset presence and 450 KB per-format bundle checks pass; the static-public build test confirms clips are excluded. No phase timing or game behavior changed in this batch. Verify #219 is green.
 

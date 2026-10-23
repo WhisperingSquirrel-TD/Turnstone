@@ -526,7 +526,47 @@ describe('health and readiness', () => {
         text: 'A private message',
       });
     expect(response.status).toBe(429);
+    expect(response.headers['retry-after']).toBe('60');
+    expect(response.body).toEqual({ error: 'Too many requests' });
+    expect(response.headers['x-test-rate-limit-diagnostic']).toBeUndefined();
     expect(limits).toEqual([60]);
+  });
+
+  it('exposes limiter diagnostics only when the test observer is enabled', async () => {
+    const diagnostics: Array<Record<string, unknown>> = [];
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'player', seatId: 'seat-1' }),
+      rateLimitSecret: 'unit-test-secret',
+      testOnlyRateLimitDiagnostics: true,
+      consumeRateLimit: async () => false,
+      onRateLimitRejected: (diagnostic) => diagnostics.push(diagnostic),
+    });
+    const response = await request(app)
+      .post('/api/games/game-id/commands')
+      .send({
+        type: 'PostTraitorMessage',
+        expectedVersion: 1,
+        idempotencyKey: 'chat-rate-limit-diagnostic',
+        text: 'A private message',
+      });
+
+    expect(response.status).toBe(429);
+    expect(response.headers['retry-after']).toBe('60');
+    expect(response.body).toEqual({ error: 'Too many requests' });
+    expect(diagnostics).toHaveLength(1);
+    const diagnostic = JSON.parse(
+      response.headers['x-test-rate-limit-diagnostic'] as string,
+    ) as Record<string, unknown>;
+    expect(diagnostic).toEqual(diagnostics[0]);
+    expect(diagnostic).toMatchObject({
+      commandType: 'PostTraitorMessage',
+      actorSeatId: 'seat-1',
+      scope: 'command-PostTraitorMessage',
+      bucketFingerprint: expect.stringMatching(/^[a-f0-9]{12}$/),
+      subjectKind: 'actor',
+      limit: 60,
+    });
+    expect(response.text).not.toContain('unit-test-secret');
   });
 
   it.each(['visitor', 'ghost', 'presenter', 'admin'] as const)(
