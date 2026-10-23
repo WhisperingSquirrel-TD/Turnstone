@@ -284,7 +284,7 @@ jobs:
           echo "PIN_PEPPER=$pin_pepper" >> "$GITHUB_ENV"
       - run: pnpm run db:migrate:dev
       - name: Run full real-server Pixel rehearsal
-        run: pnpm exec playwright test --config=playwright.rehearsal.config.ts --trace retain-on-failure
+        run: pnpm exec playwright test --config=playwright.rehearsal.config.ts
       - name: Upload rehearsal diagnostics
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
