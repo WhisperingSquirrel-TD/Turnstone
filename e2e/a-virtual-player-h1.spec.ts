@@ -12,6 +12,7 @@ import {
   buildVirtualPlayerScenario,
   playerScreenFingerprint,
   readPlayerStepIdentity,
+  observeOrganiserAdvance,
   waitForPlayerScreenChange,
   type VirtualPlayer,
   type VirtualPlayerScenario,
@@ -282,6 +283,7 @@ async function advanceAsOrganiser(
   playerPages: Page[],
   scenario: VirtualPlayerScenario,
   phase: string,
+  expectedStep: string,
   setActivePlayer: (player: VirtualPlayer) => void,
   allowUnfinished = false,
 ): Promise<void> {
@@ -292,6 +294,31 @@ async function advanceAsOrganiser(
     await waitForPlayersOnPhase(playerPages, currentPhase);
     return;
   }
+  const returnToActionsForChangedStep = async (): Promise<boolean> => {
+    if (
+      observeOrganiserAdvance(
+        expectedStep,
+        await readPlayerStepIdentity(playerPages[0]!),
+        false,
+      ) !== 'step-changed'
+    )
+      return false;
+    await expect
+      .poll(
+        async () => {
+          const identities = await Promise.all(
+            playerPages.map(readPlayerStepIdentity),
+          );
+          return identities.every(
+            (identity) => identity !== null && identity !== expectedStep,
+          );
+        },
+        { timeout: 20_000 },
+      )
+      .toBe(true);
+    return true;
+  };
+  if (await returnToActionsForChangedStep()) return;
   const moveOn = coordinatorPage.getByRole('button', {
     name: 'Move everyone on',
     exact: true,
@@ -312,7 +339,11 @@ async function advanceAsOrganiser(
       async () => {
         const coordinatorPhase = await visibleCoordinatorPhase(coordinatorPage);
         if (coordinatorPhase !== phase) return 'phase-changed';
-        return (await moveOn.isEnabled()) ? 'enabled' : 'waiting';
+        return observeOrganiserAdvance(
+          expectedStep,
+          await readPlayerStepIdentity(playerPages[0]!),
+          await moveOn.isEnabled(),
+        );
       },
       { timeout: 20_000 },
     )
@@ -324,12 +355,14 @@ async function advanceAsOrganiser(
     await waitForPlayersOnPhase(playerPages, phaseAfterWait);
     return;
   }
+  if (await returnToActionsForChangedStep()) return;
   await waitForPlayersOnPhase(playerPages, phase);
   const previousSteps = await Promise.all(
     playerPages.map(readPlayerStepIdentity),
   );
   if (previousSteps.some((identity) => identity === null))
     throw new Error('Could not identify every player step before moving on.');
+  if (await returnToActionsForChangedStep()) return;
   await moveOn.click();
 
   const moveAnyway = coordinatorPage.getByRole('button', {
@@ -765,6 +798,11 @@ test('six virtual players complete a real game across desktop and phone contexts
       activePage = organiserPage;
       const phase = await visiblePhase(organiserPage);
       if (!phase) throw new Error('Organiser game screen disappeared.');
+      // Preserve the action batch's identity even if the server advances a
+      // SHADOW round/slot automatically while the organiser waits to move on.
+      const expectedStep = await readPlayerStepIdentity(organiserPage);
+      if (expectedStep === null)
+        throw new Error('Could not identify the player step before actions.');
       if (!phaseTrail.includes(phase)) phaseTrail.push(phase);
       const phaseObservedAt = Date.now();
       if (phase === 'FINISHED' || phase === 'ARCHIVED') break;
@@ -788,6 +826,7 @@ test('six virtual players complete a real game across desktop and phone contexts
             pages,
             scenario,
             phase,
+            expectedStep,
             (player) => {
               activePlayer = player;
               activePage = pages[scenario.players.indexOf(player)]!;
@@ -916,6 +955,7 @@ test('six virtual players complete a real game across desktop and phone contexts
             pages,
             scenario,
             phase,
+            expectedStep,
             (player) => {
               activePlayer = player;
               activePage = pages[scenario.players.indexOf(player)]!;
@@ -1000,6 +1040,7 @@ test('six virtual players complete a real game across desktop and phone contexts
             pages,
             scenario,
             phase,
+            expectedStep,
             (player) => {
               activePlayer = player;
               activePage = pages[scenario.players.indexOf(player)]!;
@@ -1017,6 +1058,7 @@ test('six virtual players complete a real game across desktop and phone contexts
           pages,
           scenario,
           phase,
+          expectedStep,
           (player) => {
             activePlayer = player;
             activePage = pages[scenario.players.indexOf(player)]!;
@@ -1030,6 +1072,7 @@ test('six virtual players complete a real game across desktop and phone contexts
           pages,
           scenario,
           phase,
+          expectedStep,
           (player) => {
             activePlayer = player;
             activePage = pages[scenario.players.indexOf(player)]!;

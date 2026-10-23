@@ -4,10 +4,43 @@ import {
   createProgressWatchdog,
   createSeededRandom,
   playerStepIdentity,
+  observeOrganiserAdvance,
 } from '../e2e/support/virtual-player-harness';
 import { createTestOnlyRandom } from '../artifacts/api-server/src/test-only-random';
 
 describe('virtual-player harness helpers', () => {
+  it('returns to player actions when a pending shadow round or slot changes', () => {
+    const expected = playerStepIdentity({
+      phase: 'SHADOW',
+      shadowRound: '1',
+      shadowSlot: '1',
+    })!;
+    for (const current of [
+      { phase: 'SHADOW', shadowRound: '2', shadowSlot: '1' },
+      { phase: 'SHADOW', shadowRound: '1', shadowSlot: '2' },
+    ]) {
+      // The new step has fresh pending actions: its advance control is disabled.
+      expect(
+        observeOrganiserAdvance(expected, playerStepIdentity(current), false),
+      ).toBe('step-changed');
+      // A stale enabled control must not advance the new step either.
+      expect(
+        observeOrganiserAdvance(expected, playerStepIdentity(current), true),
+      ).toBe('step-changed');
+    }
+  });
+
+  it('keeps pending actions blocked within the expected step', () => {
+    const expected = playerStepIdentity({
+      phase: 'SHADOW',
+      shadowRound: '2',
+      shadowSlot: '1',
+    })!;
+    expect(observeOrganiserAdvance(expected, expected, false)).toBe('waiting');
+    expect(observeOrganiserAdvance(expected, null, true)).toBe('waiting');
+    expect(observeOrganiserAdvance(expected, expected, true)).toBe('enabled');
+  });
+
   it('identifies genuine phase, shadow round and shadow slot transitions', () => {
     const firstWindow = {
       phase: 'SHADOW',

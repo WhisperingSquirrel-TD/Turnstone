@@ -23,3 +23,4 @@
 - [Git connection authentication](github-connection-auth.md) — saved CLI credentials and the configured GitHub integration can differ; verify exact trees and never evade permission restrictions.
 - [Scenario runtime profiling](scenario-runtime-profiling.md) — use matched CPU-limited profiles to distinguish scheduling overhead from repeated projection work; CI remains the runtime authority.
 - [Playwright pool lifetime](playwright-pool-lifetime.md) — shared database teardown belongs to the worker, not individual spec files.
+- [Harness step identity](harness-step-identity.md) — night rounds and slots can advance without changing the phase name.

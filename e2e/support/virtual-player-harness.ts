@@ -20,6 +20,16 @@ export interface VirtualPlayerScenario {
 
 export type WatchdogObservation = 'waiting' | 'progressed' | 'stalled';
 
+export function observeOrganiserAdvance(
+  expectedStep: string,
+  currentStep: string | null,
+  enabled: boolean,
+): 'step-changed' | 'enabled' | 'waiting' {
+  if (currentStep === null) return 'waiting';
+  if (currentStep !== expectedStep) return 'step-changed';
+  return enabled ? 'enabled' : 'waiting';
+}
+
 export function playerStepIdentity(
   dataset: Readonly<Record<string, string | undefined>>,
 ): string | null {

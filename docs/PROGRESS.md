@@ -1,6 +1,21 @@
 # Status for reviewer
 
-**Verify #229 FAILED on `477e7f4`; latest green remains #228.** Q6 cleanup closed a shared database pool before the next test. Worker-owned cleanup fixes that: Q6, full rehearsal and cold restart pass together locally. The full local run also found H1 SHADOW advancement waiting beyond its unchanged 20-second assertion; H1 passed in #229, so this separate finding remains open. Pushing only pool-lifetime fix; no product/assertion/threshold changes. Then Verify, resilience set 2, H2 and stop.
+**Verify #230 FAILED on `8918cac`; latest green remains #228.** H1 cause confirmed: harness missed an automatic SHADOW round change, leaving fresh actions unsubmitted. Harness-only fix now passes all four real-server Pixel tests together (4.6m), plus eight helper tests; typecheck, lint and formatting pass. No product rules, existing assertions or timeouts changed. Preparing push, then Verify; resilience set 2 and H2 remain gated on green.
+
+### Verify #230 H1 step-identity correction
+
+The server completed SHADOW round 1 (5/5), then automatically opened round 2.
+The harness watched only the phase name, so it never returned to submit the five
+new choices. The server correctly kept Move-on disabled at 0/5; this was not a
+product fault. The harness now captures phase/round/slot before each action batch
+and returns to player actions when that identity changes. Two new helper tests
+failed first, then passed. The complete Pixel configuration passed H1, Q6 recovery,
+full rehearsal and cold restart together; no assertion or timeout was weakened.
+Evidence: `generated-artifacts/rehearsal-step-identity-run/complete.log`.
+
+The desktop job in #230 was separately cancelled after Ubuntu dependency downloads
+took 8m24s of its ten-minute job budget; no browser assertion failed before that
+cancellation. Other suites, including scenarios and report merging, passed.
 
 ### Verify #229 cleanup correction
 
