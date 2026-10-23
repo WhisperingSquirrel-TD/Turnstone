@@ -20,6 +20,20 @@ export interface VirtualPlayerScenario {
   replayCommand: string;
 }
 
+export function getVirtualPlayerPage<T>(
+  players: readonly VirtualPlayer[],
+  pages: readonly T[],
+  player: VirtualPlayer,
+): T {
+  const index = players.findIndex((candidate) => candidate.id === player.id);
+  if (index < 0)
+    throw new Error(`No scenario seat matches player ${player.id}.`);
+  const page = pages[index];
+  if (page === undefined)
+    throw new Error(`No browser page is assigned to player ${player.id}.`);
+  return page;
+}
+
 export type WatchdogObservation = 'waiting' | 'progressed' | 'stalled';
 
 export function observeOrganiserAdvance(

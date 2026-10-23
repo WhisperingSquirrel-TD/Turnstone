@@ -3,6 +3,7 @@ import {
   buildVirtualPlayerScenario,
   createProgressWatchdog,
   createSeededRandom,
+  getVirtualPlayerPage,
   playerStepIdentity,
   observeOrganiserAdvance,
 } from '../e2e/support/virtual-player-harness';
@@ -123,6 +124,16 @@ describe('virtual-player harness helpers', () => {
     expect(scenario.replayCommand).toBe(
       'VIRTUAL_PLAYER_COUNT=12 VIRTUAL_PLAYER_SEED=h2-seed-1201 VIRTUAL_PLAYER_STAGE=H2 REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h2 --timeout=540000',
     );
+  });
+
+  it('pairs each H2 player with their own page for failure capture', () => {
+    const scenario = buildVirtualPlayerScenario('h2-seed-1201', 12, 'H2');
+    const pages = scenario.players.map((player) => ({ seat: player.id }));
+    const player = scenario.players[10]!;
+
+    expect(getVirtualPlayerPage(scenario.players, pages, player)).toEqual({
+      seat: 'virtual-seat-11',
+    });
   });
 
   it('rejects player counts outside the real-game range', () => {

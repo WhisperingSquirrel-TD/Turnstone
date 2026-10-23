@@ -6,9 +6,9 @@
 
 **Evidence:** 133 server tests passed; line coverage is 86.01% against the unchanged 85% gate. The 40-seat and 15-seat same-seat command-burst tests passed without 429s. Pixel and desktop Chromium full rehearsals passed with real nightfall and dawn clips (browser emulation, not physical phones).
 
-**H2 replay:** the initial documented selector found no tests. The test-only 12-player H2 selector now runs; its unit/pipeline checks pass (29 tests), but the real replay failed in SHADOW for virtual-seat-11 when the “Shield your screen” dialog stayed visible for 20 seconds. Vite logged a WebSocket `ECONNRESET` nearby; cause is not established. The attached screenshot/trace may be from a different player: the SHADOW diagnostic loop updates `activePlayer` but not `activePage`, and failure capture prefers the stale `activePage`. No product fix or assertion change has been made.
+**H2 replay:** the first failure artifact could have captured the wrong page because the SHADOW diagnostic loop updated `activePlayer` without updating `activePage`. A test-only pairing fix now captures the active seat's page; focused unit/pipeline checks (30 tests), typecheck, lint and formatting pass. The same replay now fails accurately for `virtual-seat-05` (Pixel) in SHADOW: “Review this choice” remains visible where the harness expects the choice flow to have completed. Vite also logged WebSocket `ECONNRESET`; the cause of the choice-flow failure is not yet established.
 
-**Next:** waiting for approval to correct the harness’s per-player failure capture and rerun H2. Harness changes and generated failure artifacts remain local and unpushed.
+**Next:** report the H2 finding and wait for approval before changing product code or assertions. The capture fix and H2 run remain local and unpushed.
 
 **Push isolation:** current work is based on `origin/main` at `6346c90`; the separate local backup containing attached content and generated Playwright artifacts will not be pushed.
 

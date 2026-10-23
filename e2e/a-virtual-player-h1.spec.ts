@@ -10,6 +10,7 @@ import { test } from './support/rehearsal-test';
 import { mkdir, rm } from 'node:fs/promises';
 import {
   buildVirtualPlayerScenario,
+  getVirtualPlayerPage,
   playerScreenFingerprint,
   readPlayerStepIdentity,
   observeOrganiserAdvance,
@@ -873,8 +874,10 @@ test('virtual players complete a real game across desktop and phone contexts @vi
         }
         if (phase === 'SHADOW') {
           for (let index = 0; index < pages.length; index += 1) {
-            activePlayer = scenario.players[index]!;
-            const page = pages[index]!;
+            const player = scenario.players[index]!;
+            const page = getVirtualPlayerPage(scenario.players, pages, player);
+            activePlayer = player;
+            activePage = page;
             if (
               await page
                 .getByTestId('player-fate')
