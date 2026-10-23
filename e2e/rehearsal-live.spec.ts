@@ -998,6 +998,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await installPhaseClipFixtures(page);
   test.setTimeout(150_000);
   const minimumHumanThinkTimeMs = 2_100;
+  const commandPacingBufferMs = 100;
   const commandForwardTimes: number[] = [];
   let lastCommandForwardAt = 0;
   let commandForwardQueue = Promise.resolve();
@@ -1005,7 +1006,10 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     const queuedForward = commandForwardQueue.then(async () => {
       const waitMs = Math.max(
         0,
-        lastCommandForwardAt + minimumHumanThinkTimeMs - Date.now(),
+        lastCommandForwardAt +
+          minimumHumanThinkTimeMs +
+          commandPacingBufferMs -
+          Date.now(),
       );
       if (waitMs > 0)
         await new Promise<void>((resolve) => setTimeout(resolve, waitMs));

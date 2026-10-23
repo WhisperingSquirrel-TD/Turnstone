@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green: Verify #238 (`a41dfb1`). Q9 limits are on main (`6346c90`); Verify #239 failed only in `rehearsal-live` (artifact `playwright-rehearsal-39957318836-1`).**
+**Verify #240 (`8a3ba71`) failed only in `rehearsal-live` (run 39971112072); every other job passed. Latest green: #238 (`a41dfb1`).**
 
 **Queue correction:** resilience set 2 landed in `a41dfb1` and passed #238; it is complete, not queued.
 
@@ -8,7 +8,11 @@
 
 **Local checks:** 133 server tests passed; line coverage is 86.01% against the unchanged 85% gate. Test typecheck, ESLint and formatting pass. Pixel and desktop Chromium full rehearsals passed with the real nightfall and dawn clips. These are browser emulations, not physical-phone tests.
 
-**Next:** confirm no Verify is running, push only the isolated intended files, and check that run once. After green Verify, H2 (`h2-seed-1201`) is the only queued item.
+**Finding:** no 429 occurred; the rehearsal pacing assertion caught two 2,099 ms gaps against its 2,100 ms minimum. The route now waits an additional 100 ms buffer; the assertion and all rate limits remain unchanged.
+
+**Local recheck:** after the buffer change, Pixel and desktop Chromium full rehearsals passed with nightfall and dawn real clips.
+
+**Next:** push the pacing correction only after confirming no Verify is active. After a green Verify, H2 (`h2-seed-1201`) is the only queued item.
 
 **Push isolation:** current work is based on `origin/main` at `6346c90`; the separate local backup containing attached content and generated Playwright artifacts will not be pushed.
 
