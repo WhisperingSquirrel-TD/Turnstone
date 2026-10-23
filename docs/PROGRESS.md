@@ -1,16 +1,16 @@
 # Status for reviewer
 
-**Latest green: Verify #241 (`b19f032`, run 39973695840); all jobs passed.**
+**Latest green: Verify #241 (`b19f032`, run 39973695840); confirmed on GitHub main, all 19 jobs passed.**
 
-**Q9 follow-up:** #240 failed only because two harness pacing gaps measured 2,099 ms against the 2,100 ms minimum; #241 passed after adding 100 ms of scheduling headroom. No 429 occurred in the final rehearsal, and no rate limit or assertion changed.
+**Round 6 Q9 follow-up:** #240 failed only because two harness pacing gaps measured 2,099 ms against the 2,100 ms minimum; #241 passed after adding 100 ms of scheduling headroom. No 429 occurred in the final rehearsal, and no rate limit or assertion changed.
 
 **Evidence:** 133 server tests passed; line coverage is 86.01% against the unchanged 85% gate. The 40-seat and 15-seat same-seat command-burst tests passed without 429s. Pixel and desktop Chromium full rehearsals passed with real nightfall and dawn clips (browser emulation, not physical phones).
 
-**H2 replay:** the first failure artifact could have captured the wrong page because the SHADOW diagnostic loop updated `activePlayer` without updating `activePage`. A test-only pairing fix now captures the active seat's page; focused unit/pipeline checks (30 tests), typecheck, lint and formatting pass. The same replay now fails accurately for `virtual-seat-05` (Pixel) in SHADOW: “Review this choice” remains visible where the harness expects the choice flow to have completed. Vite also logged WebSocket `ECONNRESET`; the cause of the choice-flow failure is not yet established.
+**Round 6 H2 — 12-player replay:** fixed two harness issues revealed by accurate captures: a rejected first SHADOW target was a fellow Traitor (the UI correctly said “Please choose someone else” and allowed another choice), and a later loop tried to resubmit for a seat already showing “Thanks. Waiting for everyone.” The unpaced run hit one `AcknowledgePrivate` 429 for `virtual-seat-10` on the shared per-game IP bucket (`command-game-ip`, limit 120/min, `Retry-After: 60`). It was the app's single automatic acknowledgement, not an internal retry; the harness was moving faster than human timing. The 600 ms H2-only replay then found the organiser still waiting for 11 players in SHADOW; the harness had only synchronised phase and its identity omitted cycle, allowing a prior SHADOW wait state to be mistaken for the current one. Added cycle identity from the public “Night N” announcement and a wait for every browser context to reach the exact step before acting. The cycle and all-player synchronisation tests failed first, then passed. The same seed is pending replay; no game rule, rate limit or test threshold changed.
 
-**Next:** report the H2 finding and wait for approval before changing product code or assertions. The capture fix and H2 run remain local and unpushed.
+**Next:** finish Round 6 H2 and record its local and Verify result; then complete the remaining Round 6 Q6 client handover and disconnected-player UI journey, and stop.
 
-**Push isolation:** current work is based on `origin/main` at `6346c90`; the separate local backup containing attached content and generated Playwright artifacts will not be pushed.
+**Push isolation:** current work is based on `origin/main` at `b19f032`; attached content and generated Playwright artifacts are excluded.
 
 ### Verify #234–#237 rehearsal diagnostics
 

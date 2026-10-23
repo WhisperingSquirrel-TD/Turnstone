@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  allPlayersOnStep,
   buildVirtualPlayerScenario,
   createProgressWatchdog,
   createSeededRandom,
   getVirtualPlayerPage,
+  nextUntriedPlayerChoice,
   playerStepIdentity,
   observeOrganiserAdvance,
+  publicShadowCycleFromAnnouncement,
+  virtualPlayerThinkDelayMs,
 } from '../e2e/support/virtual-player-harness';
 import { createTestOnlyRandom } from '../artifacts/api-server/src/test-only-random';
 
@@ -13,12 +17,13 @@ describe('virtual-player harness helpers', () => {
   it('returns to player actions when a pending shadow round or slot changes', () => {
     const expected = playerStepIdentity({
       phase: 'SHADOW',
+      cycle: '2',
       shadowRound: '1',
       shadowSlot: '1',
     })!;
     for (const current of [
-      { phase: 'SHADOW', shadowRound: '2', shadowSlot: '1' },
-      { phase: 'SHADOW', shadowRound: '1', shadowSlot: '2' },
+      { phase: 'SHADOW', cycle: '2', shadowRound: '2', shadowSlot: '1' },
+      { phase: 'SHADOW', cycle: '2', shadowRound: '1', shadowSlot: '2' },
     ]) {
       // The new step has fresh pending actions: its advance control is disabled.
       expect(
@@ -34,6 +39,7 @@ describe('virtual-player harness helpers', () => {
   it('keeps pending actions blocked within the expected step', () => {
     const expected = playerStepIdentity({
       phase: 'SHADOW',
+      cycle: '2',
       shadowRound: '2',
       shadowSlot: '1',
     })!;
@@ -42,9 +48,34 @@ describe('virtual-player harness helpers', () => {
     expect(observeOrganiserAdvance(expected, expected, true)).toBe('enabled');
   });
 
+  it('waits for every player context to reach the exact current step', () => {
+    const current = JSON.stringify(['SHADOW', '3', '1', '1']);
+    const previousCycle = JSON.stringify(['SHADOW', '2', '1', '1']);
+    expect(allPlayersOnStep(current, [current, current])).toBe(true);
+    expect(allPlayersOnStep(current, [current, previousCycle])).toBe(false);
+    expect(allPlayersOnStep(current, [current, null])).toBe(false);
+  });
+
+  it('reads the public night number without using private player data', () => {
+    expect(
+      publicShadowCycleFromAnnouncement(
+        'Night 3. Everyone answers privately at the same moment.',
+      ),
+    ).toBe('3');
+    expect(
+      publicShadowCycleFromAnnouncement(
+        'Night 3. No decision yet. One more round of choosing tonight.',
+      ),
+    ).toBe('3');
+    expect(publicShadowCycleFromAnnouncement('Day 3. Everyone can talk.')).toBe(
+      null,
+    );
+  });
+
   it('identifies genuine phase, shadow round and shadow slot transitions', () => {
     const firstWindow = {
       phase: 'SHADOW',
+      cycle: '2',
       shadowRound: '1',
       shadowSlot: '1',
       version: '62',
@@ -52,6 +83,9 @@ describe('virtual-player harness helpers', () => {
     };
     const original = playerStepIdentity(firstWindow);
     expect(original).not.toBeNull();
+    expect(playerStepIdentity({ ...firstWindow, cycle: '3' })).not.toBe(
+      original,
+    );
     expect(playerStepIdentity({ ...firstWindow, phase: 'DAWN' })).not.toBe(
       original,
     );
@@ -70,6 +104,13 @@ describe('virtual-player harness helpers', () => {
     ).toBe(original);
     expect(playerStepIdentity({})).toBeNull();
     expect(playerStepIdentity({ phase: 'SHADOW' })).toBeNull();
+    expect(
+      playerStepIdentity({
+        phase: 'SHADOW',
+        shadowRound: '1',
+        shadowSlot: '1',
+      }),
+    ).toBeNull();
     expect(
       playerStepIdentity({ phase: 'VOTE', shadowRound: '2', shadowSlot: '2' }),
     ).toBe(playerStepIdentity({ phase: 'VOTE' }));
@@ -134,6 +175,27 @@ describe('virtual-player harness helpers', () => {
     expect(getVirtualPlayerPage(scenario.players, pages, player)).toEqual({
       seat: 'virtual-seat-11',
     });
+  });
+
+  it('moves to a different visible choice after a rejected target', () => {
+    const choices = [
+      { name: 'first visible target' },
+      { name: 'next visible target' },
+      { name: 'later visible target' },
+    ];
+
+    expect(
+      nextUntriedPlayerChoice(
+        choices,
+        new Set(['first visible target']),
+        (choice) => choice.name,
+      ),
+    ).toBe(choices[1]);
+  });
+
+  it('paces H2 actions at least 600 ms without slowing H1', () => {
+    expect(virtualPlayerThinkDelayMs('H2')).toBe(600);
+    expect(virtualPlayerThinkDelayMs('H1')).toBe(0);
   });
 
   it('rejects player counts outside the real-game range', () => {

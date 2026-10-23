@@ -20,6 +20,10 @@ export interface VirtualPlayerScenario {
   replayCommand: string;
 }
 
+export function virtualPlayerThinkDelayMs(stage: VirtualPlayerStage): number {
+  return stage === 'H2' ? 600 : 0;
+}
+
 export function getVirtualPlayerPage<T>(
   players: readonly VirtualPlayer[],
   pages: readonly T[],
@@ -34,6 +38,14 @@ export function getVirtualPlayerPage<T>(
   return page;
 }
 
+export function nextUntriedPlayerChoice<T>(
+  choices: readonly T[],
+  attemptedNames: ReadonlySet<string>,
+  getName: (choice: T) => string,
+): T | undefined {
+  return choices.find((choice) => !attemptedNames.has(getName(choice)));
+}
+
 export type WatchdogObservation = 'waiting' | 'progressed' | 'stalled';
 
 export function observeOrganiserAdvance(
@@ -46,14 +58,30 @@ export function observeOrganiserAdvance(
   return enabled ? 'enabled' : 'waiting';
 }
 
+export function allPlayersOnStep(
+  expectedStep: string,
+  observedSteps: readonly (string | null)[],
+): boolean {
+  return (
+    observedSteps.length > 0 &&
+    observedSteps.every((step) => step === expectedStep)
+  );
+}
+
+export function publicShadowCycleFromAnnouncement(text: string): string | null {
+  return /\bNight\s+(\d+)\b/.exec(text)?.[1] ?? null;
+}
+
 export function playerStepIdentity(
   dataset: Readonly<Record<string, string | undefined>>,
 ): string | null {
   if (!dataset.phase) return null;
   if (dataset.phase !== 'SHADOW') return JSON.stringify([dataset.phase]);
-  if (!dataset.shadowRound || !dataset.shadowSlot) return null;
+  if (!dataset.cycle || !dataset.shadowRound || !dataset.shadowSlot)
+    return null;
   return JSON.stringify([
     dataset.phase,
+    dataset.cycle,
     dataset.shadowRound,
     dataset.shadowSlot,
   ]);
@@ -62,13 +90,22 @@ export function playerStepIdentity(
 export async function readPlayerStepIdentity(
   page: Page,
 ): Promise<string | null> {
-  const dataset = await page.evaluate(() => {
+  const state = await page.evaluate(() => {
     const game = document.querySelector<HTMLElement>(
       '[data-testid="player-game"]',
     );
-    return { ...game?.dataset };
+    return {
+      dataset: { ...game?.dataset },
+      publicStepText:
+        game
+          ?.querySelector('[data-testid="game-commentary"]')
+          ?.textContent?.trim() ?? '',
+    };
   });
-  return playerStepIdentity(dataset);
+  return playerStepIdentity({
+    ...state.dataset,
+    cycle: publicShadowCycleFromAnnouncement(state.publicStepText) ?? undefined,
+  });
 }
 
 export function createSeededRandom(seed: string | number): () => number {

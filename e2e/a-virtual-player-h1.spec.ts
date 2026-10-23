@@ -9,14 +9,18 @@ import {
 import { test } from './support/rehearsal-test';
 import { mkdir, rm } from 'node:fs/promises';
 import {
+  allPlayersOnStep,
   buildVirtualPlayerScenario,
   getVirtualPlayerPage,
+  nextUntriedPlayerChoice,
   playerScreenFingerprint,
   readPlayerStepIdentity,
   observeOrganiserAdvance,
   waitForPlayerScreenChange,
   type VirtualPlayer,
   type VirtualPlayerScenario,
+  type VirtualPlayerStage,
+  virtualPlayerThinkDelayMs,
 } from './support/virtual-player-harness';
 
 const playerNamePattern = /^Virtual Player \d{2}$/;
@@ -105,6 +109,31 @@ async function waitForPlayersOnPhase(
     .toBe(true);
 }
 
+async function waitForPlayersOnStep(
+  playerPages: Page[],
+  expectedStep: string,
+): Promise<void> {
+  let observedSteps: (string | null)[] = [];
+  try {
+    await expect
+      .poll(
+        async () => {
+          observedSteps = await Promise.all(
+            playerPages.map(readPlayerStepIdentity),
+          );
+          return allPlayersOnStep(expectedStep, observedSteps);
+        },
+        { timeout: 20_000 },
+      )
+      .toBe(true);
+  } catch (error) {
+    throw new Error(
+      `Player screens did not reach current step ${expectedStep}; observed ${observedSteps.join(', ')}.`,
+      { cause: error },
+    );
+  }
+}
+
 async function shouldAdvanceAsOrganiser(
   coordinatorPage: Page,
   playerPages: Page[],
@@ -128,7 +157,18 @@ async function waitForPhase(page: Page, phase: string): Promise<void> {
   );
 }
 
-async function approvePrivacy(page: Page): Promise<void> {
+async function pauseForHumanTiming(
+  page: Page,
+  stage: VirtualPlayerStage,
+): Promise<void> {
+  const delayMs = virtualPlayerThinkDelayMs(stage);
+  if (delayMs > 0) await page.waitForTimeout(delayMs);
+}
+
+async function approvePrivacy(
+  page: Page,
+  stage: VirtualPlayerStage,
+): Promise<void> {
   const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
   const shield = page.getByRole('button', {
     name: 'I’m shielded',
@@ -136,11 +176,15 @@ async function approvePrivacy(page: Page): Promise<void> {
   });
   await expect(shieldDialog).toBeVisible({ timeout: 20_000 });
   await expect(shield).toBeEnabled({ timeout: 20_000 });
+  await pauseForHumanTiming(page, stage);
   await shield.click();
   await expect(shieldDialog).toBeHidden({ timeout: 20_000 });
 }
 
-async function waitForApprovedSeat(page: Page): Promise<void> {
+async function waitForApprovedSeat(
+  page: Page,
+  stage: VirtualPlayerStage,
+): Promise<void> {
   const deadline = Date.now() + 30_000;
   const gameUrl = /\/game\//;
 
@@ -157,6 +201,7 @@ async function waitForApprovedSeat(page: Page): Promise<void> {
       await page.waitForTimeout(100);
       continue;
     }
+    await pauseForHumanTiming(page, stage);
     await checkAgain.click();
     await page.waitForTimeout(250);
   }
@@ -166,6 +211,7 @@ async function waitForApprovedSeat(page: Page): Promise<void> {
 
 async function revealRoleAndAcknowledge(
   page: Page,
+  stage: VirtualPlayerStage,
 ): Promise<'Traitor' | 'Faithful'> {
   const seal = page.getByRole('button', {
     name: 'Hold the seal to see your role',
@@ -186,6 +232,7 @@ async function revealRoleAndAcknowledge(
   await expect(roleHeading).toBeHidden();
   const done = page.getByRole('button', { name: 'Done', exact: true });
   await expect(done).toBeVisible();
+  await pauseForHumanTiming(page, stage);
   await done.click();
   await expect(done).toBeHidden({ timeout: 20_000 });
   return role;
@@ -200,6 +247,19 @@ async function chooseFirstVisiblePlayer(
 ): Promise<boolean> {
   const choices = page.getByRole('button', { name: playerNamePattern });
   const buttons = await choices.all();
+  const visibleChoices: {
+    button: (typeof buttons)[number];
+    name: string;
+  }[] = [];
+  for (const button of buttons) {
+    const name = (await button.innerText()).trim();
+    if (!preferredName && name === player.name) continue;
+    if (
+      (await button.isVisible().catch(() => false)) &&
+      (await button.isEnabled().catch(() => false))
+    )
+      visibleChoices.push({ button, name });
+  }
   let selected: (typeof buttons)[number] | undefined;
   if (preferredName) {
     const selfChoice = page.getByRole('button', {
@@ -209,42 +269,74 @@ async function chooseFirstVisiblePlayer(
     await expect(selfChoice).toBeVisible();
     await expect(selfChoice).toBeEnabled();
     selected = selfChoice;
-  }
-  for (const button of buttons) {
-    if (selected) break;
-    if ((await button.innerText()).trim() === player.name) continue;
-    if (
-      (await button.isVisible().catch(() => false)) &&
-      (await button.isEnabled().catch(() => false))
-    ) {
-      selected = button;
-      break;
-    }
-  }
+  } else selected = visibleChoices[0]?.button;
   if (!selected) return false;
 
-  await selected.click();
   const review = page.getByRole('button', { name: reviewChoice, exact: true });
-  await expect(review).toBeVisible({ timeout: 5_000 });
-  await review.click();
   const confirm = page.getByRole('button', {
     name: confirmChoice,
     exact: true,
   });
-  await expect(confirm).toBeVisible({ timeout: 5_000 });
-  const beforeConfirm = await playerScreenFingerprint(page);
-  await confirm.click();
-  await waitForPlayerScreenChange(
-    page,
-    testInfo,
-    scenario,
-    player,
-    beforeConfirm,
-    { timeoutMs: 20_000 },
-  );
-  await expect(review).toBeHidden({ timeout: 2_000 });
-  await expect(confirm).toBeHidden({ timeout: 2_000 });
-  return true;
+  const rejectedChoiceMessage = page.getByText('Please choose someone else.', {
+    exact: true,
+  });
+  const attemptedNames = new Set<string>();
+
+  while (selected) {
+    const selectedName = (await selected.innerText()).trim();
+    if (attemptedNames.has(selectedName)) return false;
+    attemptedNames.add(selectedName);
+    await pauseForHumanTiming(page, scenario.stage);
+    await selected.click();
+    if (attemptedNames.size > 1)
+      await expect(rejectedChoiceMessage).toBeHidden({ timeout: 5_000 });
+    await expect(review).toBeVisible({ timeout: 5_000 });
+    await pauseForHumanTiming(page, scenario.stage);
+    await review.click();
+    await expect(confirm).toBeVisible({ timeout: 5_000 });
+    const beforeConfirm = await playerScreenFingerprint(page);
+    await pauseForHumanTiming(page, scenario.stage);
+    await confirm.click();
+    await waitForPlayerScreenChange(
+      page,
+      testInfo,
+      scenario,
+      player,
+      beforeConfirm,
+      { timeoutMs: 20_000 },
+    );
+    await expect
+      .poll(
+        async () => {
+          if (await rejectedChoiceMessage.isVisible().catch(() => false))
+            return 'rejected';
+          if (
+            !(await review.isVisible().catch(() => false)) &&
+            !(await confirm.isVisible().catch(() => false))
+          )
+            return 'complete';
+          return 'pending';
+        },
+        { timeout: 20_000 },
+      )
+      .not.toBe('pending');
+
+    if (await rejectedChoiceMessage.isVisible().catch(() => false)) {
+      const nextChoice = nextUntriedPlayerChoice(
+        visibleChoices,
+        attemptedNames,
+        (choice) => choice.name,
+      );
+      if (!nextChoice) return false;
+      selected = nextChoice.button;
+      continue;
+    }
+
+    await expect(review).toBeHidden({ timeout: 2_000 });
+    await expect(confirm).toBeHidden({ timeout: 2_000 });
+    return true;
+  }
+  return false;
 }
 
 async function chooseToEndGame(
@@ -256,9 +348,11 @@ async function chooseToEndGame(
   const end = page.getByRole('button', { name: 'End the game', exact: true });
   if (!(await end.isVisible().catch(() => false))) return false;
   const before = await playerScreenFingerprint(page);
+  await pauseForHumanTiming(page, scenario.stage);
   await end.click();
   const review = page.getByRole('button', { name: reviewChoice, exact: true });
   await expect(review).toBeVisible({ timeout: 5_000 });
+  await pauseForHumanTiming(page, scenario.stage);
   await review.click();
   const confirm = page.getByRole('button', {
     name: confirmChoice,
@@ -266,6 +360,7 @@ async function chooseToEndGame(
   });
   await expect(confirm).toBeVisible({ timeout: 5_000 });
   const beforeConfirm = await playerScreenFingerprint(page);
+  await pauseForHumanTiming(page, scenario.stage);
   await confirm.click();
   await waitForPlayerScreenChange(
     page,
@@ -331,9 +426,16 @@ async function advanceAsOrganiser(
     ).toHaveText(/^(\d+) of \1 done$/, { timeout: 20_000 });
   }
   if (await moveOn.isDisabled()) {
-    await expect(
-      coordinatorPage.getByText(/^Move everyone on in \d+ seconds?\.$/),
-    ).toBeVisible();
+    const minimumWaitStatus = coordinatorPage.getByText(
+      /^Move everyone on in \d+ seconds?\.$/,
+    );
+    const hasMinimumWaitStatus = await minimumWaitStatus.isVisible();
+    const moveOnLabel = (await moveOn.innerText()).trim();
+    const waitingForPlayers = /^Waiting for \d+ players?$/.test(moveOnLabel);
+    expect(
+      hasMinimumWaitStatus || waitingForPlayers,
+      `Move-on is disabled without an explanatory wait state: "${moveOnLabel}".`,
+    ).toBe(true);
   }
   await expect
     .poll(
@@ -364,6 +466,7 @@ async function advanceAsOrganiser(
   if (previousSteps.some((identity) => identity === null))
     throw new Error('Could not identify every player step before moving on.');
   if (await returnToActionsForChangedStep()) return;
+  await pauseForHumanTiming(coordinatorPage, scenario.stage);
   await moveOn.click();
 
   const moveAnyway = coordinatorPage.getByRole('button', {
@@ -377,7 +480,10 @@ async function advanceAsOrganiser(
         () => true,
         () => false,
       );
-    if (confirmationAppeared) await moveAnyway.click();
+    if (confirmationAppeared) {
+      await pauseForHumanTiming(coordinatorPage, scenario.stage);
+      await moveAnyway.click();
+    }
   } else {
     await expect(moveAnyway).toBeHidden({ timeout: 1_000 });
   }
@@ -669,15 +775,18 @@ test('virtual players complete a real game across desktop and phone contexts @vi
     activePlayer = organiser;
     activePage = organiserPage;
     await organiserPage.goto('/');
+    await pauseForHumanTiming(organiserPage, scenario.stage);
     await organiserPage
       .getByRole('link', { name: 'Start a new game', exact: true })
       .click();
     await expect(
       organiserPage.getByRole('heading', { name: 'Name your game' }),
     ).toBeVisible();
+    await pauseForHumanTiming(organiserPage, scenario.stage);
     await organiserPage
       .getByRole('textbox', { name: 'Game name (optional)' })
       .fill(`Harness ${scenario.seed}`);
+    await pauseForHumanTiming(organiserPage, scenario.stage);
     await organiserPage
       .getByRole('button', { name: 'Continue', exact: true })
       .click();
@@ -687,25 +796,32 @@ test('virtual players complete a real game across desktop and phone contexts @vi
       exact: true,
     });
     for (let count = 15; count > scenario.playerCount; count -= 1) {
+      await pauseForHumanTiming(organiserPage, scenario.stage);
       await fewerPlayers.click();
     }
     await expect(
       organiserPage.getByTestId('text-create-player-count'),
     ).toHaveText(String(scenario.playerCount));
+    await pauseForHumanTiming(organiserPage, scenario.stage);
     await organiserPage
       .getByRole('button', { name: 'Continue', exact: true })
       .click();
+    await pauseForHumanTiming(organiserPage, scenario.stage);
     await organiserPage
       .getByRole('textbox', { name: 'Your first name' })
       .fill(organiser.name);
+    await pauseForHumanTiming(organiserPage, scenario.stage);
     await organiserPage
       .getByRole('textbox', { name: 'Choose a 4-digit PIN' })
       .fill('6284');
     const circleOption = organiserPage.getByRole('radio', {
       name: /Voting circle/i,
     });
-    if (await circleOption.isVisible().catch(() => false))
+    if (await circleOption.isVisible().catch(() => false)) {
+      await pauseForHumanTiming(organiserPage, scenario.stage);
       await circleOption.check();
+    }
+    await pauseForHumanTiming(organiserPage, scenario.stage);
     await organiserPage
       .getByRole('button', { name: 'Create game', exact: true })
       .click();
@@ -724,6 +840,7 @@ test('virtual players complete a real game across desktop and phone contexts @vi
       activePage = page;
       await test.step(`join and approve ${player.id} (${player.persona})`, async () => {
         await page.goto('/');
+        await pauseForHumanTiming(page, scenario.stage);
         await page
           .getByRole('link', { name: 'Join a game', exact: true })
           .click();
@@ -734,12 +851,15 @@ test('virtual players complete a real game across desktop and phone contexts @vi
             })
             .fill(gameCode[digit]!);
         }
+        await pauseForHumanTiming(page, scenario.stage);
         await page
           .getByRole('button', { name: 'Continue', exact: true })
           .click();
+        await pauseForHumanTiming(page, scenario.stage);
         await page
           .getByRole('textbox', { name: 'Your first name' })
           .fill(player.name);
+        await pauseForHumanTiming(page, scenario.stage);
         await page
           .getByRole('button', { name: 'Continue', exact: true })
           .click();
@@ -749,6 +869,7 @@ test('virtual players complete a real game across desktop and phone contexts @vi
         await page
           .getByRole('textbox', { name: '4-digit PIN' })
           .fill(String(6285 + index).slice(-4));
+        await pauseForHumanTiming(page, scenario.stage);
         await page.getByRole('button', { name: 'Join', exact: true }).click();
         await expect(
           page.getByRole('button', { name: 'Check again', exact: true }),
@@ -764,9 +885,10 @@ test('virtual players complete a real game across desktop and phone contexts @vi
           timeout: 20_000,
         });
         await expect(approve).toBeVisible({ timeout: 10_000 });
+        await pauseForHumanTiming(organiserPage, scenario.stage);
         await approve.click();
         await expect(approve).toBeHidden({ timeout: 20_000 });
-        await waitForApprovedSeat(page);
+        await waitForApprovedSeat(page, scenario.stage);
       });
     }
 
@@ -776,6 +898,7 @@ test('virtual players complete a real game across desktop and phone contexts @vi
         exact: true,
       }),
     ).toBeEnabled({ timeout: 20_000 });
+    await pauseForHumanTiming(organiserPage, scenario.stage);
     await organiserPage
       .getByRole('button', { name: 'Start the game', exact: true })
       .click();
@@ -816,6 +939,7 @@ test('virtual players complete a real game across desktop and phone contexts @vi
       const expectedStep = await readPlayerStepIdentity(organiserPage);
       if (expectedStep === null)
         throw new Error('Could not identify the player step before actions.');
+      await waitForPlayersOnStep(pages, expectedStep);
       if (!phaseTrail.includes(phase)) phaseTrail.push(phase);
       const phaseObservedAt = Date.now();
       if (phase === 'FINISHED' || phase === 'ARCHIVED') break;
@@ -825,10 +949,10 @@ test('virtual players complete a real game across desktop and phone contexts @vi
         for (let index = 0; index < pages.length; index += 1) {
           const page = pages[index]!;
           activePlayer = scenario.players[index]!;
-          await approvePrivacy(page);
+          await approvePrivacy(page, scenario.stage);
           rolesByPlayer.set(
             scenario.players[index]!.id,
-            await revealRoleAndAcknowledge(page),
+            await revealRoleAndAcknowledge(page, scenario.stage),
           );
         }
         activePlayer = organiser;
@@ -891,7 +1015,7 @@ test('virtual players complete a real game across desktop and phone contexts @vi
                 page.getByRole('dialog', { name: 'Shield your screen' }),
               ).toBeHidden({ timeout: 20_000 });
             } else {
-              await approvePrivacy(page);
+              await approvePrivacy(page, scenario.stage);
               shieldedNightPlayers.add(activePlayer.id);
             }
           }
@@ -904,6 +1028,13 @@ test('virtual players complete a real game across desktop and phone contexts @vi
           if (
             await page
               .getByTestId('player-fate')
+              .isVisible()
+              .catch(() => false)
+          )
+            continue;
+          if (
+            await page
+              .getByTestId('waiting-for-everyone')
               .isVisible()
               .catch(() => false)
           )
@@ -1043,6 +1174,7 @@ test('virtual players complete a real game across desktop and phone contexts @vi
           activePlayer =
             scenario.players[pages.indexOf(speaker.page)] ?? organiser;
           activePage = speaker.page;
+          await pauseForHumanTiming(speaker.page, scenario.stage);
           await speaker.button.click();
           await expect(speaker.button).toBeHidden();
           revealCount += 1;
