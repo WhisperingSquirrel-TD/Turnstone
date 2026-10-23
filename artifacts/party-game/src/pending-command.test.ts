@@ -3,6 +3,7 @@ import {
   gameCommandStepKey,
   isDefinitiveCommandRejection,
   PendingCommandStore,
+  retryAfterMilliseconds,
 } from './pending-command';
 
 describe('PendingCommandStore', () => {
@@ -10,10 +11,67 @@ describe('PendingCommandStore', () => {
     expect(isDefinitiveCommandRejection({ status: 409 })).toBe(true);
     expect(isDefinitiveCommandRejection({ status: 422 })).toBe(true);
     expect(isDefinitiveCommandRejection({ status: 408 })).toBe(false);
+    expect(isDefinitiveCommandRejection({ status: 429 })).toBe(false);
     expect(isDefinitiveCommandRejection({ status: 500 })).toBe(false);
     expect(isDefinitiveCommandRejection(new Error('connection lost'))).toBe(
       false,
     );
+  });
+
+  it('honours Retry-After without changing the pending payload or idempotency key', async () => {
+    let now = 1_000;
+    const store = new PendingCommandStore<{
+      idempotencyKey: string;
+      target: string;
+    }>(() => now);
+    const originalPayload = {
+      idempotencyKey: 'same-vote-key',
+      target: 'seat-2',
+    };
+    const send = vi
+      .fn<(payload: typeof originalPayload) => Promise<string>>()
+      .mockRejectedValueOnce({
+        status: 429,
+        headers: new Headers({ 'Retry-After': '2' }),
+      })
+      .mockResolvedValueOnce('confirmed');
+
+    await expect(
+      store.send('vote', 'game:VOTE:1', () => originalPayload, send),
+    ).rejects.toMatchObject({ status: 429 });
+
+    expect(
+      retryAfterMilliseconds(
+        {
+          status: 429,
+          headers: new Headers({ 'Retry-After': '2' }),
+        },
+        now,
+      ),
+    ).toBe(2_000);
+    expect(store.getRetryAfterUntil('vote', 'game:VOTE:1')).toBe(3_000);
+    expect(store.isWaitingToSend('vote', 'game:VOTE:1')).toBe(true);
+    await expect(
+      store.send(
+        'vote',
+        'game:VOTE:1',
+        () => ({ idempotencyKey: 'new-key', target: 'seat-3' }),
+        send,
+      ),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(send).toHaveBeenCalledTimes(1);
+
+    now = 3_000;
+    await expect(
+      store.send(
+        'vote',
+        'game:VOTE:1',
+        () => ({ idempotencyKey: 'new-key', target: 'seat-3' }),
+        send,
+      ),
+    ).resolves.toBe('confirmed');
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1]?.[0]).toEqual(originalPayload);
   });
 
   it('treats a re-vote and each night slot as separate phase steps', () => {
@@ -265,5 +323,32 @@ describe('PendingCommandStore', () => {
       'accepted',
     ]);
     expect(store.isSending('acknowledgement', 'game:DEAL:1')).toBe(false);
+  });
+
+  it('clears the Retry-After cooldown when the phase step changes', async () => {
+    let now = 1_000;
+    const store = new PendingCommandStore<{ idempotencyKey: string }>(
+      () => now,
+    );
+    await expect(
+      store.send(
+        'vote',
+        'game:VOTE:1',
+        () => ({ idempotencyKey: 'vote-original' }),
+        async () => {
+          throw {
+            status: 429,
+            headers: new Headers({ 'Retry-After': '60' }),
+          };
+        },
+      ),
+    ).rejects.toMatchObject({ status: 429 });
+
+    expect(store.getRetryAfterUntil('vote', 'game:VOTE:1')).toBe(61_000);
+    now = 2_000;
+    store.clearForStep('game:VERDICT:1');
+
+    expect(store.get('vote', 'game:VOTE:1')).toBeNull();
+    expect(store.getRetryAfterUntil('vote', 'game:VOTE:1')).toBeNull();
   });
 });

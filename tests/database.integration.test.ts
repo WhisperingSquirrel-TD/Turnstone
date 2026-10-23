@@ -78,6 +78,36 @@ function cookieValues(header: string | string[] | undefined): string[] {
   return Array.isArray(header) ? header : header ? [header] : [];
 }
 
+async function seedGameFromFixture(
+  gameId: string,
+  game: ReturnType<typeof createFixture>,
+  actorId: string,
+): Promise<number> {
+  const events = [
+    eventSchema.parse({ ...game.events[0], id: gameId }),
+    ...game.events.slice(1),
+  ];
+  const created = await createGameWithEvent({
+    event: events[0]!,
+    actorId,
+    idempotencyKey: randomUUID(),
+    requestHash: randomUUID(),
+  });
+  expect(created.ok).toBe(true);
+  if (events.length > 1) {
+    const seeded = await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId,
+      idempotencyKey: randomUUID(),
+      requestHash: randomUUID(),
+      events: events.slice(1),
+    });
+    expect(seeded.ok).toBe(true);
+  }
+  return events.length;
+}
+
 afterAll(async () => {
   await pool.end();
 });
@@ -5322,6 +5352,437 @@ it('applies rate limits before reading or mutating game data on every write rout
       idempotencyKey: 'rate-limited-command',
     })
     .expect(429, { error: 'Too many requests' });
+});
+
+it('allows forty seats on one IP to vote and retry each command idempotently', async () => {
+  const gameId = randomUUID();
+  const game = createFixture(40, { missions: { enabled: false } });
+  game.context.now = Math.max(Date.now() + 24 * 60 * 60_000, game.context.now);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  advanceFixture(game, 'VOTE');
+  const app = createApp(async () => {}, {
+    resolveViewer: (req) => ({
+      kind: 'player',
+      seatId: req.header('x-test-seat') ?? 's0',
+    }),
+    rateLimitSecret: `integration-test-40-seat-votes-${randomUUID()}`,
+  });
+
+  try {
+    let expectedVersion = await seedGameFromFixture(
+      gameId,
+      game,
+      'coordinator:40-seat-votes',
+    );
+    for (let index = 0; index < 40; index++) {
+      const seatId = `s${index}`;
+      const body = {
+        type: 'SubmitVote',
+        target: `s${(index + 1) % 40}`,
+        expectedVersion,
+        idempotencyKey: `same-ip-vote-${index}`,
+      };
+      const first = await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .set('x-test-seat', seatId)
+        .send(body)
+        .expect(200);
+      const retry = await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .set('x-test-seat', seatId)
+        .send(body)
+        .expect(200);
+      expect(retry.body.version).toBe(first.body.version);
+      expectedVersion = first.body.version as number;
+    }
+    expect(
+      Object.keys(replay(await readGameEvents(gameId)).votes),
+    ).toHaveLength(40);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+}, 30_000);
+
+it('allows forty same-IP private acknowledgements and one retry each', async () => {
+  const gameId = randomUUID();
+  const game = createFixture(40, { missions: { enabled: false } });
+  game.context.now = Math.max(Date.now() + 24 * 60 * 60_000, game.context.now);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  const app = createApp(async () => {}, {
+    resolveViewer: (req) => ({
+      kind: 'player',
+      seatId: req.header('x-test-seat') ?? 's0',
+    }),
+    rateLimitSecret: `integration-test-40-seat-acks-${randomUUID()}`,
+  });
+
+  try {
+    let expectedVersion = await seedGameFromFixture(
+      gameId,
+      game,
+      'coordinator:40-seat-acks',
+    );
+    for (let index = 0; index < 40; index++) {
+      const seatId = `s${index}`;
+      const body = {
+        type: 'AcknowledgePrivate',
+        expectedVersion,
+        idempotencyKey: `same-ip-ack-${index}`,
+      };
+      const first = await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .set('x-test-seat', seatId)
+        .send(body)
+        .expect(200);
+      const retry = await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .set('x-test-seat', seatId)
+        .send(body)
+        .expect(200);
+      expect(retry.body.version).toBe(first.body.version);
+      expectedVersion = first.body.version as number;
+    }
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+}, 30_000);
+
+it('does not throttle a concurrent forty-seat AcknowledgePrivate burst and retries', async () => {
+  const gameId = randomUUID();
+  const game = createFixture(40, { missions: { enabled: false } });
+  game.context.now = Math.max(Date.now() + 24 * 60 * 60_000, game.context.now);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  const app = createApp(async () => {}, {
+    resolveViewer: (req) => ({
+      kind: 'player',
+      seatId: req.header('x-test-seat') ?? 's0',
+    }),
+    rateLimitSecret: `integration-test-40-seat-ack-burst-${randomUUID()}`,
+  });
+
+  try {
+    const expectedVersion = await seedGameFromFixture(
+      gameId,
+      game,
+      'coordinator:40-seat-ack-burst',
+    );
+    const acknowledgements = Array.from({ length: 40 }, (_, index) => ({
+      seatId: `s${index}`,
+      body: {
+        type: 'AcknowledgePrivate',
+        expectedVersion,
+        idempotencyKey: `ack-burst-${index}`,
+      },
+    }));
+    const firstResponses = await Promise.all(
+      acknowledgements.map(({ seatId, body }) =>
+        request(app)
+          .post(`/api/games/${gameId}/commands`)
+          .set('x-test-seat', seatId)
+          .send(body),
+      ),
+    );
+    expect(
+      firstResponses.filter((response) => response.status === 429),
+    ).toHaveLength(0);
+    const retryResponses = await Promise.all(
+      acknowledgements.map(({ seatId, body }) =>
+        request(app)
+          .post(`/api/games/${gameId}/commands`)
+          .set('x-test-seat', seatId)
+          .send(body),
+      ),
+    );
+    expect(
+      retryResponses.filter((response) => response.status === 429),
+    ).toHaveLength(0);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+}, 30_000);
+
+it('does not throttle a concurrent forty-seat vote burst and one retry each', async () => {
+  const gameId = randomUUID();
+  const game = createFixture(40, { missions: { enabled: false } });
+  game.context.now = Math.max(Date.now() + 24 * 60 * 60_000, game.context.now);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  advanceFixture(game, 'VOTE');
+  const app = createApp(async () => {}, {
+    resolveViewer: (req) => ({
+      kind: 'player',
+      seatId: req.header('x-test-seat') ?? 's0',
+    }),
+    rateLimitSecret: `integration-test-40-seat-vote-burst-${randomUUID()}`,
+  });
+
+  try {
+    const expectedVersion = await seedGameFromFixture(
+      gameId,
+      game,
+      'coordinator:40-seat-vote-burst',
+    );
+    const ballots = Array.from({ length: 40 }, (_, index) => ({
+      seatId: `s${index}`,
+      body: {
+        type: 'SubmitVote',
+        target: `s${(index + 1) % 40}`,
+        expectedVersion,
+        idempotencyKey: `burst-vote-${index}`,
+      },
+    }));
+    const firstResponses = await Promise.all(
+      ballots.map(({ seatId, body }) =>
+        request(app)
+          .post(`/api/games/${gameId}/commands`)
+          .set('x-test-seat', seatId)
+          .send(body),
+      ),
+    );
+    expect(
+      firstResponses.filter((response) => response.status === 429),
+    ).toHaveLength(0);
+    const retryResponses = await Promise.all(
+      ballots.map(({ seatId, body }) =>
+        request(app)
+          .post(`/api/games/${gameId}/commands`)
+          .set('x-test-seat', seatId)
+          .send(body),
+      ),
+    );
+    expect(
+      retryResponses.filter((response) => response.status === 429),
+    ).toHaveLength(0);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+}, 30_000);
+
+it('caps one seat without throttling neighbours and reports the denied bucket', async () => {
+  const gameId = randomUUID();
+  const game = createFixture(40, { missions: { enabled: false } });
+  game.context.now = Math.max(Date.now() + 24 * 60 * 60_000, game.context.now);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  advanceFixture(game, 'VOTE');
+  const diagnostics: Array<Record<string, unknown>> = [];
+  const app = createApp(async () => {}, {
+    resolveViewer: (req) => ({
+      kind: 'player',
+      seatId: req.header('x-test-seat') ?? 's0',
+    }),
+    rateLimitSecret: `integration-test-seat-aggregate-${randomUUID()}`,
+    onRateLimitRejected: (diagnostic) => diagnostics.push(diagnostic),
+  });
+
+  try {
+    const expectedVersion = await seedGameFromFixture(
+      gameId,
+      game,
+      'coordinator:seat-aggregate',
+    );
+    for (let index = 0; index < 40; index++) {
+      const vote = await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .set('x-test-seat', 's0')
+        .send({
+          type: 'SubmitVote',
+          target: 's1',
+          expectedVersion,
+          idempotencyKey: `seat-aggregate-vote-${index}`,
+        });
+      expect(vote.status).not.toBe(429);
+      const acknowledgement = await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .set('x-test-seat', 's0')
+        .send({
+          type: 'AcknowledgePrivate',
+          expectedVersion,
+          idempotencyKey: `seat-aggregate-ack-${index}`,
+        });
+      expect(acknowledgement.status).not.toBe(429);
+    }
+
+    const aggregateLimited = await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .set('x-test-seat', 's0')
+      .send({
+        type: 'SubmitVote',
+        target: 's1',
+        expectedVersion,
+        idempotencyKey: 'seat-aggregate-cap',
+      })
+      .expect(429, { error: 'Too many requests' });
+    expect(aggregateLimited.headers['retry-after']).toBe('60');
+    expect(diagnostics.at(-1)).toMatchObject({
+      scope: 'command-seat-aggregate',
+      commandType: 'SubmitVote',
+      actorSeatId: 's0',
+      subjectKind: 'actor',
+      limit: 80,
+    });
+    expect(diagnostics.at(-1)?.bucketFingerprint).toMatch(/^[a-f0-9]{12}$/);
+
+    const latestVersion = (await readGameEvents(gameId)).length;
+    await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .set('x-test-seat', 's1')
+      .send({
+        type: 'SubmitVote',
+        target: 's2',
+        expectedVersion: latestVersion,
+        idempotencyKey: 'neighbour-vote-after-seat-cap',
+      })
+      .expect(200);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+}, 30_000);
+
+it('uses a 120 shared and 30 per-seat aggregate budget in a six-seat game', async () => {
+  const gameId = randomUUID();
+  const game = createFixture(6, { missions: { enabled: false } });
+  game.context.now = Math.max(Date.now() + 24 * 60 * 60_000, game.context.now);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  advanceFixture(game, 'VOTE');
+  const consumedLimits: number[] = [];
+  const app = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'player', seatId: 's0' }),
+    rateLimitSecret: `integration-test-six-seat-command-budgets-${randomUUID()}`,
+    consumeRateLimit: async (_bucketHash, limit) => {
+      consumedLimits.push(limit);
+      return true;
+    },
+  });
+
+  try {
+    const expectedVersion = await seedGameFromFixture(
+      gameId,
+      game,
+      'coordinator:six-seat-command-budgets',
+    );
+    await request(app)
+      .post(`/api/games/${gameId}/commands`)
+      .send({
+        type: 'SubmitVote',
+        target: 's1',
+        expectedVersion,
+        idempotencyKey: 'six-seat-budget-vote',
+      })
+      .expect(200);
+    expect(consumedLimits).toEqual([60, 30, 120]);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('keeps the shared-IP rate-limit bucket isolated between games', async () => {
+  const gameIds = [randomUUID(), randomUUID()];
+  const games = gameIds.map(() => {
+    const game = createFixture(6, { missions: { enabled: false } });
+    game.context.now = Math.max(
+      Date.now() + 24 * 60 * 60_000,
+      game.context.now,
+    );
+    applyFixtureCommand(game, { type: 'StartGame' });
+    advanceFixture(game, 'VOTE');
+    return game;
+  });
+  const sharedBucketHashes: string[] = [];
+  const app = createApp(async () => {}, {
+    resolveViewer: () => ({ kind: 'player', seatId: 's0' }),
+    rateLimitSecret: `integration-test-isolated-game-buckets-${randomUUID()}`,
+    consumeRateLimit: async (bucketHash, limit) => {
+      if (limit === 120) sharedBucketHashes.push(bucketHash);
+      return true;
+    },
+  });
+
+  try {
+    for (let index = 0; index < gameIds.length; index++) {
+      const gameId = gameIds[index]!;
+      const expectedVersion = await seedGameFromFixture(
+        gameId,
+        games[index]!,
+        `coordinator:isolated-bucket-${index}`,
+      );
+      await request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .send({
+          type: 'SubmitVote',
+          target: 's1',
+          expectedVersion,
+          idempotencyKey: `isolated-game-${index}`,
+        })
+        .expect(200);
+    }
+    expect(sharedBucketHashes).toHaveLength(2);
+    expect(sharedBucketHashes[0]).not.toBe(sharedBucketHashes[1]);
+  } finally {
+    for (const gameId of gameIds)
+      await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
+it('returns identical Retry-After responses for Traitor and Faithful commands', async () => {
+  const gameId = randomUUID();
+  const game = createFixture(6, { missions: { enabled: false } });
+  game.context.now = Math.max(Date.now() + 24 * 60 * 60_000, game.context.now);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  advanceFixture(game, 'VOTE');
+  const traitor = game.state.seats.find((seat) => seat.role === 'traitor');
+  const faithful = game.state.seats.find((seat) => seat.role === 'faithful');
+  expect(traitor).toBeDefined();
+  expect(faithful).toBeDefined();
+  const diagnostics: Array<Record<string, unknown>> = [];
+  const app = createApp(async () => {}, {
+    resolveViewer: (req) => ({
+      kind: 'player',
+      seatId: req.header('x-test-seat') ?? 's0',
+    }),
+    rateLimitSecret: `integration-test-role-neutral-429-${randomUUID()}`,
+    consumeRateLimit: async (_bucketHash, limit) => limit !== 120,
+    onRateLimitRejected: (diagnostic) => diagnostics.push(diagnostic),
+  });
+
+  try {
+    const expectedVersion = await seedGameFromFixture(
+      gameId,
+      game,
+      'coordinator:role-neutral-429',
+    );
+    const sendVote = (seatId: string) =>
+      request(app)
+        .post(`/api/games/${gameId}/commands`)
+        .set('x-test-seat', seatId)
+        .send({
+          type: 'SubmitVote',
+          target: 's2',
+          expectedVersion,
+          idempotencyKey: `role-neutral-${seatId}`,
+        });
+    const [traitorResponse, faithfulResponse] = await Promise.all([
+      sendVote(traitor!.id),
+      sendVote(faithful!.id),
+    ]);
+    expect(traitorResponse.status).toBe(429);
+    expect(faithfulResponse.status).toBe(429);
+    expect(traitorResponse.body).toEqual(faithfulResponse.body);
+    expect(traitorResponse.body).toEqual({ error: 'Too many requests' });
+    expect(traitorResponse.headers['retry-after']).toBe('60');
+    expect(faithfulResponse.headers['retry-after']).toBe('60');
+    expect(diagnostics).toHaveLength(2);
+    expect(diagnostics[0]).toMatchObject({
+      scope: 'command-game-ip',
+      subjectKind: 'ip',
+      limit: 120,
+    });
+    expect(diagnostics[1]).toMatchObject({
+      scope: 'command-game-ip',
+      subjectKind: 'ip',
+      limit: 120,
+    });
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
 });
 
 it('rejects cookie-authenticated writes without a matching CSRF token', async () => {

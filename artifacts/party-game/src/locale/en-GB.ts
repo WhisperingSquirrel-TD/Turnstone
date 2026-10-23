@@ -887,6 +887,8 @@ export const en = {
     retryChoice: 'Retry this choice',
     waitingToSend: 'Waiting to send. Your action has not been confirmed.',
     resend: 'Resend',
+    resendAvailableIn: (seconds: number) =>
+      `Available to resend in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}.`,
     confirm: 'Confirm',
     chooseAgain: 'Choose again',
     recorded: 'Your choice has been recorded.',

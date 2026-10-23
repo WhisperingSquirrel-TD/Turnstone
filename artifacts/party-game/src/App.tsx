@@ -2476,6 +2476,12 @@ function PlayerGame() {
         'choice-acknowledgement',
         commandStepKey,
       ));
+  const choiceRetryAfterUntil =
+    pendingCommands.getRetryAfterUntil('player-choice', commandStepKey) ??
+    pendingCommands.getRetryAfterUntil(
+      'choice-acknowledgement',
+      commandStepKey,
+    );
   const pendingPrivateAcknowledgement = pendingCommands.get(
     'private-phase-acknowledgement',
     commandStepKey,
@@ -2488,6 +2494,11 @@ function PlayerGame() {
       commandStepKey,
     ),
   );
+  const privateAcknowledgementRetryAfterUntil =
+    pendingCommands.getRetryAfterUntil(
+      'private-phase-acknowledgement',
+      commandStepKey,
+    );
   const pendingRoleReadyAcknowledgement = pendingCommands.get(
     'role-ready-acknowledgement',
     commandStepKey,
@@ -2500,6 +2511,10 @@ function PlayerGame() {
       commandStepKey,
     ),
   );
+  const roleReadyRetryAfterUntil = pendingCommands.getRetryAfterUntil(
+    'role-ready-acknowledgement',
+    commandStepKey,
+  );
   const selectedForControls =
     selected || choiceIdFromCommand(pendingChoiceAttempt?.payload);
   const choiceControlProps = {
@@ -2510,6 +2525,7 @@ function PlayerGame() {
       choiceRetryPending || command.isPending || choiceCommandSending,
     isPending: command.isPending || choiceCommandSending,
     waitingToSend: waitingForChoiceSend,
+    retryAfterUntil: choiceRetryAfterUntil,
     onResend: () => void submitAction(),
     hasToken: Boolean(token),
     commandMessage,
@@ -2990,6 +3006,7 @@ function PlayerGame() {
                 {waitingForPrivateAcknowledgement && !showShieldCard && (
                   <PendingCommandNotice
                     disabled={command.isPending || shieldPending}
+                    retryAfterUntil={privateAcknowledgementRetryAfterUntil}
                     onResend={() => void acknowledge()}
                   />
                 )}
@@ -3086,6 +3103,7 @@ function PlayerGame() {
                       (waitingForRoleReadyAcknowledgement ? (
                         <PendingCommandNotice
                           disabled={command.isPending}
+                          retryAfterUntil={roleReadyRetryAfterUntil}
                           onResend={() => void markRoleReady()}
                         />
                       ) : (
@@ -3581,6 +3599,7 @@ function PlayerGame() {
             countdown={shieldCountdown}
             pending={shieldPending}
             waitingToSend={waitingForPrivateAcknowledgement}
+            retryAfterUntil={privateAcknowledgementRetryAfterUntil}
             message={waitingForPrivateAcknowledgement ? undefined : holdMessage}
             hasToken={Boolean(token)}
             showNotesDone={notesOpen && !phaseIsPrivate}

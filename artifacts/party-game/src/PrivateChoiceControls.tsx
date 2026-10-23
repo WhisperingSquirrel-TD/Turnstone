@@ -20,6 +20,7 @@ export type PrivateChoiceControlsProps = {
   choiceSubmitted?: boolean;
   isPending: boolean;
   waitingToSend?: boolean;
+  retryAfterUntil?: number | null;
   onResend?: () => void;
   hasToken: boolean;
   commandMessage: string;
@@ -40,6 +41,7 @@ export function PrivateChoiceControls({
   choiceSubmitted = false,
   isPending,
   waitingToSend = false,
+  retryAfterUntil = null,
   onResend,
   hasToken,
   commandMessage,
@@ -180,7 +182,11 @@ export function PrivateChoiceControls({
         <div className="mt-4 border-t border-stone pt-4">
           <p className="text-candle">{en.game.confirmChoice}</p>
           {waitingToSend && onResend ? (
-            <PendingCommandNotice disabled={isPending} onResend={onResend} />
+            <PendingCommandNotice
+              disabled={isPending}
+              retryAfterUntil={retryAfterUntil}
+              onResend={onResend}
+            />
           ) : (
             <div className="mt-3 flex flex-wrap gap-3">
               <button

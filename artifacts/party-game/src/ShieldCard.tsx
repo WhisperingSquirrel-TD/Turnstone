@@ -6,6 +6,7 @@ type ShieldCardProps = {
   countdown: number;
   pending: boolean;
   waitingToSend?: boolean;
+  retryAfterUntil?: number | null;
   message?: string;
   hasToken: boolean;
   showNotesDone: boolean;
@@ -21,6 +22,7 @@ export const ShieldCard = forwardRef<HTMLDialogElement, ShieldCardProps>(
       countdown,
       pending,
       waitingToSend = false,
+      retryAfterUntil = null,
       message,
       hasToken,
       showNotesDone,
@@ -51,6 +53,7 @@ export const ShieldCard = forwardRef<HTMLDialogElement, ShieldCardProps>(
             {waitingToSend ? (
               <PendingCommandNotice
                 disabled={pending}
+                retryAfterUntil={retryAfterUntil}
                 onResend={onAcknowledge}
               />
             ) : (

@@ -41,12 +41,58 @@ export function isDefinitiveCommandRejection(error: unknown) {
     typeof error.status !== 'number'
   )
     return false;
-  return error.status >= 400 && error.status < 500 && error.status !== 408;
+  return (
+    error.status >= 400 &&
+    error.status < 500 &&
+    error.status !== 408 &&
+    error.status !== 429
+  );
+}
+
+export function retryAfterMilliseconds(
+  error: unknown,
+  now = Date.now(),
+): number | null {
+  if (!error || typeof error !== 'object' || !('status' in error)) return null;
+  if (error.status !== 429) return null;
+
+  if ('retryAfterMs' in error && typeof error.retryAfterMs === 'number')
+    return Math.max(0, error.retryAfterMs);
+
+  const headers =
+    'headers' in error && error.headers instanceof Headers
+      ? error.headers
+      : 'response' in error &&
+          error.response &&
+          typeof error.response === 'object' &&
+          'headers' in error.response &&
+          error.response.headers instanceof Headers
+        ? error.response.headers
+        : null;
+  const value = headers?.get('Retry-After');
+  if (!value) return null;
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0)
+    return Math.ceil(seconds * 1_000);
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, date - now) : null;
+}
+
+class RetryAfterActiveError extends Error {
+  readonly status = 429;
+
+  constructor(readonly retryAfterMs: number) {
+    super('The server asked this command to wait before retrying.');
+  }
 }
 
 export class PendingCommandStore<T> {
   private readonly attempts = new Map<string, PendingCommandAttempt<T>>();
   private readonly inFlight = new Map<string, Promise<unknown>>();
+  private readonly retryAfter = new Map<string, number>();
+
+  constructor(private readonly now: () => number = () => Date.now()) {}
 
   private requestKey(operation: string, stepKey: string) {
     return JSON.stringify([operation, stepKey]);
@@ -84,6 +130,12 @@ export class PendingCommandStore<T> {
     );
   }
 
+  getRetryAfterUntil(operation: string, stepKey: string) {
+    const retryAt = this.retryAfter.get(this.requestKey(operation, stepKey));
+    if (retryAt === undefined || retryAt <= this.now()) return null;
+    return retryAt;
+  }
+
   send<TResult>(
     operation: string,
     stepKey: string,
@@ -94,9 +146,21 @@ export class PendingCommandStore<T> {
     const existing = this.inFlight.get(key);
     if (existing) return existing as Promise<TResult>;
 
+    const retryAt = this.retryAfter.get(key);
+    const retryAfterMs = retryAt === undefined ? 0 : retryAt - this.now();
+    if (retryAfterMs > 0)
+      return Promise.reject(new RetryAfterActiveError(retryAfterMs));
+    if (retryAt !== undefined) this.retryAfter.delete(key);
+
     const attempt = this.getOrCreate(operation, stepKey, createPayload);
     const request = Promise.resolve()
       .then(() => send(attempt.payload))
+      .catch((error: unknown) => {
+        const retryAfterMs = retryAfterMilliseconds(error, this.now());
+        if (retryAfterMs !== null && retryAfterMs > 0)
+          this.retryAfter.set(key, this.now() + retryAfterMs);
+        throw error;
+      })
       .finally(() => {
         if (this.inFlight.get(key) === request) this.inFlight.delete(key);
       });
@@ -105,16 +169,25 @@ export class PendingCommandStore<T> {
   }
 
   confirm(operation: string, stepKey: string) {
-    if (this.get(operation, stepKey)) this.attempts.delete(operation);
+    if (this.get(operation, stepKey)) {
+      this.attempts.delete(operation);
+      this.retryAfter.delete(this.requestKey(operation, stepKey));
+    }
   }
 
   reject(operation: string, stepKey: string) {
-    if (this.get(operation, stepKey)) this.attempts.delete(operation);
+    if (this.get(operation, stepKey)) {
+      this.attempts.delete(operation);
+      this.retryAfter.delete(this.requestKey(operation, stepKey));
+    }
   }
 
   clearForStep(stepKey: string) {
     for (const [operation, attempt] of this.attempts) {
-      if (attempt.stepKey !== stepKey) this.attempts.delete(operation);
+      if (attempt.stepKey !== stepKey) {
+        this.attempts.delete(operation);
+        this.retryAfter.delete(this.requestKey(operation, attempt.stepKey));
+      }
     }
   }
 }

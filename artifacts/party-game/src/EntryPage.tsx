@@ -120,10 +120,12 @@ interface EntryPageProps {
 
 class ApiRequestError extends Error {
   readonly status: number;
+  readonly headers: Headers;
 
-  constructor(status: number, message?: string) {
+  constructor(status: number, headers: Headers, message?: string) {
     super(message ?? (status === 503 ? 'busy' : 'request-failed'));
     this.status = status;
+    this.headers = headers;
   }
 }
 
@@ -136,7 +138,7 @@ async function createApiError(response: Response): Promise<ApiRequestError> {
     isEntryFailureMessage(body.error)
       ? body.error
       : undefined;
-  return new ApiRequestError(response.status, message);
+  return new ApiRequestError(response.status, response.headers, message);
 }
 
 function joinFailureMessage(error: unknown): EntryFailureMessage {

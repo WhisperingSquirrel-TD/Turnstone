@@ -24,4 +24,18 @@ describe('PendingCommandNotice', () => {
 
     expect(markup).toContain('disabled=""');
   });
+
+  it('shows the Retry-After countdown and keeps Resend disabled until then', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    try {
+      const markup = renderToStaticMarkup(
+        <PendingCommandNotice retryAfterUntil={61_000} onResend={() => {}} />,
+      );
+
+      expect(markup).toContain('Available to resend in 60 seconds.');
+      expect(markup).toContain('disabled=""');
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
 });

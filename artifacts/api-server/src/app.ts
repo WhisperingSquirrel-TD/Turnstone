@@ -93,10 +93,20 @@ import {
 import { security } from './middlewares/security';
 import { staticClient } from './static-client';
 import { canOrganiserActOnDisconnectedSeat } from './disconnected-seat-policy';
+import { gameplayCommandRateLimits } from './gameplay-command-limits';
 import {
   coordinatorInactivityWindowMs,
   isCoordinatorUnavailableForAction,
 } from './coordinator-takeover-policy';
+
+type RateLimitRejectionDiagnostic = Readonly<{
+  scope: string;
+  bucketFingerprint: string;
+  subjectKind: 'ip' | 'actor';
+  limit: number;
+  commandType: string;
+  actorSeatId?: string;
+}>;
 
 export type AppOptions = {
   clientDirectory?: string;
@@ -122,6 +132,7 @@ export type AppOptions = {
     limit: number,
     windowMs: number,
   ) => Promise<boolean>;
+  onRateLimitRejected?: (diagnostic: RateLimitRejectionDiagnostic) => void;
   deploymentMode?: DeploymentMode;
 };
 
@@ -422,6 +433,7 @@ export function createApp(
     scope: string,
     subject: string,
     limit: number,
+    command?: Pick<RateLimitRejectionDiagnostic, 'commandType' | 'actorSeatId'>,
   ): Promise<boolean> {
     if (!options.rateLimitSecret) return true;
     const { consumeRateLimit } = options.consumeRateLimit
@@ -430,7 +442,21 @@ export function createApp(
     const bucketHash = createHmac('sha256', options.rateLimitSecret)
       .update(`${scope}\u0000${subject}`)
       .digest('hex');
-    return consumeRateLimit(bucketHash, limit, 60_000);
+    const allowed = await consumeRateLimit(bucketHash, limit, 60_000);
+    if (!allowed && command && options.onRateLimitRejected) {
+      try {
+        options.onRateLimitRejected({
+          ...command,
+          scope,
+          bucketFingerprint: bucketHash.slice(0, 12),
+          subjectKind: subject.startsWith('ip:') ? 'ip' : 'actor',
+          limit,
+        });
+      } catch {
+        // Diagnostic sinks must not change command rate-limit behaviour.
+      }
+    }
+    return allowed;
   }
 
   function rateLimitIp(request: Request): string {
@@ -453,6 +479,56 @@ export function createApp(
         return false;
     }
     return true;
+  }
+
+  async function checkGameplayCommandTypeRateLimit(
+    commandActorId: string,
+    commandType: string,
+    actorSeatId?: string,
+  ): Promise<boolean> {
+    return consumeRateLimitForSubject(
+      `command-${commandType}`,
+      `actor:${commandActorId}`,
+      60,
+      { commandType, ...(actorSeatId ? { actorSeatId } : {}) },
+    );
+  }
+
+  async function checkGameplayCommandAggregateRateLimit(
+    commandActorId: string,
+    commandType: string,
+    actorSeatId: string | undefined,
+    seatCount: number,
+  ): Promise<boolean> {
+    if (!actorSeatId) return true;
+    const limits = gameplayCommandRateLimits(seatCount);
+    return consumeRateLimitForSubject(
+      'command-seat-aggregate',
+      `actor:${commandActorId}`,
+      limits.perSeatAggregatePerMinute,
+      { commandType, actorSeatId },
+    );
+  }
+
+  async function checkGameplayCommandIpRateLimit(
+    request: Request,
+    gameId: string,
+    seatCount: number,
+    commandType: string,
+    actorSeatId?: string,
+  ): Promise<boolean> {
+    const limits = gameplayCommandRateLimits(seatCount);
+    return consumeRateLimitForSubject(
+      'command-game-ip',
+      `${rateLimitIp(request)}\u0000game:${gameId}`,
+      limits.sharedIpPerMinute,
+      { commandType, ...(actorSeatId ? { actorSeatId } : {}) },
+    );
+  }
+
+  function sendCommandRateLimitError(response: Response): void {
+    response.setHeader('Retry-After', '60');
+    sendError(response, 429, 'Too many requests');
   }
 
   async function checkJoinIpAbuseRateLimit(request: Request): Promise<boolean> {
@@ -3068,16 +3144,45 @@ export function createApp(
       const commandActorId = rehearsalSeatId
         ? `seat:${rehearsalSeatId}`
         : actorId(actor);
-      const commandLimit = parsed.data.type === 'PostTraitorMessage' ? 30 : 60;
+      const actorSeatId =
+        actor.kind === 'player' ? actor.seatId : rehearsalSeatId;
       if (
-        !(await checkRateLimit(
-          request,
-          `command-${parsed.data.type}`,
+        !(await checkGameplayCommandTypeRateLimit(
           commandActorId,
-          commandLimit,
+          parsed.data.type,
+          actorSeatId,
         ))
       ) {
-        sendError(response, 429, 'Too many requests');
+        sendCommandRateLimitError(response);
+        return;
+      }
+
+      state ??= await loadGameState(gameId);
+      if (!state) {
+        sendError(response, 404, 'Not found');
+        return;
+      }
+      if (
+        !(await checkGameplayCommandAggregateRateLimit(
+          commandActorId,
+          parsed.data.type,
+          actorSeatId,
+          state.seats.length,
+        ))
+      ) {
+        sendCommandRateLimitError(response);
+        return;
+      }
+      if (
+        !(await checkGameplayCommandIpRateLimit(
+          request,
+          gameId,
+          state.seats.length,
+          parsed.data.type,
+          actorSeatId,
+        ))
+      ) {
+        sendCommandRateLimitError(response);
         return;
       }
 

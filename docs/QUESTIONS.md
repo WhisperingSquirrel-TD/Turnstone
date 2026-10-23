@@ -291,3 +291,9 @@ organiser fallback interacts with Q3's existing strict-majority approval;
 confirm whether the current Faithful win at zero living seats is intended.
 Also decide whether a skipped DEAL acknowledgement leaves that seat's private
 role card available on return.
+
+## Q9 — Authenticated gameplay-command rate limits (RESOLVED, 23 October 2026)
+
+**Owner ruling:** use a per-game, per-IP budget of `min(400, max(120, 8 × stored seat count))` per minute. Each seat's aggregate limit across authenticated command types is one quarter of that budget, rounded down; the per-seat, per-command-type limit is 60 per minute. At least four seats are required to exhaust the shared bucket. A 429 includes `Retry-After`; clients retain the original idempotency key and payload and honour the wait. Derive seat count only from server-stored game state.
+
+Join, recovery, PIN, CSRF and all other unauthenticated-route limits, including PIN lockout, remain unchanged. Test shared-IP 40-seat vote and AcknowledgePrivate bursts with one retry each; single-seat and three-seat isolation; six-seat limits; role-neutral 429 responses; unchanged unauthenticated limits; and Retry-After client handling.

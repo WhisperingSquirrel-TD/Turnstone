@@ -507,7 +507,7 @@ describe('health and readiness', () => {
     expect(limits).toEqual([5]);
   });
 
-  it('uses the tighter rate limit for private Traitor chat', async () => {
+  it('uses the approved per-command gameplay limit for private Traitor chat', async () => {
     const limits: number[] = [];
     const app = createApp(async () => {}, {
       resolveViewer: () => ({ kind: 'player', seatId: 'seat-1' }),
@@ -526,7 +526,7 @@ describe('health and readiness', () => {
         text: 'A private message',
       });
     expect(response.status).toBe(429);
-    expect(limits).toEqual([30]);
+    expect(limits).toEqual([60]);
   });
 
   it.each(['visitor', 'ghost', 'presenter', 'admin'] as const)(

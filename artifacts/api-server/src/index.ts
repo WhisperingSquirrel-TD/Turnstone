@@ -112,6 +112,22 @@ const app = createApp(
       ? {}
       : { testOnlyPhaseDurationMs }),
     processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
+    ...(environment.NODE_ENV === 'test'
+      ? {
+          onRateLimitRejected: (diagnostic: {
+            scope: string;
+            bucketFingerprint: string;
+            subjectKind: 'ip' | 'actor';
+            limit: number;
+            commandType: string;
+            actorSeatId?: string;
+          }) =>
+            logger.warn({
+              event: 'gameplay_command_rate_limited',
+              ...diagnostic,
+            }),
+        }
+      : {}),
   },
 );
 const server = createServer(app);

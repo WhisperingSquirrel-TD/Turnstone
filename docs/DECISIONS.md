@@ -1452,3 +1452,13 @@ wording or timing by role.
 **Choice:** Normal code pushes use the Replit Git source-control layer. Changes under `.github/workflows` use the GitHub REST Contents API with the owner-authorised `TURNSTONE_GITHUB_TOKEN` from D40, guarded by the current file SHA; do not use the Replit Git layer for workflow files. Never print or persist the secret value. If the API rejects the change, stop and have the owner apply the reviewed workflow diff in GitHub's web editor.
 
 **Evidence:** The workflow update returned HTTP 200 and commit `874f3f3e4a74e37fe86732593eb94ce711ba8265`. The GitHub source-control layer had rewritten a direct `github.com` push to its internal mirror and rejected the workflow update for lacking `workflow` scope.
+
+## D95 — Bound authenticated gameplay commands for shared Wi-Fi (owner-approved, 23 October 2026)
+
+**Context:** H2 showed that a whole room commonly shares one public IP. The former per-IP command bucket could throttle ordinary players in the same game.
+
+**Choice:** For authenticated gameplay commands only, set the shared per-game/per-IP budget to `min(400, max(120, 8 × server-stored seat count))` per minute. Set each seat's aggregate budget across command types to one quarter of that shared budget, rounded down; keep each seat's per-command-type budget at 60 per minute. All 429 command responses include `Retry-After: 60`, with a role-neutral body. The client keeps the original payload and idempotency key, displays a wait, and blocks resends until the server's retry time.
+
+**Security impact:** Three seats cannot exhaust the shared bucket; at least four are needed at every supported game size. In a six-seat game the shared and per-seat aggregate limits are 120 and 30 per minute; in a 40-seat game they are 320 and 80. The approved common per-type cap is 60, replacing the former 30-per-minute `PostTraitorMessage` special case; the aggregate cap bounds total activity. The bucket key combines game ID and the request IP, and diagnostics expose only a short HMAC fingerprint, never the IP or secret. Join, recovery, PIN, CSRF, other unauthenticated limits and PIN lockout are unchanged.
+
+**Verification:** Tests cover 40 seats sharing one IP for vote and acknowledgement bursts with retries, per-seat isolation, six-seat limits, role-neutral 429s, and Retry-After handling. H2 replay remains queued after a green Verify.

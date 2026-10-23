@@ -1,6 +1,8 @@
 # Status for reviewer
 
-**Latest green: Verify #237 (`1bc7c96`). #236 failed because global Playwright tracing conflicted with H1’s manual tracing; the uploaded artifact proved it, and removing the global trace option while retaining failure uploads passed. Resilience set 2 now passes 23 focused tests, party-game typecheck and ESLint. Next: push set 2, then run H2.**
+**Latest green: Verify #238 (`a41dfb1`). Q9's owner-approved authenticated-command limits and Retry-After handling are implemented locally. Local checks pass: 663 unit tests; 130 server tests; 85.98% line coverage against the unchanged 85% threshold; typechecks, lint, formatting and production build. Q9 has not run in Verify yet.**
+
+**Push safety:** local commit `dd91a93` contains attached content and generated Playwright artifacts; it will not be pushed. The Q9 commit is being isolated directly on `a41dfb1`, with only its code, tests and documentation.
 
 ### Verify #234–#237 rehearsal diagnostics
 
