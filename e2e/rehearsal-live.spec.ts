@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from './support/rehearsal-test';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -2562,10 +2563,4 @@ test('a cold browser restart restores the existing seat from its stored token @r
       });
     }
   }
-});
-
-test.afterAll(async () => {
-  if (!process.env.DATABASE_URL) return;
-  const { pool } = await import('@workspace/db');
-  await pool.end();
 });

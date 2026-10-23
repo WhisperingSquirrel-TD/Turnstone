@@ -1,12 +1,12 @@
 import {
   devices,
   expect,
-  test,
   type BrowserContext,
   type BrowserContextOptions,
   type Page,
   type TestInfo,
 } from '@playwright/test';
+import { test } from './support/rehearsal-test';
 import { mkdir, rm } from 'node:fs/promises';
 import {
   buildVirtualPlayerScenario,

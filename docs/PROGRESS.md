@@ -1,6 +1,22 @@
 # Status for reviewer
 
-**Verify #228 GREEN on `1aeee6b`; approved Q6 organiser-view fix passes locally, awaiting new Verify.** Playing organisers now use a separately capability-authorised blind console projection. Real-server Pixel and iPhone recovery journeys pass, including Skip/undo, Remove/reinstate and cold return. Next: Verify, resilience set 2, H2 and stop.
+**Verify #229 FAILED on `477e7f4`; latest green remains #228.** Q6 cleanup closed a shared database pool before the next test. Worker-owned cleanup fixes that: Q6, full rehearsal and cold restart pass together locally. The full local run also found H1 SHADOW advancement waiting beyond its unchanged 20-second assertion; H1 passed in #229, so this separate finding remains open. Pushing only pool-lifetime fix; no product/assertion/threshold changes. Then Verify, resilience set 2, H2 and stop.
+
+### Verify #229 cleanup correction
+
+All suites except rehearsal-live and its required-checks dependency passed.
+Within rehearsal-live, H1 and Q6 passed; the next full rehearsal failed because
+Q6's file-scoped cleanup had ended the worker's cached database pool.
+All real-server specs now share a worker-scoped fixture that closes the pool
+only when the worker finishes. No assertion, timeout, retry or workflow changed.
+The complete local Pixel run finished with three passes (Q6, full rehearsal,
+cold restart) and the separate H1 SHADOW advancement failure. Neither pool-ended
+error recurred. Test typecheck, focused lint and formatting pass.
+
+H1 replay: `VIRTUAL_PLAYER_SEED=h1-seed-6001 REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h1 --timeout=540000`.
+Evidence: `generated-artifacts/rehearsal-pool-lifetime-run/complete.log` and
+the H1 trace under `generated-artifacts/playwright-rehearsal-pool-lifetime-complete`.
+No product fix has been made for this separate finding.
 
 ### Q6 real-server recovery finding
 

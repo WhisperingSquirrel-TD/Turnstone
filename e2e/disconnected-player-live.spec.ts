@@ -1,4 +1,5 @@
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, type BrowserContext, type Page } from '@playwright/test';
+import { test } from './support/rehearsal-test';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
@@ -508,10 +509,4 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
       });
     }
   }
-});
-
-test.afterAll(async () => {
-  if (!process.env.DATABASE_URL) return;
-  const { pool } = await import('@workspace/db');
-  await pool.end();
 });
