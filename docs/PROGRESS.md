@@ -1,16 +1,18 @@
 # Status for reviewer
 
-**Latest green: Verify #241 (`b19f032`, run 39973695840); confirmed on GitHub main, all 19 jobs passed.**
+**Latest green: Verify #242 (`99da77a`); confirmed successful on GitHub main.**
 
 **Round 6 Q9 follow-up:** #240 failed only because two harness pacing gaps measured 2,099 ms against the 2,100 ms minimum; #241 passed after adding 100 ms of scheduling headroom. No 429 occurred in the final rehearsal, and no rate limit or assertion changed.
 
 **Evidence:** 133 server tests passed; line coverage is 86.01% against the unchanged 85% gate. The 40-seat and 15-seat same-seat command-burst tests passed without 429s. Pixel and desktop Chromium full rehearsals passed with real nightfall and dawn clips (browser emulation, not physical phones).
 
-**Round 6 H2 — 12-player replay:** local Pixel replay passed for `h2-seed-1201` (1 test, 7.3 minutes). The final failure before the fix showed all seven living players on SHADOW cycle 3 / round 2 / slot 1 while the organiser still showed 0 of 7; the harness had waited for Move-on to enable without continuing to poll player step identity. Review exposed Confirm when tapped, so this was a harness race, not a confirmed product lockup. The harness now watches for a phase or step change throughout the disabled-control wait and after human think-time, then returns to player actions. Regression and helper tests pass (16/16), as do test TypeScript, focused lint, formatting and diff checks. No product rule, rate limit or assertion threshold changed. H2 changes are local and not yet pushed; no Verify result exists for them.
+**Round 6 H2 — 12-player replay:** Pixel replay passed for `h2-seed-1201` (1 test, 7.3 minutes), and Verify #242 on `99da77a` succeeded. The final failure before the fix showed all seven living players on SHADOW cycle 3 / round 2 / slot 1 while the organiser still showed 0 of 7; the harness had waited for Move-on to enable without continuing to poll player step identity. Review exposed Confirm when tapped, so this was a harness race, not a confirmed product lockup. The harness now watches for a phase or step change throughout the disabled-control wait and after human think-time, then returns to player actions. Regression and helper tests pass (16/16), as do test TypeScript, focused lint, formatting and diff checks. No product rule, rate limit or assertion threshold changed.
 
-**Next:** after H2 is pushed and Verify is green, complete Round 6 Q6 client automatic organiser handover and the disconnected-player journey through the real UI; then stop.
+**Round 6 Q6 — complete:** the client automatically claims server-selected blind organiser control; component and browser regressions cover that flow, while majority takeover remains manual. The real-server disconnected-player journey covers the unchanged grace period, skip/undo, removal/reinstatement, return-to-act and phase advancement. Verify #242 succeeded across the browser and full rehearsal jobs. This is browser emulation, not a physical-phone test.
 
-**Push isolation:** current work is based on `origin/main` at `b19f032`. Outgoing changes are progress documentation, virtual-player harness/tests and the pipeline regression test; attached content and generated Playwright artifacts are excluded.
+**Next:** stop here as requested; no further Round 6 items are queued.
+
+**Push isolation:** `99da77a` is on `main`; the push contained progress documentation, virtual-player harness/tests and the pipeline regression test. Attached content and generated Playwright artifacts were excluded.
 
 ### Verify #234–#237 rehearsal diagnostics
 
@@ -75,40 +77,24 @@ Evidence: `generated-artifacts/rehearsal-pool-lifetime-run/complete.log` and
 the H1 trace under `generated-artifacts/playwright-rehearsal-pool-lifetime-complete`.
 No product fix has been made for this separate finding.
 
-### Q6 real-server recovery finding
+### Round 6 Q6 real-server recovery and automatic client handover
 
-Replay: `REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts e2e/disconnected-player-live.spec.ts`
-(replace Pixel with iPhone for WebKit). Both fail at the missing organiser
-pending controls. The authenticated view reports DEAL, six waiting players,
-the organiser's player seat, and no `coordinatorPendingSeats`; the console
-shows the count but not the controls. Evidence is local under
-`generated-artifacts/playwright-q6-Pixel` and `playwright-q6-iPhone`.
-The owner approved the fix: a separately capability-authorised blind organiser
-projection for the console. Ordinary player/private/socket views remain
-unchanged; socket events invalidate the console view rather than replacing it
-with player data. Five-second refresh exposes grace eligibility without needing
-a new game event and does not rotate lobby invitations.
+The initial missing-controls finding was fixed with a separately authorised,
+blind organiser projection; ordinary player/private/socket views remain
+unchanged. The server-selected recipient claims blind organiser control
+automatically from a fresh status response, with no client selection or
+role-dependent logic. Majority requests still require approval and a claim;
+private screens defer handover notification and overlapping refreshes cannot
+duplicate claims.
 
-The API regressions failed before implementation, then passed. They cover
-combined seat/capability cookies, unauthorised seats, wrong-game and revoked
-capabilities, and absence of private data. Locally: 139 focused unit/server tests,
-14 Pixel/iPhone console checks, typechecks, lint and formatting passed.
-The real-server recovery journey passed on Pixel (1.8 minutes) and iPhone
-WebKit (1.9 minutes), with the unchanged 60-second grace observed at 62.2 and
-62.3 seconds. Skip/undo, Remove/reinstate, neutral public logs, cold seat return,
-pending acknowledgement and phase advancement all passed. This is browser
-emulation, not a physical-phone test. No assertions or thresholds were weakened.
-
-### Q6 automatic client handover
-
-The selected recipient now claims blind organiser control automatically from a
-fresh server response; no client selection or role-dependent logic. Explicit
-majority requests still require approval and a claim. Private screens defer the
-handover notification, and overlapping refreshes cannot duplicate claims.
-Four component regressions failed before implementation. Locally: 649 unit
-tests, full typecheck and lint passed; four Pixel/iPhone browser checks passed,
-covering automatic navigation to blind controls and unchanged majority requests.
-This does not yet prove the complete real-server disconnected-player journey.
+Component and browser regressions cover automatic handover. The real-server
+disconnected-player journey covers the unchanged 60-second grace, skip/undo,
+Remove/reinstate, neutral public logs, cold seat return, pending
+acknowledgement and phase advancement. It passed locally on Pixel (1.8 minutes)
+and iPhone WebKit (1.9 minutes), observing the grace at 62.2 and 62.3 seconds.
+Verify #242 passed both the browser suite and full real-server Pixel rehearsal.
+This is browser emulation, not a physical-phone test; no assertions or
+thresholds were weakened.
 
 ## Approved projection optimisation
 
