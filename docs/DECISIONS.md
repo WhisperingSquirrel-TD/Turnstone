@@ -1462,3 +1462,11 @@ wording or timing by role.
 **Security impact:** Three seats cannot exhaust the shared bucket; at least four are needed at every supported game size. In a six-seat game the shared and per-seat aggregate limits are 120 and 30 per minute; in a 40-seat game they are 320 and 80. The approved common per-type cap is 60, replacing the former 30-per-minute `PostTraitorMessage` special case; the aggregate cap bounds total activity. The bucket key combines game ID and the request IP, and diagnostics expose only a short HMAC fingerprint, never the IP or secret. Join, recovery, PIN, CSRF, other unauthenticated limits and PIN lockout are unchanged.
 
 **Verification:** Tests cover 40 seats sharing one IP for vote and acknowledgement bursts with retries, per-seat isolation, six-seat limits, role-neutral 429s, and Retry-After handling. H2 replay remains queued after a green Verify.
+
+## D96 — Upgrade shared Zod to resolve the audit advisory (owner-approved, 23 October 2026)
+
+**Context:** Verify #247's unchanged dependency audit found high-severity advisory `GHSA-mrhx-c7xc-m3w5` in Zod 3.25.76; the first patched release is 4.6.6.
+
+**Choice:** Upgrade the workspace Zod dependency and the explicit shared-library pin to 4.6.6. Migrate the Zod 4 record schema signatures, preserve nested configuration defaults with `.prefault()`, and update compatibility types and the public-log validation spy without weakening validation assertions.
+
+**Consequence:** The existing audit threshold remains unchanged. `pnpm audit --audit-level high` reports 0 high and 0 critical findings, and the complete local `pnpm run verify` passes. GitHub Verify remains pending until the isolated changes are pushed.

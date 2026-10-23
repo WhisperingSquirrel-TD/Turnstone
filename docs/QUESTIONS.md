@@ -298,7 +298,7 @@ role card available on return.
 
 Join, recovery, PIN, CSRF and all other unauthenticated-route limits, including PIN lockout, remain unchanged. Test shared-IP 40-seat vote and AcknowledgePrivate bursts with one retry each; single-seat and three-seat isolation; six-seat limits; role-neutral 429 responses; unchanged unauthenticated limits; and Retry-After client handling.
 
-## Q10 — Zod security update (OPEN)
+## Q10 — Zod security update (RESOLVED)
 
 Verify #247's dependency audit found one high-severity advisory:
 `GHSA-mrhx-c7xc-m3w5`, affecting the workspace's `zod@3.25.76`; the advisory
@@ -309,10 +309,12 @@ schemas, database schemas and API-server environment parsing. `drizzle-zod`
 major shared-library upgrade that may change schema typing and validation
 behaviour.
 
-**Proposed resolution:** upgrade the workspace Zod version to `4.6.6`, update
-the explicit `lib/shared` version pin, run the full type, unit, server,
-scenario and browser checks, and keep the audit gate unchanged with no
-exception.
+**Owner decision:** approved the Zod `4.6.6` upgrade.
 
-**Owner decision required:** may this major Zod upgrade proceed to resolve the
-high-severity audit finding?
+**Resolution:** upgraded the workspace and `lib/shared` pin, migrated the Zod 4
+record signatures, and preserved nested configuration defaults with
+`.prefault()`. The Zod compatibility type fixes and public-log validation test
+updates are included. The audit threshold and all other checks remain
+unchanged. `pnpm audit --audit-level high` reports 0 high and 0 critical
+findings; the complete local `pnpm run verify` passes. GitHub Verify is pending
+the next push.

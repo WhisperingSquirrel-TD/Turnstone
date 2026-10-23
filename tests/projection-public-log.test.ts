@@ -24,7 +24,7 @@ function example() {
 
 it('validates identical public-log contents once while returning independent mutable views', () => {
   const state = example();
-  const parse = vi.spyOn(fullViewSchema.shape.publicLog.element, '_parse');
+  const parse = vi.spyOn(fullViewSchema.shape.publicLog.element, 'safeParse');
   const first = viewFor({ kind: 'coordinator' }, state);
   const player = viewFor({ kind: 'player', seatId: 's0' }, state);
   const presenter = viewFor({ kind: 'presenter' }, state);
@@ -60,7 +60,7 @@ it('validates identical public-log contents once while returning independent mut
 
 it('revalidates in-place source, nested array, seat-name and cross-state changes', () => {
   const state = example();
-  const parse = vi.spyOn(fullViewSchema.shape.publicLog.element, '_parse');
+  const parse = vi.spyOn(fullViewSchema.shape.publicLog.element, 'safeParse');
   viewFor({ kind: 'coordinator' }, state);
   state.seats[0]!.name = 'Renamed';
   expect(viewFor({ kind: 'coordinator' }, state).publicLog[0]).toMatchObject({

@@ -2313,7 +2313,9 @@ export function createApp(
           .filter((seat) => seat.status === 'alive')
           .map((seat) => seat.id),
       );
-      if (!parsed.data.seatIds.every((seatId) => livingSeats.has(seatId))) {
+      if (
+        !parsed.data.seatIds.every((seatId: string) => livingSeats.has(seatId))
+      ) {
         sendError(response, 409, 'Selection could not be saved');
         return;
       }

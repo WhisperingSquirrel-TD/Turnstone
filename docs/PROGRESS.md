@@ -1,8 +1,8 @@
 # Status for reviewer
 
-**Latest green: Verify #244 (`4d250b9`); confirmed successful on GitHub main. Verify #245 failed in the iPad browser job at the exact Retry-After boundary; #246 failed on a brittle route-time measurement; #247 failed only the dependency audit.**
+**Latest confirmed green on GitHub: Verify #244 (`4d250b9`). Verify #245 failed the exact Retry-After browser boundary, #246 failed a brittle route-time measurement, and #247 failed the unchanged dependency audit. No newer GitHub result has been confirmed yet.**
 
-**Round 6 Notes / Verify #245–#247:** the Notes regression passed in CI. #245 exposed a browser assertion that incorrectly rejected a retry at the exact 10-second `Retry-After` boundary; #246 failed only because a follow-up assertion sampled fake browser time from a route callback and received `NaN`. #247's browser jobs passed, but its audit job found one high advisory for `zod@3.25.76` (`GHSA-mrhx-c7xc-m3w5`, fixed upstream in 4.6.6); local `pnpm audit` confirms it. Per reviewer direction, exact timing is now in a deterministic fake-clock unit test with injected jitter, while the browser test checks only that polling backs off and resumes. Unit (5/5), desktop and Pixel browser checks, test typecheck, lint and formatting pass locally. These test changes are local and unpushed; Q10 requests approval for the major Zod upgrade needed to clear the unchanged audit gate.
+**Round 6 Notes / Zod security update:** the Notes regression passed in CI. #245 exposed a browser assertion that incorrectly rejected a retry at the exact 10-second `Retry-After` boundary; #246 failed because a browser route callback produced `NaN` for fake time. Exact timing now has a deterministic injected-clock unit test, and the browser check verifies back-off and eventual resume. #247's browser jobs passed, but audit found `GHSA-mrhx-c7xc-m3w5` in Zod 3.25.76. The owner approved the upgrade to 4.6.6. The complete local `pnpm run verify` now passes: 680 unit tests, 21 property tests, 86.02% server coverage (85% threshold unchanged), 2,572 scenarios with none failing, 126 browser tests passing and 22 skipped because those profiles run only in CI, all 4 real-server rehearsals passing, six public-page Lighthouse checks passing, and audit at 0 high / 0 critical. This includes two uncommitted Zod-compatibility fixes. The fixes are local; GitHub CI is pending.
 
 **Round 6 Q9 follow-up:** #240 failed only because two harness pacing gaps measured 2,099 ms against the 2,100 ms minimum; #241 passed after adding 100 ms of scheduling headroom. No 429 occurred in the final rehearsal, and no rate limit or assertion changed.
 
@@ -14,13 +14,13 @@
 
 **Round 6 Resilience 3:** already covered on `main` by the away/resume implementation. The player refetches on `online`, `pageshow`, visible `visibilitychange` and focus; the browser test covers 30 seconds, 5 minutes, 1 hour offline/online, overnight return, and a delayed resync response. Verify #243 passed with this code.
 
-**Round 6 Resilience 4:** complete on `4d250b9`; Verify #244 passed. Adaptive polling covers organiser join-request, coordinator-access and takeover-status checks. Failures back off exponentially with jitter; 429 responses honour `Retry-After`; successful polls restore the prior cadence. Unit, typecheck, lint, formatting and browser regressions passed. No server limits or rules changed.
+**Round 6 Resilience 4:** the adaptive polling feature is on `4d250b9`; Verify #244 passed. Failures back off exponentially with jitter; 429 responses honour `Retry-After`; successful polls restore the prior cadence. The exact-boundary regression has since moved to a deterministic unit test; the full local suite passes and awaits GitHub confirmation. No server limits or rules changed.
 
 **Round 6 Resilience 5:** already implemented and covered by Verify #243: the player status visibly changes to “Reconnecting...” on network loss and returns to “Online” only after the game view resyncs. The real-server rehearsal asserts both transitions.
 
 **Round 6 Notes:** the draft now clears when the player presses Done. A new browser regression proved it stayed in the textarea after closing and reopening before the fix; the fixed flow passed on all four browser profiles, including in Verify #245. It also checks the released text is absent from the DOM, local/session storage and browser console. Temporary privacy covers still allow a player to return to the open Notes screen.
 
-**Next:** resolve Q10; no audit threshold or exception will be changed. After the approved audit fix has a green Verify, begin Round 7 Stage 1 shared foundations and stop to report. No redesign work starts while Verify is red.
+**Next:** push the approved Zod 4.6.6 upgrade and the Retry-After regression fix after confirming no Verify run is in progress. Wait for a fully green GitHub Verify; then begin Round 7 Stage 1 shared foundations and stop to report.
 
 **Push isolation:** `99da77a` is on `main`; the push contained progress documentation, virtual-player harness/tests and the pipeline regression test. Attached content and generated Playwright artifacts were excluded.
 
