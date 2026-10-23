@@ -1,6 +1,17 @@
 # Status for reviewer
 
-**Projection repair ready for Verify:** matched two-CPU shard 5 improved from 361,222 to 195,846 ms, all 420 games passing. Full local checks pass: 632 unit, 21 property, 120 server tests; coverage 85.75% (85% unchanged), typechecks, lint and formatting. #226 remains failed; the new run must prove CI runtime. Next after green: finish Q6, resilience set 2, then H2 and stop.
+**Verify #227 GREEN on `7120d82` (attempt 2):** all jobs passed, including six scenario shards, merge/runtime gate, four browsers and Lighthouse. Attempt 1 was cancelled after slow Ubuntu dependency installation exceeded the Lighthouse job limit; the unchanged-commit rerun passed. Q6 automatic client handover is now in progress, tests first. Next: disconnected-player browser proof, resilience set 2, then H2 and stop.
+
+### Q6 automatic client handover
+
+The selected recipient now claims blind organiser control automatically from a
+fresh server response; no client selection or role-dependent logic. Explicit
+majority requests still require approval and a claim. Private screens defer the
+handover notification, and overlapping refreshes cannot duplicate claims.
+Four component regressions failed before implementation. Locally: 649 unit
+tests, full typecheck and lint passed; four Pixel/iPhone browser checks passed,
+covering automatic navigation to blind controls and unchanged majority requests.
+This does not yet prove the complete real-server disconnected-player journey.
 
 ## Approved projection optimisation
 

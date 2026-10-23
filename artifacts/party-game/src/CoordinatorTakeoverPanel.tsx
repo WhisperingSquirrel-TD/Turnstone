@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { config } from '@/config';
 import { en } from '@/locale/en-GB';
 import { apiUrl } from './api-url';
@@ -68,11 +68,49 @@ export function CoordinatorTakeoverPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const latest = useRef({ gameId, hidden, csrfToken, onTransferred });
+  latest.current = { gameId, hidden, csrfToken, onTransferred };
+  const action = useRef({
+    gameId,
+    inFlight: false,
+    transferred: false,
+    notified: false,
+    active: false,
+  });
+  if (action.current.gameId !== gameId) {
+    action.current = {
+      gameId,
+      inFlight: false,
+      transferred: false,
+      notified: false,
+      active: false,
+    };
+  }
+
+  function notifyTransferred() {
+    const current = action.current;
+    if (
+      current.transferred &&
+      current.active &&
+      !current.notified &&
+      latest.current.gameId === current.gameId &&
+      !latest.current.hidden
+    ) {
+      current.notified = true;
+      latest.current.onTransferred();
+    }
+  }
 
   useEffect(() => {
+    const lifecycle = action.current;
+    lifecycle.active = !hidden;
     if (hidden) return;
+    notifyTransferred();
     let mounted = true;
+    let refreshing = false;
     async function refresh() {
+      if (refreshing || action.current.transferred) return;
+      refreshing = true;
       try {
         const response = await fetch(
           apiUrl(
@@ -93,24 +131,49 @@ export function CoordinatorTakeoverPanel({
         if (mounted) {
           setStatus(parsed);
           setError('');
+          // Only the server-selected automatic recipient may claim without
+          // consent. Explicit majority requests always keep their button.
+          if (
+            parsed.eligible &&
+            parsed.mode === 'co-coordinator' &&
+            parsed.canClaim &&
+            parsed.request === null
+          ) {
+            await send(`/games/${encodeURIComponent(gameId)}/takeover/claim`);
+          }
         }
       } catch {
         if (mounted) setError(en.coordinator.takeoverError);
+      } finally {
+        refreshing = false;
       }
     }
     void refresh();
     const interval = window.setInterval(() => void refresh(), 15_000);
     return () => {
       mounted = false;
+      lifecycle.active = false;
       window.clearInterval(interval);
     };
-  }, [gameId, hidden]);
+    // Callback identity and mutation state must not restart polling/retries.
+    // send/notifyTransferred read the latest props through refs.
+  }, [gameId, hidden, csrfToken]);
 
   async function send(
     path: string,
     payload?: Record<string, unknown>,
   ): Promise<void> {
-    if (!csrfToken || busy) return;
+    const current = action.current;
+    const context = latest.current;
+    if (
+      !context.csrfToken ||
+      context.hidden ||
+      context.gameId !== gameId ||
+      current.inFlight ||
+      current.transferred
+    )
+      return;
+    current.inFlight = true;
     setBusy(true);
     setError('');
     setMessage('');
@@ -120,7 +183,7 @@ export function CoordinatorTakeoverPanel({
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken,
+          'X-CSRF-Token': context.csrfToken,
         },
         ...(payload ? { body: JSON.stringify(payload) } : {}),
       });
@@ -132,9 +195,13 @@ export function CoordinatorTakeoverPanel({
         'status' in result &&
         result.status === 'transferred'
       ) {
-        onTransferred();
+        current.transferred = true;
+        if (action.current === current) notifyTransferred();
         return;
       }
+      if (path.endsWith('/takeover/claim'))
+        throw new Error('Invalid takeover claim response');
+      if (action.current !== current) return;
       if (
         result &&
         typeof result === 'object' &&
@@ -153,9 +220,10 @@ export function CoordinatorTakeoverPanel({
       if (!refreshed.ok) throw new Error('Unable to check takeover status');
       setStatus(parseTakeoverStatus(await refreshed.json()));
     } catch {
-      setError(en.coordinator.takeoverError);
+      if (action.current === current) setError(en.coordinator.takeoverError);
     } finally {
-      setBusy(false);
+      current.inFlight = false;
+      if (action.current === current) setBusy(false);
     }
   }
 

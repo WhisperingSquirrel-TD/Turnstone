@@ -613,3 +613,69 @@ test('a living player can request a blind majority takeover', async ({
   await expect(takeover.getByText('Traitor', { exact: true })).toHaveCount(0);
   await expect(takeover.getByText('Faithful', { exact: true })).toHaveCount(0);
 });
+
+test('the server-selected player automatically receives blind organiser controls without tapping takeover', async ({
+  page,
+}) => {
+  const gameId = 'coordinator-console-test';
+  const view = {
+    ...createView(),
+    phase: 'DEBATE',
+    coordinatorSkippedSeats: [],
+  } as FullView;
+  let claims = 0;
+  const commands: unknown[] = [];
+  await page.route('**/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
+  );
+  await page.route(`**/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/games/${gameId}/takeover`, (route) =>
+    route.fulfill({
+      json: {
+        eligible: true,
+        mode: 'co-coordinator',
+        canRequest: false,
+        canVote: false,
+        canClaim: true,
+        request: null,
+      },
+    }),
+  );
+  await page.route(`**/games/${gameId}/takeover/claim`, async (route) => {
+    expect(route.request().method()).toBe('POST');
+    expect(route.request().headers()['x-csrf-token']).toBe('screen-test-token');
+    expect(route.request().postData()).toBeNull();
+    claims++;
+    await route.fulfill({ json: { status: 'transferred' } });
+  });
+  await page.route(`**/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/delegates`, (route) =>
+    route.fulfill({ json: { limit: 1, seatIds: [] } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/presence`, (route) =>
+    route.fulfill({ json: { status: 'online' } }),
+  );
+  await page.route(`**/games/${gameId}/commands`, (route) => {
+    commands.push(route.request().postDataJSON());
+    return route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    });
+  });
+  await page.route('**/socket.io/**', (route) => route.abort());
+
+  await page.goto(`/game/${gameId}`);
+  // Deliberately no takeover button click: this is the old-client regression.
+  await expect(page).toHaveURL(new RegExp(`/coordinate/${gameId}$`));
+  const controls = page.getByTestId('coordinator-console');
+  await expect(controls).toBeVisible();
+  expect(claims).toBe(1);
+  expect(commands).toEqual([]);
+  await expect(controls.getByText('Traitor', { exact: true })).toHaveCount(0);
+  await expect(controls.getByText('Faithful', { exact: true })).toHaveCount(0);
+});
