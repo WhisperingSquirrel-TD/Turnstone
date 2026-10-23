@@ -294,9 +294,7 @@ h2,
   background: var(--game-page-background, var(--hearth));
 }
 .game-action-bar {
-  bottom: calc(
-    var(--game-footer-dock-height) + var(--game-bottom-bar-height)
-  );
+  bottom: calc(var(--game-footer-dock-height) + var(--game-bottom-bar-height));
   background: var(--game-surface, var(--hearth));
 }
 .game-footer-adjacent {
@@ -316,6 +314,11 @@ h2,
   height: 44px !important;
   min-height: 44px !important;
   align-items: center;
+}
+
+.game-shell > a[href='#main'] {
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .public-skip-link {
@@ -437,9 +440,7 @@ h2,
   position: fixed;
   z-index: 30;
   right: 0;
-  bottom: calc(
-    var(--game-footer-dock-height) + var(--game-bottom-bar-height)
-  );
+  bottom: calc(var(--game-footer-dock-height) + var(--game-bottom-bar-height));
   left: 0;
   display: flex;
   min-height: 72px;

@@ -306,8 +306,9 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
       );
       await expect(page.getByTestId('game-status-bar')).toBeVisible();
       await expect(page.getByTestId('game-happening-card')).toBeVisible();
-      await expect(page.getByRole('navigation', { name: 'Game navigation' }))
-        .toBeVisible();
+      await expect(
+        page.getByRole('navigation', { name: 'Game navigation' }),
+      ).toBeVisible();
       await expect(page.getByTestId('game-status-phase')).toContainText(
         view.phase === 'SHADOW' ? 'Night' : 'Day',
       );

@@ -43,9 +43,7 @@ function luminance(hex: string) {
     .match(/.{2}/g)!
     .map((part) => Number.parseInt(part, 16) / 255)
     .map((channel) =>
-      channel <= 0.04045
-        ? channel / 12.92
-        : ((channel + 0.055) / 1.055) ** 2.4,
+      channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
     );
   return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
 }
@@ -74,9 +72,9 @@ describe('shared game chrome', () => {
       expect(contrast(tokens.muted, tokens.surface)).toBeGreaterThanOrEqual(
         4.5,
       );
-      expect(
-        contrast(tokens.onAccent, tokens.accent),
-      ).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(tokens.onAccent, tokens.accent)).toBeGreaterThanOrEqual(
+        4.5,
+      );
     },
   );
 

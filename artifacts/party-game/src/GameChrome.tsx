@@ -88,7 +88,9 @@ export function GameBottomBar({ active }: { active: 'game' | 'players' }) {
       <a
         href="#game-players"
         aria-current={current === 'players' ? 'page' : undefined}
-        className={current === 'players' ? 'game-bottom-bar__active' : undefined}
+        className={
+          current === 'players' ? 'game-bottom-bar__active' : undefined
+        }
         onClick={() => setCurrent('players')}
       >
         {en.game.tabPlayers}
@@ -123,7 +125,11 @@ export function PlayerTile({
   statusTestId?: string;
 }) {
   const stateLabel =
-    state === 'selected' ? en.game.tileSelected : state === 'out' ? en.game.tileOut : null;
+    state === 'selected'
+      ? en.game.tileSelected
+      : state === 'out'
+        ? en.game.tileOut
+        : null;
   const contents = (
     <>
       <span className="player-tile__name">{name}</span>

@@ -406,7 +406,10 @@ function Shell({
               </span>
               <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
             </Link>
-            <nav aria-label={en.nav.label} className="public-home-nav text-sm text-ash">
+            <nav
+              aria-label={en.nav.label}
+              className="public-home-nav text-sm text-ash"
+            >
               <Link
                 className="underline-offset-4 hover:underline"
                 to={config.routes.home}
@@ -449,7 +452,10 @@ function Shell({
         )}
       </header>
       {isPlayer && organiserControlsVisible && (
-        <div className="game-organiser-tools" aria-label={en.game.organiserControls}>
+        <div
+          className="game-organiser-tools"
+          aria-label={en.game.organiserControls}
+        >
           {organiserTools}
           <details className="game-display-settings">
             <summary>{en.app.display}</summary>
@@ -2623,7 +2629,9 @@ function PlayerGame() {
       isPlayer
       phase={!isResuming ? full?.phase : undefined}
       cycle={full?.cycle ?? 1}
-      remaining={full?.seats.filter((seat) => seat.status === 'alive').length ?? 0}
+      remaining={
+        full?.seats.filter((seat) => seat.status === 'alive').length ?? 0
+      }
       hideGameFooter={Boolean(
         full && !['LOBBY', 'FINISHED'].includes(full.phase),
       )}
@@ -2773,8 +2781,9 @@ function PlayerGame() {
                 context={{
                   phase: full.phase,
                   cycle: full.cycle,
-                  aliveCount: full.seats.filter((seat) => seat.status === 'alive')
-                    .length,
+                  aliveCount: full.seats.filter(
+                    (seat) => seat.status === 'alive',
+                  ).length,
                   publicLog: full.publicLog,
                   seats: full.seats,
                   winner: full.winner,
