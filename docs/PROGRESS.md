@@ -1,6 +1,16 @@
 # Status for reviewer
 
-**Workflow update applied through the GitHub Contents API as `874f3f3e4a74e37fe86732593eb94ce711ba8265` (HTTP 200). Supporting test, script and documentation changes are being pushed separately; Verify result pending.**
+**Verify #234 failed only in `disconnected-player-live.spec.ts`: the lobby-code assertion used Playwright’s 5-second default. The test now follows H1’s 30-second lobby wait; the targeted Pixel real-server test passes locally. Fix commit is pending Verify; resilience set 2 and H2 remain paused.**
+
+### Verify #234 rehearsal-live timeout correction
+
+The owner-relayed log confirmed the sole failing assertion was the lobby-code
+locator after game creation, timing out at the default 5 seconds before the
+Q6 journey began. The H1 creation flow uses a 30-second visible wait. This
+harness-only fix applies that wait and a 20-second configured timeout to the
+remaining asynchronous UI expectations; the six-player Pixel real-server
+spec passes locally (1.8 minutes). The production 60-second disconnect grace
+and its 75-second observation timeout are unchanged. Verify result pending.
 
 ### Verify #230 H1 step-identity correction
 

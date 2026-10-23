@@ -1,9 +1,18 @@
-import { expect, type BrowserContext, type Page } from '@playwright/test';
+import {
+  expect as playwrightExpect,
+  type BrowserContext,
+  type Page,
+} from '@playwright/test';
 import { test } from './support/rehearsal-test';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
 import type { FullView } from '../lib/shared/src/contracts';
+
+// Real-server UI updates can take longer on the constrained CI runner than
+// Playwright's 5-second default. The lobby itself uses the same 30-second
+// allowance as the H1 creation flow below.
+const expect = playwrightExpect.configure({ timeout: 20_000 });
 
 // This spec belongs to the real-server rehearsal runner, not the routed UI
 // suite. Every mutation below is a user interaction; HTTP reads only observe.
@@ -114,9 +123,11 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
     };
     expect(gameId).toBeTruthy();
     expect(creation.view.id).toBe(gameId);
-    await expect(organiser.getByTestId('text-lobby-code')).toHaveText(
-      /^[A-Z0-9]{6}$/,
-    );
+    const lobbyCode = organiser.getByTestId('text-lobby-code');
+    await expect(lobbyCode).toBeVisible({ timeout: 30_000 });
+    await expect(lobbyCode).toHaveText(/^[A-Z0-9]{6}$/, {
+      timeout: 30_000,
+    });
     const code = (
       await organiser.getByTestId('text-lobby-code').innerText()
     ).trim();
