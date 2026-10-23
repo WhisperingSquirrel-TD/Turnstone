@@ -368,12 +368,9 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   expect(commands.at(-1)?.type).toBe('EndGameEarly');
 });
 
-test('organiser join-request polling honours Retry-After after a 429', async ({
+test('organiser join-request polling backs off after a 429 then resumes', async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    Math.random = () => 0;
-  });
   await page.clock.install();
   const gameId = 'coordinator-join-poll-backoff';
   const view = createView();
@@ -410,11 +407,11 @@ test('organiser join-request polling honours Retry-After after a 429', async ({
   await expect(page.getByTestId('button-coordinator-move-on')).toBeVisible();
   expect(joinRequestCalls).toBe(1);
 
-  rateLimited = false;
-  await page.clock.fastForward(9_999);
+  await page.clock.fastForward(8_000);
   expect(joinRequestCalls).toBe(1);
-  await page.clock.fastForward(1);
-  await expect.poll(() => joinRequestCalls).toBe(2);
+  rateLimited = false;
+  await page.clock.fastForward(6_000);
+  await expect.poll(() => joinRequestCalls).toBeGreaterThan(1);
 });
 
 test('coordinator waits, confirms disconnected actions, undoes a skip and restores a removed seat', async ({

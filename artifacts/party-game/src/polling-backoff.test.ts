@@ -66,6 +66,29 @@ describe('adaptive polling', () => {
     poller.stop();
   });
 
+  it('keeps an exact Retry-After boundary deterministic when jitter is zero', async () => {
+    vi.useFakeTimers();
+    const task = vi.fn<() => Promise<void>>().mockRejectedValueOnce({
+      status: 429,
+      headers: new Headers({ 'Retry-After': '10' }),
+    });
+    const poller = createAdaptivePoller(task, {
+      baseIntervalMs: 5_000,
+      maxIntervalMs: 120_000,
+      random: () => 0,
+    });
+
+    poller.start();
+    await flush();
+    expect(task).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(task).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(task).toHaveBeenCalledTimes(2);
+    poller.stop();
+  });
+
   it('coalesces refresh requests received while a poll is in flight', async () => {
     vi.useFakeTimers();
     let resolveFirst!: () => void;

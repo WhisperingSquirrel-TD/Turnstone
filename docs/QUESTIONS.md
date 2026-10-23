@@ -297,3 +297,22 @@ role card available on return.
 **Owner ruling:** use a per-game, per-IP budget of `min(400, max(120, 8 × stored seat count))` per minute. Each seat's aggregate limit across authenticated command types is one quarter of that budget, rounded down; the per-seat, per-command-type limit is 60 per minute. At least four seats are required to exhaust the shared bucket. A 429 includes `Retry-After`; clients retain the original idempotency key and payload and honour the wait. Derive seat count only from server-stored game state.
 
 Join, recovery, PIN, CSRF and all other unauthenticated-route limits, including PIN lockout, remain unchanged. Test shared-IP 40-seat vote and AcknowledgePrivate bursts with one retry each; single-seat and three-seat isolation; six-seat limits; role-neutral 429 responses; unchanged unauthenticated limits; and Retry-After client handling.
+
+## Q10 — Zod security update (OPEN)
+
+Verify #247's dependency audit found one high-severity advisory:
+`GHSA-mrhx-c7xc-m3w5`, affecting the workspace's `zod@3.25.76`; the advisory
+lists Zod `4.6.6` as the first patched version. A local `pnpm audit` confirms
+the finding. Zod is used by shared contracts/configuration, generated API
+schemas, database schemas and API-server environment parsing. `drizzle-zod`
+0.8.3 declares compatibility with both Zod 3 and 4, but moving to Zod 4 is a
+major shared-library upgrade that may change schema typing and validation
+behaviour.
+
+**Proposed resolution:** upgrade the workspace Zod version to `4.6.6`, update
+the explicit `lib/shared` version pin, run the full type, unit, server,
+scenario and browser checks, and keep the audit gate unchanged with no
+exception.
+
+**Owner decision required:** may this major Zod upgrade proceed to resolve the
+high-severity audit finding?
