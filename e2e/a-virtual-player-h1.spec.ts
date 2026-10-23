@@ -382,6 +382,8 @@ async function advanceAsOrganiser(
   expectedStep: string,
   setActivePlayer: (player: VirtualPlayer) => void,
   allowUnfinished = false,
+  diagnosticsByPlayer?: ReadonlyMap<string, PlayerDiagnostics>,
+  actionTrace: readonly string[] = [],
 ): Promise<void> {
   const currentPhase = await visibleCoordinatorPhase(coordinatorPage);
   if (!currentPhase)
@@ -420,6 +422,83 @@ async function advanceAsOrganiser(
     exact: true,
   });
   await expect(moveOn).toBeVisible({ timeout: 20_000 });
+  const reportAdvanceFailure = async (error: unknown): Promise<never> => {
+    const progress = await coordinatorPage
+      .getByTestId('coordinator-progress')
+      .innerText()
+      .catch(() => 'unavailable');
+    const moveOnText = (
+      await moveOn.innerText().catch(() => 'unavailable')
+    ).trim();
+    const pendingNames: string[] = await coordinatorPage
+      .locator('[data-testid^="text-pending-name-"]')
+      .allTextContents()
+      .then((names) => names.map((name) => name.trim()))
+      .catch((): string[] => []);
+    const pendingPlayer = scenario.players.find((player) =>
+      pendingNames.includes(player.name),
+    );
+    let pendingView = 'no matching pending player shown';
+    let recentNetworkCalls: string[] = [];
+    let gameplayCalls: string[] = [];
+    if (pendingPlayer) {
+      const playerIndex = scenario.players.indexOf(pendingPlayer);
+      const pendingPage = playerPages[playerIndex]!;
+      setActivePlayer(pendingPlayer);
+      const [step, fate, waiting, shield, review, confirm] = await Promise.all([
+        readPlayerStepIdentity(pendingPage),
+        pendingPage
+          .getByTestId('player-fate')
+          .isVisible()
+          .catch(() => false),
+        pendingPage
+          .getByTestId('waiting-for-everyone')
+          .isVisible()
+          .catch(() => false),
+        pendingPage
+          .getByRole('dialog', { name: 'Shield your screen' })
+          .isVisible()
+          .catch(() => false),
+        pendingPage
+          .getByRole('button', { name: reviewChoice, exact: true })
+          .isVisible()
+          .catch(() => false),
+        pendingPage
+          .getByRole('button', { name: confirmChoice, exact: true })
+          .isVisible()
+          .catch(() => false),
+      ]);
+      const diagnostics = diagnosticsByPlayer?.get(pendingPlayer.id);
+      recentNetworkCalls = diagnostics?.recentNetworkCalls.slice(-10) ?? [];
+      gameplayCalls = diagnostics?.gameplayCalls.slice(-10) ?? [];
+      pendingView = [
+        `seat=${pendingPlayer.id}`,
+        `step=${step ?? 'unavailable'}`,
+        `fate=${fate}`,
+        `waiting=${waiting}`,
+        `shieldDialog=${shield}`,
+        `review=${review}`,
+        `confirm=${confirm}`,
+      ].join(' ');
+    }
+    const diagnostics = pendingPlayer
+      ? diagnosticsByPlayer?.get(pendingPlayer.id)
+      : undefined;
+    throw new Error(
+      [
+        error instanceof Error ? error.message : String(error),
+        `Coordinator progress: ${progress}; Move-on: "${moveOnText}".`,
+        `Pending seats: ${pendingNames.join(', ') || 'none'}.`,
+        `Pending player UI: ${pendingView}.`,
+        `Recent network calls: ${recentNetworkCalls.join(' | ') || 'none'}.`,
+        `Gameplay command calls: ${gameplayCalls.join(' | ') || 'none'}.`,
+        `Recent player actions: ${actionTrace.slice(-24).join(' | ') || 'none'}.`,
+        `Failed responses: ${diagnostics?.failedResponses.join('; ') || 'none'}.`,
+        `Failed requests: ${diagnostics?.failedRequests.join('; ') || 'none'}.`,
+      ].join('\n'),
+      { cause: error },
+    );
+  };
   if (phase === 'VOTE') {
     await expect(
       coordinatorPage.getByTestId('coordinator-progress'),
@@ -437,20 +516,25 @@ async function advanceAsOrganiser(
       `Move-on is disabled without an explanatory wait state: "${moveOnLabel}".`,
     ).toBe(true);
   }
-  await expect
-    .poll(
-      async () => {
-        const coordinatorPhase = await visibleCoordinatorPhase(coordinatorPage);
-        if (coordinatorPhase !== phase) return 'phase-changed';
-        return observeOrganiserAdvance(
-          expectedStep,
-          await readPlayerStepIdentity(playerPages[0]!),
-          await moveOn.isEnabled(),
-        );
-      },
-      { timeout: 20_000 },
-    )
-    .not.toBe('waiting');
+  try {
+    await expect
+      .poll(
+        async () => {
+          const coordinatorPhase =
+            await visibleCoordinatorPhase(coordinatorPage);
+          if (coordinatorPhase !== phase) return 'phase-changed';
+          return observeOrganiserAdvance(
+            expectedStep,
+            await readPlayerStepIdentity(playerPages[0]!),
+            await moveOn.isEnabled(),
+          );
+        },
+        { timeout: 20_000 },
+      )
+      .not.toBe('waiting');
+  } catch (error) {
+    await reportAdvanceFailure(error);
+  }
   const phaseAfterWait = await visibleCoordinatorPhase(coordinatorPage);
   if (!phaseAfterWait)
     throw new Error('Coordinator step did not match a known game phase.');
@@ -466,8 +550,14 @@ async function advanceAsOrganiser(
   if (previousSteps.some((identity) => identity === null))
     throw new Error('Could not identify every player step before moving on.');
   if (await returnToActionsForChangedStep()) return;
-  await pauseForHumanTiming(coordinatorPage, scenario.stage);
-  await moveOn.click();
+  try {
+    await expect(moveOn).toBeEnabled({ timeout: 20_000 });
+    await pauseForHumanTiming(coordinatorPage, scenario.stage);
+    await expect(moveOn).toBeEnabled({ timeout: 20_000 });
+    await moveOn.click();
+  } catch (error) {
+    await reportAdvanceFailure(error);
+  }
 
   const moveAnyway = coordinatorPage.getByRole('button', {
     name: 'Move everyone on anyway',
@@ -508,12 +598,24 @@ type PlayerDiagnostics = {
   consoleErrors: string[];
   failedResponses: string[];
   failedRequests: string[];
+  recentNetworkCalls: string[];
+  gameplayCalls: string[];
 };
 
 function instrumentPageDiagnostics(
   page: Page,
   diagnostics: PlayerDiagnostics,
 ): void {
+  const recordNetworkCall = (call: string) => {
+    diagnostics.recentNetworkCalls.push(call);
+    if (diagnostics.recentNetworkCalls.length > 20)
+      diagnostics.recentNetworkCalls.shift();
+  };
+  const recordGameplayCall = (call: string) => {
+    diagnostics.gameplayCalls.push(call);
+    if (diagnostics.gameplayCalls.length > 20)
+      diagnostics.gameplayCalls.shift();
+  };
   page.on('pageerror', (pageError) => {
     if (diagnostics.pageErrors.length < 20)
       diagnostics.pageErrors.push(scrubDiagnosticText(pageError.message));
@@ -522,7 +624,21 @@ function instrumentPageDiagnostics(
     if (message.type() === 'error' && diagnostics.consoleErrors.length < 20)
       diagnostics.consoleErrors.push(scrubDiagnosticText(message.text()));
   });
+  page.on('request', (request) => {
+    const path = safeRequestPath(request.url());
+    recordNetworkCall(`request ${request.method()} ${path}`);
+    if (path.endsWith('/commands'))
+      recordGameplayCall(`request ${request.method()} ${path}`);
+  });
   page.on('response', (response) => {
+    const path = safeRequestPath(response.url());
+    recordNetworkCall(
+      `response ${response.status()} ${response.request().method()} ${path}`,
+    );
+    if (path.endsWith('/commands'))
+      recordGameplayCall(
+        `response ${response.status()} ${response.request().method()} ${path}`,
+      );
     if (response.status() >= 400 && diagnostics.failedResponses.length < 20) {
       diagnostics.failedResponses.push(
         `${response.status()} ${response.request().method()} ${safeRequestPath(response.url())}`,
@@ -530,6 +646,9 @@ function instrumentPageDiagnostics(
     }
   });
   page.on('requestfailed', (request) => {
+    recordNetworkCall(
+      `failed ${request.method()} ${safeRequestPath(request.url())}`,
+    );
     if (diagnostics.failedRequests.length < 20) {
       const failureText = request.failure()?.errorText ?? 'unknown error';
       diagnostics.failedRequests.push(
@@ -704,6 +823,7 @@ async function attachFailureArtifacts({
         `- Cause: ${errorMessage}`,
         `- Failed responses: ${diagnostics.failedResponses.join('; ') || 'none'}`,
         `- Failed requests: ${diagnostics.failedRequests.join('; ') || 'none'}`,
+        `- Recent network calls: ${diagnostics.recentNetworkCalls.join(' | ') || 'none'}`,
         `- Replay: \`${scenario.replayCommand}\``,
       ].join('\n'),
       contentType: 'text/markdown',
@@ -733,6 +853,7 @@ test('virtual players complete a real game across desktop and phone contexts @vi
   const contexts: BrowserContext[] = [];
   const pages: Page[] = [];
   const phaseTrail: string[] = [];
+  const actionTrace: string[] = [];
   const rolesByPlayer = new Map<string, 'Traitor' | 'Faithful'>();
   const shieldedNightPlayers = new Set<string>();
   const activeTraces = new Set<BrowserContext>();
@@ -764,6 +885,8 @@ test('virtual players complete a real game across desktop and phone contexts @vi
         consoleErrors: [],
         failedResponses: [],
         failedRequests: [],
+        recentNetworkCalls: [],
+        gameplayCalls: [],
       };
       playerDiagnostics.set(player.id, diagnostics);
       instrumentPageDiagnostics(page, diagnostics);
@@ -968,6 +1091,8 @@ test('virtual players complete a real game across desktop and phone contexts @vi
               activePlayer = player;
               activePage = pages[scenario.players.indexOf(player)]!;
             },
+            false,
+            playerDiagnostics,
           );
       } else if (
         phase === 'VOTE' ||
@@ -1025,20 +1150,29 @@ test('virtual players complete a real game across desktop and phone contexts @vi
           const player = scenario.players[index]!;
           activePlayer = player;
           activePage = page;
+          const stepBefore = await readPlayerStepIdentity(page);
           if (
             await page
               .getByTestId('player-fate')
               .isVisible()
               .catch(() => false)
-          )
+          ) {
+            actionTrace.push(
+              `${phase}:${player.id}:step=${stepBefore ?? 'unknown'}:skip-fate`,
+            );
             continue;
+          }
           if (
             await page
               .getByTestId('waiting-for-everyone')
               .isVisible()
               .catch(() => false)
-          )
+          ) {
+            actionTrace.push(
+              `${phase}:${player.id}:step=${stepBefore ?? 'unknown'}:skip-waiting`,
+            );
             continue;
+          }
           if (phase === 'SHADOW') {
             const role = rolesByPlayer.get(player.id);
             if (!role)
@@ -1058,23 +1192,40 @@ test('virtual players complete a real game across desktop and phone contexts @vi
             await expect(selfOption).toBeVisible();
             await expect(selfOption).toBeEnabled();
           }
+          actionTrace.push(
+            `${phase}:${player.id}:step=${stepBefore ?? 'unknown'}:action-start`,
+          );
           if (phase === 'FINAL_VOTE') {
+            const submitted = await chooseToEndGame(
+              page,
+              testInfo,
+              scenario,
+              player,
+            );
+            const stepAfter = await readPlayerStepIdentity(page);
+            actionTrace.push(
+              `${phase}:${player.id}:step=${stepBefore ?? 'unknown'}->${stepAfter ?? 'unknown'}:submitted=${submitted}`,
+            );
             expect(
-              await chooseToEndGame(page, testInfo, scenario, player),
+              submitted,
               `${player.id} could not submit their endgame choice.`,
             ).toBe(true);
           } else {
+            const submitted = await chooseFirstVisiblePlayer(
+              page,
+              testInfo,
+              scenario,
+              player,
+              phase === 'SHADOW' && rolesByPlayer.get(player.id) === 'Faithful'
+                ? player.name
+                : undefined,
+            );
+            const stepAfter = await readPlayerStepIdentity(page);
+            actionTrace.push(
+              `${phase}:${player.id}:step=${stepBefore ?? 'unknown'}->${stepAfter ?? 'unknown'}:submitted=${submitted}`,
+            );
             expect(
-              await chooseFirstVisiblePlayer(
-                page,
-                testInfo,
-                scenario,
-                player,
-                phase === 'SHADOW' &&
-                  rolesByPlayer.get(player.id) === 'Faithful'
-                  ? player.name
-                  : undefined,
-              ),
+              submitted,
               `${player.id} could not submit their choice during ${phase}.`,
             ).toBe(true);
           }
@@ -1106,6 +1257,9 @@ test('virtual players complete a real game across desktop and phone contexts @vi
               activePlayer = player;
               activePage = pages[scenario.players.indexOf(player)]!;
             },
+            false,
+            playerDiagnostics,
+            actionTrace,
           );
       } else if (phase === 'VERDICT') {
         const verdictResult = organiserPage.getByText(
@@ -1303,6 +1457,8 @@ test('virtual players complete a real game across desktop and phone contexts @vi
       consoleErrors: [],
       failedResponses: [],
       failedRequests: [],
+      recentNetworkCalls: [],
+      gameplayCalls: [],
     };
     const captured = await attachFailureArtifacts({
       testInfo,
