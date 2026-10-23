@@ -13,6 +13,7 @@ type GameStepAnnouncementProps = {
   progress?: { done: number; total: number };
   context?: CommentaryContext;
   coachingTip?: string;
+  fallback?: string;
 };
 
 export function GameStepAnnouncement({
@@ -24,6 +25,7 @@ export function GameStepAnnouncement({
   progress,
   context,
   coachingTip,
+  fallback,
 }: GameStepAnnouncementProps) {
   let message: string | null = null;
 
@@ -46,20 +48,19 @@ export function GameStepAnnouncement({
   // VerdictScreen owns its ordered reveal; never announce its result early.
   const summary =
     context && phase !== 'VERDICT' ? publicStepCommentary(context) : null;
-  if (!message && !votes && !summary) return null;
+  if (!message && !votes && !summary && !fallback) return null;
+  const lead = summary ?? message ?? fallback;
 
   return (
-    <div className="mb-4" data-testid="game-commentary">
-      <p className="text-base text-ash" aria-live="polite">
-        {summary && message && <>{summary} </>}
-        {(message || summary) && (
-          <span data-testid="game-context-line">{message ?? summary}</span>
-        )}
-        {(message || summary) && votes && ' '}
+    <div data-testid="game-commentary">
+      <p aria-live="polite">
+        {lead && <span data-testid="game-context-line">{lead}</span>}
+        {message && summary && message !== summary && <> {message}</>}
+        {lead && votes && ' '}
         {votes && <span data-testid="vote-progress-commentary">{votes}</span>}
       </p>
       {coachingTip && (
-        <p className="mt-1 text-sm text-ash" data-testid="rehearsal-coaching">
+        <p className="mt-1" data-testid="rehearsal-coaching">
           {coachingTip}
         </p>
       )}

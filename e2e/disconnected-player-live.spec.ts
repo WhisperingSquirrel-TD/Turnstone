@@ -187,7 +187,7 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
       );
       await expect(
         player.getByRole('status', { name: 'Connection status' }),
-      ).toHaveText('Online');
+      ).toHaveText('Live');
     }
     await expect(organiser.getByTestId('text-lobby-player-count')).toHaveText(
       '6 of 6 player seats are ready.',

@@ -9,13 +9,22 @@ describe('game connection status', () => {
     );
 
     expect(html).toContain('role="status"');
-    expect(html).toContain('Reconnecting...');
+    expect(html).toContain('Reconnecting');
   });
 
-  it('shows online only after the game view has resynced', () => {
+  it('uses Live only after the game view has resynced', () => {
     const html = renderToStaticMarkup(<GameConnectionStatus status="online" />);
 
-    expect(html).toContain('Online');
-    expect(html).not.toContain('Reconnecting...');
+    expect(html).toContain('Live');
+    expect(html).not.toContain('Reconnecting');
+  });
+
+  it('labels an offline device with a word as well as a status dot', () => {
+    const html = renderToStaticMarkup(
+      <GameConnectionStatus status="offline" />,
+    );
+
+    expect(html).toContain('Offline');
+    expect(html).toContain('aria-hidden="true"');
   });
 });

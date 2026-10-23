@@ -4,7 +4,7 @@ import type { GameConnectionState } from './game-socket';
 export function GameConnectionStatus({
   status,
 }: {
-  status: GameConnectionState;
+  status: GameConnectionState | 'offline';
 }) {
   const isOnline = status === 'online';
 
@@ -12,7 +12,7 @@ export function GameConnectionStatus({
     <span
       role="status"
       aria-label={en.app.connectionStatus}
-      className="inline-flex items-center gap-2"
+      className="game-connection-state"
     >
       <span
         aria-hidden="true"
@@ -20,8 +20,8 @@ export function GameConnectionStatus({
       />
       {isOnline
         ? en.app.online
-        : status === 'connecting'
-          ? en.app.connecting
+        : status === 'offline'
+          ? en.app.offline
           : en.app.reconnecting}
     </span>
   );

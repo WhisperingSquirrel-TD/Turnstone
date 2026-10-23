@@ -20,6 +20,11 @@
   --game-footer-dock-height: calc(
     3.5rem + max(1rem, env(safe-area-inset-bottom))
   );
+  --game-bottom-bar-height: calc(52px + env(safe-area-inset-bottom));
+  --game-action-dock-height: 0px;
+  --game-bottom-stack-height: calc(
+    var(--game-footer-dock-height) + var(--game-bottom-bar-height)
+  );
   --brand-footer-max-width: 72rem;
 }
 
@@ -253,9 +258,7 @@ h2,
   margin-bottom: 0;
   overflow: visible;
   padding-top: 1rem !important;
-  padding-bottom: calc(
-    var(--game-bottom-stack-height, var(--game-footer-dock-height)) + 1rem
-  ) !important;
+  padding-bottom: calc(var(--game-bottom-stack-height) + 1rem) !important;
 }
 .game-shell-main.private-moment-main {
   display: block;
@@ -270,7 +273,7 @@ h2,
   position: relative;
   height: auto;
   min-height: 100dvh;
-  padding-inline: max(24px, env(safe-area-inset-left));
+  padding-inline: max(16px, env(safe-area-inset-left));
   padding-bottom: 0;
   background: var(--game-page-background, var(--hearth));
 }
@@ -291,11 +294,350 @@ h2,
   background: var(--game-page-background, var(--hearth));
 }
 .game-action-bar {
-  bottom: var(--game-footer-dock-height);
-  background: var(--game-page-background, var(--hearth));
+  bottom: calc(
+    var(--game-footer-dock-height) + var(--game-bottom-bar-height)
+  );
+  background: var(--game-surface, var(--hearth));
 }
 .game-footer-adjacent {
   bottom: calc(var(--game-footer-dock-height) + 0.5rem);
+}
+
+.game-shell .player-shell-header {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  min-height: 52px;
+  margin: 0 auto;
+  padding-block: 0;
+}
+
+.game-shell .public-skip-link {
+  height: 44px !important;
+  min-height: 44px !important;
+  align-items: center;
+}
+
+.public-skip-link {
+  height: 44px !important;
+  min-height: 44px !important;
+}
+
+.game-status-bar {
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-inline: auto;
+  color: var(--game-text);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.game-status-chip,
+.game-connection-state {
+  display: inline-flex;
+  min-height: 32px;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--game-line);
+  border-radius: 999px;
+  padding: 0.35rem 0.55rem;
+  background: var(--game-surface);
+  color: var(--game-text);
+  white-space: nowrap;
+}
+
+.game-status-bar > .game-status-chip {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-status-right {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.game-happening-card {
+  margin: 0 0 1rem;
+  border: 1px solid var(--game-line);
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+  background: var(--game-surface);
+  color: var(--game-text);
+}
+
+.game-happening-card--accent {
+  border: 1.5px solid var(--game-accent);
+}
+
+.game-screen-label {
+  margin: 0 0 0.2rem;
+  color: var(--game-muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.game-happening-copy {
+  color: var(--game-text);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.game-bottom-bar {
+  position: fixed;
+  z-index: 25;
+  right: 0;
+  bottom: var(--game-footer-dock-height);
+  left: 0;
+  display: grid;
+  height: calc(52px + env(safe-area-inset-bottom));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-inline: max(16px, env(safe-area-inset-left))
+    max(16px, env(safe-area-inset-right));
+  border-top: 1px solid var(--game-line);
+  background: var(--game-surface);
+  color: var(--game-muted);
+}
+
+.game-shell:not(.game-shell--footer-visible) .game-bottom-bar {
+  bottom: 0;
+}
+
+.game-bottom-bar a {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 2px solid transparent;
+  color: var(--game-muted);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.game-bottom-bar a.game-bottom-bar__active {
+  border-bottom-color: var(--game-accent);
+  color: var(--game-text);
+}
+
+.game-action-dock {
+  position: fixed;
+  z-index: 30;
+  right: 0;
+  bottom: calc(
+    var(--game-footer-dock-height) + var(--game-bottom-bar-height)
+  );
+  left: 0;
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem max(16px, env(safe-area-inset-left));
+  border-top: 1px solid var(--game-line);
+  background: var(--game-surface);
+}
+
+.game-shell:not(.game-shell--footer-visible) .game-action-dock {
+  bottom: var(--game-bottom-bar-height);
+}
+
+.game-shell .game-action-dock > :is(button, a) {
+  min-height: 56px;
+  flex: 1 1 0;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.game-action-dock > div {
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+}
+
+.game-action-bar {
+  padding-right: max(16px, env(safe-area-inset-right));
+  padding-left: max(16px, env(safe-area-inset-left));
+}
+
+.game-action-bar > div > button {
+  min-height: 56px;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.game-action-dock button {
+  min-height: 56px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.game-shell button.game-action-dock {
+  min-height: 56px;
+}
+
+.game-shell button,
+.game-shell .primary-action,
+.game-shell .quiet-action,
+.game-shell .choice-action {
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.game-shell h1 {
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.game-shell h2 {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.game-shell .text-xs,
+.game-shell .text-\[10px\],
+.game-shell .text-\[11px\],
+.game-shell .text-\[12px\] {
+  font-size: 13px;
+}
+
+.game-shell .text-sm {
+  font-size: 15px;
+}
+
+.game-shell p {
+  font-size: max(15px, 1em);
+}
+
+.game-shell input[type='checkbox'] {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
+.player-tile {
+  display: flex;
+  width: 100%;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1.5px solid var(--game-line);
+  border-radius: 14px;
+  padding: 0.55rem 0.75rem;
+  background: var(--game-surface);
+  color: var(--game-text);
+  text-align: left;
+}
+
+button.player-tile {
+  cursor: pointer;
+}
+
+.player-tile__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.player-tile__end {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--game-muted);
+  font-size: 13px;
+}
+
+.player-tile__radio {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.player-tile--selected {
+  border-width: 2.5px;
+  border-color: var(--game-accent);
+  color: var(--game-text);
+  font-weight: 700;
+}
+
+.player-tile--selected .player-tile__radio {
+  border-color: var(--game-accent);
+  background: var(--game-accent);
+  box-shadow: inset 0 0 0 3px var(--game-surface);
+}
+
+.player-tile--selected .player-tile__status {
+  color: var(--game-text);
+  font-weight: 700;
+}
+
+.player-tile--out {
+  border-style: dashed;
+  color: var(--game-muted);
+}
+
+.player-tile--disabled,
+.player-tile--disabled:disabled {
+  border-color: var(--game-line);
+  background: var(--game-surface);
+  color: var(--game-muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.player-tile__status {
+  white-space: nowrap;
+}
+
+.game-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.game-organiser-tools {
+  display: flex;
+  width: min(100%, 480px);
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin: 0 auto 0.5rem;
+  font-size: 13px;
+}
+
+.game-notes-dock-button {
+  position: fixed;
+  z-index: 30;
+  bottom: calc(
+    var(--game-footer-dock-height) + var(--game-bottom-bar-height) + 0.5rem
+  );
+  right: max(16px, env(safe-area-inset-right));
+  min-height: 48px;
+  padding-inline: 1rem;
+  border-radius: 14px;
 }
 .private-player-stage {
   display: flex;

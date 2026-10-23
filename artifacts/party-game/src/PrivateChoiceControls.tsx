@@ -1,5 +1,6 @@
 import { en } from '@/locale/en-GB';
 import { PendingCommandNotice } from './PendingCommandNotice';
+import { PlayerTile } from './GameChrome';
 
 export type PrivateChoiceOption = {
   id: string;
@@ -77,87 +78,57 @@ export function PrivateChoiceControls({
               const statusId = `vote-status-${row.id}`;
 
               if (!choice) {
-                if (row.id === viewerSeatId) {
-                  return (
-                    <p
-                      key={row.id}
-                      className="flex items-center gap-2 text-sm text-ash"
-                      data-testid="vote-self-status"
-                    >
-                      <span>{row.name}</span>
-                      <span aria-hidden="true">·</span>
-                      <span data-testid={statusId}>{status}</span>
-                    </p>
-                  );
-                }
                 return (
-                  <div
+                  <PlayerTile
                     key={row.id}
-                    className="vote-status-row flex min-h-10 items-center justify-between gap-3 border border-stone px-3 py-2 text-candle"
-                    data-testid={
+                    name={row.name}
+                    statusText={status}
+                    statusId={statusId}
+                    statusTestId={statusId}
+                    testId={
                       row.id === viewerSeatId
                         ? 'vote-self-status'
                         : `vote-progress-row-${row.id}`
                     }
-                  >
-                    <span>{row.name}</span>
-                    <span
-                      className="ml-auto shrink-0 text-sm text-ash"
-                      data-testid={statusId}
-                    >
-                      {status}
-                    </span>
-                  </div>
+                  />
                 );
               }
 
               return (
-                <button
+                <PlayerTile
                   key={choice.id}
-                  type="button"
-                  className={`choice-action justify-between gap-3 ${
-                    disabledChoiceIdSet.has(choice.id)
-                      ? 'choice-action--unavailable'
-                      : ''
-                  }`}
-                  data-choice-id={choice.id}
+                  name={choice.name}
+                  state={selected === choice.id ? 'selected' : 'available'}
+                  statusText={status}
+                  statusId={statusId}
+                  statusTestId={statusId}
+                  dataChoiceId={choice.id}
                   disabled={
                     choiceSelectionLocked || disabledChoiceIdSet.has(choice.id)
                   }
-                  aria-label={choice.name}
-                  aria-describedby={statusId}
-                  aria-pressed={selected === choice.id}
-                  onClick={() => onSelect(choice.id)}
-                >
-                  <span>{choice.name}</span>
-                  <span
-                    id={statusId}
-                    className="ml-auto shrink-0 text-sm text-ash"
-                    data-testid={statusId}
-                  >
-                    {status}
-                  </span>
-                </button>
+                  ariaLabel={choice.name}
+                  ariaDescribedBy={statusId}
+                  onSelect={() => onSelect(choice.id)}
+                />
               );
             })
           : choices.map((choice) => (
-              <button
+              <PlayerTile
                 key={choice.id}
-                type="button"
-                className={`choice-action ${
+                name={choice.name}
+                state={
                   disabledChoiceIdSet.has(choice.id)
-                    ? 'choice-action--unavailable'
-                    : ''
-                }`}
-                data-choice-id={choice.id}
+                    ? 'disabled'
+                    : selected === choice.id
+                      ? 'selected'
+                      : 'available'
+                }
+                dataChoiceId={choice.id}
                 disabled={
                   choiceSelectionLocked || disabledChoiceIdSet.has(choice.id)
                 }
-                aria-pressed={selected === choice.id}
-                onClick={() => onSelect(choice.id)}
-              >
-                {choice.name}
-              </button>
+                onSelect={() => onSelect(choice.id)}
+              />
             ))}
       </div>
       {selectedOption && (
@@ -170,48 +141,59 @@ export function PrivateChoiceControls({
         </p>
       )}
       {selected && !confirmChoice && !choiceSubmitted && (
-        <button
-          className="quiet-action mt-4 w-full"
-          type="button"
-          onClick={onReview}
-        >
-          {en.game.reviewChoice}
-        </button>
+        <div className="game-action-dock" data-testid="game-action-dock">
+          <button
+            className="primary-action w-full"
+            type="button"
+            onClick={onReview}
+          >
+            {en.game.reviewChoice}
+          </button>
+        </div>
       )}
       {selected && confirmChoice && !choiceSubmitted && (
-        <div className="mt-4 border-t border-stone pt-4">
-          <p className="text-candle">{en.game.confirmChoice}</p>
-          {waitingToSend && onResend ? (
-            <PendingCommandNotice
-              disabled={isPending}
-              retryAfterUntil={retryAfterUntil}
-              onResend={onResend}
-            />
-          ) : (
-            <div className="mt-3 flex flex-wrap gap-3">
-              <button
-                type="button"
-                className="primary-action flex-1"
-                disabled={isPending || !hasToken}
-                onClick={onConfirm}
-              >
-                {isPending
-                  ? en.game.recording
-                  : choiceSelectionLocked
-                    ? en.game.retryChoice
-                    : en.game.confirm}
-              </button>
-              {!choiceSelectionLocked && (
+        <div className="game-action-dock" data-testid="game-action-dock">
+          <div className="mx-auto w-full max-w-[480px]">
+            <p className="mb-1 text-candle">{en.game.confirmChoice}</p>
+            {waitingToSend && onResend ? (
+              <PendingCommandNotice
+                disabled={isPending}
+                retryAfterUntil={retryAfterUntil}
+                onResend={onResend}
+              />
+            ) : (
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="quiet-action flex-1"
-                  onClick={onChooseAgain}
+                  className="primary-action flex-1"
+                  disabled={isPending || !hasToken}
+                  onClick={onConfirm}
                 >
-                  {en.game.chooseAgain}
+                  {isPending
+                    ? en.game.recording
+                    : choiceSelectionLocked
+                      ? en.game.retryChoice
+                      : en.game.confirm}
                 </button>
-              )}
-            </div>
-          )}
+                {!choiceSelectionLocked && (
+                  <button
+                    type="button"
+                    className="quiet-action flex-1"
+                    onClick={onChooseAgain}
+                  >
+                    {en.game.chooseAgain}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {!selected && !choiceSubmitted && (
+        <div className="game-action-dock" data-testid="game-action-dock">
+          <button className="primary-action w-full" type="button" disabled>
+            {choices.length ? en.game.choosePlayer : en.game.noChoiceAvailable}
+          </button>
         </div>
       )}
       {commandMessage && !waitingToSend && (

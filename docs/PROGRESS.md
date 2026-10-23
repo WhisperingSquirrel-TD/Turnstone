@@ -1,8 +1,8 @@
 # Status for reviewer
 
-**Latest confirmed green on GitHub: Verify #244 (`4d250b9`). Verify #245 failed the exact Retry-After browser boundary, #246 failed a brittle route-time measurement, and #247 failed the unchanged dependency audit. No newer GitHub result has been confirmed yet.**
+**Latest green on GitHub: Verify #248 (`6f17b40`), all listed jobs succeeded. Verify #247 on `1d8f485` failed the unchanged dependency audit; the approved Zod 4.6.6 update cleared it.**
 
-**Round 6 Notes / Zod security update:** the Notes regression passed in CI. #245 exposed a browser assertion that incorrectly rejected a retry at the exact 10-second `Retry-After` boundary; #246 failed because a browser route callback produced `NaN` for fake time. Exact timing now has a deterministic injected-clock unit test, and the browser check verifies back-off and eventual resume. #247's browser jobs passed, but audit found `GHSA-mrhx-c7xc-m3w5` in Zod 3.25.76. The owner approved the upgrade to 4.6.6. The complete local `pnpm run verify` now passes: 680 unit tests, 21 property tests, 86.02% server coverage (85% threshold unchanged), 2,572 scenarios with none failing, 126 browser tests passing and 22 skipped because those profiles run only in CI, all 4 real-server rehearsals passing, six public-page Lighthouse checks passing, and audit at 0 high / 0 critical. This includes two uncommitted Zod-compatibility fixes. The fixes are local; GitHub CI is pending.
+**Round 6 Notes / Zod security update:** the Notes regression passed in CI. #245 exposed a browser assertion that incorrectly rejected a retry at the exact 10-second `Retry-After` boundary; #246 failed because a browser route callback produced `NaN` for fake time. Exact timing now has a deterministic injected-clock unit test, and the browser check verifies back-off and eventual resume. #247's audit found `GHSA-mrhx-c7xc-m3w5` in Zod 3.25.76; the owner approved the upgrade to 4.6.6. Verify #248 passed all jobs, including audit. The complete local `pnpm run verify` also passed: 680 unit tests, 21 property tests, 86.02% server coverage (85% threshold unchanged), 2,572 scenarios with none failing, 126 browser tests passing and 22 skipped because those profiles run only in CI, all 4 real-server rehearsals passing, six public-page Lighthouse checks passing, and audit at 0 high / 0 critical.
 
 **Round 6 Q9 follow-up:** #240 failed only because two harness pacing gaps measured 2,099 ms against the 2,100 ms minimum; #241 passed after adding 100 ms of scheduling headroom. No 429 occurred in the final rehearsal, and no rate limit or assertion changed.
 
@@ -20,7 +20,7 @@
 
 **Round 6 Notes:** the draft now clears when the player presses Done. A new browser regression proved it stayed in the textarea after closing and reopening before the fix; the fixed flow passed on all four browser profiles, including in Verify #245. It also checks the released text is absent from the DOM, local/session storage and browser console. Temporary privacy covers still allow a player to return to the open Notes screen.
 
-**Next:** push the approved Zod 4.6.6 upgrade and the Retry-After regression fix after confirming no Verify run is in progress. Wait for a fully green GitHub Verify; then begin Round 7 Stage 1 shared foundations and stop to report.
+**Next:** Round 7 Stage 1 shared foundations only: tokens, common shell, dock, tiles and footer placement. After its green Verify, stop and report; do not start per-screen redesign.
 
 **Push isolation:** `99da77a` is on `main`; the push contained progress documentation, virtual-player harness/tests and the pipeline regression test. Attached content and generated Playwright artifacts were excluded.
 

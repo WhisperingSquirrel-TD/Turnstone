@@ -159,6 +159,7 @@ test('night status has identical four-line geometry for both roles in both theme
       }),
   );
   const snapshots: Record<string, unknown> = {};
+  const shellSnapshots: Record<string, unknown> = {};
   for (role of ['faithful', 'traitor']) {
     view = { ...view, version: view.version + 1 };
     await page.goto('/game/night-theme-uniformity');
@@ -170,6 +171,29 @@ test('night status has identical four-line geometry for both roles in both theme
     const status = page.getByTestId('shadow-status');
     await expect(status).toBeVisible();
     await expect(status.locator('p')).toHaveCount(4);
+    const shellStatus = await page
+      .getByTestId('game-status-bar')
+      .evaluate((el) => ({
+        text: el.textContent?.replace(/\s+/g, ' ').trim(),
+        childCount: el.children.length,
+        phase: el.querySelector('[data-testid="game-status-phase"]')
+          ?.textContent,
+        remaining: el.querySelector('[data-testid="game-status-remaining"]')
+          ?.textContent,
+      }));
+    const happening = await page
+      .getByTestId('game-happening-card')
+      .evaluate((el) => ({
+        text: el.textContent?.replace(/\s+/g, ' ').trim(),
+        childCount: el.children.length,
+      }));
+    if (role === 'faithful') {
+      shellSnapshots.status = shellStatus;
+      shellSnapshots.happening = happening;
+    } else {
+      expect(shellStatus).toEqual(shellSnapshots.status);
+      expect(happening).toEqual(shellSnapshots.happening);
+    }
     for (const theme of ['day', 'night']) {
       await page.locator('.game-shell').evaluate((element, palette) => {
         (element as HTMLElement).dataset.gameTheme = palette;
@@ -209,8 +233,13 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
   const gameId = 'r5-screen-matrix';
   let view = createPublicView(gameId);
   let role: 'faithful' | 'traitor' = 'faithful';
-  const capture = process.env.R5_CAPTURE_SCREENS === '1';
-  const directory = 'docs/screens/round-5';
+  const capture =
+    process.env.R5_CAPTURE_SCREENS === '1' ||
+    process.env.R7_CAPTURE_SCREENS === '1';
+  const directory =
+    process.env.R7_CAPTURE_SCREENS === '1'
+      ? 'docs/screens/round-7-stage-1'
+      : 'docs/screens/round-5';
   if (capture) await mkdir(directory, { recursive: true });
   await page.route('**/api/csrf', (route) =>
     route.fulfill({ json: { csrfToken: 'test-csrf' } }),
@@ -274,6 +303,13 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
       await expect(page.getByTestId('player-game')).toHaveAttribute(
         'data-phase',
         view.phase,
+      );
+      await expect(page.getByTestId('game-status-bar')).toBeVisible();
+      await expect(page.getByTestId('game-happening-card')).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Game navigation' }))
+        .toBeVisible();
+      await expect(page.getByTestId('game-status-phase')).toContainText(
+        view.phase === 'SHADOW' ? 'Night' : 'Day',
       );
       await page.evaluate(() => document.fonts.ready);
       const privacyShield = page.getByRole('dialog', {
@@ -343,12 +379,101 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
             () => document.documentElement.scrollWidth <= innerWidth,
           ),
         ).toBe(true);
+        const bottomBar = page.getByTestId('game-bottom-bar');
+        const bottomBarBox = await bottomBar.boundingBox();
+        expect(bottomBarBox).not.toBeNull();
+        expect(bottomBarBox!.height).toBeGreaterThanOrEqual(52);
+        expect(Math.abs(bottomBarBox!.height - 52)).toBeLessThanOrEqual(1);
+        for (const tab of ['Game', 'Players']) {
+          const box = await page.getByRole('link', { name: tab }).boundingBox();
+          expect(box, `${tab} tab at ${width}px`).not.toBeNull();
+          expect(box!.height).toBeGreaterThanOrEqual(44);
+        }
+        const themeTokens = await page
+          .locator('.game-shell')
+          .evaluate((element) => {
+            const style = getComputedStyle(element);
+            return {
+              background: style
+                .getPropertyValue('--game-bg')
+                .trim()
+                .toUpperCase(),
+              surface: style
+                .getPropertyValue('--game-surface')
+                .trim()
+                .toUpperCase(),
+              line: style.getPropertyValue('--game-line').trim().toUpperCase(),
+              text: style.getPropertyValue('--game-text').trim().toUpperCase(),
+              muted: style
+                .getPropertyValue('--game-muted')
+                .trim()
+                .toUpperCase(),
+              accent: style
+                .getPropertyValue('--game-accent')
+                .trim()
+                .toUpperCase(),
+              onAccent: style
+                .getPropertyValue('--game-on-accent')
+                .trim()
+                .toUpperCase(),
+              alert: style
+                .getPropertyValue('--game-alert')
+                .trim()
+                .toUpperCase(),
+            };
+          });
+        expect(themeTokens).toEqual(
+          palette === 'day'
+            ? {
+                background: '#FAF8F1',
+                surface: '#F1ECDF',
+                line: '#D9D1BF',
+                text: '#26221D',
+                muted: '#5E564B',
+                accent: '#7A4E1D',
+                onAccent: '#FFFFFF',
+                alert: '#A3341F',
+              }
+            : {
+                background: '#1B1815',
+                surface: '#272320',
+                line: '#433C34',
+                text: '#F3EEE4',
+                muted: '#BFB5A5',
+                accent: '#E3B35F',
+                onAccent: '#1B1815',
+                alert: '#F2927A',
+              },
+        );
         if (!shielded && !held)
           expect(
             await page
               .locator('main')
               .evaluate((element) => getComputedStyle(element).overflowY),
           ).toBe('visible');
+        const undersizedTargets = await page
+          .locator(
+            'button:visible, a:visible, input:visible, select:visible, [role="button"]:visible',
+          )
+          .evaluateAll((elements) =>
+            elements
+              .map((element) => {
+                const box = element.getBoundingClientRect();
+                return {
+                  name:
+                    element.getAttribute('aria-label') ||
+                    element.textContent?.trim() ||
+                    element.tagName,
+                  width: box.width,
+                  height: box.height,
+                };
+              })
+              .filter((box) => box.width < 44 || box.height < 44),
+          );
+        expect(
+          undersizedTargets,
+          `${label}/${palette}/${width}: minimum touch targets`,
+        ).toEqual([]);
         if (held) {
           const box = await page
             .getByTestId('private-role-content')
@@ -371,27 +496,28 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
           const phase = await page
             .getByTestId('player-game')
             .getAttribute('data-phase');
-          const footerExpected = [
-            'DRAFT',
-            'LOBBY',
-            'FINISHED',
-            'ARCHIVED',
-          ].includes(phase ?? '');
+          const footerExpected = ['LOBBY', 'FINISHED'].includes(phase ?? '');
           if (footerExpected) {
             await expect(footer).toBeVisible();
           } else {
             await expect(footer).toHaveCount(0);
           }
           const last = page
-            .locator('main button:visible:not(.game-action-bar button)')
+            .locator(
+              'main button:visible:not(.game-action-bar button):not(.game-action-dock button):not(.game-notes-dock-button)',
+            )
             .last();
           if (await last.count()) {
             await page.evaluate(() =>
               window.scrollTo(0, document.documentElement.scrollHeight),
             );
             const box = await last.boundingBox();
-            const action = page.locator('.game-action-bar:visible');
-            const stack = (await action.count()) ? action : footer;
+            const action = page.locator(
+              '.game-action-bar:visible, .game-action-dock:visible, .game-notes-dock-button:visible',
+            );
+            const bottomBar = page.getByTestId('game-bottom-bar');
+            const stack =
+              (await action.count()) > 0 ? action.first() : bottomBar;
             const stackBox =
               (await stack.count()) > 0 ? await stack.boundingBox() : null;
             const viewportHeight =
@@ -402,26 +528,20 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
               `${label}/${palette}/${width}: last action clear of bottom stack`,
             ).toBeLessThanOrEqual((stackBox?.y ?? viewportHeight) + 1);
           }
-          const bar = page.locator('.game-action-bar:visible');
+          const bar = page.locator(
+            '.game-action-bar:visible, .game-action-dock:visible',
+          );
           if (await bar.count()) {
-            const barBox = await bar.boundingBox();
-            const footerBox = footerExpected
-              ? await footer.boundingBox()
-              : null;
-            if (footerBox) {
-              expect(
-                Math.abs(barBox!.y + barBox!.height - footerBox.y),
-              ).toBeLessThanOrEqual(1);
-              expect(barBox!.width).toBe(footerBox.width);
-            } else {
-              expect(
-                Math.abs(
-                  barBox!.y +
-                    barBox!.height -
-                    (page.viewportSize()?.height ?? 0),
-                ),
-              ).toBeLessThanOrEqual(1);
-            }
+            const barBox = await bar.first().boundingBox();
+            const tabBox = await page
+              .getByTestId('game-bottom-bar')
+              .boundingBox();
+            expect(barBox).not.toBeNull();
+            expect(tabBox).not.toBeNull();
+            expect(
+              Math.abs(barBox!.y + barBox!.height - tabBox!.y),
+            ).toBeLessThanOrEqual(1);
+            expect(barBox!.width).toBe(page.viewportSize()?.width);
           }
         }
       }

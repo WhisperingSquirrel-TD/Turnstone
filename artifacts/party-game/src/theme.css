@@ -33,27 +33,45 @@
 
 .game-shell {
   color-scheme: dark;
-  color: var(--candle);
-  --game-button-ink: var(--brand-hearth);
-  --game-button-fill: var(--brand-gilt);
+  color: var(--game-text);
+  --game-bg: #1b1815;
+  --game-surface: #272320;
+  --game-line: #433c34;
+  --game-text: #f3eee4;
+  --game-muted: #bfb5a5;
+  --game-accent: #e3b35f;
+  --game-on-accent: #1b1815;
+  --game-alert: #f2927a;
+  --game-page-background: var(--game-bg);
+  --charcoal: var(--game-bg);
+  --hearth: var(--game-surface);
+  --stone: var(--game-line);
+  --gilt: var(--game-accent);
+  --candle: var(--game-text);
+  --ash: var(--game-muted);
+  --game-button-ink: var(--game-on-accent);
+  --game-button-fill: var(--game-accent);
 }
 
 .game-shell[data-game-theme='day'] {
   color-scheme: light;
-  --game-page-background: var(--brand-candle);
-  --charcoal: var(--brand-candle);
-  --hearth: var(--brand-ash);
-  --candle: var(--brand-charcoal);
-  --ash: var(--brand-stone);
-  --stone: var(--brand-stone);
-  --gilt: color-mix(in srgb, var(--brand-gilt) 35%, var(--brand-hearth));
-  --game-button-ink: var(--brand-charcoal);
-  /* Original Gilt/Charcoal is below 4.5:1: a small Candle tint meets AA. */
-  --game-button-fill: color-mix(
-    in srgb,
-    var(--brand-gilt) 88%,
-    var(--brand-candle)
-  );
+  --game-bg: #faf8f1;
+  --game-surface: #f1ecdf;
+  --game-line: #d9d1bf;
+  --game-text: #26221d;
+  --game-muted: #5e564b;
+  --game-accent: #7a4e1d;
+  --game-on-accent: #ffffff;
+  --game-alert: #a3341f;
+  --game-page-background: var(--game-bg);
+  --charcoal: var(--game-bg);
+  --hearth: var(--game-surface);
+  --stone: var(--game-line);
+  --gilt: var(--game-accent);
+  --candle: var(--game-text);
+  --ash: var(--game-muted);
+  --game-button-ink: var(--game-on-accent);
+  --game-button-fill: var(--game-accent);
 }
 
 .game-shell .primary-action,
@@ -80,17 +98,16 @@
   }
 }
 
-.game-shell[data-game-theme='day'] .primary-action:disabled {
-  background: var(--brand-ash);
-  color: var(--brand-stone);
+.game-shell .primary-action:disabled,
+.game-shell .quiet-action:disabled {
+  border-color: var(--game-line);
+  background: var(--game-surface);
+  color: var(--game-muted);
+  opacity: 1;
 }
 
-.game-shell[data-game-theme='day'] .text-gilt {
-  color: var(--candle);
-}
-
-.game-shell[data-game-theme='day'] :is(h1, h2, .oathstone-wordmark) .text-gilt {
-  color: var(--gilt);
+.game-shell .text-gilt {
+  color: var(--game-accent);
 }
 
 .game-display-settings {

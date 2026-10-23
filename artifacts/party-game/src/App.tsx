@@ -49,7 +49,12 @@ import type {
 } from '@workspace/api-client-react';
 import { config } from '@/config';
 import { BrandFooter, BrandSurfaceContext } from './BrandFooter';
-import { GameConnectionStatus } from './GameConnectionStatus';
+import {
+  GameBottomBar,
+  PlayerTile,
+  GameStatusBar,
+  WhatIsHappeningCard,
+} from './GameChrome';
 import { PhaseClipOverlay } from './PhaseClipOverlay';
 import { NotesScreen } from './NotesScreen';
 import { BanishmentVoteScreen } from './BanishmentVoteScreen';
@@ -257,24 +262,31 @@ function Shell({
   privateMode = false,
   privateRevealActive = false,
   connectionStatus = null,
-  wakeLockFallback = false,
   hideGameFooter = false,
   phase,
+  cycle = 1,
+  remaining = 0,
+  organiserControlsVisible = false,
+  organiserTools,
 }: {
   children: ReactNode;
   isPlayer?: boolean;
   privateMode?: boolean;
   privateRevealActive?: boolean;
   connectionStatus?: GameConnectionState | null;
-  wakeLockFallback?: boolean;
   hideGameFooter?: boolean;
   phase?: string;
+  cycle?: number;
+  remaining?: number;
+  organiserControlsVisible?: boolean;
+  organiserTools?: ReactNode;
 }) {
   const navigate = useNavigate();
   const [alwaysDark, setAlwaysDark] = useState(false);
   const theme = gameThemeForPhase(phase, alwaysDark);
   const previousPhase = useRef<string | undefined>(undefined);
   const [themeMessage, setThemeMessage] = useState<string | null>(null);
+  const [browserOnline, setBrowserOnline] = useState(true);
   useEffect(() => {
     if (!phase) return;
     const previous = previousPhase.current;
@@ -292,24 +304,51 @@ function Shell({
     return () => clearTimeout(timer);
   }, [phase, theme, alwaysDark]);
   useEffect(() => {
+    const update = () => setBrowserOnline(navigator.onLine);
+    update();
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
+  useEffect(() => {
     if (!isPlayer) return;
     const root = document.querySelector<HTMLElement>('.game-shell');
     if (!root) return;
     const measure = () => {
       const footer = root.querySelector<HTMLElement>('.game-brand-footer');
-      const actions = root.querySelector<HTMLElement>('.game-action-bar');
+      const bottomBar = root.querySelector<HTMLElement>('.game-bottom-bar');
+      const actions = [
+        ...root.querySelectorAll<HTMLElement>(
+          '.game-action-bar, .game-action-dock, .game-notes-dock-button',
+        ),
+      ];
       const footerHeight = footer?.getBoundingClientRect().height ?? 0;
+      const bottomBarHeight = bottomBar?.getBoundingClientRect().height ?? 0;
+      const actionHeight = Math.max(
+        0,
+        ...actions.map((action) => action.getBoundingClientRect().height),
+      );
       root.style.setProperty('--game-footer-dock-height', `${footerHeight}px`);
       root.style.setProperty(
+        '--game-bottom-bar-height',
+        `${bottomBarHeight}px`,
+      );
+      root.style.setProperty('--game-action-dock-height', `${actionHeight}px`);
+      root.style.setProperty(
         '--game-bottom-stack-height',
-        `${footerHeight + (actions?.getBoundingClientRect().height ?? 0)}px`,
+        `${footerHeight + bottomBarHeight + actionHeight}px`,
       );
     };
     const resize = new ResizeObserver(measure);
     const watch = () => {
       resize.disconnect();
       root
-        .querySelectorAll('.game-brand-footer, .game-action-bar')
+        .querySelectorAll(
+          '.game-brand-footer, .game-bottom-bar, .game-action-bar, .game-action-dock, .game-notes-dock-button',
+        )
         .forEach((element) => resize.observe(element));
       measure();
     };
@@ -335,7 +374,7 @@ function Shell({
   return (
     <div
       data-game-theme={isPlayer ? theme : undefined}
-      className={`safe-page flex min-h-[100dvh] flex-col${isPlayer ? ' game-shell' : ''}${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
+      className={`safe-page flex min-h-[100dvh] flex-col${isPlayer ? ` game-shell${hideGameFooter ? '' : ' game-shell--footer-visible'}` : ''}${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
     >
       <a
         href="#main"
@@ -346,22 +385,28 @@ function Shell({
       <header
         className={`public-home-brand public-shell-header w-full${isPlayer ? ' player-shell-header' : ' mx-auto max-w-5xl'}`}
       >
-        <Link
-          to={config.routes.home}
-          aria-label={config.appName}
-          className="oathstone-wordmark"
-        >
-          <span>
-            {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
-          </span>
-          <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
-        </Link>
-        <nav
-          aria-label={en.nav.label}
-          className={`public-home-nav text-sm text-ash ${isPlayer ? 'player-status-nav' : ''}`}
-        >
-          {!isPlayer && (
-            <>
+        {isPlayer ? (
+          <GameStatusBar
+            phase={phase ?? 'DRAFT'}
+            cycle={cycle}
+            remaining={remaining}
+            connectionStatus={
+              !browserOnline ? 'offline' : (connectionStatus ?? 'connecting')
+            }
+          />
+        ) : (
+          <>
+            <Link
+              to={config.routes.home}
+              aria-label={config.appName}
+              className="oathstone-wordmark"
+            >
+              <span>
+                {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
+              </span>
+              <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
+            </Link>
+            <nav aria-label={en.nav.label} className="public-home-nav text-sm text-ash">
               <Link
                 className="underline-offset-4 hover:underline"
                 to={config.routes.home}
@@ -386,25 +431,38 @@ function Shell({
               >
                 {en.nav.play}
               </Link>
-            </>
-          )}
-          {isPlayer && connectionStatus && (
-            <GameConnectionStatus status={connectionStatus} />
-          )}
-          {isPlayer && (
-            <details className="game-display-settings">
-              <summary>{en.app.display}</summary>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={alwaysDark}
-                  onChange={(event) => setAlwaysDark(event.target.checked)}
-                />
-                {en.app.alwaysDark}
-              </label>
-            </details>
-          )}
-          {isPlayer && standalone && (
+            </nav>
+          </>
+        )}
+        {!isPlayer && (
+          <details className="public-home-menu">
+            <summary>{en.nav.menu}</summary>
+            <div>
+              <Link to={config.routes.home}>{en.nav.home}</Link>
+              <Link to={config.routes.faq}>{en.publicSite.faqHeading}</Link>
+              <Link to={config.routes.compare}>
+                {en.publicSite.compareHeading}
+              </Link>
+              <Link to={config.routes.play}>{en.nav.play}</Link>
+            </div>
+          </details>
+        )}
+      </header>
+      {isPlayer && organiserControlsVisible && (
+        <div className="game-organiser-tools" aria-label={en.game.organiserControls}>
+          {organiserTools}
+          <details className="game-display-settings">
+            <summary>{en.app.display}</summary>
+            <label>
+              <input
+                type="checkbox"
+                checked={alwaysDark}
+                onChange={(event) => setAlwaysDark(event.target.checked)}
+              />
+              {en.app.alwaysDark}
+            </label>
+          </details>
+          {standalone && (
             <>
               <button
                 className="quiet-action"
@@ -425,30 +483,8 @@ function Shell({
               </button>
             </>
           )}
-        </nav>
-        {isPlayer && wakeLockFallback && (
-          <p
-            role="status"
-            data-testid="wake-lock-notice"
-            className="player-wake-lock-notice"
-          >
-            {en.game.wakeLockFallback}
-          </p>
-        )}
-        {!isPlayer && (
-          <details className="public-home-menu">
-            <summary>{en.nav.menu}</summary>
-            <div>
-              <Link to={config.routes.home}>{en.nav.home}</Link>
-              <Link to={config.routes.faq}>{en.publicSite.faqHeading}</Link>
-              <Link to={config.routes.compare}>
-                {en.publicSite.compareHeading}
-              </Link>
-              <Link to={config.routes.play}>{en.nav.play}</Link>
-            </div>
-          </details>
-        )}
-      </header>
+        </div>
+      )}
       {isPlayer && themeMessage && (
         <div className="game-theme-transition" role="status" aria-live="polite">
           {themeMessage}
@@ -465,6 +501,7 @@ function Shell({
           {children}
         </BrandSurfaceContext.Provider>
       </main>
+      {isPlayer && <GameBottomBar active="game" />}
       {(!isPlayer || !hideGameFooter) && (
         <BrandFooter
           context={isPlayer ? 'game' : 'public'}
@@ -2585,13 +2622,24 @@ function PlayerGame() {
     <Shell
       isPlayer
       phase={!isResuming ? full?.phase : undefined}
+      cycle={full?.cycle ?? 1}
+      remaining={full?.seats.filter((seat) => seat.status === 'alive').length ?? 0}
       hideGameFooter={Boolean(
-        full &&
-        !['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(full.phase),
+        full && !['LOBBY', 'FINISHED'].includes(full.phase),
       )}
+      organiserControlsVisible={showOrganiserBar}
+      organiserTools={
+        full && activeGame && !full.rehearsal ? (
+          <Link
+            className="quiet-action"
+            to={webPath(`/coordinate/${encodeURIComponent(full.id)}`)}
+          >
+            {en.entry.organiserControls}
+          </Link>
+        ) : null
+      }
       privateMode={!isResuming && inPrivateMoment}
       privateRevealActive={!isResuming && held}
-      wakeLockFallback={Boolean(activeGame && wakeLockFallback)}
       connectionStatus={
         isResuming
           ? 'reconnecting'
@@ -2623,6 +2671,17 @@ function PlayerGame() {
             : 'mx-auto w-full max-w-[480px]'
         }
       >
+        {(isResuming || !full) && (
+          <WhatIsHappeningCard>
+            <p>
+              {isResuming
+                ? en.game.awayResyncing
+                : visitor
+                  ? phaseLabel(visitor.phase)
+                  : en.game.loading}
+            </p>
+          </WhatIsHappeningCard>
+        )}
         {isResuming && (
           <div
             aria-live="polite"
@@ -2701,6 +2760,42 @@ function PlayerGame() {
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
+            <WhatIsHappeningCard accent={Boolean(full.revote)}>
+              <GameStepAnnouncement
+                aliveCount={
+                  full.seats.filter((seat) => seat.status === 'alive').length
+                }
+                endRule={full.endRule}
+                murderSlots={full.murderSlots}
+                phase={full.phase}
+                shadowRound={full.shadowRound}
+                progress={full.progress}
+                context={{
+                  phase: full.phase,
+                  cycle: full.cycle,
+                  aliveCount: full.seats.filter((seat) => seat.status === 'alive')
+                    .length,
+                  publicLog: full.publicLog,
+                  seats: full.seats,
+                  winner: full.winner,
+                }}
+                coachingTip={
+                  full.rehearsal && explanationKey && full.phase !== 'DEAL'
+                    ? en.game.coachingTips[explanationKey]
+                    : undefined
+                }
+                fallback={phaseLabel(full.phase)}
+              />
+            </WhatIsHappeningCard>
+            {wakeLockFallback && (
+              <p
+                role="status"
+                data-testid="wake-lock-notice"
+                className="mb-3 text-sm text-ash"
+              >
+                {en.game.wakeLockFallback}
+              </p>
+            )}
             {watchingRehearsal && (
               <RehearsalWatchCommentary phase={full.phase} />
             )}
@@ -2715,30 +2810,6 @@ function PlayerGame() {
                   : en.game.personalOutFate}
               </p>
             )}
-            <GameStepAnnouncement
-              aliveCount={
-                full.seats.filter((seat) => seat.status === 'alive').length
-              }
-              endRule={full.endRule}
-              murderSlots={full.murderSlots}
-              phase={full.phase}
-              shadowRound={full.shadowRound}
-              progress={full.progress}
-              context={{
-                phase: full.phase,
-                cycle: full.cycle,
-                aliveCount: full.seats.filter((seat) => seat.status === 'alive')
-                  .length,
-                publicLog: full.publicLog,
-                seats: full.seats,
-                winner: full.winner,
-              }}
-              coachingTip={
-                full.rehearsal && explanationKey && full.phase !== 'DEAL'
-                  ? en.game.coachingTips[explanationKey]
-                  : undefined
-              }
-            />
             {full.phase === 'DEBATE' && (
               <ConversationPromptsCard
                 title={en.game.conversationPromptsTitle}
@@ -3293,14 +3364,6 @@ function PlayerGame() {
 
             {!inPrivateMoment && (
               <div className="mt-12 border-t border-stone pt-6">
-                {!full.rehearsal && activeGame && (
-                  <Link
-                    className="quiet-action my-3 inline-flex min-h-11 items-center"
-                    to={webPath(`/coordinate/${encodeURIComponent(full.id)}`)}
-                  >
-                    {en.entry.organiserControls}
-                  </Link>
-                )}
                 {full.phase === 'LOBBY' && full.lobbyCode && (
                   <section
                     className="mt-5 flex flex-col items-center gap-3 border-y border-stone py-5 text-center"
@@ -3368,35 +3431,38 @@ function PlayerGame() {
                   </section>
                 )}
 
-                <section className="mt-7" aria-labelledby="players-heading">
+                <section
+                  id="game-players"
+                  className="mt-7"
+                  aria-labelledby="players-heading"
+                >
                   <h2 id="players-heading" className="display text-2xl">
                     {en.game.playersHeading}
                   </h2>
-                  <ul className="mt-2 divide-y divide-stone">
+                  <ul className="game-roster-grid mt-2">
                     {full.seats.map((seat) => {
                       const isAlive = seat.status === 'alive';
                       return (
                         <li
                           key={seat.id}
-                          className="flex min-h-14 items-center justify-between gap-4 py-3"
                           data-testid={`player-seat-${seat.id}`}
                         >
-                          <span className="min-w-0 break-words text-candle">
-                            {seat.name}
-                          </span>
-                          <span
-                            className={`shrink-0 text-sm ${isAlive ? 'text-candle' : 'text-ash'}`}
-                          >
-                            {full.phase === 'FINISHED' && seat.role
-                              ? !isAlive
-                                ? en.game.playerOutRole(seat.role)
-                                : seat.role === 'traitor'
-                                  ? en.game.roleTraitor
-                                  : en.game.roleFaithful
-                              : isAlive
-                                ? en.game.playerPlaying
-                                : en.game.playerOut}
-                          </span>
+                          <PlayerTile
+                            name={seat.name}
+                            state={isAlive ? 'available' : 'out'}
+                            statusText={
+                              full.phase === 'FINISHED' && seat.role
+                                ? isAlive
+                                  ? seat.role === 'traitor'
+                                    ? en.game.roleTraitor
+                                    : en.game.roleFaithful
+                                  : en.game.playerOutRole(seat.role)
+                                : isAlive
+                                  ? en.game.playerPlaying
+                                  : undefined
+                            }
+                            testId={`player-tile-${seat.id}`}
+                          />
                         </li>
                       );
                     })}
@@ -3434,17 +3500,19 @@ function PlayerGame() {
                 {!full.canAdvancePhase && (
                   <p className="mt-7 text-sm text-ash">{en.game.roomNote}</p>
                 )}
-                <button
-                  className="primary-action mt-6 w-full"
-                  type="button"
-                  data-testid="button-open-notes"
-                  onClick={() => {
-                    setNotesStatus('');
-                    setNotesOpen(true);
-                  }}
-                >
-                  {en.game.notesButton}
-                </button>
+                {full.phase !== 'DEBATE' && (
+                  <button
+                    className="primary-action mt-6 w-full"
+                    type="button"
+                    data-testid="button-open-notes"
+                    onClick={() => {
+                      setNotesStatus('');
+                      setNotesOpen(true);
+                    }}
+                  >
+                    {en.game.notesButton}
+                  </button>
+                )}
                 {full.phase === 'FINISHED' && (
                   <div className="mt-6 grid gap-3">
                     {full.rehearsal && (
@@ -3483,6 +3551,19 @@ function PlayerGame() {
             data-testid="rehearsal-action-bar"
           >
             <div className="mx-auto w-full max-w-[480px]">
+              {full.phase === 'DEBATE' && !notesOpen && (
+                <button
+                  className="quiet-action mb-2 w-full"
+                  type="button"
+                  data-testid="button-open-notes"
+                  onClick={() => {
+                    setNotesStatus('');
+                    setNotesOpen(true);
+                  }}
+                >
+                  {en.game.notesButton}
+                </button>
+              )}
               {!full.rehearsal && (
                 <p className="mb-2 text-sm text-ash">
                   {en.game.organiserControls}
@@ -3499,11 +3580,7 @@ function PlayerGame() {
                 />
               )}
               <button
-                className={
-                  full.rehearsal
-                    ? 'primary-action w-full'
-                    : 'quiet-action w-full'
-                }
+                className="primary-action w-full"
                 type="button"
                 aria-live="polite"
                 disabled={
@@ -3525,6 +3602,19 @@ function PlayerGame() {
               </button>
             </div>
           </section>
+        )}
+        {full?.phase === 'DEBATE' && !notesOpen && !showOrganiserBar && (
+          <button
+            className="quiet-action game-notes-dock-button"
+            type="button"
+            data-testid="button-open-notes"
+            onClick={() => {
+              setNotesStatus('');
+              setNotesOpen(true);
+            }}
+          >
+            {en.game.notesButton}
+          </button>
         )}
         {!isResuming && advanceConfirmationOpen && full && !full.rehearsal && (
           <div

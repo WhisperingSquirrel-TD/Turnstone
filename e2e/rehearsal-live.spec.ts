@@ -1332,13 +1332,13 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     const connectionStatus = page.getByRole('status', {
       name: 'Connection status',
     });
-    await expect(connectionStatus).toHaveText('Online');
+    await expect(connectionStatus).toHaveText('Live');
     await page.context().setOffline(true);
-    await expect(connectionStatus).toHaveText('Reconnecting...', {
+    await expect(connectionStatus).toHaveText('Reconnecting', {
       timeout: 5_000,
     });
     await page.context().setOffline(false);
-    await expect(connectionStatus).toHaveText('Online', { timeout: 15_000 });
+    await expect(connectionStatus).toHaveText('Live', { timeout: 15_000 });
     await expect(game).toHaveAttribute('data-version', /\d+/);
     await expect(game).toHaveAttribute('data-progress-total', '8');
     const initialProgressDone = Number(
