@@ -58,12 +58,12 @@ export const gameConfigSchema = z
             faithful: z.string().min(1).max(20).default('Faithful'),
           })
           .strict()
-          .default({}),
+          .prefault({}),
         coordinatorPlays: z.boolean().default(true),
         coCoordinators: minutes(1, 0, 3),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     players: z
       .object({
         count: minutes(15, 5, 40),
@@ -77,7 +77,7 @@ export const gameConfigSchema = z
         departureReveal: z.enum(['now', 'end']).default('end'),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     traitors: z
       .object({
         number: z
@@ -95,7 +95,7 @@ export const gameConfigSchema = z
         murders: minutes(1, 0, 2),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     roundTable: z
       .object({
         debateMinutes: minutes(15, 2, 60),
@@ -113,7 +113,7 @@ export const gameConfigSchema = z
         banishments: minutes(1, 1, 2),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     missions: z
       .object({
         enabled: z.boolean().default(true),
@@ -124,7 +124,7 @@ export const gameConfigSchema = z
         seer: z.literal(false).default(false),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     endgame: z
       .object({
         trigger: z.enum(['alive', 'time', 'first']).default('first'),
@@ -136,7 +136,7 @@ export const gameConfigSchema = z
         parity: z.boolean().default(true),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     ghosts: z
       .object({
         seeRoles: z.boolean().default(false),
@@ -145,7 +145,7 @@ export const gameConfigSchema = z
         referee: z.boolean().default(true),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     schedule: z
       .object({
         format: z.enum(['quick', 'day', 'multi-day']).default('day'),
@@ -167,7 +167,7 @@ export const gameConfigSchema = z
         plannedCycles: z.number().int().min(1).max(40).nullable().default(null),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     privacy: z
       .object({
         holdMs: minutes(500, 300, 1000),
@@ -176,7 +176,7 @@ export const gameConfigSchema = z
         seatPin: z.literal(true).default(true),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     presenter: z
       .object({
         enabled: z.boolean().default(false),
@@ -184,7 +184,7 @@ export const gameConfigSchema = z
         sound: z.boolean().default(true),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     data: z
       .object({
         recap: z
@@ -193,7 +193,7 @@ export const gameConfigSchema = z
         retentionDays: minutes(30, 7, 90),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     tasks: z
       .object({
         enabled: z.boolean().default(false),
@@ -204,7 +204,7 @@ export const gameConfigSchema = z
         filters: z.array(taskTagSchema).default([]),
       })
       .strict()
-      .default({}),
+      .prefault({}),
     rehearsal: z
       .object({
         enabled: z.boolean().default(false),
@@ -212,7 +212,7 @@ export const gameConfigSchema = z
         speed: z.enum(['fast', 'normal']).default('normal'),
       })
       .strict()
-      .default({}),
+      .prefault({}),
   })
   .strict()
   .superRefine((value, ctx) => {

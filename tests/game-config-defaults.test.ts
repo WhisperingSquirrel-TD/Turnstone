@@ -16,3 +16,14 @@ it('accepts an optional public game name without hard-coding the product name', 
     }).basics.gameName,
   ).toBe('Family game');
 });
+
+it('materialises nested defaults before validating the full game config', () => {
+  const config = gameConfigSchema.parse({});
+
+  expect(config.basics.labels).toEqual({
+    traitor: 'Traitor',
+    faithful: 'Faithful',
+  });
+  expect(config.schedule.blocked).toEqual([]);
+  expect(config.rehearsal.botSeatIds).toEqual([]);
+});

@@ -107,7 +107,7 @@ export const eventSchema = z.discriminatedUnion('type', [
     cycle: z.number().int().nonnegative(),
   }),
   event('RolesDealt', {
-    roles: z.record(roleSchema),
+    roles: z.record(z.string(), roleSchema),
     salt: z.string().regex(/^[a-f0-9]{64}$/),
     commitment: z.string().regex(/^[a-f0-9]{64}$/),
     sleeper: id.nullable(),
@@ -254,7 +254,7 @@ export const privateViewSchema = z
       z.object({ id, name: z.string(), role: roleSchema }).strict(),
     ),
     options: z.array(z.object({ id, name: z.string() }).strict()),
-    choices: z.record(id),
+    choices: z.record(z.string(), id),
     choiceSlots: z.array(
       z
         .object({
@@ -489,7 +489,7 @@ export const fullViewSchema = z
       .optional(),
     votedSeatIds: z.array(id).max(40),
     voteCandidates: z.array(id),
-    ballots: z.record(id),
+    ballots: z.record(z.string(), id),
     voteCircle: z.object({ speakerSeatId: id.nullable() }).strict().optional(),
     ownVoteTargetId: id.optional(),
     winner: roleSchema.nullable(),
@@ -546,7 +546,7 @@ export const fullViewSchema = z
     fairness: z
       .object({
         salt: z.string(),
-        roles: z.record(roleSchema),
+        roles: z.record(z.string(), roleSchema),
         sleeper: z.string().nullable(),
         tasks: z.array(
           z
