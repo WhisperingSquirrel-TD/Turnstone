@@ -4,6 +4,7 @@ import { en } from './locale/en-GB';
 import { PendingPlayerControls } from './PendingPlayerControls';
 import { getAdvanceControlState, isAdvanceConflict } from './advance-control';
 import { secondsUntilServerDeadline, serverClockOffset } from './server-clock';
+import { createAdaptivePoller } from './polling-backoff';
 
 export type CoordinatorCommand =
   | { type: 'AdvancePhase' }
@@ -196,18 +197,19 @@ export function CoordinatorConsole({
         setDelegateLimit(result.limit);
         if (!delegateSelectionDirty) setSelectedDelegateIds(result.seatIds);
         setDelegateError('');
-      } catch {
+      } catch (error) {
         if (mounted) setDelegateError(en.coordinator.coCoordinatorError);
+        throw error;
       }
     }
-    void refreshCoordinatorAccess();
-    const interval = window.setInterval(
-      () => void refreshCoordinatorAccess(),
-      30_000,
-    );
+    const poller = createAdaptivePoller(refreshCoordinatorAccess, {
+      baseIntervalMs: 30_000,
+      maxIntervalMs: 120_000,
+    });
+    poller.start();
     return () => {
       mounted = false;
-      window.clearInterval(interval);
+      poller.stop();
     };
   }, [delegateSelectionDirty, onHeartbeat, onLoadCoordinatorDelegates]);
 

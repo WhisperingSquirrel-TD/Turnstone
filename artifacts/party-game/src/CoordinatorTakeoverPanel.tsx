@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { config } from '@/config';
 import { en } from '@/locale/en-GB';
 import { apiUrl } from './api-url';
+import { createAdaptivePoller } from './polling-backoff';
 
 type TakeoverRequest = {
   id: string;
@@ -51,6 +52,13 @@ function parseTakeoverStatus(value: unknown): TakeoverStatus {
     throw new Error('Invalid takeover status');
   }
   return candidate as TakeoverStatus;
+}
+
+function responseError(message: string, response: Response) {
+  return Object.assign(new Error(message), {
+    status: response.status,
+    headers: response.headers,
+  });
 }
 
 export function CoordinatorTakeoverPanel({
@@ -107,10 +115,8 @@ export function CoordinatorTakeoverPanel({
     if (hidden) return;
     notifyTransferred();
     let mounted = true;
-    let refreshing = false;
     async function refresh() {
-      if (refreshing || action.current.transferred) return;
-      refreshing = true;
+      if (action.current.transferred) return;
       try {
         const response = await fetch(
           apiUrl(
@@ -126,7 +132,8 @@ export function CoordinatorTakeoverPanel({
           }
           return;
         }
-        if (!response.ok) throw new Error('Unable to check takeover status');
+        if (!response.ok)
+          throw responseError('Unable to check takeover status', response);
         const parsed = parseTakeoverStatus(await response.json());
         if (mounted) {
           setStatus(parsed);
@@ -142,18 +149,20 @@ export function CoordinatorTakeoverPanel({
             await send(`/games/${encodeURIComponent(gameId)}/takeover/claim`);
           }
         }
-      } catch {
+      } catch (error) {
         if (mounted) setError(en.coordinator.takeoverError);
-      } finally {
-        refreshing = false;
+        throw error;
       }
     }
-    void refresh();
-    const interval = window.setInterval(() => void refresh(), 15_000);
+    const poller = createAdaptivePoller(refresh, {
+      baseIntervalMs: 15_000,
+      maxIntervalMs: 120_000,
+    });
+    poller.start();
     return () => {
       mounted = false;
       lifecycle.active = false;
-      window.clearInterval(interval);
+      poller.stop();
     };
     // Callback identity and mutation state must not restart polling/retries.
     // send/notifyTransferred read the latest props through refs.
@@ -187,7 +196,7 @@ export function CoordinatorTakeoverPanel({
         },
         ...(payload ? { body: JSON.stringify(payload) } : {}),
       });
-      if (!response.ok) throw new Error('Takeover action failed');
+      if (!response.ok) throw responseError('Takeover action failed', response);
       const result: unknown = await response.json();
       if (
         result &&
@@ -217,10 +226,12 @@ export function CoordinatorTakeoverPanel({
         ),
         { credentials: 'include', cache: 'no-store' },
       );
-      if (!refreshed.ok) throw new Error('Unable to check takeover status');
+      if (!refreshed.ok)
+        throw responseError('Unable to check takeover status', refreshed);
       setStatus(parseTakeoverStatus(await refreshed.json()));
-    } catch {
+    } catch (error) {
       if (action.current === current) setError(en.coordinator.takeoverError);
+      throw error;
     } finally {
       current.inFlight = false;
       if (action.current === current) setBusy(false);
@@ -264,7 +275,9 @@ export function CoordinatorTakeoverPanel({
           type="button"
           disabled={busy || !csrfToken}
           onClick={() =>
-            void send(`/games/${encodeURIComponent(gameId)}/takeover`)
+            void send(`/games/${encodeURIComponent(gameId)}/takeover`).catch(
+              () => undefined,
+            )
           }
         >
           {busy
@@ -282,7 +295,7 @@ export function CoordinatorTakeoverPanel({
               void send(`/games/${encodeURIComponent(gameId)}/takeover/vote`, {
                 requestId: request.id,
                 approve: true,
-              })
+              }).catch(() => undefined)
             }
           >
             {en.coordinator.takeoverApprove}
@@ -295,7 +308,7 @@ export function CoordinatorTakeoverPanel({
               void send(`/games/${encodeURIComponent(gameId)}/takeover/vote`, {
                 requestId: request.id,
                 approve: false,
-              })
+              }).catch(() => undefined)
             }
           >
             {en.coordinator.takeoverDecline}
@@ -311,7 +324,7 @@ export function CoordinatorTakeoverPanel({
             void send(
               `/games/${encodeURIComponent(gameId)}/takeover/claim`,
               request ? { requestId: request.id } : undefined,
-            )
+            ).catch(() => undefined)
           }
         >
           {en.coordinator.takeoverClaim}

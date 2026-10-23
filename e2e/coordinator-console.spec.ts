@@ -368,6 +368,52 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   expect(commands.at(-1)?.type).toBe('EndGameEarly');
 });
 
+test('organiser join-request polling honours Retry-After after a 429', async ({
+  page,
+}) => {
+  await page.clock.install();
+  const gameId = 'coordinator-join-poll-backoff';
+  const view = createView();
+  let joinRequestCalls = 0;
+  let rateLimited = true;
+  await page.route('**/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/games/${gameId}/join-requests`, async (route) => {
+    joinRequestCalls += 1;
+    if (rateLimited) {
+      await route.fulfill({
+        status: 429,
+        headers: { 'Retry-After': '10' },
+        json: { error: 'rate-limited' },
+      });
+      return;
+    }
+    await route.fulfill({ json: { requests: [] } });
+  });
+  await page.route(`**/games/${gameId}/coordinator/delegates`, (route) =>
+    route.fulfill({ json: { limit: 0, seatIds: [] } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/presence`, (route) =>
+    route.fulfill({ json: { status: 'online' } }),
+  );
+
+  await page.goto(`/coordinate/${gameId}`);
+  await expect(page.getByTestId('button-coordinator-move-on')).toBeVisible();
+  expect(joinRequestCalls).toBe(1);
+
+  rateLimited = false;
+  await page.clock.fastForward(10_000);
+  expect(joinRequestCalls).toBe(1);
+  await page.clock.fastForward(1_000);
+  await expect.poll(() => joinRequestCalls).toBe(2);
+});
+
 test('coordinator waits, confirms disconnected actions, undoes a skip and restores a removed seat', async ({
   page,
 }) => {

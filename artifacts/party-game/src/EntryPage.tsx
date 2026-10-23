@@ -46,6 +46,7 @@ import { attachGameView, type GameRealtimeSocket } from './game-socket';
 import { lobbyCodeJoinUrl, parseLobbyCodeFragment } from './lobby-code-url';
 import { recoverSeat } from './recovery-client';
 import { buildNewGameConfig } from './new-game-config';
+import { createAdaptivePoller } from './polling-backoff';
 import {
   EntryActionError,
   type EntryFailureMessage,
@@ -434,15 +435,20 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     let socket: ReturnType<typeof io> | null = null;
     let detach: (() => void) | null = null;
 
-    const load = async (ensureLobbyInvite = false) => {
-      try {
-        const view = await loadCoordinatorView(coordinatorGameId);
-        await loadPendingJoiners(coordinatorGameId);
-        if (ensureLobbyInvite && view.phase === 'LOBBY' && !shareUrl) {
-          await createLobbyInvite(coordinatorGameId);
-        }
-        if (!active) return;
-      } catch (error) {
+    let includeInitialInvite = true;
+    const load = async () => {
+      const ensureLobbyInvite = includeInitialInvite;
+      includeInitialInvite = false;
+      const view = await loadCoordinatorView(coordinatorGameId);
+      await loadPendingJoiners(coordinatorGameId);
+      if (ensureLobbyInvite && view.phase === 'LOBBY' && !shareUrl) {
+        await createLobbyInvite(coordinatorGameId);
+      }
+    };
+    const poller = createAdaptivePoller(load, {
+      baseIntervalMs: 5_000,
+      maxIntervalMs: 120_000,
+      onError: (error) => {
         if (active)
           setErrors((current) => ({
             ...current,
@@ -451,12 +457,11 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
                 ? en.entry.organiserOnly
                 : en.entry.errorFallback,
           }));
-      }
-    };
-    void load(true);
+      },
+    });
+    poller.start();
     // Seat disconnection eligibility changes after the server's grace period
     // without a game event. Refresh the capability-authorised projection too.
-    const refreshInterval = window.setInterval(() => void load(), 5_000);
 
     const api = new URL(config.apiOrigin ?? '/', window.location.origin);
     const prefix = api.pathname.replace(/\/+$/, '');
@@ -470,12 +475,12 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       coordinatorGameId,
       // A playing organiser's socket intentionally remains a normal player
       // projection. Use packets only as invalidations, never as console data.
-      () => void load(),
+      () => poller.refresh(),
     );
 
     return () => {
       active = false;
-      window.clearInterval(refreshInterval);
+      poller.stop();
       detach?.();
       socket?.disconnect();
     };

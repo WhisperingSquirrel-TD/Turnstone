@@ -113,6 +113,7 @@ function clickButton(label: string) {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.spyOn(Math, 'random').mockReturnValue(0.5);
   hooks.slots = [];
   hooks.effects = [];
   hooks.pending = [];
@@ -136,6 +137,7 @@ beforeEach(() => {
 
 afterEach(() => {
   hooks.effects.forEach((effect) => effect.cleanup?.());
+  vi.restoreAllMocks();
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -338,6 +340,62 @@ describe('automatic organiser handover client', () => {
     expect(claims()).toHaveLength(1);
     claimResponse = async () => json({ status: 'transferred' });
     await vi.advanceTimersByTimeAsync(15_000);
+    await settle();
+    expect(claims()).toHaveLength(2);
+    expect(props.onTransferred).toHaveBeenCalledOnce();
+  });
+
+  it('honours Retry-After before polling takeover status again', async () => {
+    serverStatus = { ...selected, canClaim: false };
+    let rateLimited = true;
+    fetchMock.mockImplementation(async (path: string) =>
+      path.endsWith('/claim')
+        ? claimResponse()
+        : rateLimited
+          ? new Response(JSON.stringify({ error: 'Unavailable' }), {
+              status: 429,
+              headers: { 'Retry-After': '60' },
+            })
+          : json(serverStatus),
+    );
+
+    render();
+    await settle();
+    const statusPolls = () =>
+      fetchMock.mock.calls.filter(([path]) =>
+        String(path).endsWith('/takeover'),
+      ).length;
+    expect(statusPolls()).toBe(1);
+
+    rateLimited = false;
+    await vi.advanceTimersByTimeAsync(62_499);
+    await settle();
+    expect(statusPolls()).toBe(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await settle();
+    expect(statusPolls()).toBe(2);
+  });
+
+  it('backs off an automatic claim retry after a 429 Retry-After response', async () => {
+    let rateLimited = true;
+    claimResponse = async () =>
+      rateLimited
+        ? new Response(JSON.stringify({ error: 'Unavailable' }), {
+            status: 429,
+            headers: { 'Retry-After': '60' },
+          })
+        : json({ status: 'transferred' });
+
+    render();
+    await settle();
+    expect(claims()).toHaveLength(1);
+    expect(props.onTransferred).not.toHaveBeenCalled();
+
+    rateLimited = false;
+    await vi.advanceTimersByTimeAsync(62_499);
+    await settle();
+    expect(claims()).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
     await settle();
     expect(claims()).toHaveLength(2);
     expect(props.onTransferred).toHaveBeenCalledOnce();

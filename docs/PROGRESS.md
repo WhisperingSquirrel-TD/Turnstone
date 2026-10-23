@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Latest green: Verify #242 (`99da77a`); confirmed successful on GitHub main.**
+**Latest green: Verify #243 (`131fce1`); confirmed successful on GitHub main.**
 
 **Round 6 Q9 follow-up:** #240 failed only because two harness pacing gaps measured 2,099 ms against the 2,100 ms minimum; #241 passed after adding 100 ms of scheduling headroom. No 429 occurred in the final rehearsal, and no rate limit or assertion changed.
 
@@ -10,7 +10,11 @@
 
 **Round 6 Q6 — complete:** the client automatically claims server-selected blind organiser control; component and browser regressions cover that flow, while majority takeover remains manual. The real-server disconnected-player journey covers the unchanged grace period, skip/undo, removal/reinstatement, return-to-act and phase advancement. Verify #242 succeeded across the browser and full rehearsal jobs. This is browser emulation, not a physical-phone test.
 
-**Next:** stop here as requested; no further Round 6 items are queued.
+**Round 6 Resilience 3:** already covered on `main` by the away/resume implementation. The player refetches on `online`, `pageshow`, visible `visibilitychange` and focus; the browser test covers 30 seconds, 5 minutes, 1 hour offline/online, overnight return, and a delayed resync response. Verify #243 passed with this code.
+
+**Round 6 Resilience 4:** adaptive polling is implemented locally for organiser join-request, coordinator-access and takeover-status checks. Failures back off exponentially with jitter; 429 responses honour `Retry-After`; successful polls restore the prior cadence. Unit and browser regressions pass locally. No server limits or rules changed. Verify is pending.
+
+**Next:** after Resilience 4 is green, do Round 6 Resilience 5, then the Notes hold-to-reveal section; stop there.
 
 **Push isolation:** `99da77a` is on `main`; the push contained progress documentation, virtual-player harness/tests and the pipeline regression test. Attached content and generated Playwright artifacts were excluded.
 
@@ -37,6 +41,15 @@ idempotency key; an in-flight resend is coalesced. The shared
 commit-then-lost-response, a dropped request, duplicate resend, and clearing
 after phase change. No private-choice storage rules or server thresholds were
 changed.
+
+### Resilience set 4
+
+The organiser’s join-request refresh and the coordinator access/takeover status
+pollers use a shared adaptive scheduler. Successful polling keeps its existing
+cadence. Transient failures increase the delay with jitter; 429 responses wait
+at least the server’s `Retry-After` value and add bounded jitter. A successful
+poll resets the back-off. In-flight refresh triggers coalesce into one follow-up.
+The work is client-only and does not change rate limits.
 
 ### Verify #230 H1 step-identity correction
 
