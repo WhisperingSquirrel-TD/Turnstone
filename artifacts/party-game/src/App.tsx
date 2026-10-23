@@ -68,6 +68,7 @@ import {
 } from './private-step-key';
 import { VerdictScreen } from './VerdictScreen';
 import { ShieldCard } from './ShieldCard';
+import { PendingCommandNotice } from './PendingCommandNotice';
 import { PhaseProgressStatus } from './PhaseProgressStatus';
 import { VoteProgressSummary } from './VoteProgressSummary';
 import { VotingCircleScreen } from './VotingCircleScreen';
@@ -95,7 +96,11 @@ import {
   readPrivateChoiceDraft,
   writePrivateChoiceDraft,
 } from './private-choice-draft';
-import { gameCommandStepKey, PendingCommandStore } from './pending-command';
+import {
+  gameCommandStepKey,
+  isDefinitiveCommandRejection,
+  PendingCommandStore,
+} from './pending-command';
 import {
   secondsUntilServerDeadline,
   serverClockOffset,
@@ -1406,18 +1411,15 @@ function PlayerGame() {
                   : null;
               if (latestShadowKey !== shadowPrivateViewKey) return;
               try {
-                const acknowledgement = pendingCommands.getOrCreate(
+                const acknowledgementResponse = await pendingCommands.send(
                   'private-phase-acknowledgement',
                   commandStepKey,
                   () => ({
                     type: 'AcknowledgePrivate',
                     idempotencyKey: idempotencyKey(),
                   }),
+                  (payload) => command.mutateAsync({ id, data: payload }),
                 );
-                const acknowledgementResponse = await command.mutateAsync({
-                  id,
-                  data: acknowledgement.payload,
-                });
                 const acknowledgedView = acknowledgementResponse.view;
                 if (
                   currentShadowPrivateViewKeyRef.current !==
@@ -1435,10 +1437,17 @@ function PlayerGame() {
                 acknowledgedShadowPrivateViewKey.current = shadowPrivateViewKey;
                 acknowledged = true;
                 break;
-              } catch {
+              } catch (error) {
                 // A competing bot update can invalidate the command version.
                 // Refetch once and retry; the private-view endpoint still
                 // enforces that acknowledgement succeeded before data is shown.
+                if (isDefinitiveCommandRejection(error)) {
+                  pendingCommands.reject(
+                    'private-phase-acknowledgement',
+                    commandStepKey,
+                  );
+                  break;
+                }
               }
             }
             if (!acknowledged)
@@ -1841,7 +1850,16 @@ function PlayerGame() {
   }, [gameQuery.data]);
 
   async function acknowledge() {
-    if (!token || shieldPending || shieldCountdown > 0 || !shieldRequired)
+    const pendingAcknowledgement = pendingCommands.get(
+      'private-phase-acknowledgement',
+      commandStepKey,
+    );
+    if (
+      !token ||
+      shieldPending ||
+      shieldCountdown > 0 ||
+      (!shieldRequired && !pendingAcknowledgement)
+    )
       return;
     setShieldPending(true);
     setHoldMessage('');
@@ -1850,18 +1868,15 @@ function PlayerGame() {
       const notesRequest = notesOpen && !phaseIsPrivate;
       const needsPrivateView = notesRequest || full?.phase === 'SHADOW';
       if (phaseIsPrivate) {
-        const acknowledgement = pendingCommands.getOrCreate(
+        const acknowledgementResponse = await pendingCommands.send(
           'private-phase-acknowledgement',
           commandStepKey,
           () => ({
             type: 'AcknowledgePrivate',
             idempotencyKey: idempotencyKey(),
           }),
+          (payload) => command.mutateAsync({ id, data: payload }),
         );
-        const acknowledgementResponse = await command.mutateAsync({
-          id,
-          data: acknowledgement.payload,
-        });
         pendingCommands.confirm(
           'private-phase-acknowledgement',
           commandStepKey,
@@ -1904,10 +1919,12 @@ function PlayerGame() {
       setPrivateView(nextPrivateView);
       setPrivateCovered(false);
       setShielded(true);
-    } catch {
+    } catch (error) {
       command.reset();
       reveal.reset();
       setShielded(false);
+      if (isDefinitiveCommandRejection(error))
+        pendingCommands.reject('private-phase-acknowledgement', commandStepKey);
       setHoldMessage(en.game.shieldRetry);
     } finally {
       setShieldPending(false);
@@ -2105,46 +2122,59 @@ function PlayerGame() {
       shadowSlot: view.shadowSlot,
     });
     const pendingAction = pendingCommands.get('player-choice', stepKey);
-    if (!selected && !pendingAction) return;
+    const pendingAcknowledgement = pendingCommands.get(
+      'choice-acknowledgement',
+      stepKey,
+    );
+    if (!selected && !pendingAction && !pendingAcknowledgement) return;
     setCommandMessage('');
-    const payload = pendingCommands.getOrCreate('player-choice', stepKey, () =>
-      view.phase === 'VOTE' || view.phase === 'FINAL_BANISH'
-        ? {
-            type: 'SubmitVote',
-            target: selected,
-            idempotencyKey: idempotencyKey(),
-          }
-        : view.phase === 'SHADOW'
-          ? {
-              type: 'SubmitShadowChoice',
-              choice: selected,
-              slot: view.shadowSlot,
-              idempotencyKey: idempotencyKey(),
-            }
-          : {
-              type: 'SubmitEndgameVote',
-              choice: selected,
-              idempotencyKey: idempotencyKey(),
-            },
-    ).payload;
-    let actionAccepted = false;
+    let actionAccepted = Boolean(pendingAcknowledgement && !pendingAction);
     try {
-      await command.mutateAsync({ id, data: payload });
-      actionAccepted = true;
-      command.reset();
-      const acknowledgement = pendingCommands.getOrCreate(
-        'choice-acknowledgement',
-        stepKey,
-        () => ({
-          type: 'AcknowledgePrivate',
-          idempotencyKey: idempotencyKey(),
-        }),
-      );
-      await command.mutateAsync({
-        id,
-        data: acknowledgement.payload,
-      });
-      pendingCommands.confirm('player-choice', stepKey);
+      if (pendingAcknowledgement && !pendingAction) {
+        await pendingCommands.send(
+          'choice-acknowledgement',
+          stepKey,
+          () => pendingAcknowledgement.payload,
+          (payload) => command.mutateAsync({ id, data: payload }),
+        );
+      } else {
+        await pendingCommands.send(
+          'player-choice',
+          stepKey,
+          () =>
+            view.phase === 'VOTE' || view.phase === 'FINAL_BANISH'
+              ? {
+                  type: 'SubmitVote',
+                  target: selected,
+                  idempotencyKey: idempotencyKey(),
+                }
+              : view.phase === 'SHADOW'
+                ? {
+                    type: 'SubmitShadowChoice',
+                    choice: selected,
+                    slot: view.shadowSlot,
+                    idempotencyKey: idempotencyKey(),
+                  }
+                : {
+                    type: 'SubmitEndgameVote',
+                    choice: selected,
+                    idempotencyKey: idempotencyKey(),
+                  },
+          (payload) => command.mutateAsync({ id, data: payload }),
+        );
+        pendingCommands.confirm('player-choice', stepKey);
+        actionAccepted = true;
+        command.reset();
+        await pendingCommands.send(
+          'choice-acknowledgement',
+          stepKey,
+          () => ({
+            type: 'AcknowledgePrivate',
+            idempotencyKey: idempotencyKey(),
+          }),
+          (payload) => command.mutateAsync({ id, data: payload }),
+        );
+      }
       pendingCommands.confirm('choice-acknowledgement', stepKey);
       command.reset();
       if (privateChoiceDraftKey) {
@@ -2188,25 +2218,53 @@ function PlayerGame() {
           return;
         }
       }
-      const explicitlyRejected =
-        !actionAccepted &&
-        error instanceof Error &&
-        'status' in error &&
-        error.status === 409;
+      const explicitlyRejected = isDefinitiveCommandRejection(error);
       if (explicitlyRejected) {
-        pendingCommands.reject('player-choice', stepKey);
-        setCommandMessage(
-          view.phase === 'SHADOW'
-            ? en.game.chooseSomeoneElse
-            : view.phase === 'VOTE' || view.phase === 'FINAL_BANISH'
-              ? en.game.voteNotRecorded
-              : en.game.choiceNotRecorded,
-        );
-        setSelected('');
-        setConfirmChoice(false);
+        if (actionAccepted) {
+          pendingCommands.reject('choice-acknowledgement', stepKey);
+          setCommandMessage(en.game.acknowledgementNotRecorded);
+        } else {
+          pendingCommands.reject('player-choice', stepKey);
+          setCommandMessage(
+            view.phase === 'SHADOW'
+              ? en.game.chooseSomeoneElse
+              : view.phase === 'VOTE' || view.phase === 'FINAL_BANISH'
+                ? en.game.voteNotRecorded
+                : en.game.choiceNotRecorded,
+          );
+          setSelected('');
+          setConfirmChoice(false);
+        }
         return;
       }
       setCommandMessage(en.game.retryUncertainAction);
+    }
+  }
+
+  async function markRoleReady() {
+    if (!token || command.isPending) return;
+    setCommandMessage('');
+    try {
+      await pendingCommands.send(
+        'role-ready-acknowledgement',
+        commandStepKey,
+        () => ({
+          type: 'AcknowledgePrivate',
+          ready: true,
+          idempotencyKey: idempotencyKey(),
+        }),
+        (payload) => command.mutateAsync({ id, data: payload }),
+      );
+      pendingCommands.confirm('role-ready-acknowledgement', commandStepKey);
+      setRoleSeen(false);
+      setActionDone(true);
+      command.reset();
+      void gameQuery.refetch();
+    } catch (error) {
+      command.reset();
+      if (isDefinitiveCommandRejection(error))
+        pendingCommands.reject('role-ready-acknowledgement', commandStepKey);
+      setCommandMessage(en.game.readyFailed);
     }
   }
 
@@ -2401,9 +2459,46 @@ function PlayerGame() {
     'player-choice',
     commandStepKey,
   );
+  const pendingChoiceAcknowledgement = pendingCommands.get(
+    'choice-acknowledgement',
+    commandStepKey,
+  );
   const choiceRetryPending = Boolean(
-    pendingChoiceAttempt ||
-    pendingCommands.get('choice-acknowledgement', commandStepKey),
+    pendingChoiceAttempt || pendingChoiceAcknowledgement,
+  );
+  const choiceCommandSending =
+    pendingCommands.isSending('player-choice', commandStepKey) ||
+    pendingCommands.isSending('choice-acknowledgement', commandStepKey);
+  const waitingForChoiceSend =
+    !command.isPending &&
+    (pendingCommands.isWaitingToSend('player-choice', commandStepKey) ||
+      pendingCommands.isWaitingToSend(
+        'choice-acknowledgement',
+        commandStepKey,
+      ));
+  const pendingPrivateAcknowledgement = pendingCommands.get(
+    'private-phase-acknowledgement',
+    commandStepKey,
+  );
+  const waitingForPrivateAcknowledgement = Boolean(
+    pendingPrivateAcknowledgement &&
+    !command.isPending &&
+    pendingCommands.isWaitingToSend(
+      'private-phase-acknowledgement',
+      commandStepKey,
+    ),
+  );
+  const pendingRoleReadyAcknowledgement = pendingCommands.get(
+    'role-ready-acknowledgement',
+    commandStepKey,
+  );
+  const waitingForRoleReadyAcknowledgement = Boolean(
+    pendingRoleReadyAcknowledgement &&
+    !command.isPending &&
+    pendingCommands.isWaitingToSend(
+      'role-ready-acknowledgement',
+      commandStepKey,
+    ),
   );
   const selectedForControls =
     selected || choiceIdFromCommand(pendingChoiceAttempt?.payload);
@@ -2411,8 +2506,11 @@ function PlayerGame() {
     choices,
     selected: selectedForControls,
     confirmChoice: confirmChoice || choiceRetryPending,
-    choiceSelectionLocked: choiceRetryPending || command.isPending,
-    isPending: command.isPending,
+    choiceSelectionLocked:
+      choiceRetryPending || command.isPending || choiceCommandSending,
+    isPending: command.isPending || choiceCommandSending,
+    waitingToSend: waitingForChoiceSend,
+    onResend: () => void submitAction(),
     hasToken: Boolean(token),
     commandMessage,
     onSelect: (choiceId: string) => {
@@ -2889,6 +2987,12 @@ function PlayerGame() {
 
             {inPrivateMoment && (
               <div className="private-moment-panel">
+                {waitingForPrivateAcknowledgement && !showShieldCard && (
+                  <PendingCommandNotice
+                    disabled={command.isPending || shieldPending}
+                    onResend={() => void acknowledge()}
+                  />
+                )}
                 {shieldRequired && !shielded ? null : privateCovered ? (
                   <>
                     <button
@@ -2899,7 +3003,7 @@ function PlayerGame() {
                     >
                       {en.game.privateRestore}
                     </button>
-                    {holdMessage && (
+                    {holdMessage && !waitingForPrivateAcknowledgement && (
                       <p role="status" className="text-sm text-ash">
                         {holdMessage}
                       </p>
@@ -2977,48 +3081,30 @@ function PlayerGame() {
                     <p id="hold-instructions" className="text-sm text-ash">
                       {en.game.holdInstructions}
                     </p>
-                    {roleSeen && !held && (
-                      <button
-                        className="primary-action w-full"
-                        type="button"
-                        disabled={command.isPending}
-                        onClick={async () => {
-                          setCommandMessage('');
-                          try {
-                            const acknowledgement = pendingCommands.getOrCreate(
-                              'role-ready-acknowledgement',
-                              commandStepKey,
-                              () => ({
-                                type: 'AcknowledgePrivate',
-                                ready: true,
-                                idempotencyKey: idempotencyKey(),
-                              }),
-                            );
-                            await command.mutateAsync({
-                              id,
-                              data: acknowledgement.payload,
-                            });
-                            pendingCommands.confirm(
-                              'role-ready-acknowledgement',
-                              commandStepKey,
-                            );
-                            setRoleSeen(false);
-                            setActionDone(true);
-                            command.reset();
-                            void gameQuery.refetch();
-                          } catch {
-                            setCommandMessage(en.game.readyFailed);
-                          }
-                        }}
-                      >
-                        {en.game.notesDone}
-                      </button>
-                    )}
-                    {full.phase === 'DEAL' && commandMessage && (
-                      <p role="alert" className="text-ash">
-                        {commandMessage}
-                      </p>
-                    )}
+                    {roleSeen &&
+                      !held &&
+                      (waitingForRoleReadyAcknowledgement ? (
+                        <PendingCommandNotice
+                          disabled={command.isPending}
+                          onResend={() => void markRoleReady()}
+                        />
+                      ) : (
+                        <button
+                          className="primary-action w-full"
+                          type="button"
+                          disabled={command.isPending}
+                          onClick={() => void markRoleReady()}
+                        >
+                          {en.game.notesDone}
+                        </button>
+                      ))}
+                    {full.phase === 'DEAL' &&
+                      commandMessage &&
+                      !waitingForRoleReadyAcknowledgement && (
+                        <p role="alert" className="text-ash">
+                          {commandMessage}
+                        </p>
+                      )}
                   </>
                 ) : (
                   <>
@@ -3494,6 +3580,8 @@ function PlayerGame() {
             ref={shieldDialog}
             countdown={shieldCountdown}
             pending={shieldPending}
+            waitingToSend={waitingForPrivateAcknowledgement}
+            message={waitingForPrivateAcknowledgement ? undefined : holdMessage}
             hasToken={Boolean(token)}
             showNotesDone={notesOpen && !phaseIsPrivate}
             onAcknowledge={() => void acknowledge()}

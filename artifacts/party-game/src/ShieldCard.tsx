@@ -1,9 +1,12 @@
 import { forwardRef, type ReactNode } from 'react';
 import { en } from '@/locale/en-GB';
+import { PendingCommandNotice } from './PendingCommandNotice';
 
 type ShieldCardProps = {
   countdown: number;
   pending: boolean;
+  waitingToSend?: boolean;
+  message?: string;
   hasToken: boolean;
   showNotesDone: boolean;
   onAcknowledge: () => void;
@@ -17,6 +20,8 @@ export const ShieldCard = forwardRef<HTMLDialogElement, ShieldCardProps>(
     {
       countdown,
       pending,
+      waitingToSend = false,
+      message,
       hasToken,
       showNotesDone,
       onAcknowledge,
@@ -43,20 +48,32 @@ export const ShieldCard = forwardRef<HTMLDialogElement, ShieldCardProps>(
               {en.game.shieldHeading}
             </h1>
             <p className="mt-4 text-ash">{en.game.shieldDetail}</p>
-            <button
-              autoFocus
-              className="primary-action mt-8 min-h-14 w-full"
-              type="button"
-              disabled={!hasToken || pending || countdown > 0}
-              aria-disabled={!hasToken || pending || countdown > 0}
-              onClick={onAcknowledge}
-            >
-              {pending
-                ? en.game.shieldConfirming
-                : countdown > 0
-                  ? en.game.countdown(countdown)
-                  : en.game.shieldConfirm}
-            </button>
+            {waitingToSend ? (
+              <PendingCommandNotice
+                disabled={pending}
+                onResend={onAcknowledge}
+              />
+            ) : (
+              <button
+                autoFocus
+                className="primary-action mt-8 min-h-14 w-full"
+                type="button"
+                disabled={!hasToken || pending || countdown > 0}
+                aria-disabled={!hasToken || pending || countdown > 0}
+                onClick={onAcknowledge}
+              >
+                {pending
+                  ? en.game.shieldConfirming
+                  : countdown > 0
+                    ? en.game.countdown(countdown)
+                    : en.game.shieldConfirm}
+              </button>
+            )}
+            {message && !waitingToSend && (
+              <p role="alert" className="mt-3 text-sm text-ash">
+                {message}
+              </p>
+            )}
             {showNotesDone && (
               <button
                 className="quiet-action mt-3 w-full"

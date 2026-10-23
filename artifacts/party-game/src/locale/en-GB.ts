@@ -607,6 +607,8 @@ export const en = {
     readyProgress: (done: number, total: number) =>
       `${done} of ${total} are ready`,
     readyFailed: 'We could not mark you as ready. Tap Done to try again.',
+    acknowledgementNotRecorded:
+      'We could not confirm that action. Check the game status before trying again.',
     playerOutcome: (
       winner: 'traitor' | 'faithful',
       role: 'traitor' | 'faithful',
@@ -883,6 +885,8 @@ export const en = {
     confirmChoice: 'Confirm this choice?',
     recording: 'Recording…',
     retryChoice: 'Retry this choice',
+    waitingToSend: 'Waiting to send. Your action has not been confirmed.',
+    resend: 'Resend',
     confirm: 'Confirm',
     chooseAgain: 'Choose again',
     recorded: 'Your choice has been recorded.',

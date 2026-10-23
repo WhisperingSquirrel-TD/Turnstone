@@ -1,16 +1,30 @@
 # Status for reviewer
 
-**Verify #234 failed only in `disconnected-player-live.spec.ts`: the lobby-code assertion used Playwright’s 5-second default. The test now follows H1’s 30-second lobby wait; the targeted Pixel real-server test passes locally. Fix commit is pending Verify; resilience set 2 and H2 remain paused.**
+**Latest green: Verify #237 (`1bc7c96`). #236 failed because global Playwright tracing conflicted with H1’s manual tracing; the uploaded artifact proved it, and removing the global trace option while retaining failure uploads passed. Resilience set 2 now passes 23 focused tests, party-game typecheck and ESLint. Next: push set 2, then run H2.**
 
-### Verify #234 rehearsal-live timeout correction
+### Verify #234–#237 rehearsal diagnostics
 
-The owner-relayed log confirmed the sole failing assertion was the lobby-code
-locator after game creation, timing out at the default 5 seconds before the
-Q6 journey began. The H1 creation flow uses a 30-second visible wait. This
-harness-only fix applies that wait and a 20-second configured timeout to the
-remaining asynchronous UI expectations; the six-player Pixel real-server
-spec passes locally (1.8 minutes). The production 60-second disconnect grace
-and its 75-second observation timeout are unchanged. Verify result pending.
+Verify #234’s only failure was the lobby-code wait at the Playwright default of
+5 seconds. The harness now uses the same 30-second visible wait as H1 and a
+20-second timeout for other asynchronous UI checks. The Pixel real-server Q6
+journey passed locally and in Verify #236’s artifact (63,050 ms disconnect
+grace; skip, undo, remove, reinstate, return-to-act, and next-phase all passed).
+Verify #235 was green.
+
+Workflow commit `e3f3ec0` added a 3-day failure artifact and global
+`--trace retain-on-failure`; Verify #236 failed before H1 ran because tracing
+was already started by H1’s manual per-player instrumentation. The uploaded
+artifact showed the exact error. Workflow commit `1bc7c96` removed only the
+global trace flag, retained the failure upload, and Verify #237 is green.
+
+### Resilience set 2
+
+The volatile retry state reuses the original command payload and
+idempotency key; an in-flight resend is coalesced. The shared
+“Waiting to send” notice and Resend action are role-neutral. Focused tests cover
+commit-then-lost-response, a dropped request, duplicate resend, and clearing
+after phase change. No private-choice storage rules or server thresholds were
+changed.
 
 ### Verify #230 H1 step-identity correction
 

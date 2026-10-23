@@ -1,4 +1,5 @@
 import { en } from '@/locale/en-GB';
+import { PendingCommandNotice } from './PendingCommandNotice';
 
 export type PrivateChoiceOption = {
   id: string;
@@ -18,6 +19,8 @@ export type PrivateChoiceControlsProps = {
   choiceSelectionLocked?: boolean;
   choiceSubmitted?: boolean;
   isPending: boolean;
+  waitingToSend?: boolean;
+  onResend?: () => void;
   hasToken: boolean;
   commandMessage: string;
   onSelect: (choiceId: string) => void;
@@ -36,6 +39,8 @@ export function PrivateChoiceControls({
   choiceSelectionLocked = false,
   choiceSubmitted = false,
   isPending,
+  waitingToSend = false,
+  onResend,
   hasToken,
   commandMessage,
   onSelect,
@@ -174,32 +179,36 @@ export function PrivateChoiceControls({
       {selected && confirmChoice && !choiceSubmitted && (
         <div className="mt-4 border-t border-stone pt-4">
           <p className="text-candle">{en.game.confirmChoice}</p>
-          <div className="mt-3 flex flex-wrap gap-3">
-            <button
-              type="button"
-              className="primary-action flex-1"
-              disabled={isPending || !hasToken}
-              onClick={onConfirm}
-            >
-              {isPending
-                ? en.game.recording
-                : choiceSelectionLocked
-                  ? en.game.retryChoice
-                  : en.game.confirm}
-            </button>
-            {!choiceSelectionLocked && (
+          {waitingToSend && onResend ? (
+            <PendingCommandNotice disabled={isPending} onResend={onResend} />
+          ) : (
+            <div className="mt-3 flex flex-wrap gap-3">
               <button
                 type="button"
-                className="quiet-action flex-1"
-                onClick={onChooseAgain}
+                className="primary-action flex-1"
+                disabled={isPending || !hasToken}
+                onClick={onConfirm}
               >
-                {en.game.chooseAgain}
+                {isPending
+                  ? en.game.recording
+                  : choiceSelectionLocked
+                    ? en.game.retryChoice
+                    : en.game.confirm}
               </button>
-            )}
-          </div>
+              {!choiceSelectionLocked && (
+                <button
+                  type="button"
+                  className="quiet-action flex-1"
+                  onClick={onChooseAgain}
+                >
+                  {en.game.chooseAgain}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
-      {commandMessage && (
+      {commandMessage && !waitingToSend && (
         <p role="status" className="mt-4 text-sm text-ash">
           {commandMessage}
         </p>
