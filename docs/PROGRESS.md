@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Verify #230 FAILED on `8918cac`; latest green remains #228.** H1 cause confirmed: harness missed an automatic SHADOW round change, leaving fresh actions unsubmitted. Harness-only fix now passes all four real-server Pixel tests together (4.6m), plus eight helper tests; typecheck, lint and formatting pass. No product rules, existing assertions or timeouts changed. Preparing push, then Verify; resilience set 2 and H2 remain gated on green.
+**Verify #231 CANCELLED on `64a56a4`; latest green remains #228.** H1 cause confirmed: harness missed an automatic SHADOW round change; harness-only fix passes all four real-server Pixel tests locally. CI rehearsal job was cancelled during Chromium dependency installation after that step consumed the 10-minute job budget; it never started the rehearsal tests. All other test jobs passed; desktop Chromium was likewise cancelled during dependency setup. This is not green. Fresh Verify required before resilience set 2 or H2.
 
 ### Verify #230 H1 step-identity correction
 
@@ -16,6 +16,14 @@ Evidence: `generated-artifacts/rehearsal-step-identity-run/complete.log`.
 The desktop job in #230 was separately cancelled after Ubuntu dependency downloads
 took 8m24s of its ten-minute job budget; no browser assertion failed before that
 cancellation. Other suites, including scenarios and report merging, passed.
+
+Verify #231 again spent about 8m24s downloading Chromium dependencies in the
+rehearsal job, then was cancelled during `playwright install`; the full real-server
+rehearsal command never started. All other completed jobs passed, including unit,
+property, integration, scenario shards/report merge, audit, Lighthouse, static
+checks and the other three browser profiles. Desktop Chromium also hit dependency
+setup cancellation. Local complete Pixel rehearsal (H1, Q6, full rehearsal, cold
+restart) passed 4/4, 4.6 minutes. The #231 cancellation is not a green Verify.
 
 ### Verify #229 cleanup correction
 
