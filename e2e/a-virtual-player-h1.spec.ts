@@ -9,13 +9,13 @@ import {
 import { test } from './support/rehearsal-test';
 import { mkdir, rm } from 'node:fs/promises';
 import {
-  allPlayersOnStep,
   buildVirtualPlayerScenario,
   getVirtualPlayerPage,
   nextUntriedPlayerChoice,
   playerScreenFingerprint,
   readPlayerStepIdentity,
-  observeOrganiserAdvance,
+  observeAdvanceGate,
+  sharedActivePlayerStep,
   waitForPlayerScreenChange,
   type VirtualPlayer,
   type VirtualPlayerScenario,
@@ -109,26 +109,48 @@ async function waitForPlayersOnPhase(
     .toBe(true);
 }
 
+async function readPlayerStepState(
+  page: Page,
+): Promise<{ active: boolean; step: string | null }> {
+  const eliminated = await page
+    .getByTestId('player-fate')
+    .isVisible()
+    .catch(() => false);
+  return {
+    active: !eliminated,
+    step: await readPlayerStepIdentity(page),
+  };
+}
+
+async function readPlayerStepStates(
+  playerPages: Page[],
+): Promise<{ active: boolean; step: string | null }[]> {
+  return Promise.all(playerPages.map(readPlayerStepState));
+}
+
 async function waitForPlayersOnStep(
   playerPages: Page[],
   expectedStep: string,
 ): Promise<void> {
-  let observedSteps: (string | null)[] = [];
+  let observedStates: { active: boolean; step: string | null }[] = [];
   try {
     await expect
       .poll(
         async () => {
-          observedSteps = await Promise.all(
-            playerPages.map(readPlayerStepIdentity),
+          observedStates = await readPlayerStepStates(playerPages);
+          return (
+            sharedActivePlayerStep(
+              observedStates.map(({ step }) => step),
+              observedStates.map(({ active }) => active),
+            ) === expectedStep
           );
-          return allPlayersOnStep(expectedStep, observedSteps);
         },
         { timeout: 20_000 },
       )
       .toBe(true);
   } catch (error) {
     throw new Error(
-      `Player screens did not reach current step ${expectedStep}; observed ${observedSteps.join(', ')}.`,
+      `Living player screens did not reach current step ${expectedStep}; observed ${observedStates.map(({ active, step }) => `${active ? 'active' : 'out'}:${step ?? 'unknown'}`).join(', ')}.`,
       { cause: error },
     );
   }
@@ -246,6 +268,12 @@ async function chooseFirstVisiblePlayer(
   preferredName?: string,
 ): Promise<boolean> {
   const choices = page.getByRole('button', { name: playerNamePattern });
+  const review = page.getByRole('button', { name: reviewChoice, exact: true });
+  const confirm = page.getByRole('button', {
+    name: confirmChoice,
+    exact: true,
+  });
+  let reviewIsOpen = await review.isVisible().catch(() => false);
   const buttons = await choices.all();
   const visibleChoices: {
     button: (typeof buttons)[number];
@@ -261,7 +289,14 @@ async function chooseFirstVisiblePlayer(
       visibleChoices.push({ button, name });
   }
   let selected: (typeof buttons)[number] | undefined;
-  if (preferredName) {
+  if (reviewIsOpen) {
+    for (const choice of visibleChoices) {
+      if ((await choice.button.getAttribute('aria-pressed')) === 'true') {
+        selected = choice.button;
+        break;
+      }
+    }
+  } else if (preferredName) {
     const selfChoice = page.getByRole('button', {
       name: preferredName,
       exact: true,
@@ -270,28 +305,28 @@ async function chooseFirstVisiblePlayer(
     await expect(selfChoice).toBeEnabled();
     selected = selfChoice;
   } else selected = visibleChoices[0]?.button;
-  if (!selected) return false;
+  if (!selected && !reviewIsOpen) return false;
 
-  const review = page.getByRole('button', { name: reviewChoice, exact: true });
-  const confirm = page.getByRole('button', {
-    name: confirmChoice,
-    exact: true,
-  });
   const rejectedChoiceMessage = page.getByText('Please choose someone else.', {
     exact: true,
   });
   const attemptedNames = new Set<string>();
 
-  while (selected) {
-    const selectedName = (await selected.innerText()).trim();
-    if (attemptedNames.has(selectedName)) return false;
-    attemptedNames.add(selectedName);
-    await pauseForHumanTiming(page, scenario.stage);
-    await selected.click();
-    if (attemptedNames.size > 1)
-      await expect(rejectedChoiceMessage).toBeHidden({ timeout: 5_000 });
-    await expect(review).toBeVisible({ timeout: 5_000 });
-    await pauseForHumanTiming(page, scenario.stage);
+  while (selected || reviewIsOpen) {
+    if (reviewIsOpen) {
+      if (selected) attemptedNames.add((await selected.innerText()).trim());
+    } else {
+      if (!selected) return false;
+      const selectedName = (await selected.innerText()).trim();
+      if (attemptedNames.has(selectedName)) return false;
+      attemptedNames.add(selectedName);
+      await pauseForHumanTiming(page, scenario.stage);
+      await selected.click();
+      if (attemptedNames.size > 1)
+        await expect(rejectedChoiceMessage).toBeHidden({ timeout: 5_000 });
+      await expect(review).toBeVisible({ timeout: 5_000 });
+      await pauseForHumanTiming(page, scenario.stage);
+    }
     await review.click();
     await expect(confirm).toBeVisible({ timeout: 5_000 });
     const beforeConfirm = await playerScreenFingerprint(page);
@@ -329,6 +364,7 @@ async function chooseFirstVisiblePlayer(
       );
       if (!nextChoice) return false;
       selected = nextChoice.button;
+      reviewIsOpen = false;
       continue;
     }
 
@@ -393,22 +429,23 @@ async function advanceAsOrganiser(
     return;
   }
   const returnToActionsForChangedStep = async (): Promise<boolean> => {
+    const observedStates = await readPlayerStepStates(playerPages);
+    const referenceStep = observedStates.find(({ active }) => active)?.step;
     if (
-      observeOrganiserAdvance(
-        expectedStep,
-        await readPlayerStepIdentity(playerPages[0]!),
-        false,
-      ) !== 'step-changed'
+      referenceStep === undefined ||
+      referenceStep === null ||
+      referenceStep === expectedStep
     )
       return false;
     await expect
       .poll(
         async () => {
-          const identities = await Promise.all(
-            playerPages.map(readPlayerStepIdentity),
-          );
-          return identities.every(
-            (identity) => identity !== null && identity !== expectedStep,
+          const states = await readPlayerStepStates(playerPages);
+          return (
+            sharedActivePlayerStep(
+              states.map(({ step }) => step),
+              states.map(({ active }) => active),
+            ) === referenceStep
           );
         },
         { timeout: 20_000 },
@@ -427,6 +464,7 @@ async function advanceAsOrganiser(
       .getByTestId('coordinator-progress')
       .innerText()
       .catch(() => 'unavailable');
+    const allStepStates = await readPlayerStepStates(playerPages);
     const moveOnText = (
       await moveOn.innerText().catch(() => 'unavailable')
     ).trim();
@@ -441,6 +479,7 @@ async function advanceAsOrganiser(
     let pendingView = 'no matching pending player shown';
     let recentNetworkCalls: string[] = [];
     let gameplayCalls: string[] = [];
+    let reviewConfirmProbe = 'not attempted';
     if (pendingPlayer) {
       const playerIndex = scenario.players.indexOf(pendingPlayer);
       const pendingPage = playerPages[playerIndex]!;
@@ -471,6 +510,23 @@ async function advanceAsOrganiser(
       const diagnostics = diagnosticsByPlayer?.get(pendingPlayer.id);
       recentNetworkCalls = diagnostics?.recentNetworkCalls.slice(-10) ?? [];
       gameplayCalls = diagnostics?.gameplayCalls.slice(-10) ?? [];
+      if (review && !confirm) {
+        try {
+          await pendingPage
+            .getByRole('button', { name: reviewChoice, exact: true })
+            .click({ timeout: 5_000 });
+          await expect(
+            pendingPage.getByRole('button', {
+              name: confirmChoice,
+              exact: true,
+            }),
+          ).toBeVisible({ timeout: 5_000 });
+          reviewConfirmProbe = 'Confirm appeared after the visible Review tap.';
+        } catch {
+          reviewConfirmProbe =
+            'Confirm did not appear after the visible Review tap.';
+        }
+      }
       pendingView = [
         `seat=${pendingPlayer.id}`,
         `step=${step ?? 'unavailable'}`,
@@ -479,6 +535,7 @@ async function advanceAsOrganiser(
         `shieldDialog=${shield}`,
         `review=${review}`,
         `confirm=${confirm}`,
+        `reviewConfirmProbe="${reviewConfirmProbe}"`,
       ].join(' ');
     }
     const diagnostics = pendingPlayer
@@ -489,6 +546,7 @@ async function advanceAsOrganiser(
         error instanceof Error ? error.message : String(error),
         `Coordinator progress: ${progress}; Move-on: "${moveOnText}".`,
         `Pending seats: ${pendingNames.join(', ') || 'none'}.`,
+        `Current seat steps: ${allStepStates.map(({ active, step }, index) => `${scenario.players[index]?.id ?? index}:${active ? 'active' : 'out'}:${step ?? 'unknown'}`).join(' | ')}.`,
         `Pending player UI: ${pendingView}.`,
         `Recent network calls: ${recentNetworkCalls.join(' | ') || 'none'}.`,
         `Gameplay command calls: ${gameplayCalls.join(' | ') || 'none'}.`,
@@ -522,10 +580,13 @@ async function advanceAsOrganiser(
         async () => {
           const coordinatorPhase =
             await visibleCoordinatorPhase(coordinatorPage);
-          if (coordinatorPhase !== phase) return 'phase-changed';
-          return observeOrganiserAdvance(
+          const states = await readPlayerStepStates(playerPages);
+          const referenceStep = states.find(({ active }) => active)?.step;
+          return observeAdvanceGate(
+            phase,
+            coordinatorPhase,
             expectedStep,
-            await readPlayerStepIdentity(playerPages[0]!),
+            referenceStep ?? null,
             await moveOn.isEnabled(),
           );
         },
@@ -544,16 +605,62 @@ async function advanceAsOrganiser(
   }
   if (await returnToActionsForChangedStep()) return;
   await waitForPlayersOnPhase(playerPages, phase);
-  const previousSteps = await Promise.all(
-    playerPages.map(readPlayerStepIdentity),
-  );
-  if (previousSteps.some((identity) => identity === null))
-    throw new Error('Could not identify every player step before moving on.');
+  const previousStates = await readPlayerStepStates(playerPages);
+  if (previousStates.some(({ active, step }) => active && step === null))
+    throw new Error(
+      'Could not identify every living player step before moving on.',
+    );
   if (await returnToActionsForChangedStep()) return;
   try {
-    await expect(moveOn).toBeEnabled({ timeout: 20_000 });
+    const waitForAdvanceGate = async (): Promise<
+      ReturnType<typeof observeAdvanceGate>
+    > => {
+      let outcome: ReturnType<typeof observeAdvanceGate> = 'waiting';
+      await expect
+        .poll(
+          async () => {
+            const coordinatorPhase =
+              await visibleCoordinatorPhase(coordinatorPage);
+            const states = await readPlayerStepStates(playerPages);
+            const referenceStep = states.find(({ active }) => active)?.step;
+            outcome = observeAdvanceGate(
+              phase,
+              coordinatorPhase,
+              expectedStep,
+              referenceStep ?? null,
+              await moveOn.isEnabled(),
+            );
+            return outcome;
+          },
+          { timeout: 20_000 },
+        )
+        .not.toBe('waiting');
+      return outcome;
+    };
+    const returnForTransition = async (
+      outcome: ReturnType<typeof observeAdvanceGate>,
+    ): Promise<boolean> => {
+      if (outcome === 'phase-changed') {
+        const currentPhase = await visibleCoordinatorPhase(coordinatorPage);
+        if (currentPhase)
+          await waitForPlayersOnPhase(playerPages, currentPhase);
+        return true;
+      }
+      if (outcome === 'step-changed') {
+        if (await returnToActionsForChangedStep()) return true;
+        throw new Error(
+          'A new player step was detected but the living seats did not synchronise.',
+        );
+      }
+      return false;
+    };
+    let outcome = await waitForAdvanceGate();
+    if (await returnForTransition(outcome)) return;
+    await expect(moveOn).toBeEnabled({ timeout: 1_000 });
     await pauseForHumanTiming(coordinatorPage, scenario.stage);
-    await expect(moveOn).toBeEnabled({ timeout: 20_000 });
+    outcome = await waitForAdvanceGate();
+    if (await returnForTransition(outcome)) return;
+    await expect(moveOn).toBeEnabled({ timeout: 1_000 });
     await moveOn.click();
   } catch (error) {
     await reportAdvanceFailure(error);
@@ -580,12 +687,17 @@ async function advanceAsOrganiser(
 
   for (let index = 0; index < playerPages.length; index += 1) {
     const player = scenario.players[index]!;
+    const previousState = previousStates[index]!;
+    if (!previousState.active) continue;
     setActivePlayer(player);
     await expect
       .poll(
         async () => {
-          const identity = await readPlayerStepIdentity(playerPages[index]!);
-          return identity !== null && identity !== previousSteps[index];
+          const state = await readPlayerStepState(playerPages[index]!);
+          return (
+            !state.active ||
+            (state.step !== null && state.step !== previousState.step)
+          );
         },
         { timeout: 20_000 },
       )
@@ -1058,10 +1170,14 @@ test('virtual players complete a real game across desktop and phone contexts @vi
       const phase = await visiblePhase(organiserPage);
       if (!phase) throw new Error('Organiser game screen disappeared.');
       // Preserve the action batch's identity even if the server advances a
-      // SHADOW round/slot automatically while the organiser waits to move on.
-      const expectedStep = await readPlayerStepIdentity(organiserPage);
-      if (expectedStep === null)
-        throw new Error('Could not identify the player step before actions.');
+      // SHADOW round/slot while the organiser is eliminated and their own
+      // player screen remains on an older public step.
+      const stepStates = await readPlayerStepStates(pages);
+      const expectedStep = stepStates.find(({ active }) => active)?.step;
+      if (expectedStep === undefined || expectedStep === null)
+        throw new Error(
+          'Could not identify a living player step before actions.',
+        );
       await waitForPlayersOnStep(pages, expectedStep);
       if (!phaseTrail.includes(phase)) phaseTrail.push(phase);
       const phaseObservedAt = Date.now();

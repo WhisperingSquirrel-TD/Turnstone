@@ -58,6 +58,18 @@ export function observeOrganiserAdvance(
   return enabled ? 'enabled' : 'waiting';
 }
 
+export function observeAdvanceGate(
+  expectedPhase: string,
+  currentPhase: string | null,
+  expectedStep: string,
+  currentStep: string | null,
+  enabled: boolean,
+): 'phase-changed' | 'step-changed' | 'enabled' | 'waiting' {
+  if (currentPhase === null) return 'waiting';
+  if (currentPhase !== expectedPhase) return 'phase-changed';
+  return observeOrganiserAdvance(expectedStep, currentStep, enabled);
+}
+
 export function allPlayersOnStep(
   expectedStep: string,
   observedSteps: readonly (string | null)[],
@@ -66,6 +78,19 @@ export function allPlayersOnStep(
     observedSteps.length > 0 &&
     observedSteps.every((step) => step === expectedStep)
   );
+}
+
+export function sharedActivePlayerStep(
+  observedSteps: readonly (string | null)[],
+  activePlayers: readonly boolean[],
+): string | null {
+  if (observedSteps.length !== activePlayers.length) return null;
+  const activeSteps = observedSteps.filter((_, index) => activePlayers[index]);
+  if (activeSteps.length === 0 || activeSteps.some((step) => step === null))
+    return null;
+  const firstStep = activeSteps[0];
+  if (firstStep === undefined || firstStep === null) return null;
+  return activeSteps.every((step) => step === firstStep) ? firstStep : null;
 }
 
 export function publicShadowCycleFromAnnouncement(text: string): string | null {

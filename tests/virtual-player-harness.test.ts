@@ -5,6 +5,8 @@ import {
   createProgressWatchdog,
   createSeededRandom,
   getVirtualPlayerPage,
+  sharedActivePlayerStep,
+  observeAdvanceGate,
   nextUntriedPlayerChoice,
   playerStepIdentity,
   observeOrganiserAdvance,
@@ -48,12 +50,44 @@ describe('virtual-player harness helpers', () => {
     expect(observeOrganiserAdvance(expected, expected, true)).toBe('enabled');
   });
 
+  it('keeps watching for a new night step while move-on is disabled', () => {
+    const roundOne = JSON.stringify(['SHADOW', '3', '1', '1']);
+    const roundTwo = JSON.stringify(['SHADOW', '3', '2', '1']);
+    expect(
+      observeAdvanceGate('SHADOW', 'SHADOW', roundOne, roundTwo, false),
+    ).toBe('step-changed');
+    expect(
+      observeAdvanceGate('SHADOW', 'SHADOW', roundOne, roundOne, false),
+    ).toBe('waiting');
+    expect(
+      observeAdvanceGate('SHADOW', 'SHADOW', roundOne, roundOne, true),
+    ).toBe('enabled');
+    expect(observeAdvanceGate('SHADOW', 'DAWN', roundOne, null, false)).toBe(
+      'phase-changed',
+    );
+  });
+
   it('waits for every player context to reach the exact current step', () => {
     const current = JSON.stringify(['SHADOW', '3', '1', '1']);
     const previousCycle = JSON.stringify(['SHADOW', '2', '1', '1']);
     expect(allPlayersOnStep(current, [current, current])).toBe(true);
     expect(allPlayersOnStep(current, [current, previousCycle])).toBe(false);
     expect(allPlayersOnStep(current, [current, null])).toBe(false);
+  });
+
+  it('uses the common living-player step instead of an eliminated organiser screen', () => {
+    const previous = JSON.stringify(['SHADOW', '1', '1', '1']);
+    const current = JSON.stringify(['SHADOW', '1', '2', '1']);
+    expect(
+      sharedActivePlayerStep([previous, current, current], [false, true, true]),
+    ).toBe(current);
+    expect(
+      sharedActivePlayerStep(
+        [previous, current, previous],
+        [false, true, true],
+      ),
+    ).toBeNull();
+    expect(sharedActivePlayerStep([current, null], [true, true])).toBeNull();
   });
 
   it('reads the public night number without using private player data', () => {
