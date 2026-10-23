@@ -1,8 +1,8 @@
 # Status for reviewer
 
-**Latest green: Verify #244 (`4d250b9`); confirmed successful on GitHub main. Verify #245 (`08b79ac`) failed only in the iPad browser job.**
+**Latest green: Verify #244 (`4d250b9`); confirmed successful on GitHub main. Verify #245 failed in the iPad browser job at the exact Retry-After boundary. Verify #246 failed in the desktop browser job because a follow-up assertion sampled fake browser time from an intercepted route and got `NaN`; its polling boundary checks passed.**
 
-**Round 6 Notes / Verify #245:** the Notes regression itself passed in CI. The sole failure was an existing organiser join-request polling test: it expected no retry after exactly 10 seconds, but `Retry-After: 10` permits the next request at that boundary (CI observed 2 calls). This is a test-boundary issue, not an early retry. A deterministic browser test now asserts no request before 10 seconds and a retry by 11 seconds, also checking the observed request interval is at least 10 seconds. It passes locally on desktop and Pixel Chromium. Local iPad WebKit could not launch because this workspace lacks its native browser dependencies; CI supplied the failing evidence. The test-only fix is pending push and Verify.
+**Round 6 Notes / Verify #245–#246:** the Notes regression itself passed in CI. #245 exposed an existing organiser join-request polling test that incorrectly rejected a retry at exactly the 10-second `Retry-After` boundary. #246 then exposed a brittle follow-up measurement: the test tried to read fake browser time inside a route callback and got `NaN`; the actual polling boundary checks passed. The test now deterministically checks that no retry occurs by 9,999 ms and that one occurs at 10,000 ms, with jitter fixed at zero for this boundary case. Local desktop and Pixel Chromium passed before the measurement was removed; the final correction is pending local checks and Verify. Local iPad WebKit cannot launch because this workspace lacks its native browser dependencies.
 
 **Round 6 Q9 follow-up:** #240 failed only because two harness pacing gaps measured 2,099 ms against the 2,100 ms minimum; #241 passed after adding 100 ms of scheduling headroom. No 429 occurred in the final rehearsal, and no rate limit or assertion changed.
 
@@ -20,7 +20,7 @@
 
 **Round 6 Notes:** the draft now clears when the player presses Done. A new browser regression proved it stayed in the textarea after closing and reopening before the fix; the fixed flow passed on all four browser profiles, including in Verify #245. It also checks the released text is absent from the DOM, local/session storage and browser console. Temporary privacy covers still allow a player to return to the open Notes screen.
 
-**Next:** push the isolated Verify #245 test-boundary fix and wait for green; then begin Round 7 Stage 1 design-only and stop for owner approval. Do not implement individual screen redesigns before approval.
+**Next:** finish local checks, push the isolated polling-boundary test correction and wait for green; then begin Round 7 Stage 1 design-only and stop for owner approval. Do not implement individual screen redesigns before approval.
 
 **Push isolation:** `99da77a` is on `main`; the push contained progress documentation, virtual-player harness/tests and the pipeline regression test. Attached content and generated Playwright artifacts were excluded.
 

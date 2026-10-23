@@ -378,7 +378,6 @@ test('organiser join-request polling honours Retry-After after a 429', async ({
   const gameId = 'coordinator-join-poll-backoff';
   const view = createView();
   let joinRequestCalls = 0;
-  const joinRequestTimes: number[] = [];
   let rateLimited = true;
   await page.route('**/csrf', (route) =>
     route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
@@ -390,7 +389,6 @@ test('organiser join-request polling honours Retry-After after a 429', async ({
   );
   await page.route(`**/games/${gameId}/join-requests`, async (route) => {
     joinRequestCalls += 1;
-    joinRequestTimes.push(await page.evaluate(() => Date.now()));
     if (rateLimited) {
       await route.fulfill({
         status: 429,
@@ -415,11 +413,8 @@ test('organiser join-request polling honours Retry-After after a 429', async ({
   rateLimited = false;
   await page.clock.fastForward(9_999);
   expect(joinRequestCalls).toBe(1);
-  await page.clock.fastForward(1_001);
+  await page.clock.fastForward(1);
   await expect.poll(() => joinRequestCalls).toBe(2);
-  expect(joinRequestTimes[1] - joinRequestTimes[0]).toBeGreaterThanOrEqual(
-    10_000,
-  );
 });
 
 test('coordinator waits, confirms disconnected actions, undoes a skip and restores a removed seat', async ({
