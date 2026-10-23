@@ -17,6 +17,7 @@ import {
   ClaimCoordinatorTakeoverBody,
   ClaimCoordinatorTakeoverResponse,
   GetCoordinatorDelegatesResponse,
+  GetCoordinatorViewResponse,
   GetCoordinatorTakeoverStatusResponse,
   HeartbeatCoordinatorPresenceResponse,
   HealthCheckResponse,
@@ -2722,6 +2723,29 @@ export function createApp(
       await publishGame(gameId);
       response.json(
         ClaimCoordinatorTakeoverResponse.parse({ status: 'transferred' }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
+  app.get('/api/games/:id/coordinator/view', async (request, response) => {
+    try {
+      const viewer = await coordinatorViewerForRequest(request);
+      if (viewer.kind !== 'coordinator') {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      const state = await loadGameState(request.params.id ?? '');
+      if (!state) {
+        sendError(response, 404, 'Not found');
+        return;
+      }
+      // Resolve capability separately from the organiser's player seat.
+      // Never elevate the ordinary player/private-view or socket projection.
+      response.json(
+        GetCoordinatorViewResponse.parse(
+          await projectState(state, { kind: 'coordinator' }),
+        ),
       );
     } catch {
       sendError(response, 503, 'Service unavailable');

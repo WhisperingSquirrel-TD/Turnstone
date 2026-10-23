@@ -1,6 +1,30 @@
 # Status for reviewer
 
-**Verify #227 GREEN on `7120d82` (attempt 2):** all jobs passed, including six scenario shards, merge/runtime gate, four browsers and Lighthouse. Attempt 1 was cancelled after slow Ubuntu dependency installation exceeded the Lighthouse job limit; the unchanged-commit rerun passed. Q6 automatic client handover is now in progress, tests first. Next: disconnected-player browser proof, resilience set 2, then H2 and stop.
+**Verify #228 GREEN on `1aeee6b`; approved Q6 organiser-view fix passes locally, awaiting new Verify.** Playing organisers now use a separately capability-authorised blind console projection. Real-server Pixel and iPhone recovery journeys pass, including Skip/undo, Remove/reinstate and cold return. Next: Verify, resilience set 2, H2 and stop.
+
+### Q6 real-server recovery finding
+
+Replay: `REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts e2e/disconnected-player-live.spec.ts`
+(replace Pixel with iPhone for WebKit). Both fail at the missing organiser
+pending controls. The authenticated view reports DEAL, six waiting players,
+the organiser's player seat, and no `coordinatorPendingSeats`; the console
+shows the count but not the controls. Evidence is local under
+`generated-artifacts/playwright-q6-Pixel` and `playwright-q6-iPhone`.
+The owner approved the fix: a separately capability-authorised blind organiser
+projection for the console. Ordinary player/private/socket views remain
+unchanged; socket events invalidate the console view rather than replacing it
+with player data. Five-second refresh exposes grace eligibility without needing
+a new game event and does not rotate lobby invitations.
+
+The API regressions failed before implementation, then passed. They cover
+combined seat/capability cookies, unauthorised seats, wrong-game and revoked
+capabilities, and absence of private data. Locally: 139 focused unit/server tests,
+14 Pixel/iPhone console checks, typechecks, lint and formatting passed.
+The real-server recovery journey passed on Pixel (1.8 minutes) and iPhone
+WebKit (1.9 minutes), with the unchanged 60-second grace observed at 62.2 and
+62.3 seconds. Skip/undo, Remove/reinstate, neutral public logs, cold seat return,
+pending acknowledgement and phase advancement all passed. This is browser
+emulation, not a physical-phone test. No assertions or thresholds were weakened.
 
 ### Q6 automatic client handover
 

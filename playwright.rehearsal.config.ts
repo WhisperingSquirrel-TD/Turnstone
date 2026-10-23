@@ -32,7 +32,11 @@ if (!sessionSecret || sessionSecret.length < 32)
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['a-virtual-player-h1.spec.ts', 'rehearsal-live.spec.ts'],
+  testMatch: [
+    'a-virtual-player-h1.spec.ts',
+    'rehearsal-live.spec.ts',
+    'disconnected-player-live.spec.ts',
+  ],
   outputDir: 'generated-artifacts/playwright-rehearsal',
   reporter: [['list']],
   workers: 1,

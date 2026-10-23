@@ -1559,6 +1559,84 @@ export const useClaimCoordinatorTakeover = <TError = ErrorType<ApiError>,
       return useMutation(getClaimCoordinatorTakeoverMutationOptions(options));
     }
 
+export const getGetCoordinatorViewUrl = (id: string,) => {
+
+
+
+
+  return `/api/games/${id}/coordinator/view`
+}
+
+/**
+ * Requires the coordinator capability cookie, even when the organiser also has a player seat. Includes named pending-action logistics but never private roles, team information or secret choices. Does not change the player or private-view projections.
+ * @summary Get blind organiser controls using the game-scoped coordinator capability
+ */
+export const getCoordinatorView = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<GameViewResponse> => {
+
+  return customFetch<GameViewResponse>(getGetCoordinatorViewUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCoordinatorViewQueryKey = (id: string,) => {
+    return [
+    `/api/games/${id}/coordinator/view`
+    ] as const;
+    }
+
+
+export const getGetCoordinatorViewQueryOptions = <TData = Awaited<ReturnType<typeof getCoordinatorView>>, TError = ErrorType<ApiError>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCoordinatorView>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCoordinatorViewQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCoordinatorView>>> = ({ signal }) => getCoordinatorView(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCoordinatorView>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCoordinatorViewQueryResult = NonNullable<Awaited<ReturnType<typeof getCoordinatorView>>>
+export type GetCoordinatorViewQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get blind organiser controls using the game-scoped coordinator capability
+ */
+
+export function useGetCoordinatorView<TData = Awaited<ReturnType<typeof getCoordinatorView>>, TError = ErrorType<ApiError>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCoordinatorView>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCoordinatorViewQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetGameViewUrl = (id: string,) => {
 
 

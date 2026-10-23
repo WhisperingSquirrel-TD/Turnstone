@@ -127,6 +127,28 @@ describe('health and readiness', () => {
     });
   });
 
+  it('requires the game-scoped coordinator capability for the blind console view', async () => {
+    for (const viewer of [
+      { kind: 'visitor' },
+      { kind: 'player', seatId: 'organiser-seat' },
+      { kind: 'ghost', seatId: 'former-organiser' },
+      { kind: 'presenter' },
+      { kind: 'host', reveal: true },
+    ] as const) {
+      const app = createApp(async () => {}, {
+        // Even a seat called organiser, or a separate player projection,
+        // cannot substitute for a valid coordinator capability.
+        resolveViewer: () => ({ kind: 'coordinator' }),
+        resolveCoordinatorViewer: () => viewer,
+      });
+      const response = await request(app).get(
+        '/api/games/not-authorised/coordinator/view',
+      );
+      expect(response.status, viewer.kind).toBe(401);
+      expect(response.body).toEqual({ error: 'Authentication required' });
+    }
+  });
+
   it('fails closed on coordinator takeover routes without a seat or coordinator', async () => {
     const app = createApp(async () => {});
     await request(app)

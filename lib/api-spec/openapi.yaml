@@ -515,6 +515,39 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ApiError' }
+  /games/{id}/coordinator/view:
+    get:
+      operationId: getCoordinatorView
+      tags: [games]
+      summary: Get blind organiser controls using the game-scoped coordinator capability
+      description: Requires the coordinator capability cookie, even when the organiser also has a player seat. Includes named pending-action logistics but never private roles, team information or secret choices. Does not change the player or private-view projections.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        '200':
+          description: Blind coordinator projection with private and fairness set to null
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameViewResponse'
+        '401':
+          description: Valid game-scoped coordinator capability required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/view:
     get:
       operationId: getGameView

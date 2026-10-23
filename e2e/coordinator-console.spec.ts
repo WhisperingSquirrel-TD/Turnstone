@@ -94,7 +94,7 @@ test('coordinator can pause, extend and safely advance an active game', async ({
   await page.route('**/csrf', (route) =>
     route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
   );
-  await page.route(`**/games/${gameId}/view`, (route) =>
+  await page.route(`**/games/${gameId}/coordinator/view`, (route) =>
     route.fulfill({
       json: { serverNow: Date.now(), version: view.version, view },
     }),
@@ -388,7 +388,7 @@ test('coordinator waits, confirms disconnected actions, undoes a skip and restor
   await page.route('**/csrf', (route) =>
     route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
   );
-  await page.route(`**/games/${gameId}/view`, (route) =>
+  await page.route(`**/games/${gameId}/coordinator/view`, (route) =>
     route.fulfill({
       json: { serverNow: Date.now(), version: view.version, view },
     }),
@@ -629,6 +629,11 @@ test('the server-selected player automatically receives blind organiser controls
     route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
   );
   await page.route(`**/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/view`, (route) =>
     route.fulfill({
       json: { serverNow: Date.now(), version: view.version, view },
     }),

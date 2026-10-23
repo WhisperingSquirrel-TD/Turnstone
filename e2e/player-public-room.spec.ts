@@ -555,7 +555,7 @@ test('coordinator creates a fresh late invitation without reopening the room cod
       json: { csrfToken: 'c'.repeat(64) },
     }),
   );
-  await page.route(`**/api/games/${gameId}/view`, (route) =>
+  await page.route(`**/api/games/${gameId}/coordinator/view`, (route) =>
     route.fulfill({
       json: { serverNow: Date.now(), version: view.version, view },
     }),
@@ -647,7 +647,7 @@ test('organiser can start with five players while one planned seat has not joine
       json: { csrfToken: 'c'.repeat(64) },
     }),
   );
-  await page.route(`**/api/games/${gameId}/view`, (route) =>
+  await page.route(`**/api/games/${gameId}/coordinator/view`, (route) =>
     route.fulfill({
       json: { serverNow: Date.now(), version: view.version, view },
     }),

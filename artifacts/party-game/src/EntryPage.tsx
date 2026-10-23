@@ -397,7 +397,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
 
   const loadCoordinatorView = useCallback(async (gameId: string) => {
     const response = await getJson(
-      `/games/${encodeURIComponent(gameId)}/view`,
+      `/games/${encodeURIComponent(gameId)}/coordinator/view`,
       gameViewResponseSchema,
     );
     if (!isFullView(response.view))
@@ -432,11 +432,11 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     let socket: ReturnType<typeof io> | null = null;
     let detach: (() => void) | null = null;
 
-    const load = async () => {
+    const load = async (ensureLobbyInvite = false) => {
       try {
         const view = await loadCoordinatorView(coordinatorGameId);
         await loadPendingJoiners(coordinatorGameId);
-        if (view.phase === 'LOBBY' && !shareUrl) {
+        if (ensureLobbyInvite && view.phase === 'LOBBY' && !shareUrl) {
           await createLobbyInvite(coordinatorGameId);
         }
         if (!active) return;
@@ -451,7 +451,10 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
           }));
       }
     };
-    void load();
+    void load(true);
+    // Seat disconnection eligibility changes after the server's grace period
+    // without a game event. Refresh the capability-authorised projection too.
+    const refreshInterval = window.setInterval(() => void load(), 5_000);
 
     const api = new URL(config.apiOrigin ?? '/', window.location.origin);
     const prefix = api.pathname.replace(/\/+$/, '');
@@ -463,17 +466,14 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     detach = attachGameView(
       socket as unknown as GameRealtimeSocket,
       coordinatorGameId,
-      (response) => {
-        if (isFullView(response.view)) {
-          setCoordinatorView(response.view);
-          setCoordinatorServerNow(response.serverNow);
-        }
-        void loadPendingJoiners(coordinatorGameId);
-      },
+      // A playing organiser's socket intentionally remains a normal player
+      // projection. Use packets only as invalidations, never as console data.
+      () => void load(),
     );
 
     return () => {
       active = false;
+      window.clearInterval(refreshInterval);
       detach?.();
       socket?.disconnect();
     };

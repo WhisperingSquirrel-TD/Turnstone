@@ -12,6 +12,7 @@ import { gameRandom } from '../lib/security/src/game-random';
 import { attachRealtime } from '../artifacts/api-server/src/realtime';
 import {
   cookieNameForGame,
+  cookieNameForCoordinatorGame,
   createCoordinatorViewerResolver,
   cookieNameForJoinRequest,
   createSeatViewerResolver,
@@ -79,6 +80,161 @@ function cookieValues(header: string | string[] | undefined): string[] {
 
 afterAll(async () => {
   await pool.end();
+});
+
+it('serves a capability-authorised blind console view without changing player or private views', async () => {
+  const gameId = randomUUID();
+  const token = randomBytes(32).toString('base64url');
+  const otherGameId = randomUUID();
+  const now = Date.now();
+  const game = createFixture(6, {
+    basics: { coordinatorPlays: true },
+    missions: { enabled: false },
+  });
+  game.context.now = Math.max(now + 24 * 60 * 60_000, game.context.now);
+  applyFixtureCommand(game, { type: 'StartGame' });
+  advanceFixture(game, 'VOTE');
+  applyFixtureCommand(game, { type: 'SubmitVote', target: 's2' }, true, {
+    kind: 'player',
+    seatId: 's0',
+  });
+  const events = [
+    eventSchema.parse({ ...game.events[0], id: gameId }),
+    ...game.events.slice(1),
+  ];
+  const coordinatorResolver = createCoordinatorViewerResolver({
+    findSession: findCoordinatorSession,
+  });
+  const seatResolver = createSeatViewerResolver({
+    findSession: findViewerSession,
+    findCoordinatorSession,
+  });
+  const app = createApp(async () => {}, {
+    resolveViewer: (req) =>
+      seatResolver({
+        gameId: requestGameId(req),
+        cookieHeader: req.headers.cookie,
+      }),
+    resolveCoordinatorViewer: (req) =>
+      coordinatorResolver({
+        gameId: requestGameId(req),
+        cookieHeader: req.headers.cookie,
+      }),
+  });
+  try {
+    await createGameWithEvent({
+      event: events[0]!,
+      actorId: 'coordinator:console-view',
+      idempotencyKey: randomUUID(),
+      requestHash: randomUUID(),
+      coordinatorCapability: {
+        tokenHash: createHash('sha256').update(token).digest('hex'),
+        expiresAt: new Date(now + 60_000),
+      },
+    });
+    const seeded = await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:console-view',
+      idempotencyKey: randomUUID(),
+      requestHash: randomUUID(),
+      events: events.slice(1),
+    });
+    expect(seeded.ok).toBe(true);
+    const seatTokens = [
+      randomBytes(32).toString('base64url'),
+      randomBytes(32).toString('base64url'),
+    ];
+    for (const [index, seatToken] of seatTokens.entries()) {
+      await createSeatAccess({
+        gameId,
+        seatId: `s${index}`,
+        pinSalt: 'a'.repeat(32),
+        pinHash: 'b'.repeat(64),
+      });
+      await createViewerSession({
+        tokenHash: createHash('sha256').update(seatToken).digest('hex'),
+        gameId,
+        seatId: `s${index}`,
+        expiresAt: now + 60_000,
+      });
+    }
+    const organiserSeatCookie = `${cookieNameForGame(gameId)}=${seatTokens[0]}`;
+    const playerCookie = `${cookieNameForGame(gameId)}=${seatTokens[1]}`;
+    const coordinatorCookie = `${cookieNameForCoordinatorGame(gameId)}=${token}`;
+    const bothCookies = `${organiserSeatCookie}; ${coordinatorCookie}`;
+    const consoleView = await request(app)
+      .get(`/api/games/${gameId}/coordinator/view`)
+      .set('Cookie', bothCookies);
+    expect(consoleView.status).toBe(200);
+    expect(consoleView.body.view.phase).toBe('VOTE');
+    expect(consoleView.body.view.coordinatorPendingSeats).toEqual(
+      ['s1', 's2', 's3', 's4', 's5'].map((id) => ({
+        id,
+        name: `Player ${id.slice(1)}`,
+        disconnected: false,
+      })),
+    );
+    expect(consoleView.body.view.actionStatus).toEqual({
+      waiting: 5,
+      total: 6,
+    });
+    expect(consoleView.body.view.private).toBeNull();
+    expect(consoleView.body.view.fairness).toBeNull();
+    expect(consoleView.body.view.ballots).toEqual({});
+    expect(consoleView.body.view).not.toHaveProperty('viewerSeatId');
+    for (const seat of consoleView.body.view.seats)
+      expect(seat).not.toHaveProperty('role');
+
+    for (const cookie of [
+      organiserSeatCookie,
+      playerCookie,
+      `${cookieNameForCoordinatorGame(otherGameId)}=${token}`,
+    ]) {
+      const denied = await request(app)
+        .get(`/api/games/${gameId}/coordinator/view`)
+        .set('Cookie', cookie);
+      expect(denied.status).toBe(401);
+      expect(denied.body).toEqual({ error: 'Authentication required' });
+    }
+    const playerView = await request(app)
+      .get(`/api/games/${gameId}/view`)
+      .set('Cookie', bothCookies);
+    expect(playerView.status).toBe(200);
+    expect(playerView.body.view.viewerSeatId).toBe('s0');
+    expect(playerView.body.view.private).toBeNull();
+    expect(playerView.body.view.actionStatus).toEqual({ waiting: 5, total: 6 });
+    expect(playerView.body.view).not.toHaveProperty('coordinatorPendingSeats');
+    const otherPlayerView = await request(app)
+      .get(`/api/games/${gameId}/view`)
+      .set('Cookie', playerCookie);
+    expect(otherPlayerView.body.view).not.toHaveProperty(
+      'coordinatorPendingSeats',
+    );
+    expect(otherPlayerView.body.view.ballots).toEqual({});
+    const privateView = await request(app)
+      .post(`/api/games/${gameId}/private-view`)
+      .set('X-CSRF-Token', 'console-view-csrf')
+      .set('Cookie', `${bothCookies}; oathstone-csrf=console-view-csrf`)
+      .send({ purpose: 'notes' });
+    expect(privateView.status).toBe(200);
+    expect(privateView.body.view.viewerSeatId).toBe('s0');
+    expect(privateView.body.view.private.role).toBe(game.state.seats[0]!.role);
+    expect(privateView.body.view).not.toHaveProperty('coordinatorPendingSeats');
+    await db.execute(sql`
+      update game_coordinator_capabilities set revoked_at = now()
+      where game_id = ${gameId}
+    `);
+    expect(
+      (
+        await request(app)
+          .get(`/api/games/${gameId}/coordinator/view`)
+          .set('Cookie', bothCookies)
+      ).status,
+    ).toBe(401);
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
 });
 
 it('creates a game with a hashed, game-scoped coordinator capability cookie', async () => {
