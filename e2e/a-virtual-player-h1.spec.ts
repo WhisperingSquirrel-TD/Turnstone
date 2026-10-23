@@ -501,7 +501,7 @@ async function attachFailureArtifacts({
     error instanceof Error ? error.message : String(error),
   );
   const identity = `${player.id} (${player.profile}, ${player.persona})`;
-  const baseName = `h1-${player.id}-failure`;
+  const baseName = `${scenario.stage.toLowerCase()}-${player.id}-failure`;
   const attachSafely = async (
     name: string,
     action: () => Promise<void>,
@@ -562,7 +562,7 @@ async function attachFailureArtifacts({
   }
 
   const report = {
-    stage: 'H1',
+    stage: scenario.stage,
     seed: scenario.seed,
     scenario: `${scenario.playerCount} separate browser contexts`,
     player: {
@@ -588,7 +588,7 @@ async function attachFailureArtifacts({
   await attachSafely(`${baseName}-summary.md`, async () => {
     await testInfo.attach(`${baseName}-summary.md`, {
       body: [
-        '# Virtual-player H1 failure',
+        `# Virtual-player ${scenario.stage} failure`,
         '',
         `- Seed: ${scenario.seed}`,
         `- Scenario: ${scenario.playerCount} separate browser contexts`,
@@ -605,12 +605,24 @@ async function attachFailureArtifacts({
   return { phase, errorMessage };
 }
 
-test('six virtual players complete a real game across desktop and phone contexts @virtual-player-h1', async ({
+test('virtual players complete a real game across desktop and phone contexts @virtual-player-h1 @virtual-player-h2', async ({
   browser,
 }, testInfo) => {
   test.setTimeout(540_000);
   const seed = process.env.VIRTUAL_PLAYER_SEED ?? 'h1-seed-6001';
-  const scenario = buildVirtualPlayerScenario(seed, 6);
+  const stageSetting = process.env.VIRTUAL_PLAYER_STAGE;
+  if (
+    stageSetting !== undefined &&
+    stageSetting !== 'H1' &&
+    stageSetting !== 'H2'
+  )
+    throw new Error(`Unsupported virtual-player stage: ${stageSetting}`);
+  const stage = stageSetting === 'H2' ? 'H2' : 'H1';
+  const playerCount =
+    process.env.VIRTUAL_PLAYER_COUNT === undefined
+      ? 6
+      : Number(process.env.VIRTUAL_PLAYER_COUNT);
+  const scenario = buildVirtualPlayerScenario(seed, playerCount, stage);
   const contexts: BrowserContext[] = [];
   const pages: Page[] = [];
   const phaseTrail: string[] = [];
@@ -1065,7 +1077,7 @@ test('six virtual players complete a real game across desktop and phone contexts
           },
         );
       } else if (phase === 'MISSION') {
-        // H1 checks the end-to-end phase watchdog. Mission behaviour is exercised
+        // The full-game replay checks the end-to-end phase watchdog. Mission behaviour is exercised
         // separately in H3, so use the coordinator's explicit "move anyway" flow.
         await advanceAsOrganiser(
           coordinatorScreen,
@@ -1080,7 +1092,9 @@ test('six virtual players complete a real game across desktop and phone contexts
           true,
         );
       } else {
-        throw new Error(`H1 encountered unsupported phase ${phase}.`);
+        throw new Error(
+          `${scenario.stage} encountered unsupported phase ${phase}.`,
+        );
       }
     }
 
@@ -1103,7 +1117,7 @@ test('six virtual players complete a real game across desktop and phone contexts
     }
 
     const report = {
-      stage: 'H1',
+      stage: scenario.stage,
       seed: scenario.seed,
       playerCount: scenario.playerCount,
       players: scenario.players.map(
@@ -1116,16 +1130,17 @@ test('six virtual players complete a real game across desktop and phone contexts
       ),
       phases: phaseTrail,
       terminalPhase: 'FINISHED',
-      result: 'public result visible on all six player screens',
+      result: `public result visible on all ${scenario.playerCount} player screens`,
       replayCommand: scenario.replayCommand,
     };
-    await testInfo.attach('virtual-player-h1.json', {
+    const stageName = scenario.stage.toLowerCase();
+    await testInfo.attach(`virtual-player-${stageName}.json`, {
       body: JSON.stringify(report, null, 2),
       contentType: 'application/json',
     });
-    await testInfo.attach('virtual-player-h1-summary.md', {
+    await testInfo.attach(`virtual-player-${stageName}-summary.md`, {
       body: [
-        '# Virtual-player H1',
+        `# Virtual-player ${scenario.stage}`,
         '',
         `- Seed: ${scenario.seed}`,
         `- Players: ${scenario.playerCount} (desktop and Pixel phone profiles, separate browser contexts)`,
@@ -1144,7 +1159,7 @@ test('six virtual players complete a real game across desktop and phone contexts
     if (!page) {
       redactCaughtError(error);
       throw new Error(
-        `H1 failure for seed ${scenario.seed}; player ${player.id} (${player.profile}, ${player.persona}); replay: ${scenario.replayCommand}`,
+        `${scenario.stage} failure for seed ${scenario.seed}; player ${player.id} (${player.profile}, ${player.persona}); replay: ${scenario.replayCommand}`,
         { cause: error },
       );
     }
@@ -1170,16 +1185,19 @@ test('six virtual players complete a real game across desktop and phone contexts
     if (video) {
       try {
         const videoPath = testInfo.outputPath(
-          `h1-${player.id}-failure-video.webm`,
+          `${scenario.stage.toLowerCase()}-${player.id}-failure-video.webm`,
         );
         await video.saveAs(videoPath);
-        await testInfo.attach(`h1-${player.id}-failure-video.webm`, {
-          path: videoPath,
-          contentType: 'video/webm',
-        });
+        await testInfo.attach(
+          `${scenario.stage.toLowerCase()}-${player.id}-failure-video.webm`,
+          {
+            path: videoPath,
+            contentType: 'video/webm',
+          },
+        );
       } catch (captureError) {
         await testInfo
-          .attach('h1-failure-video-capture.txt', {
+          .attach(`${scenario.stage.toLowerCase()}-failure-video-capture.txt`, {
             body: scrubDiagnosticText(
               captureError instanceof Error
                 ? captureError.message
@@ -1193,7 +1211,7 @@ test('six virtual players complete a real game across desktop and phone contexts
     redactCaughtError(error);
     throw new Error(
       [
-        `H1 failure for seed ${scenario.seed}`,
+        `${scenario.stage} failure for seed ${scenario.seed}`,
         `Scenario: ${scenario.playerCount} separate browser contexts`,
         `Player: ${player.id} (${player.profile}, ${player.persona})`,
         `Phase: ${captured.phase ?? 'not available'}`,

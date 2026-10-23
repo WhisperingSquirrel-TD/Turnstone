@@ -111,7 +111,17 @@ describe('virtual-player harness helpers', () => {
       expect.arrayContaining(['desktop', 'pixel']),
     );
     expect(scenario.replayCommand).toBe(
-      'VIRTUAL_PLAYER_SEED=h1-seed-6001 REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h1 --timeout=540000',
+      'VIRTUAL_PLAYER_COUNT=6 VIRTUAL_PLAYER_SEED=h1-seed-6001 VIRTUAL_PLAYER_STAGE=H1 REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h1 --timeout=540000',
+    );
+  });
+
+  it('builds a replayable 12-player H2 scenario and command', () => {
+    const scenario = buildVirtualPlayerScenario('h2-seed-1201', 12, 'H2');
+
+    expect(scenario.playerCount).toBe(12);
+    expect(scenario.players).toHaveLength(12);
+    expect(scenario.replayCommand).toBe(
+      'VIRTUAL_PLAYER_COUNT=12 VIRTUAL_PLAYER_SEED=h2-seed-1201 VIRTUAL_PLAYER_STAGE=H2 REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h2 --timeout=540000',
     );
   });
 

@@ -1,18 +1,14 @@
 # Status for reviewer
 
-**Verify #240 (`8a3ba71`) failed only in `rehearsal-live` (run 39971112072); every other job passed. Latest green: #238 (`a41dfb1`).**
+**Latest green: Verify #241 (`b19f032`, run 39973695840); all jobs passed.**
 
-**Queue correction:** resilience set 2 landed in `a41dfb1` and passed #238; it is complete, not queued.
+**Q9 follow-up:** #240 failed only because two harness pacing gaps measured 2,099 ms against the 2,100 ms minimum; #241 passed after adding 100 ms of scheduling headroom. No 429 occurred in the final rehearsal, and no rate limit or assertion changed.
 
-**Evidence:** the rehearsal’s single `RevealVote` returned 429 at the approved 30/minute per-seat aggregate cap, with no app retry. No limits changed. New real-server tests pass: a single playing seat sent 40 reveals plus five other command types in a 40-seat game, and 15 plus five in a 15-seat game, with no 429; calls completed within the specified windows.
+**Evidence:** 133 server tests passed; line coverage is 86.01% against the unchanged 85% gate. The 40-seat and 15-seat same-seat command-burst tests passed without 429s. Pixel and desktop Chromium full rehearsals passed with real nightfall and dawn clips (browser emulation, not physical phones).
 
-**Local checks:** 133 server tests passed; line coverage is 86.01% against the unchanged 85% gate. Test typecheck, ESLint and formatting pass. Pixel and desktop Chromium full rehearsals passed with the real nightfall and dawn clips. These are browser emulations, not physical-phone tests.
+**H2 replay:** the initial documented selector found no tests. The test-only 12-player H2 selector now runs; its unit/pipeline checks pass (29 tests), but the real replay failed in SHADOW for virtual-seat-11 when the “Shield your screen” dialog stayed visible for 20 seconds. Vite logged a WebSocket `ECONNRESET` nearby; cause is not established. No product fix or assertion change has been made.
 
-**Finding:** no 429 occurred; the rehearsal pacing assertion caught two 2,099 ms gaps against its 2,100 ms minimum. The route now waits an additional 100 ms buffer; the assertion and all rate limits remain unchanged.
-
-**Local recheck:** after the buffer change, Pixel and desktop Chromium full rehearsals passed with nightfall and dawn real clips.
-
-**Next:** push the pacing correction only after confirming no Verify is active. After a green Verify, H2 (`h2-seed-1201`) is the only queued item.
+**Next:** waiting for approval to investigate the H2 SHADOW failure. The test-harness change and generated failure artifacts remain local and unpushed.
 
 **Push isolation:** current work is based on `origin/main` at `6346c90`; the separate local backup containing attached content and generated Playwright artifacts will not be pushed.
 
@@ -290,7 +286,7 @@ finished. Record the actual run number and next item after each push.
 
 **H2 concurrency fix, 22 October:** Included in green Verify #219 (`978e82b`). Retry only optimistic-version conflicts for votes, night choices and private acknowledgements, with a finite 40-attempt bound; re-evaluate validation against the fresh state on every attempt. Three focused regression tests, scoped ESLint and formatting passed; test typecheck also passed. No thresholds, workflow files or server phase minimums changed.
 
-**H2 full replay remains OPEN (owner-approved partial delivery).** Seed `h2-seed-1201`, 12 players, Pixel run fails waiting for SHADOW advancement. At the stuck player's capture, SubmitShadowChoice returned 200 and private-view confirmed one recorded pick; server and DOM both reported version 113, SHADOW round 1, 11/11 completed. Screen retained the selected name and Review this choice. Private-view refreshes included 409s; the player's command responses were successful. The organiser's advance outcome is not established by that player's trace, so neither a display fault nor a wait-only fault is proved. No speculative product fix or relaxed assertion is included. H2 remains open; resilience set 2 has since landed and passed Verify #238, but does not alter its replay assertion or fix the unresolved wait. Replay: `VIRTUAL_PLAYER_SEED=h2-seed-1201 VIRTUAL_PLAYER_COUNT=12 REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h2 --timeout=540000`. Next: finish the current Q9 rehearsal verification, then H2.
+**H2 full replay remains OPEN.** The actual 12-context run reached SHADOW, then timed out in `approvePrivacy` for virtual-seat-11: the “Shield your screen” dialog remained visible after 20 seconds. Vite logged `ECONNRESET` near the failure, so the cause is not yet attributed to product or harness. Playwright saved the failing player’s screenshot, trace and video under ignored `generated-artifacts/playwright-rehearsal`; none are committed. No assertion was weakened and no product fix was attempted. Replay: `VIRTUAL_PLAYER_COUNT=12 VIRTUAL_PLAYER_SEED=h2-seed-1201 VIRTUAL_PLAYER_STAGE=H2 REHEARSAL_PROFILE=Pixel bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h2 --timeout=540000`.
 
 **Phase clips, batch 1:** Added owner-supplied nightfall and dawn MP4/WebM videos and posters. Asset presence and 450 KB per-format bundle checks pass; the static-public build test confirms clips are excluded. No phase timing or game behavior changed in this batch. Verify #219 is green.
 

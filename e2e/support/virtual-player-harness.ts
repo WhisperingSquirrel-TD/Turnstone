@@ -2,6 +2,7 @@ import type { Page, TestInfo } from '@playwright/test';
 
 export type VirtualPlayerProfile = 'desktop' | 'pixel';
 export type VirtualPlayerPersona = 'diligent';
+export type VirtualPlayerStage = 'H1' | 'H2';
 
 export interface VirtualPlayer {
   id: string;
@@ -14,6 +15,7 @@ export interface VirtualPlayer {
 export interface VirtualPlayerScenario {
   seed: string;
   playerCount: number;
+  stage: VirtualPlayerStage;
   players: VirtualPlayer[];
   replayCommand: string;
 }
@@ -75,11 +77,14 @@ export function createSeededRandom(seed: string | number): () => number {
 export function buildVirtualPlayerScenario(
   seed: string | number,
   playerCount: number,
+  stage: VirtualPlayerStage = 'H1',
 ): VirtualPlayerScenario {
   if (!Number.isInteger(playerCount))
     throw new Error('Virtual player count must be a whole number.');
   if (playerCount < 5 || playerCount > 40)
     throw new Error('Virtual player count must be between 5 and 40.');
+  if (stage === 'H2' && playerCount !== 12)
+    throw new Error('H2 virtual-player replay requires exactly 12 players.');
 
   const normalizedSeed = String(seed);
   if (!/^[A-Za-z0-9_-]+$/.test(normalizedSeed))
@@ -107,8 +112,9 @@ export function buildVirtualPlayerScenario(
   return {
     seed: normalizedSeed,
     playerCount,
+    stage,
     players,
-    replayCommand: `VIRTUAL_PLAYER_SEED=${normalizedSeed} REHEARSAL_PROFILE=${rehearsalProfile} bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-h1 --timeout=540000`,
+    replayCommand: `VIRTUAL_PLAYER_COUNT=${playerCount} VIRTUAL_PLAYER_SEED=${normalizedSeed} VIRTUAL_PLAYER_STAGE=${stage} REHEARSAL_PROFILE=${rehearsalProfile} bash scripts/browser-runtime.sh pnpm exec playwright test --config=playwright.rehearsal.config.ts --grep @virtual-player-${stage.toLowerCase()} --timeout=540000`,
   };
 }
 

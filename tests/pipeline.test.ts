@@ -392,7 +392,7 @@ describe('owner-approved delivery policy', () => {
     expect(output).not.toContain('rehearsal-live.spec.ts');
   });
 
-  it('runs virtual-player H1 only with the real-server rehearsal config', () => {
+  it('runs virtual-player H1 and H2 only with the real-server rehearsal config', () => {
     const env: Record<string, string | undefined> = {
       ...process.env,
       CI: 'true',
@@ -420,7 +420,7 @@ describe('owner-approved delivery policy', () => {
     expect(standard.status).toBe(1);
     expect(standardOutput).toContain('No tests found.');
     expect(standardOutput).not.toContain(
-      'six virtual players complete a real game',
+      'virtual players complete a real game',
     );
 
     const rehearsal = spawnSync(
@@ -439,9 +439,9 @@ describe('owner-approved delivery policy', () => {
 
     expect(rehearsal.error).toBeUndefined();
     expect(rehearsal.status).toBe(0);
-    expect(rehearsalOutput).toContain(
-      'six virtual players complete a real game',
-    );
+    expect(rehearsalOutput).toContain('virtual players complete a real game');
+    expect(rehearsalOutput).toContain('@virtual-player-h1');
+    expect(rehearsalOutput).toContain('@virtual-player-h2');
   });
 
   it('uses Node 24-compatible pinned artifact actions in CI', () => {
