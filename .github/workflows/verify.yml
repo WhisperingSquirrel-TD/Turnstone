@@ -284,7 +284,15 @@ jobs:
           echo "PIN_PEPPER=$pin_pepper" >> "$GITHUB_ENV"
       - run: pnpm run db:migrate:dev
       - name: Run full real-server Pixel rehearsal
-        run: pnpm exec playwright test --config=playwright.rehearsal.config.ts
+        run: pnpm exec playwright test --config=playwright.rehearsal.config.ts --trace retain-on-failure
+      - name: Upload rehearsal diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-rehearsal-${{ github.run_id }}-${{ github.run_attempt }}
+          path: generated-artifacts/playwright-rehearsal
+          if-no-files-found: warn
+          retention-days: 3
 
   lighthouse:
     runs-on: ubuntu-24.04
