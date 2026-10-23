@@ -58,6 +58,10 @@ Evidence: `tests/production-client.test.ts`, `tests/client-build.test.ts` and `e
 
 Release only an exact green-Verify commit; see [RELEASES.md](RELEASES.md). No deployment has been performed.
 
+## Verify Playwright browser runner
+
+The `browsers`, `rehearsal-live` and `lighthouse` jobs use Microsoft's official `mcr.microsoft.com/playwright:v1.64.0-noble` image, matching the `@playwright/test` version in `pnpm-lock.yaml`. The amd64 image digest resolved on 23 October 2026 is `sha256:bc72a8df40831ded821e3cbc79c318c21b44d6e51dff9fd89ace7a8249c5b462`; jobs pass `--ipc=host`. The image provides the pinned Playwright browser binaries and operating-system libraries, so these jobs no longer run browser caching or `playwright install --with-deps`/apt-get. The rehearsal job reaches its PostgreSQL service by the service hostname `postgres`. Node dependency installation, test commands, secrets handling, job time limits and required checks remain in place. `tests/pipeline.test.ts` guards the image version and setup contract.
+
 ## Owner approval checklist — present before any launch action
 
 ### Phase A: static coming-soon deployment

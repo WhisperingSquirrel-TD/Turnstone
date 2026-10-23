@@ -302,9 +302,6 @@ describe('owner-approved delivery policy', () => {
     expect(workflow).toContain('profile: iPhone');
     expect(workflow).toContain('profile: iPad');
     expect(workflow).toContain(
-      'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9',
-    );
-    expect(workflow).toContain(
       'pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413',
     );
     expect(workflow).not.toContain('f40ffcd9367d9f12939873eb1018b921a783ffaa');
@@ -315,6 +312,32 @@ describe('owner-approved delivery policy', () => {
     const promotion = readFileSync('.github/workflows/promote.yml', 'utf8');
     expect(promotion).toContain("vars.TURNSTONE_PROMOTION_ENABLED == 'true'");
     expect(promotion).toContain('ubuntu-24.04');
+  });
+
+  it('uses the lockfile-matched official Playwright container for browser jobs', () => {
+    const workflow = readFileSync('.github/workflows/verify.yml', 'utf8');
+    const lockfile = readFileSync('pnpm-lock.yaml', 'utf8');
+    const version = lockfile.match(
+      /^\s{2}'@playwright\/test@(\d+\.\d+\.\d+)':/m,
+    )?.[1];
+    expect(version).toBeDefined();
+
+    for (const name of ['browsers', 'rehearsal-live', 'lighthouse']) {
+      const job =
+        workflow
+          .split(`\n  ${name}:\n`)[1]
+          ?.split(/\n\s{2}[a-z][a-z0-9-]*:\n/)[0] ?? '';
+      expect(job).not.toBe('');
+      expect(job).toMatch(
+        new RegExp(
+          `^\\s+image:\\s+mcr\\.microsoft\\.com/playwright:v${version}-noble@sha256:[a-f0-9]{64}$`,
+          'm',
+        ),
+      );
+      expect(job).toMatch(/^\s+options:\s*--ipc=host\s*$/m);
+      expect(job).not.toMatch(/playwright\s+install\s+--with-deps/);
+      expect(job).not.toContain('actions/cache@');
+    }
   });
 
   it('runs the real-server rehearsal separately from the mock-API browser matrix', () => {

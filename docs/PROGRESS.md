@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Verify #231 CANCELLED on `64a56a4`; latest green remains #228.** H1 cause confirmed: harness missed an automatic SHADOW round change; harness-only fix passes all four real-server Pixel tests locally. CI rehearsal job was cancelled during Chromium dependency installation after that step consumed the 10-minute job budget; it never started the rehearsal tests. All other test jobs passed; desktop Chromium was likewise cancelled during dependency setup. This is not green. Fresh Verify required before resilience set 2 or H2.
+**Workflow update applied through the GitHub Contents API as `874f3f3e4a74e37fe86732593eb94ce711ba8265` (HTTP 200). Supporting test, script and documentation changes are being pushed separately; Verify result pending.**
 
 ### Verify #230 H1 step-identity correction
 

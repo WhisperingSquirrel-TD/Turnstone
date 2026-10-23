@@ -1438,3 +1438,17 @@ wording or timing by role.
 **Choice:** Use Oathstone throughout product copy, code identifiers, storage and cookie names, metadata, tests, documentation and asset paths. Keep the tagline “A game of traitors and faithful.”, second line “Everyone plays. Even the host.” and byline “A Stackstone game.” The canonical hostname is `oathstone.stackstoneconsulting.co.uk`, and the company-site redirect path is `/oathstone`. Do not change the currently used app icon or create new artwork; the owner will approve a new emblem and logo set.
 
 **Exclusions and owner actions:** Keep the GitHub repository URL `https://github.com/WhisperingSquirrel-TD/Turnstone`. Leave `TURNSTONE_GITHUB_TOKEN` in Replit Secrets until the owner creates `OATHSTONE_GITHUB_TOKEN` with the matching private value and updates its consumer; never send or display the value. Leave `TURNSTONE_PROMOTION_ENABLED` in GitHub Actions until the owner creates `OATHSTONE_PROMOTION_ENABLED` with the matching value and authorizes updating the workflow. Keep historical verification entries and past release records unchanged. Preserve the originals of the 12 tracked attachment files with former-name text, but remove those 12 files from Git tracking; leave all other attachments and the new untracked screenshots alone.
+
+## D93 — Use a pinned Playwright container in Verify
+
+**Context:** Verify #231 and #232 were cancelled at the 10-minute job limit while `playwright install --with-deps` repeatedly installed operating-system packages. The browser binaries were cached, but apt setup still ran on every browser, rehearsal and Lighthouse job.
+
+**Choice:** Run those three jobs in Microsoft's official `mcr.microsoft.com/playwright:v1.64.0-noble` image, matching `@playwright/test` in `pnpm-lock.yaml`, pinned to amd64 digest `sha256:bc72a8df40831ded821e3cbc79c318c21b44d6e51dff9fd89ace7a8249c5b462`, with `--ipc=host`. Remove only their browser-cache and `playwright install --with-deps` steps. Use the `postgres` service hostname from the rehearsal job container. Keep all existing test commands, thresholds, job timeouts, action SHA pins and secret handling unchanged.
+
+**Consequence:** Browser jobs use the image's preinstalled matching browsers and system libraries instead of paying the repeated apt-install cost. A pipeline regression test checks the image version against the lockfile, digest pin, IPC option and absence of per-job browser install/cache steps.
+
+## D94 — Use the correct GitHub route for workflow changes
+
+**Choice:** Normal code pushes use the Replit Git source-control layer. Changes under `.github/workflows` use the GitHub REST Contents API with the owner-authorised `TURNSTONE_GITHUB_TOKEN` from D40, guarded by the current file SHA; do not use the Replit Git layer for workflow files. Never print or persist the secret value. If the API rejects the change, stop and have the owner apply the reviewed workflow diff in GitHub's web editor.
+
+**Evidence:** The workflow update returned HTTP 200 and commit `874f3f3e4a74e37fe86732593eb94ce711ba8265`. The GitHub source-control layer had rewritten a direct `github.com` push to its internal mirror and rejected the workflow update for lacking `workflow` scope.
