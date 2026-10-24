@@ -57,12 +57,14 @@ test('Join keeps its primary action clear of a focused mobile keyboard viewport'
   const primary = page.getByTestId('entry-primary-dock-button');
   await expect(primary).toBeVisible();
   const bounds = await primary.boundingBox();
-  expect(bounds?.height).toBeGreaterThanOrEqual(44);
+  expect(bounds?.height).toBeGreaterThanOrEqual(56);
   expect(bounds).not.toBeNull();
   expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(360);
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
     ),
   ).toBe(true);
   await expect(page.getByText('Live', { exact: true })).toBeVisible();

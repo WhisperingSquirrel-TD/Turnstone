@@ -24,3 +24,4 @@
 - [Scenario runtime profiling](scenario-runtime-profiling.md) — use matched CPU-limited profiles to distinguish scheduling overhead from repeated projection work; CI remains the runtime authority.
 - [Playwright pool lifetime](playwright-pool-lifetime.md) — shared database teardown belongs to the worker, not individual spec files.
 - [Harness step identity](harness-step-identity.md) — night rounds and slots can advance without changing the phase name.
+- [Rehearsal overlay test order](rehearsal-overlay-test-order.md) — dismiss privacy and guide overlays before testing shared help; scope duplicate disclosure labels.

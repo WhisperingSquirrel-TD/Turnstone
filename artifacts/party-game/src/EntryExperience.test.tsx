@@ -5,6 +5,10 @@ import { EntryExperience, type EntryExperienceInputs } from './EntryExperience';
 import { en } from './locale/en-GB';
 
 const shellCSS = readFileSync(new URL('./index.css', import.meta.url), 'utf8');
+const entryCSS = readFileSync(
+  new URL('./EntryExperience.css', import.meta.url),
+  'utf8',
+);
 
 const inputs: EntryExperienceInputs = {
   joinCodeEntry: '',
@@ -105,11 +109,12 @@ describe('Stage 2A entry screens', () => {
 
   it('uses the selected public day or night theme on entry screens', () => {
     expect(renderEntry('join-code')).toContain('data-game-theme="day"');
-    expect(renderEntry('lobby', 'night')).toContain(
-      'data-game-theme="night"',
-    );
+    expect(renderEntry('lobby', 'night')).toContain('data-game-theme="night"');
     expect(shellCSS).toMatch(
       /\.entry-experience \.entry-heading\s*\{[^}]*font-size:\s*30px/s,
+    );
+    expect(entryCSS).toMatch(
+      /\.coordinator-console\[data-phase='LOBBY'\]\s+h2\s*\{[^}]*font-size:\s*22px/s,
     );
   });
 });

@@ -1,6 +1,8 @@
 # Status for reviewer
 
-**Current status: Verify #256 on `c20820c` completed green; every job passed, including rehearsal-live, Pixel Chromium, iPhone/iPad WebKit, Lighthouse, scenarios, unit, audit and required-checks. This test-only Stage 1 correction is verified; stop for the next owner brief.**
+**Current status: Round 7 Stage 2A (Join, Lobby and Seal) is locally verified on top of Stage 1 main `0fbb6b4` / Verify #257 green. Local commit `9646654` and the remaining Stage 2A changes are not pushed; no Stage 2A Verify run exists yet.**
+
+The shared shell, combined short-code/name Join screen, organiser Lobby roster ordering, and sealed Deal presentation are tested. Local checks pass: 694 unit tests; typecheck and test-typecheck; lint; formatting; production build; 30 Join/CSRF/duplicate-name browser checks on Pixel and iPhone; Join/Lobby screenshot and geometry matrix plus Seal geometry/screenshot test. The focused 320×360 keyboard test confirms the Join dock button is at least 56px on Pixel and iPhone. The first post-fix full Pixel real-server run was 3/4: the disconnected-player journey failed before the lobby after `GET /api/csrf 200` and `POST /api/games 201` (no body, role or choice logged). That test passed alone in 1.7 minutes, and the subsequent full run passed 4/4 in 5.0 minutes; no test or product behavior was changed to work around the non-reproducible failure. The 30 regenerated day/night screenshots cover Join, Lobby and sealed Deal at 320, 375, 390, 430 and 1280 px in `docs/screens/round-7-stage-2a/`.
 
 **Round 7 Stage 1 Verify #249–#252:** #251 exposed the mobile dock moving with page scroll because an animated `.enter` ancestor transformed its fixed-position containing block. The fix is on `main` at `9646ab5`; the Pixel 320/375/390/430 layout matrix and away/resume choice checks passed locally, and the dock-covering failure did not recur in #252. Local iPhone WebKit cannot launch because this workspace lacks its system browser dependencies; GitHub WebKit remains authoritative.
 
@@ -28,7 +30,7 @@
 
 **Round 6 Notes:** the draft now clears when the player presses Done. A new browser regression proved it stayed in the textarea after closing and reopening before the fix; the fixed flow passed on all four browser profiles, including in Verify #245. It also checks the released text is absent from the DOM, local/session storage and browser console. Temporary privacy covers still allow a player to return to the open Notes screen.
 
-**Next:** Stage 1 is green on GitHub. Stop here; wait for the owner’s separate Stage 2 brief before per-screen redesign.
+**Next:** Complete Stage 2A, confirm its GitHub Verify result is fully green, then stop for the owner’s next screen batch.
 
 **Push isolation:** `99da77a` is on `main`; the push contained progress documentation, virtual-player harness/tests and the pipeline regression test. Attached content and generated Playwright artifacts were excluded.
 

@@ -133,9 +133,7 @@ describe('shared game chrome', () => {
 
   it("keeps the screen-lock notice inside the collapsed What's this disclosure", () => {
     const html = renderToStaticMarkup(
-      <GameHelpDisclosure
-        screenLockNotice="Your screen may lock during play. Tap it to keep the game visible."
-      >
+      <GameHelpDisclosure screenLockNotice="Your screen may lock during play. Tap it to keep the game visible.">
         <p>Phase guidance.</p>
       </GameHelpDisclosure>,
     );

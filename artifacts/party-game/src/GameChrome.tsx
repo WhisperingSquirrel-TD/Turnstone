@@ -73,7 +73,10 @@ export function GameHelpDisclosure({
   screenLockNotice?: string;
 }) {
   return (
-    <details className="game-help-disclosure" data-testid="game-help-disclosure">
+    <details
+      className="game-help-disclosure"
+      data-testid="game-help-disclosure"
+    >
       <summary>What&apos;s this?</summary>
       <div className="game-help-disclosure__content">
         {children}

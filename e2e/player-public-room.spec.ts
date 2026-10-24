@@ -251,9 +251,10 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
   await page.route(`**/api/games/${gameId}/view`, (route) =>
     route.fulfill({ json: envelope() }),
   );
-  await page.route(`**/api/games/${gameId}/commands`, (route) =>
-    route.fulfill({ json: envelope() }),
-  );
+  await page.route(`**/api/games/${gameId}/commands`, async (route) => {
+    view = { ...view, version: view.version + 1 };
+    await route.fulfill({ json: envelope() });
+  });
   await page.route(`**/api/games/${gameId}/join-requests`, (route) =>
     route.fulfill({ json: { requests: [] } }),
   );
@@ -309,17 +310,23 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
         page.getByRole('navigation', { name: 'Game navigation' }),
       ).toBeVisible();
       await expect(page.getByTestId('game-status-phase')).toContainText(
-        view.phase === 'SHADOW' ? 'Night' : 'Day',
+        view.phase === 'LOBBY'
+          ? 'Lobby'
+          : view.phase === 'SHADOW'
+            ? 'Night'
+            : 'Day',
       );
       await page.evaluate(() => document.fonts.ready);
       const privacyShield = page.getByRole('dialog', {
         name: 'Shield your screen',
       });
       if (!label.startsWith('shield-') && (await privacyShield.isVisible())) {
-        await page.clock.fastForward(3_000);
-        await privacyShield
-          .getByRole('button', { name: 'I’m shielded' })
-          .click();
+        const acknowledge = privacyShield.getByRole('button', {
+          name: 'I’m shielded',
+        });
+        await page.clock.fastForward(6_000);
+        await expect(acknowledge).toHaveAttribute('aria-disabled', 'false');
+        await acknowledge.click();
         await expect(privacyShield).not.toBeVisible();
       }
       if (label === 'notes') {
@@ -3061,14 +3068,45 @@ test('held role text stays above the seal in compact phone viewports', async ({
   });
   await acknowledge.click();
 
-  for (const viewport of [
+  const roleViewports = [
     { width: 320, height: 568 },
     { width: 375, height: 667 },
     { width: 390, height: 844 },
     { width: 430, height: 932 },
-  ]) {
+  ];
+  if (process.env.R7_STAGE_2A_CAPTURE === '1')
+    roleViewports.push({ width: 1280, height: 900 });
+
+  for (const viewport of roleViewports) {
     await page.setViewportSize(viewport);
     const seal = page.getByTestId('button-hold-reveal');
+    const roleHeading = page.getByRole('heading', {
+      name: 'Your role',
+      exact: true,
+    });
+    await expect(roleHeading).toBeVisible();
+    const headingSize = await roleHeading.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).fontSize),
+    );
+    expect(headingSize).toBe(30);
+
+    if (process.env.R7_STAGE_2A_CAPTURE === '1') {
+      await mkdir('docs/screens/round-7-stage-2a', { recursive: true });
+      for (const theme of ['day', 'night'] as const) {
+        await page.locator('.game-shell').evaluate((element, value) => {
+          (element as HTMLElement).dataset.gameTheme = value;
+        }, theme);
+        await page.screenshot({
+          path: `docs/screens/round-7-stage-2a/seal-${theme}-${viewport.width}.jpg`,
+          type: 'jpeg',
+          quality: 88,
+        });
+      }
+      await page.locator('.game-shell').evaluate((element) => {
+        (element as HTMLElement).dataset.gameTheme = 'day';
+      });
+    }
+
     const sealBox = await seal.boundingBox();
     expect(
       sealBox,
@@ -3406,9 +3444,7 @@ test('organiser confirms before moving on when players are unfinished', async ({
   expect(commandExpectedVersion).toBe(13);
 });
 
-test('Round 7 Stage 2A Join, Lobby and sealed Deal screenshot gallery', async ({
-  page,
-}) => {
+test('Round 7 Stage 2A Join and Lobby screenshot gallery', async ({ page }) => {
   test.skip(
     process.env.R7_STAGE_2A_CAPTURE !== '1',
     'Screenshots are generated explicitly for the design review',
@@ -3419,8 +3455,23 @@ test('Round 7 Stage 2A Join, Lobby and sealed Deal screenshot gallery', async ({
   await page.clock.install();
 
   const gameId = 'r7-stage-2a-gallery';
-  let view = createPublicView(gameId);
-  let role: 'faithful' | 'traitor' = 'faithful';
+  const baseView = createPublicView(gameId);
+  const firstSeat = baseView.seats[0]!;
+  let view = {
+    ...baseView,
+    seats: Array.from({ length: 5 }, (_, index) => {
+      const existingSeat = baseView.seats[index];
+      if (existingSeat) return { ...existingSeat, status: 'alive' as const };
+      const number = index + 1;
+      return {
+        ...firstSeat,
+        id: `stage-2a-seat-${number}`,
+        name: `Player ${number}`,
+      };
+    }),
+    progress: { ...baseView.progress, total: 5 },
+    actionStatus: { ...baseView.actionStatus, total: 5, waiting: 5 },
+  };
   const envelope = () => ({
     serverNow: Date.now(),
     version: view.version,
@@ -3428,16 +3479,30 @@ test('Round 7 Stage 2A Join, Lobby and sealed Deal screenshot gallery', async ({
   });
 
   await page.route('**/api/csrf', (route) =>
-    route.fulfill({ json: { csrfToken: 'stage-2a-test-csrf' } }),
+    route.fulfill({
+      status: 200,
+      headers: {
+        'Set-Cookie':
+          'oathstone-csrf=stage-2a-test-csrf; Path=/; SameSite=Strict',
+      },
+      json: { csrfToken: 'stage-2a-test-csrf' },
+    }),
   );
   await page.route(`**/api/games/${gameId}/view`, (route) =>
     route.fulfill({ json: envelope() }),
   );
-  await page.route(`**/api/games/${gameId}/commands`, (route) =>
-    route.fulfill({ json: envelope() }),
-  );
+  await page.route(`**/api/games/${gameId}/commands`, async (route) => {
+    view = { ...view, version: view.version + 1 };
+    await route.fulfill({ status: 200, json: envelope() });
+  });
   await page.route(`**/api/games/${gameId}/join-requests`, (route) =>
     route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(`**/api/games/${gameId}/coordinator/delegates`, (route) =>
+    route.fulfill({ json: { limit: 0, seatIds: [] } }),
+  );
+  await page.route(`**/api/games/${gameId}/coordinator/presence`, (route) =>
+    route.fulfill({ json: { status: 'online' } }),
   );
   await page.route(`**/api/games/${gameId}/coordinator/view`, (route) =>
     route.fulfill({ json: envelope() }),
@@ -3450,29 +3515,6 @@ test('Round 7 Stage 2A Join, Lobby and sealed Deal screenshot gallery', async ({
       },
     }),
   );
-  await page.route(`**/api/games/${gameId}/private-view`, (route) =>
-    route.fulfill({
-      json: {
-        ...envelope(),
-        view: {
-          ...view,
-          private: {
-            role,
-            team: [],
-            options: view.seats
-              .filter((seat) => seat.status === 'alive')
-              .map(({ id, name }) => ({ id, name })),
-            choices: {},
-            choiceSlots: [],
-            chat: [],
-            task: null,
-            minimumDurationMs: 0,
-          },
-        },
-      },
-    }),
-  );
-
   const sizes = [
     { width: 320, height: 640 },
     { width: 375, height: 667 },
@@ -3520,22 +3562,43 @@ test('Round 7 Stage 2A Join, Lobby and sealed Deal screenshot gallery', async ({
       await page.goto(`/coordinate/${gameId}`);
       await expect(page.getByTestId('text-lobby-player-count')).toBeVisible();
       await expect(page.getByTestId('button-start-game')).toBeVisible();
-      await saveScreen('lobby', theme, size.width);
-    }
-  }
-
-  view = { ...view, phase: 'DEAL', cycle: 1 };
-  for (const size of sizes) {
-    for (const theme of themes) {
-      await page.setViewportSize(size);
-      await page.goto(`/game/${gameId}`);
-      const shield = page.getByRole('dialog', { name: 'Shield your screen' });
-      if (await shield.isVisible()) {
-        await page.clock.fastForward(3_000);
-        await page.getByRole('button', { name: 'I’m shielded' }).click();
+      await expect(page.getByTestId('coordinator-seats')).toBeVisible();
+      await expect(
+        page.locator('[data-testid^="coordinator-seat-row-"]'),
+      ).toHaveCount(5);
+      const pageWidth = await page.evaluate(() => ({
+        client: document.documentElement.clientWidth,
+        scroll: document.documentElement.scrollWidth,
+      }));
+      expect(pageWidth.scroll).toBeLessThanOrEqual(pageWidth.client);
+      const startBounds = await page
+        .getByTestId('button-start-game')
+        .boundingBox();
+      expect(startBounds?.height).toBeGreaterThanOrEqual(44);
+      for (const button of await page
+        .locator('[data-testid^="button-mark-departed-"]')
+        .all()) {
+        const bounds = await button.boundingBox();
+        expect(bounds?.height).toBeGreaterThanOrEqual(44);
+        expect(bounds?.width).toBeGreaterThanOrEqual(44);
       }
-      await expect(page.getByTestId('button-hold-reveal')).toBeVisible();
-      await saveScreen('seal', theme, size.width);
+      const lastSeat = page
+        .locator('[data-testid^="coordinator-seat-row-"]')
+        .last();
+      await lastSeat.evaluate((element) =>
+        element.scrollIntoView({ block: 'center', behavior: 'instant' }),
+      );
+      const lastSeatBounds = await lastSeat.boundingBox();
+      const dockBounds = await page
+        .getByTestId('entry-action-dock')
+        .boundingBox();
+      expect(lastSeatBounds).not.toBeNull();
+      expect(dockBounds).not.toBeNull();
+      expect(lastSeatBounds!.y + lastSeatBounds!.height).toBeLessThanOrEqual(
+        dockBounds!.y,
+      );
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await saveScreen('lobby', theme, size.width);
     }
   }
 });

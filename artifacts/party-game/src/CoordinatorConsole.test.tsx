@@ -60,6 +60,30 @@ describe('CoordinatorConsole', () => {
     expect(html).not.toContain('Traitor');
   });
 
+  it('puts the player list ahead of organiser details in the lobby', () => {
+    const html = renderToString(
+      <CoordinatorConsole
+        view={{ ...view, phase: 'LOBBY' }}
+        presenterPath="/tv/test"
+        onCreatePresenterPairing={async () => ({
+          code: 'A'.repeat(43),
+          expiresAt: 1_800_000_600_000,
+        })}
+        onCommand={async () => {}}
+        onLoadCoordinatorDelegates={onLoadCoordinatorDelegates}
+        onSaveCoordinatorDelegates={onSaveCoordinatorDelegates}
+        onHeartbeat={onHeartbeat}
+      />,
+    );
+    expect(html).toContain('data-phase="LOBBY"');
+    expect(html).toContain(
+      `id="coordinator-console-title">${en.entry.lobbyHeading}</h1>`,
+    );
+    expect(html.indexOf('data-testid="coordinator-seats"')).toBeLessThan(
+      html.indexOf('data-testid="coordinator-delegates"'),
+    );
+  });
+
   it('pairs the initial local time with its server-clock offset sample', () => {
     const localSample = view.serverNow - 500;
     const clock = vi

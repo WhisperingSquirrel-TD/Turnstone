@@ -293,15 +293,101 @@ export function CoordinatorConsole({
     }
   }
 
+  const seatManagement = (
+    <section
+      className="mt-7 grid gap-3"
+      aria-labelledby="coordinator-seats-heading"
+      data-testid="coordinator-seats"
+    >
+      <h2 id="coordinator-seats-heading" className="display text-2xl">
+        {view.phase === 'LOBBY' ? 'Players' : en.coordinator.manageSeats}
+      </h2>
+      <ul className="divide-y divide-stone">
+        {view.seats.map((seat) => (
+          <li
+            key={seat.id}
+            className="coordinator-seat-row flex min-h-14 items-center justify-between gap-3 py-2"
+            data-testid={`coordinator-seat-row-${seat.id}`}
+          >
+            <span>{seat.name}</span>
+            <span className="text-sm text-ash">
+              {en.coordinator.seatStatus(seat.status)}
+            </span>
+            {seat.status === 'alive' && (
+              <button
+                className="entry-secondary-action"
+                data-testid={`button-mark-departed-${seat.id}`}
+                type="button"
+                disabled={busy}
+                onClick={() => setDepartingSeatId(seat.id)}
+              >
+                {en.coordinator.markDeparted}
+              </button>
+            )}
+          </li>
+        ))}
+        {view.seats.length === 0 && (
+          <li className="py-3 text-sm text-ash">{en.coordinator.noSeats}</li>
+        )}
+      </ul>
+      {departingSeatId && (
+        <div
+          className="grid gap-3 border border-stone bg-hearth p-4"
+          role="alertdialog"
+          aria-labelledby="coordinator-departure-confirmation"
+        >
+          <p id="coordinator-departure-confirmation">
+            {en.coordinator.confirmDeparted(
+              view.seats.find((seat) => seat.id === departingSeatId)?.name ??
+                '',
+            )}
+          </p>
+          <div className="flex gap-3">
+            <button
+              className="entry-secondary-action"
+              type="button"
+              disabled={busy}
+              onClick={() => setDepartingSeatId(null)}
+            >
+              {en.coordinator.cancel}
+            </button>
+            <button
+              className="entry-primary-action"
+              data-testid="button-confirm-departed"
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                const confirmedSeatId = departingSeatId;
+                if (
+                  await run({
+                    type: 'MarkDeparted',
+                    seatId: confirmedSeatId,
+                  })
+                )
+                  setDepartingSeatId(null);
+              }}
+            >
+              {en.coordinator.markDeparted}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+
   return (
     <section
       className="entry-lobby enter coordinator-console"
       aria-labelledby="coordinator-console-title"
       data-testid="coordinator-console"
+      data-phase={view.phase}
     >
       <h1 className="entry-heading" id="coordinator-console-title">
-        {en.coordinator.heading}
+        {view.phase === 'LOBBY'
+          ? en.entry.lobbyHeading
+          : en.coordinator.heading}
       </h1>
+      {view.phase === 'LOBBY' && seatManagement}
       <section
         className="mt-6 grid gap-3 border-b border-stone pb-6"
         aria-labelledby="coordinator-delegates-heading"
@@ -401,84 +487,7 @@ export function CoordinatorConsole({
         busy={busy}
         onCommand={run}
       />
-      <section
-        className="mt-7 grid gap-3"
-        aria-labelledby="coordinator-seats-heading"
-        data-testid="coordinator-seats"
-      >
-        <h2 id="coordinator-seats-heading" className="display text-2xl">
-          {en.coordinator.manageSeats}
-        </h2>
-        <ul className="divide-y divide-stone">
-          {view.seats.map((seat) => (
-            <li
-              key={seat.id}
-              className="flex min-h-14 items-center justify-between gap-3 py-2"
-            >
-              <span>{seat.name}</span>
-              <span className="text-sm text-ash">
-                {en.coordinator.seatStatus(seat.status)}
-              </span>
-              {seat.status === 'alive' && (
-                <button
-                  className="entry-secondary-action"
-                  data-testid={`button-mark-departed-${seat.id}`}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setDepartingSeatId(seat.id)}
-                >
-                  {en.coordinator.markDeparted}
-                </button>
-              )}
-            </li>
-          ))}
-          {view.seats.length === 0 && (
-            <li className="py-3 text-sm text-ash">{en.coordinator.noSeats}</li>
-          )}
-        </ul>
-        {departingSeatId && (
-          <div
-            className="grid gap-3 border border-stone bg-hearth p-4"
-            role="alertdialog"
-            aria-labelledby="coordinator-departure-confirmation"
-          >
-            <p id="coordinator-departure-confirmation">
-              {en.coordinator.confirmDeparted(
-                view.seats.find((seat) => seat.id === departingSeatId)?.name ??
-                  '',
-              )}
-            </p>
-            <div className="flex gap-3">
-              <button
-                className="entry-secondary-action"
-                type="button"
-                disabled={busy}
-                onClick={() => setDepartingSeatId(null)}
-              >
-                {en.coordinator.cancel}
-              </button>
-              <button
-                className="entry-primary-action"
-                data-testid="button-confirm-departed"
-                type="button"
-                disabled={busy}
-                onClick={async () => {
-                  const confirmedSeatId = departingSeatId;
-                  if (
-                    await run({
-                      type: 'MarkDeparted',
-                      seatId: confirmedSeatId,
-                    })
-                  )
-                    setDepartingSeatId(null);
-                }}
-              >
-                {en.coordinator.markDeparted}
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
+      {view.phase !== 'LOBBY' && seatManagement}
       <section
         className="mt-7"
         aria-labelledby="coordinator-public-log-heading"

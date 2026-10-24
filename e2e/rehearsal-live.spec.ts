@@ -1389,14 +1389,6 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         await expect(gameHelpDisclosure).toBeVisible();
         await expect(gameHelpDisclosure).not.toHaveAttribute('open', '');
         await expect(wakeLockNotice).toHaveCount(1);
-        if (step === 0) {
-          const summary = gameHelpDisclosure.locator('summary');
-          await summary.click();
-          await expect(wakeLockNotice).toHaveText(wakeLockNoticeText);
-          await expect(wakeLockNotice).toBeVisible();
-          await summary.click();
-          await expect(gameHelpDisclosure).not.toHaveAttribute('open', '');
-        }
       }
       await expect(page.locator('.game-shell')).toHaveAttribute(
         'data-game-theme',
@@ -1479,7 +1471,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         if (phase === 'DEBATE') {
           const details = page
             .locator('details')
-            .filter({ hasText: "What's this?" });
+            .filter({ hasText: 'Everyone talks it over.' });
           await details.locator('summary').click();
           await expect(details.locator('p')).toHaveText(
             'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
@@ -1846,6 +1838,15 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       if (phase === 'DEAL') {
         await handleShield(page, activeGameId);
         playerRole = await revealDealRole(page);
+        if (step === 0) {
+          await expect(page.getByTestId('rehearsal-explainer')).toHaveCount(0);
+          const summary = gameHelpDisclosure.locator('summary');
+          await summary.click();
+          await expect(wakeLockNotice).toHaveText(wakeLockNoticeText);
+          await expect(wakeLockNotice).toBeVisible();
+          await summary.click();
+          await expect(gameHelpDisclosure).not.toHaveAttribute('open', '');
+        }
       } else if (['SHADOW', 'FINAL_VOTE'].includes(phase)) {
         if (seatStatus === 'alive') {
           if (

@@ -80,6 +80,20 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
       pages.push(page);
     }
     const organiser = pages[0]!;
+    const createFlowStatuses: string[] = [];
+    organiser.on('response', (response) => {
+      const path = new URL(response.url()).pathname;
+      if (!path.startsWith('/api/')) return;
+      const safePath = path
+        .replace(/\/api\/games\/[^/]+(?=\/|$)/g, '/api/games/:gameId')
+        .replace(
+          /\/api\/join-requests\/[^/]+(?=\/|$)/g,
+          '/api/join-requests/:requestId',
+        );
+      createFlowStatuses.push(
+        `${response.request().method()} ${safePath} ${response.status()}`,
+      );
+    });
     await organiser.goto('/');
     await organiser
       .getByRole('link', { name: 'Start a new game', exact: true })
@@ -124,7 +138,10 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
     expect(gameId).toBeTruthy();
     expect(creation.view.id).toBe(gameId);
     const lobbyCode = organiser.getByTestId('text-lobby-code');
-    await expect(lobbyCode).toBeVisible({ timeout: 30_000 });
+    await expect(
+      lobbyCode,
+      `create-flow HTTP statuses: ${createFlowStatuses.join(' | ')}`,
+    ).toBeVisible({ timeout: 30_000 });
     await expect(lobbyCode).toHaveText(/^[A-Z0-9]{6}$/, {
       timeout: 30_000,
     });

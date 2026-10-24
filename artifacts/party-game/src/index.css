@@ -444,7 +444,7 @@ h2,
   background: var(--hearth);
 }
 
-.entry-action-dock > button {
+.entry-experience .entry-action-dock > button {
   width: min(100%, 480px);
   min-height: 56px;
   border-radius: 12px;

@@ -358,7 +358,7 @@ The off-by-default **Always dark** control is under **Display**. Theme choice de
 
 Final review images and reproduction instructions are in [screens/round-5](screens/round-5/README.md). The matrix covers 320, 375, 390, 430 and 1280 px, both palettes, both role reveals, both night variants, Notes and all public game steps, with header and bottom-stack bounds checks.
 
-Keep the Stackstone talk-slide identity from §25 and the one-column phone layout. Day and night are the only game theme states; the active server phase switches every player's screen together. The home, entry and lobby stay dark. Each game-step component retains its own content and uses the same header, commentary alignment, action/footer stack and safe-area spacing.
+Keep the Stackstone talk-slide identity from §25 and the one-column phone layout. Day and night are the only game theme states; the active server phase switches every player's screen together. Home keeps its public-site theme, Join defaults to day, and Lobby follows the public phase when available. Active game screens use the public phase, never the player's role. Each game-step component retains its own content and uses the same header, commentary alignment, action/footer stack and safe-area spacing.
 
 ```text
 DAY / PUBLIC STEP                    NIGHT / PRIVATE STEP

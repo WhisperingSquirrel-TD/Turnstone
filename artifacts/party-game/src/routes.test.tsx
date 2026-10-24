@@ -121,7 +121,7 @@ describe('routes', () => {
     expect(entryHeader).not.toContain('stackstone-icon-dark-outlined.svg');
     expect(entryFooter).toContain('made by Stackstone Consulting');
     expect(entryFooter).toContain('href="https://stackstoneconsulting.co.uk/"');
-    expect(entryFooter).toContain('src="/brand/stackstone-icon-dark.svg"');
+    expect(entryFooter).toContain('src="/brand/stackstone-icon.svg"');
     expect(entryFooter).toContain('target="_blank"');
     expect(entryFooter).toContain('rel="noopener noreferrer"');
 
@@ -197,7 +197,11 @@ describe('routes', () => {
       const footer = html.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
       expect(footer).toContain('made by Stackstone Consulting');
       expect(footer).toContain('href="https://stackstoneconsulting.co.uk/"');
-      expect(footer).toContain('/brand/stackstone-icon-dark.svg');
+      expect(footer).toContain(
+        ['/play', '/join'].includes(path)
+          ? '/brand/stackstone-icon.svg'
+          : '/brand/stackstone-icon-dark.svg',
+      );
     }
 
     const playerHtml = await render('/game/rehearsal-id');

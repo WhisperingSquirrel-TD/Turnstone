@@ -588,7 +588,8 @@ export function EntryExperience({
         id="entry-main"
         key={screen}
       >
-        {(screen.startsWith('join-') && screen !== 'join-wait' || screen === 'lobby') && (
+        {((screen.startsWith('join-') && screen !== 'join-wait') ||
+          screen === 'lobby') && (
           <div className="entry-stage-chrome">
             <GameStatusBar
               phase={screen === 'lobby' ? 'LOBBY' : 'JOIN'}
@@ -598,7 +599,9 @@ export function EntryExperience({
               connectionStatus={browserOnline ? 'online' : 'offline'}
             />
             <WhatIsHappeningCard>
-              {screen === 'lobby' ? 'Waiting for players' : 'Enter the room code and your name'}
+              {screen === 'lobby'
+                ? 'Waiting for players'
+                : 'Enter the room code and your name'}
             </WhatIsHappeningCard>
           </div>
         )}
@@ -673,7 +676,9 @@ export function EntryExperience({
                 className="entry-form-area"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  const validCode = VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase());
+                  const validCode = VALID_CODE.test(
+                    inputs.joinCodeEntry.trim().toUpperCase(),
+                  );
                   const validName = inputs.joinName.trim().length >= 2;
                   if (!validCode) {
                     setLocalError(copy.codeError);
@@ -732,7 +737,11 @@ export function EntryExperience({
                   }}
                 />
                 {duplicateName && (
-                  <div className="entry-duplicate-choice" role="group" aria-label={copy.duplicateNamePrompt(duplicateName)}>
+                  <div
+                    className="entry-duplicate-choice"
+                    role="group"
+                    aria-label={copy.duplicateNamePrompt(duplicateName)}
+                  >
                     <p>{copy.duplicateNamePrompt(duplicateName)}</p>
                     <button
                       className="entry-secondary-action"
@@ -847,7 +856,11 @@ export function EntryExperience({
             )}
 
             {screen === 'join-pin' && (
-              <form id="entry-join-pin-form" className="entry-form-area" onSubmit={submitJoin}>
+              <form
+                id="entry-join-pin-form"
+                className="entry-form-area"
+                onSubmit={submitJoin}
+              >
                 <label className="entry-label" htmlFor="entry-join-pin">
                   {copy.pinLabel}
                 </label>
@@ -1566,7 +1579,11 @@ export function EntryExperience({
             data-legacy-testid="button-continue-code"
             type="submit"
             form="entry-join-code-form"
-            disabled={!duplicateName && (!VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase()) || inputs.joinName.trim().length < 2)}
+            disabled={
+              !duplicateName &&
+              (!VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase()) ||
+                inputs.joinName.trim().length < 2)
+            }
             onClick={(event) => {
               if (duplicateName) {
                 event.preventDefault();
