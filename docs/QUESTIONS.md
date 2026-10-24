@@ -1,5 +1,19 @@
 # Open owner questions
 
+## Q11 — Local rehearsal received a join-request 429
+
+During a combined local rehearsal, `GET /api/games/:id/join-requests` returned
+HTTP 429 while the Create game page waited for the lobby code. The H1 rehearsal
+and disconnected-player journey both pass when run separately; the full player
+rehearsal also passes separately. The coordinator poller uses a 5-second base
+interval. Current evidence does not identify a harness action that exceeds
+human timing, and no request body or player data was logged.
+
+**Question:** Should this be treated as accumulated rate-limit state from
+repeated local runs, leaving the harness unchanged and relying on a clean CI
+run, or should the rehearsal add a bounded cooldown between specs? No rate
+limit or production polling behaviour has been changed.
+
 ## Q7 — Required night action with no eligible target
 
 **Found 22 October 2026 while implementing Q6.** The unchanged
