@@ -1430,13 +1430,9 @@ test('rehearsal player can move on from public and voting screens', async ({
   await expect(choiceList.getByRole('button')).toHaveCount(5);
   await expect(page.getByTestId('phase-progress-status')).toHaveCount(0);
   await expect(page.getByTestId('vote-self-status')).toContainText('Morgan');
-  await expect(page.getByTestId('vote-status-seat-morgan')).toHaveText(
-    'Waiting',
-  );
-  await expect(page.getByTestId('vote-status-seat-jamie')).toHaveText('Voted');
-  await expect(page.getByTestId('vote-status-seat-practice-1')).toHaveText(
-    'Waiting',
-  );
+  await expect(page.getByTestId('vote-self-status')).toContainText('You');
+  await expect(choiceList.getByText('Waiting', { exact: true })).toHaveCount(0);
+  await expect(choiceList.getByText('Voted', { exact: true })).toHaveCount(0);
   const voteLayout = await page.locator('main#main').evaluate((main) => ({
     contentHeight: main.scrollHeight,
     viewportHeight: main.clientHeight,

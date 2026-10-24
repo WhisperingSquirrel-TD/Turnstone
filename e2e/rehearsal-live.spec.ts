@@ -2006,18 +2006,19 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               activeGameId,
             );
             expect(voteView.revote).toBe(false);
-            const activeVoters = voteView.seats.filter(
-              (seat) => seat.status === 'alive',
-            );
             expect(voteView.votedSeatIds).toHaveLength(7);
             expect(voteView.ballots).toEqual({});
-            for (const seat of activeVoters) {
-              await expect(
-                page.getByTestId(`vote-status-${seat.id}`),
-              ).toHaveText(
-                voteView.votedSeatIds.includes(seat.id) ? 'Voted' : 'Waiting',
-              );
-            }
+            const activeVoteList = page.getByTestId('private-choice-list');
+            await expect(activeVoteList).toBeVisible();
+            await expect(page.getByTestId('vote-self-status')).toContainText(
+              'You',
+            );
+            await expect(
+              activeVoteList.getByText('Waiting', { exact: true }),
+            ).toHaveCount(0);
+            await expect(
+              activeVoteList.getByText('Voted', { exact: true }),
+            ).toHaveCount(0);
             const events = await readRehearsalEventsFromDatabase(activeGameId);
             const lastVoteClosedIndex = events.reduce(
               (lastIndex, event, index) =>
@@ -2112,7 +2113,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
                 ? `${tiedNames[0]} and ${tiedNames[1]}`
                 : `${tiedNames.slice(0, -1).join(', ')} and ${tiedNames[tiedNames.length - 1]}`;
             await expect(page.getByTestId('tie-revote-prompt')).toHaveText(
-              `It's a tie between ${tiedNamesText}. Vote again, choosing between them.`,
+              `Tied players: ${tiedNamesText}.`,
             );
             const eligibleChoiceIds = tieView.seats
               .filter(
