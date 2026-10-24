@@ -93,10 +93,24 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
   await alwaysDark.uncheck();
   await expect(shell).toHaveAttribute('data-game-theme', 'day');
   await page.locator('.game-display-settings > summary').click();
+  const primaryAction = page.getByRole('button', {
+    name: 'Move everyone on',
+    exact: true,
+  });
   for (const theme of ['day', 'night']) {
     await shell.evaluate((element, palette) => {
       (element as HTMLElement).dataset.gameTheme = palette;
     }, theme);
+    await expect(primaryAction).toHaveCSS(
+      'background-color',
+      theme === 'day' ? 'rgb(122, 78, 29)' : 'rgb(227, 179, 95)',
+    );
+    const transitionProperties = await primaryAction.evaluate((element) =>
+      getComputedStyle(element)
+        .transitionProperty.split(',')
+        .map((property) => property.trim()),
+    );
+    expect(transitionProperties).not.toContain('background-color');
     const result = await new AxeBuilder({ page })
       .withRules(['color-contrast'])
       .analyze();
@@ -113,7 +127,7 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
   }
 });
 
-test('night status has identical four-line geometry for both roles in both themes', async ({
+test('night status card has identical four-row geometry for both roles in both themes', async ({
   page,
 }) => {
   await page.clock.install();
@@ -213,8 +227,8 @@ test('night status has identical four-line geometry for both roles in both theme
       });
       if (role === 'faithful') snapshots[theme] = geometry;
       else expect(geometry).toEqual(snapshots[theme]);
-      expect(geometry.height).toBe(80);
-      expect(geometry.lines).toEqual([20, 20, 20, 20]);
+      expect(geometry.height).toBe(112.375);
+      expect(geometry.lines).toEqual([24, 24, 24, 24]);
     }
   }
 });
@@ -980,7 +994,9 @@ test('phone room shows public game state without a presenter', async ({
     0,
   );
 
-  const phaseHelp = page.locator('details').filter({ hasText: "What's this?" });
+  const phaseHelp = page
+    .locator('details')
+    .filter({ hasText: 'Everyone talks it over.' });
   await expect(phaseHelp).toHaveCount(1);
   await phaseHelp.locator('summary').click();
   await expect(phaseHelp).toContainText(

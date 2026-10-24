@@ -7,7 +7,10 @@ import { test } from './support/rehearsal-test';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
-import type { FullView } from '../lib/shared/src/contracts';
+import {
+  gameViewResponseSchema,
+  type FullView,
+} from '../lib/shared/src/contracts';
 
 // Real-server UI updates can take longer on the constrained CI runner than
 // Playwright's 5-second default. The lobby itself uses the same 30-second
@@ -80,7 +83,19 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
       pages.push(page);
     }
     const organiser = pages[0]!;
+    const createFlowRequests: string[] = [];
     const createFlowStatuses: string[] = [];
+    organiser.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (!path.startsWith('/api/')) return;
+      const safePath = path
+        .replace(/\/api\/games\/[^/]+(?=\/|$)/g, '/api/games/:gameId')
+        .replace(
+          /\/api\/join-requests\/[^/]+(?=\/|$)/g,
+          '/api/join-requests/:requestId',
+        );
+      createFlowRequests.push(`${request.method()} ${safePath} started`);
+    });
     organiser.on('response', (response) => {
       const path = new URL(response.url()).pathname;
       if (!path.startsWith('/api/')) return;
@@ -132,15 +147,16 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
     const creationResponse = await created;
     expect(creationResponse.ok()).toBe(true);
     gameId = (creationResponse.request().postDataJSON() as { id: string }).id;
-    const creation = (await creationResponse.json()) as {
-      view: { id: string };
-    };
+    const creation = gameViewResponseSchema.parse(
+      await creationResponse.json(),
+    );
     expect(gameId).toBeTruthy();
-    expect(creation.view.id).toBe(gameId);
+    expect(creation.view).toHaveProperty('id', gameId);
+    expect(creation.view).toHaveProperty('seats');
     const lobbyCode = organiser.getByTestId('text-lobby-code');
     await expect(
       lobbyCode,
-      `create-flow HTTP statuses: ${createFlowStatuses.join(' | ')}`,
+      `create-flow requests: ${createFlowRequests.join(' | ')}; responses: ${createFlowStatuses.join(' | ')}`,
     ).toBeVisible({ timeout: 30_000 });
     await expect(lobbyCode).toHaveText(/^[A-Z0-9]{6}$/, {
       timeout: 30_000,

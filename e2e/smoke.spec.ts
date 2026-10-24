@@ -47,25 +47,18 @@ test('home and play are accessible, reloadable and responsive', async ({
   const createNameScreen = page.locator('.entry-screen-create-name');
   const gameName = page.getByTestId('input-game-name');
   const continueCreateName = page.getByTestId('button-continue-create-name');
-  const candleColor = await page.evaluate(() => {
-    const probe = document.createElement('span');
-    probe.style.color = 'var(--candle)';
-    document.body.append(probe);
-    const color = getComputedStyle(probe).color;
-    probe.remove();
-    return color;
-  });
+  const dayTextColor = 'rgb(38, 34, 29)';
   await expect(createNameScreen).toHaveCSS('opacity', '1');
   await expect(page.getByRole('heading', { name: 'Name your game' })).toHaveCSS(
     'color',
-    candleColor,
+    dayTextColor,
   );
   await expect(gameName).toBeEnabled();
   const gameNameCursor = await gameName.evaluate(
     (input) => getComputedStyle(input).cursor,
   );
   expect(gameNameCursor).not.toBe('not-allowed');
-  await expect(gameName).toHaveCSS('color', candleColor);
+  await expect(gameName).toHaveCSS('color', dayTextColor);
   await expect(continueCreateName).toBeEnabled();
   await expect(continueCreateName).toHaveCSS('cursor', 'pointer');
   await expect(continueCreateName).toHaveCSS('opacity', '1');
