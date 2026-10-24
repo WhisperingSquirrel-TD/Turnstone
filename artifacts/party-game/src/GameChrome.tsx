@@ -1,10 +1,12 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { en } from '@/locale/en-GB';
 import type { GameConnectionState } from './game-socket';
 import { GameConnectionStatus } from './GameConnectionStatus';
 
 export type GameConnectionDisplayState =
   GameConnectionState | 'offline' | 'connected';
+
+export type GameViewTab = 'game' | 'players';
 
 export function gameStatusLabel(phase: string, cycle: number): string {
   if (phase === 'JOIN') return 'Join a game';
@@ -142,40 +144,71 @@ export function GameHelpDisclosure({
   );
 }
 
-export function GameBottomBar({ active }: { active: 'game' | 'players' }) {
-  const [current, setCurrent] = useState(active);
-  useEffect(() => {
-    const update = () =>
-      setCurrent(window.location.hash === '#game-players' ? 'players' : 'game');
-    update();
-    window.addEventListener('hashchange', update);
-    return () => window.removeEventListener('hashchange', update);
-  }, []);
+export function GameBottomBar({
+  active,
+  onSelect,
+}: {
+  active: GameViewTab;
+  onSelect: (tab: GameViewTab) => void;
+}) {
+  const handleKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    current: GameViewTab,
+  ) => {
+    if (
+      event.key !== 'ArrowLeft' &&
+      event.key !== 'ArrowRight' &&
+      event.key !== 'Home' &&
+      event.key !== 'End'
+    ) {
+      return;
+    }
+    event.preventDefault();
+    const next: GameViewTab =
+      event.key === 'Home'
+        ? 'game'
+        : event.key === 'End'
+          ? 'players'
+          : current === 'game'
+            ? 'players'
+            : 'game';
+    onSelect(next);
+    document.getElementById(`game-view-tab-${next}`)?.focus();
+  };
 
   return (
     <nav
       className="game-bottom-bar"
       data-testid="game-bottom-bar"
-      aria-label="Game navigation"
+      role="tablist"
+      aria-label="Game views"
     >
-      <a
-        href="#main"
-        aria-current={current === 'game' ? 'page' : undefined}
-        className={current === 'game' ? 'game-bottom-bar__active' : undefined}
-        onClick={() => setCurrent('game')}
+      <button
+        id="game-view-tab-game"
+        type="button"
+        role="tab"
+        aria-controls="game-tab-panel"
+        aria-selected={active === 'game'}
+        tabIndex={active === 'game' ? 0 : -1}
+        className={active === 'game' ? 'game-bottom-bar__active' : undefined}
+        onClick={() => onSelect('game')}
+        onKeyDown={(event) => handleKeyDown(event, 'game')}
       >
         {en.game.tabGame}
-      </a>
-      <a
-        href="#game-players"
-        aria-current={current === 'players' ? 'page' : undefined}
-        className={
-          current === 'players' ? 'game-bottom-bar__active' : undefined
-        }
-        onClick={() => setCurrent('players')}
+      </button>
+      <button
+        id="game-view-tab-players"
+        type="button"
+        role="tab"
+        aria-controls="players-tab-panel"
+        aria-selected={active === 'players'}
+        tabIndex={active === 'players' ? 0 : -1}
+        className={active === 'players' ? 'game-bottom-bar__active' : undefined}
+        onClick={() => onSelect('players')}
+        onKeyDown={(event) => handleKeyDown(event, 'players')}
       >
         {en.game.tabPlayers}
-      </a>
+      </button>
     </nav>
   );
 }

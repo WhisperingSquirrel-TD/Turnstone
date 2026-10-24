@@ -579,7 +579,9 @@ test('private role and seal stay inside small phone viewports without a play foo
     );
     await shieldConfirmation.click();
 
-    const happeningCard = page.getByTestId('game-happening-card');
+    const happeningCard = page
+      .getByTestId('game-tab-panel')
+      .getByTestId('game-happening-card');
     await expect(happeningCard).toContainText(
       'Look at your role in private, then hide it.',
     );

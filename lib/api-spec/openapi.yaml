@@ -1343,6 +1343,8 @@ components:
         status:
           type: string
           enum: [alive, banished, murdered, departed]
+        connected:
+          type: boolean
         role:
           $ref: '#/components/schemas/Role'
     PrivateView:

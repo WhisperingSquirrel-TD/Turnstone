@@ -2355,6 +2355,11 @@ it('keeps rehearsal phases player-paced and processes bots without deadline adva
       events: events.slice(1),
       deadline: { kind: before.phase, dueAt },
     });
+    // Keep this fixture inside the scheduler's bounded 25-game batch even
+    // when the shared development database contains older rehearsal rows.
+    await db.execute(
+      sql`update games set updated_at = ${new Date(0)} where id = ${gameId}`,
+    );
 
     await createDeadlineScheduler({
       now: () => dueAt + 1,
@@ -2708,6 +2713,11 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
       .set('X-CSRF-Token', resumeCsrf.body.csrfToken)
       .send({ ...rehearsalRequest, name: 'Someone else' })
       .expect(401, { error: 'Rehearsal could not be resumed' });
+    // The scheduler and list API are intentionally bounded. Order this test
+    // fixture first without deleting or changing other shared-database rows.
+    await db.execute(
+      sql`update games set updated_at = ${new Date(0)} where id = ${gameId}`,
+    );
     const { listActiveRehearsalGameIds } =
       await import('@workspace/db/game-store');
     expect(await listActiveRehearsalGameIds()).toContain(gameId);
@@ -2717,6 +2727,7 @@ it('runs a server-backed rehearsal to completion with held reveals and zero pres
     const scheduler = createDeadlineScheduler({
       now: () => now,
       processRehearsalGame: async (id) => {
+        if (id !== gameId) return;
         recoveredGames.push(id);
         await botRunner.processGame(id);
       },
@@ -6260,6 +6271,23 @@ it.each([5, 40])(
       }
       return JSON.stringify(value) ?? 'undefined';
     };
+    const withoutSeatConnection = (view: unknown): unknown => {
+      if (!view || typeof view !== 'object') return view;
+      const record = view as Record<string, unknown>;
+      return {
+        ...record,
+        seats: Array.isArray(record.seats)
+          ? record.seats.map((seat) => {
+              if (!seat || typeof seat !== 'object') return seat;
+              return Object.fromEntries(
+                Object.entries(seat as Record<string, unknown>).filter(
+                  ([key]) => key !== 'connected',
+                ),
+              );
+            })
+          : record.seats,
+      };
+    };
 
     let now = commands[0]!.now;
     const serverRandom = scenarioRandom(seed);
@@ -6361,7 +6389,12 @@ it.each([5, 40])(
                 { kind: 'player', seatId },
                 state,
               );
-              if (canonicalJson(payload.view) !== canonicalJson(expected)) {
+              // Connection presence is request-time metadata, not part of the
+              // deterministic event-sourced projection replayed here.
+              if (
+                canonicalJson(withoutSeatConnection(payload.view)) !==
+                canonicalJson(withoutSeatConnection(expected))
+              ) {
                 const actual = payload.view as Record<string, unknown>;
                 const expectedRecord = expected as Record<string, unknown>;
                 const fields = [
@@ -6487,7 +6520,11 @@ it.each([5, 40])(
             now,
           );
         }
-        if (canonicalJson(response.body.view) !== canonicalJson(expectedView)) {
+        const responseView = response.body.view as typeof expectedView;
+        if (
+          canonicalJson(withoutSeatConnection(responseView)) !==
+          canonicalJson(withoutSeatConnection(expectedView))
+        ) {
           const persisted = await readGameEvents(gameId);
           const difference = persisted.findIndex(
             (event, eventIndex) =>

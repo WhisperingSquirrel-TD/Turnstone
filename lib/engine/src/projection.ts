@@ -68,6 +68,7 @@ export const VIEW_ALLOW_LIST = [
 export type ProjectionContext = {
   lobbyCode?: string | null;
   disconnectedSeatIds?: readonly string[];
+  connectedSeatIds?: readonly string[];
 };
 
 type PublicLogEntry = FullView['publicLog'][number];
@@ -339,6 +340,9 @@ export function viewFor(
         id: seat.id,
         name: seat.name,
         status: seat.status,
+        ...(viewer.kind === 'player' && context.connectedSeatIds
+          ? { connected: context.connectedSeatIds.includes(seat.id) }
+          : {}),
         ...(visible && seat.role ? { role: seat.role } : {}),
       };
     }),

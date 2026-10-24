@@ -24,6 +24,7 @@ import { getOpenGameInviteCode } from '@workspace/db/seat-access-store';
 import {
   disconnectGameSeatConnection,
   areGameSeatsDisconnected,
+  listConnectedSeatIds,
   touchGameSeatConnection,
   upsertGameSeatConnection,
 } from '@workspace/db/seat-presence-store';
@@ -47,6 +48,7 @@ async function projectViewer(
   state: State,
   lobbyCode: string | null,
   serverNow: number,
+  connectedSeatIds?: readonly string[],
 ) {
   if (viewer.kind === 'visitor') return viewFor({ kind: 'visitor' }, state);
   const disconnectedSeatIds =
@@ -59,7 +61,11 @@ async function projectViewer(
           now: serverNow,
         })
       : [];
-  return viewFor(viewer, state, { lobbyCode, disconnectedSeatIds });
+  return viewFor(viewer, state, {
+    lobbyCode,
+    disconnectedSeatIds,
+    connectedSeatIds,
+  });
 }
 
 function encodedGameRoom(gameId: string): string {
@@ -113,6 +119,14 @@ export async function attachRealtime(
     const serverNow = options.now?.() ?? Date.now();
     const room = encodedGameRoom(gameId);
     const sockets = await io.in(room).fetchSockets();
+    const connectedSeatIds =
+      sockets.length > 0
+        ? await listConnectedSeatIds({
+            gameId,
+            seatIds: state.seats.map((seat) => seat.id),
+            now: serverNow,
+          })
+        : undefined;
     const lobbyCode =
       state.phase === 'LOBBY' && sockets.length > 0
         ? await getOpenGameInviteCode(state.id, serverNow)
@@ -151,7 +165,13 @@ export async function attachRealtime(
       const response = gameViewResponseSchema.parse({
         serverNow,
         version: state.version,
-        view: await projectViewer(viewer, state, lobbyCode, serverNow),
+        view: await projectViewer(
+          viewer,
+          state,
+          lobbyCode,
+          serverNow,
+          connectedSeatIds,
+        ),
       });
       socket.emit('game:view', response);
     }
@@ -356,10 +376,24 @@ export async function attachRealtime(
               (viewer.kind === 'player' || viewer.kind === 'presenter')
                 ? await getOpenGameInviteCode(state.id, serverNow)
                 : null;
+            const connectedSeatIds =
+              viewer.kind === 'player'
+                ? await listConnectedSeatIds({
+                    gameId,
+                    seatIds: state.seats.map((seat) => seat.id),
+                    now: serverNow,
+                  })
+                : undefined;
             const response = gameViewResponseSchema.parse({
               serverNow,
               version: state.version,
-              view: await projectViewer(viewer, state, lobbyCode, serverNow),
+              view: await projectViewer(
+                viewer,
+                state,
+                lobbyCode,
+                serverNow,
+                connectedSeatIds,
+              ),
             });
             socket.emit('game:view', response);
             acknowledgement?.({ ok: true });

@@ -238,10 +238,16 @@ describe('shared game chrome', () => {
     expect(html).not.toMatch(/<details[^>]*\sopen(?:=|\s|>)/);
   });
 
-  it('provides only the Game and Players destinations in the bottom bar', () => {
-    const html = renderToStaticMarkup(<GameBottomBar active="game" />);
+  it('marks the active Game or Players view as a selected tab', () => {
+    const html = renderToStaticMarkup(
+      <GameBottomBar active="players" onSelect={() => {}} />,
+    );
 
-    expect(html).toContain('aria-label="Game navigation"');
+    expect(html).toContain('role="tablist"');
+    expect(html).toContain('aria-label="Game views"');
+    expect(html).toContain('role="tab"');
+    expect(html).toContain('aria-selected="true"');
+    expect(html).toContain('aria-selected="false"');
     expect(html).toContain('>Game<');
     expect(html).toContain('>Players<');
     expect(html).not.toContain('>Notes<');

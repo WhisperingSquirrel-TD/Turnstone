@@ -331,6 +331,44 @@ it('keeps mutable viewer, disclosure, lobby and presence context separate from s
   expect(coordinator.publicLog).toEqual(concealed.publicLog);
 });
 
+it('projects the same connection roster to both player roles, not coordinator or presenter', () => {
+  const state = example();
+  state.seats[0]!.role = 'traitor';
+  state.seats[1]!.role = 'faithful';
+  const connectedContext = { connectedSeatIds: ['s0', 's2'] };
+  const traitor = viewFor(
+    { kind: 'player', seatId: 's0' },
+    state,
+    connectedContext,
+  );
+  const faithful = viewFor(
+    { kind: 'player', seatId: 's1' },
+    state,
+    connectedContext,
+  );
+  expect(traitor.seats).toEqual(faithful.seats);
+  expect(traitor.seats.map((seat) => seat.connected)).toEqual([
+    true,
+    false,
+    true,
+    false,
+    false,
+  ]);
+  expect(faithful.seats.map((seat) => seat.connected)).toEqual(
+    traitor.seats.map((seat) => seat.connected),
+  );
+  expect(
+    viewFor({ kind: 'presenter' }, state, connectedContext).seats.every(
+      (seat) => !('connected' in seat),
+    ),
+  ).toBe(true);
+  expect(
+    viewFor({ kind: 'coordinator' }, state, connectedContext).seats.every(
+      (seat) => !('connected' in seat),
+    ),
+  ).toBe(true);
+});
+
 it('rejects nested victim mutation after warming, then accepts repaired contents without stale errors', () => {
   const state = example();
   const initial = viewFor({ kind: 'admin' }, state);

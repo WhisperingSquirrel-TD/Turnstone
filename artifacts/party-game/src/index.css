@@ -725,19 +725,22 @@ h2,
   bottom: 0;
 }
 
-.game-bottom-bar a {
+.game-bottom-bar button {
+  appearance: none;
   display: flex;
   min-height: 44px;
   align-items: center;
   justify-content: center;
+  border: 0;
   border-bottom: 2px solid transparent;
+  background: transparent;
   color: var(--game-muted);
   font-size: 15px;
   font-weight: 500;
-  text-decoration: none;
+  cursor: pointer;
 }
 
-.game-bottom-bar a.game-bottom-bar__active {
+.game-bottom-bar button.game-bottom-bar__active {
   border-bottom-color: var(--game-accent);
   color: var(--game-text);
 }

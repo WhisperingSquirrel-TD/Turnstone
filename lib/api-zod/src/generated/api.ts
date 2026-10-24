@@ -206,6 +206,7 @@ export const StartRehearsalResponse = zod.object({
   "id": zod.string().min(1).max(startRehearsalResponseViewTwoSeatsItemIdMax),
   "name": zod.string(),
   "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "connected": zod.boolean().optional(),
   "role": zod.enum(['traitor', 'faithful']).optional()
 })),
   "commitment": zod.string().nullable(),
@@ -607,6 +608,7 @@ export const CreateGameResponse = zod.object({
   "id": zod.string().min(1).max(createGameResponseViewTwoSeatsItemIdMax),
   "name": zod.string(),
   "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "connected": zod.boolean().optional(),
   "role": zod.enum(['traitor', 'faithful']).optional()
 })),
   "commitment": zod.string().nullable(),
@@ -1161,6 +1163,7 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
   "id": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoSeatsItemIdMax),
   "name": zod.string(),
   "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "connected": zod.boolean().optional(),
   "role": zod.enum(['traitor', 'faithful']).optional()
 })),
   "commitment": zod.string().nullable(),
@@ -1784,6 +1787,7 @@ export const GetCoordinatorViewResponse = zod.object({
   "id": zod.string().min(1).max(getCoordinatorViewResponseViewTwoSeatsItemIdMax),
   "name": zod.string(),
   "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "connected": zod.boolean().optional(),
   "role": zod.enum(['traitor', 'faithful']).optional()
 })),
   "commitment": zod.string().nullable(),
@@ -2182,6 +2186,7 @@ export const GetGameViewResponse = zod.object({
   "id": zod.string().min(1).max(getGameViewResponseViewTwoSeatsItemIdMax),
   "name": zod.string(),
   "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "connected": zod.boolean().optional(),
   "role": zod.enum(['traitor', 'faithful']).optional()
 })),
   "commitment": zod.string().nullable(),
@@ -2586,6 +2591,7 @@ export const RevealPrivateViewResponse = zod.object({
   "id": zod.string().min(1).max(revealPrivateViewResponseViewTwoSeatsItemIdMax),
   "name": zod.string(),
   "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "connected": zod.boolean().optional(),
   "role": zod.enum(['traitor', 'faithful']).optional()
 })),
   "commitment": zod.string().nullable(),
@@ -2995,6 +3001,7 @@ export const SubmitGameCommandResponse = zod.object({
   "id": zod.string().min(1).max(submitGameCommandResponseViewTwoSeatsItemIdMax),
   "name": zod.string(),
   "status": zod.enum(['alive', 'banished', 'murdered', 'departed']),
+  "connected": zod.boolean().optional(),
   "role": zod.enum(['traitor', 'faithful']).optional()
 })),
   "commitment": zod.string().nullable(),

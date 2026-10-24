@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Status for reviewer — Round 7 Improvements items 3 and 4 are green: `fabc596` (#276) and `e7971c1` (#278); status commits `66ebf1c` (#277) and `bfab721` (#279) are green.** The #275 static-copy and stale navigation/footer expectations were corrected; the Deal card now says “Look at your role in private, then hide it.” Item 5: prompts are already capped at three; the collapsed Help disclosure leaves no gap in 390px and 360px desktop and Pixel layouts, so no product change was needed. Added a browser regression check. Local checks: GameChrome 12/12, browser 1/1 on desktop and Pixel, test typecheck, lint and formatting pass. Next: Round 7 Improvements item 6, make Game and Players tabs work on private and public phases while restoring the same step and preserving privacy.
+**Status for reviewer — Round 7 Improvements item 6:** Game/Players tabs and role-neutral roster are implemented locally. Typechecks, lint, format, build, 708 unit tests, 21 property tests, 86.08% server-line coverage (85% threshold), worker smoke and 2,572 scenarios (0 failures) passed. Browser smoke had two stale strict-mode selector failures (Pixel and desktop): the hidden Players panel also renders a “What is happening” card. The unchanged assertions now scope to the Game panel; the focused rerun passes 2/2. Lighthouse passed; audit found 0 high/critical. The Pixel capture asserts Live and generated 40 screenshots under `docs/screens/round-7-improvements`. GitHub main is still `738d376`; #280 is green and no Verify is active. Next: commit and push item 6, then report its GitHub Verify result.
 
 **Previous milestone — Round 7 Stage 2B (Vote, Revote and Verdict):** commits `086ae4d`, `aafaaa7`, `7ebb798`, `e1f2e35` and status update `3665dd3` are on `main`; Verify #267 on the harness fix is green (19/19 jobs), and Verify #268 on the status update is green. #265’s stale Vote/Revote expectations are corrected; #266’s CI 429 is addressed by the Q11-approved 65-second harness-only cooldown. No product polling or rate limits changed.
 
@@ -8,7 +8,7 @@
 
 **Local checks:** the active Vote screen, out-player vote-progress summary and Revote browser tests pass (3/3); the full real-server Pixel rehearsal and disconnected-player journeys pass locally, the latter with the bounded cooldown; typecheck:tests, lint, formatting and diff checks pass. The opt-in screenshot gallery generated 40 files: Vote, Revote, banished Verdict and no-votes Verdict, in day/night themes at 320, 375, 390, 430 and 1280 px. Its test Socket.IO fixture delivers a schema-valid public view so the app renders the Live chip; this is a visual fixture, not a real-server rehearsal. Local iPhone WebKit cannot launch in this workspace; GitHub WebKit remains authoritative.
 
-**Next:** Round 7 Improvements items 3–6 are queued after the compact status row is green.
+**Next:** Finish item 6 and report after its GitHub Verify result is known.
 
 ### Round 7 Improvements — item 1: expanded Help scrolling
 

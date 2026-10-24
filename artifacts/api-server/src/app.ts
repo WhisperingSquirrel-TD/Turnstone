@@ -265,10 +265,25 @@ async function projectState(state: State, viewer: Viewer) {
             }),
         )
       : [];
+  const connectedSeatIds =
+    viewer.kind === 'player'
+      ? await import('@workspace/db/seat-presence-store').then(
+          ({ listConnectedSeatIds }) =>
+            listConnectedSeatIds({
+              gameId: state.id,
+              seatIds: state.seats.map((seat) => seat.id),
+              now: serverNow,
+            }),
+        )
+      : undefined;
   const view =
     viewer.kind === 'visitor'
       ? viewFor({ kind: 'visitor' }, state)
-      : viewFor(viewer, state, { lobbyCode, disconnectedSeatIds });
+      : viewFor(viewer, state, {
+          lobbyCode,
+          disconnectedSeatIds,
+          connectedSeatIds,
+        });
   if (viewer.kind === 'coordinator' && 'id' in view) {
     const { getGameUndoStatus } = await import('@workspace/db/game-store');
     view.coordinatorUndo = await getGameUndoStatus(

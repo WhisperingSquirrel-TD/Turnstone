@@ -224,6 +224,7 @@ export interface SeatView {
   id: string;
   name: string;
   status: SeatViewStatus;
+  connected?: boolean;
   role?: Role;
 }
 

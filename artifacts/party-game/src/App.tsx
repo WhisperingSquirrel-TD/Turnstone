@@ -55,6 +55,7 @@ import {
   PlayerTile,
   GameStatusBar,
   WhatIsHappeningCard,
+  type GameViewTab,
 } from './GameChrome';
 import { PhaseClipOverlay } from './PhaseClipOverlay';
 import { NotesScreen } from './NotesScreen';
@@ -259,7 +260,12 @@ function CsrfProvider({ children }: { children: ReactNode }) {
 
 function Shell({
   children,
+  persistentContent,
+  playersContent,
   isPlayer = false,
+  activePlayerTab = 'game',
+  onPlayerTabChange,
+  hidePlayerBottomBar = false,
   privateMode = false,
   privateRevealActive = false,
   connectionStatus = null,
@@ -273,7 +279,12 @@ function Shell({
   onOpenNotes,
 }: {
   children: ReactNode;
+  persistentContent?: ReactNode;
+  playersContent?: ReactNode;
   isPlayer?: boolean;
+  activePlayerTab?: GameViewTab;
+  onPlayerTabChange?: (tab: GameViewTab) => void;
+  hidePlayerBottomBar?: boolean;
   privateMode?: boolean;
   privateRevealActive?: boolean;
   connectionStatus?: GameConnectionState | null;
@@ -469,6 +480,7 @@ function Shell({
           {themeMessage}
         </div>
       )}
+      {persistentContent}
       <main
         id="main"
         tabIndex={-1}
@@ -477,10 +489,35 @@ function Shell({
         <BrandSurfaceContext.Provider
           value={isPlayer ? (theme === 'day' ? 'light' : 'dark') : 'light'}
         >
-          {children}
+          {playersContent !== undefined ? (
+            <>
+              <div
+                id="game-tab-panel"
+                role="tabpanel"
+                aria-labelledby="game-view-tab-game"
+                data-testid="game-tab-panel"
+                hidden={activePlayerTab !== 'game'}
+              >
+                {children}
+              </div>
+              <div
+                id="players-tab-panel"
+                role="tabpanel"
+                aria-labelledby="game-view-tab-players"
+                data-testid="players-tab-panel"
+                hidden={activePlayerTab !== 'players'}
+              >
+                {playersContent}
+              </div>
+            </>
+          ) : (
+            children
+          )}
         </BrandSurfaceContext.Provider>
       </main>
-      {isPlayer && <GameBottomBar active="game" />}
+      {isPlayer && onPlayerTabChange && !hidePlayerBottomBar && (
+        <GameBottomBar active={activePlayerTab} onSelect={onPlayerTabChange} />
+      )}
       {!isPlayer && showBrandFooter && (
         <BrandFooter
           context="public"
@@ -927,6 +964,8 @@ function PlayerGame() {
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
   const [notesStatus, setNotesStatus] = useState('');
+  const [activeGameTab, setActiveGameTab] = useState<GameViewTab>('game');
+  useEffect(() => setActiveGameTab('game'), [id]);
   const [rehearsalGuideDismissedSteps, setRehearsalGuideDismissedSteps] =
     useState<Set<string>>(() => new Set());
   const [advanceConfirmationOpen, setAdvanceConfirmationOpen] = useState(false);
@@ -1290,6 +1329,13 @@ function PlayerGame() {
     [command.reset, reveal.reset],
   );
   const cancelPrivate = useCallback(() => clearPrivate(), [clearPrivate]);
+  const selectGameTab = useCallback(
+    (tab: GameViewTab) => {
+      if (tab === 'players' && full?.phase === 'DEAL' && held) clearPrivate();
+      setActiveGameTab(tab);
+    },
+    [clearPrivate, full?.phase, held],
+  );
   const shadowPrivateViewKey =
     full?.phase === 'SHADOW'
       ? `${id}:${full.cycle}:${full.shadowRound}:${full.shadowSlot}`
@@ -1367,6 +1413,7 @@ function PlayerGame() {
   };
   const showShieldCard = Boolean(
     full &&
+    activeGameTab === 'game' &&
     inPrivateMoment &&
     shieldRequired &&
     !shielded &&
@@ -2595,10 +2642,114 @@ function PlayerGame() {
     !privateInteractionInProgress &&
     !rehearsalGuideVisible,
   );
+  const gameAnnouncement = full ? (
+    <GameStepAnnouncement
+      aliveCount={full.seats.filter((seat) => seat.status === 'alive').length}
+      endRule={full.endRule}
+      murderSlots={full.murderSlots}
+      phase={full.phase}
+      shadowRound={full.shadowRound}
+      revote={full.revote}
+      progress={full.progress}
+      context={{
+        phase: full.phase,
+        cycle: full.cycle,
+        aliveCount: full.seats.filter((seat) => seat.status === 'alive').length,
+        publicLog: full.publicLog,
+        seats: full.seats,
+        winner: full.winner,
+      }}
+      coachingTip={
+        full.rehearsal && explanationKey && full.phase !== 'DEAL'
+          ? en.game.coachingTips[explanationKey]
+          : undefined
+      }
+      fallback={phaseLabel(full.phase)}
+    />
+  ) : null;
+  const playersContent = full ? (
+    <section
+      className="mx-auto w-full max-w-[480px]"
+      aria-labelledby="players-heading"
+    >
+      <h1
+        id="players-heading"
+        className="display mt-2 mb-1 text-[30px] leading-[1.15]"
+      >
+        {en.game.playersHeading}
+      </h1>
+      <WhatIsHappeningCard accent={Boolean(full.revote)}>
+        {gameAnnouncement}
+      </WhatIsHappeningCard>
+      <ul className="game-roster-grid mt-3" data-testid="players-roster-list">
+        {full.seats.map((seat) => {
+          const isAlive = seat.status === 'alive';
+          const publicRole = seat.status === 'banished' ? seat.role : undefined;
+          return (
+            <li key={seat.id} data-testid={`player-seat-${seat.id}`}>
+              <PlayerTile
+                name={seat.name}
+                state={isAlive ? 'available' : 'out'}
+                statusText={
+                  <>
+                    {isAlive && <span>{en.game.playerPlaying}</span>}
+                    <span>
+                      {seat.connected === undefined
+                        ? en.game.playerConnectionUnknown
+                        : seat.connected
+                          ? en.game.playerConnected
+                          : en.game.playerOffline}
+                    </span>
+                    {seat.id === full.viewerSeatId && (
+                      <span>{en.game.playerYou}</span>
+                    )}
+                    {publicRole && (
+                      <span>
+                        {publicRole === 'traitor'
+                          ? en.game.roleTraitor
+                          : en.game.roleFaithful}
+                      </span>
+                    )}
+                  </>
+                }
+                testId={`player-tile-${seat.id}`}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  ) : (
+    <p className="mx-auto w-full max-w-[480px] text-ash">
+      {en.game.playersLoading}
+    </p>
+  );
 
   return (
     <Shell
       isPlayer
+      activePlayerTab={activeGameTab}
+      onPlayerTabChange={selectGameTab}
+      playersContent={playersContent}
+      persistentContent={
+        <PhaseClipOverlay
+          enabled={Boolean(
+            !isResuming && (activeGame || full?.phase === 'FINISHED'),
+          )}
+          gameId={id}
+          phase={full?.phase}
+          cycle={full?.cycle}
+          winner={full?.winner}
+          publicVerdict={full?.publicAnnouncement?.kind === 'verdict'}
+          phaseStartedAt={
+            full
+              ? (full as FullView & { phaseStartedAt?: number }).phaseStartedAt
+              : undefined
+          }
+          serverNow={response?.serverNow}
+        />
+      }
+      hidePlayerBottomBar={showShieldCard}
       phase={!isResuming ? full?.phase : undefined}
       cycle={full?.cycle ?? 1}
       remaining={
@@ -2623,8 +2774,8 @@ function PlayerGame() {
             }
           : undefined
       }
-      privateMode={!isResuming && inPrivateMoment}
-      privateRevealActive={!isResuming && held}
+      privateMode={!isResuming && activeGameTab === 'game' && inPrivateMoment}
+      privateRevealActive={!isResuming && activeGameTab === 'game' && held}
       connectionStatus={
         isResuming
           ? 'reconnecting'
@@ -2633,22 +2784,6 @@ function PlayerGame() {
             : null
       }
     >
-      <PhaseClipOverlay
-        enabled={Boolean(
-          !isResuming && (activeGame || full?.phase === 'FINISHED'),
-        )}
-        gameId={id}
-        phase={full?.phase}
-        cycle={full?.cycle}
-        winner={full?.winner}
-        publicVerdict={full?.publicAnnouncement?.kind === 'verdict'}
-        phaseStartedAt={
-          full
-            ? (full as FullView & { phaseStartedAt?: number }).phaseStartedAt
-            : undefined
-        }
-        serverNow={response?.serverNow}
-      />
       <section
         className={
           inPrivateMoment
@@ -2751,33 +2886,7 @@ function PlayerGame() {
               </h1>
             )}
             <WhatIsHappeningCard accent={Boolean(full.revote)}>
-              <GameStepAnnouncement
-                aliveCount={
-                  full.seats.filter((seat) => seat.status === 'alive').length
-                }
-                endRule={full.endRule}
-                murderSlots={full.murderSlots}
-                phase={full.phase}
-                shadowRound={full.shadowRound}
-                revote={full.revote}
-                progress={full.progress}
-                context={{
-                  phase: full.phase,
-                  cycle: full.cycle,
-                  aliveCount: full.seats.filter(
-                    (seat) => seat.status === 'alive',
-                  ).length,
-                  publicLog: full.publicLog,
-                  seats: full.seats,
-                  winner: full.winner,
-                }}
-                coachingTip={
-                  full.rehearsal && explanationKey && full.phase !== 'DEAL'
-                    ? en.game.coachingTips[explanationKey]
-                    : undefined
-                }
-                fallback={phaseLabel(full.phase)}
-              />
+              {gameAnnouncement}
             </WhatIsHappeningCard>
             {watchingRehearsal && (
               <RehearsalWatchCommentary phase={full.phase} />
@@ -3420,44 +3529,6 @@ function PlayerGame() {
                   </section>
                 )}
 
-                <section
-                  id="game-players"
-                  className={full.phase === 'DEBATE' ? 'mt-0' : 'mt-7'}
-                  aria-labelledby="players-heading"
-                >
-                  <h2 id="players-heading" className="display text-2xl">
-                    {en.game.playersHeading}
-                  </h2>
-                  <ul className="game-roster-grid mt-2">
-                    {full.seats.map((seat) => {
-                      const isAlive = seat.status === 'alive';
-                      return (
-                        <li
-                          key={seat.id}
-                          data-testid={`player-seat-${seat.id}`}
-                        >
-                          <PlayerTile
-                            name={seat.name}
-                            state={isAlive ? 'available' : 'out'}
-                            statusText={
-                              full.phase === 'FINISHED' && seat.role
-                                ? isAlive
-                                  ? seat.role === 'traitor'
-                                    ? en.game.roleTraitor
-                                    : en.game.roleFaithful
-                                  : en.game.playerOutRole(seat.role)
-                                : isAlive
-                                  ? en.game.playerPlaying
-                                  : undefined
-                            }
-                            testId={`player-tile-${seat.id}`}
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-
                 <section className="mt-7" aria-labelledby="public-log-heading">
                   <h2 id="public-log-heading" className="display text-2xl">
                     {en.game.latestUpdates}
@@ -3649,6 +3720,9 @@ function PlayerGame() {
             onAcknowledge={() => void acknowledge()}
             onNotesDone={closeNotes}
             header={<OathstonePlayerHeader />}
+            footer={
+              <GameBottomBar active={activeGameTab} onSelect={selectGameTab} />
+            }
           />
         )}
         {hasPlayerSeat && full && (

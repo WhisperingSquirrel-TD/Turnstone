@@ -28,6 +28,89 @@ async function browserStorageText(page: Page): Promise<string> {
   });
 }
 
+async function installLiveSocketViewFixture(
+  page: Page,
+  getView: () => { serverNow: number; version: number; view: FullView },
+): Promise<void> {
+  let sequence = 0;
+  const pendingPolls = new Map<string, (packet: string) => void>();
+  const queuedPackets = new Map<string, string[]>();
+  const replyToPoll = (sid: string, packet: string) => {
+    const waiting = pendingPolls.get(sid);
+    if (waiting) {
+      pendingPolls.delete(sid);
+      waiting(packet);
+      return;
+    }
+    queuedPackets.set(sid, [...(queuedPackets.get(sid) ?? []), packet]);
+  };
+
+  page.on('close', () => {
+    for (const resolve of pendingPolls.values()) resolve('6');
+    pendingPolls.clear();
+  });
+
+  await page.route('**/socket.io**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const sid = url.searchParams.get('sid');
+    if (request.method() === 'GET' && !sid) {
+      for (const resolve of pendingPolls.values()) resolve('6');
+      pendingPolls.clear();
+      const nextSid = `round-7-live-${++sequence}`;
+      queuedPackets.set(nextSid, []);
+      await route.fulfill({
+        contentType: 'text/plain; charset=UTF-8',
+        body: `0${JSON.stringify({
+          sid: nextSid,
+          upgrades: [],
+          pingInterval: 600_000,
+          pingTimeout: 60_000,
+          maxPayload: 1_000_000,
+        })}`,
+      });
+      return;
+    }
+    if (!sid) {
+      await route.fulfill({ status: 400, body: 'Missing session.' });
+      return;
+    }
+    if (request.method() === 'GET') {
+      const packet = queuedPackets.get(sid)?.shift();
+      if (packet) {
+        await route.fulfill({
+          contentType: 'text/plain; charset=UTF-8',
+          body: packet,
+        });
+        return;
+      }
+      const nextPacket = await new Promise<string>((resolve) => {
+        pendingPolls.set(sid, resolve);
+      });
+      await route
+        .fulfill({
+          contentType: 'text/plain; charset=UTF-8',
+          body: nextPacket,
+        })
+        .catch(() => {});
+      return;
+    }
+
+    const body = (request.postData() ?? '').replace(/^\d+:/, '');
+    if (body.startsWith('40')) {
+      replyToPoll(sid, `40${JSON.stringify({ sid: `${sid}-namespace` })}`);
+    } else if (body.startsWith('42')) {
+      const [eventName] = JSON.parse(body.slice(2)) as [string, unknown];
+      if (eventName === 'game:watch')
+        replyToPoll(sid, `42${JSON.stringify(['game:view', getView()])}`);
+    }
+    await route.fulfill({
+      contentType: 'text/plain; charset=UTF-8',
+      body: 'ok',
+    });
+  });
+}
+
 async function expectOnlyCurrentChoiceIdStored(
   page: Page,
   phase: 'VOTE' | 'SHADOW',
@@ -333,6 +416,7 @@ test('night status card has identical four-row geometry for both roles in both t
         })),
       }));
     const happening = await page
+      .getByTestId('game-tab-panel')
       .getByTestId('game-happening-card')
       .evaluate((el) => ({
         text: el.textContent?.replace(/\s+/g, ' ').trim(),
@@ -387,13 +471,19 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
   const capture =
     process.env.R5_CAPTURE_SCREENS === '1' ||
     process.env.R7_CAPTURE_SCREENS === '1' ||
-    process.env.R7_LIGHTER_CAPTURE_SCREENS === '1';
+    process.env.R7_LIGHTER_CAPTURE_SCREENS === '1' ||
+    process.env.R7_IMPROVEMENTS_CAPTURE_SCREENS === '1';
   const captureLighter = process.env.R7_LIGHTER_CAPTURE_SCREENS === '1';
-  const directory = captureLighter
-    ? 'docs/screens/round-7-lighter'
-    : process.env.R7_CAPTURE_SCREENS === '1'
-      ? 'docs/screens/round-7-stage-1'
-      : 'docs/screens/round-5';
+  const captureImprovements =
+    process.env.R7_IMPROVEMENTS_CAPTURE_SCREENS === '1';
+  const captureRound7 = captureLighter || captureImprovements;
+  const directory = captureImprovements
+    ? 'docs/screens/round-7-improvements'
+    : captureLighter
+      ? 'docs/screens/round-7-lighter'
+      : process.env.R7_CAPTURE_SCREENS === '1'
+        ? 'docs/screens/round-7-stage-1'
+        : 'docs/screens/round-5';
   if (capture) await mkdir(directory, { recursive: true });
   await page.route('**/api/csrf', (route) =>
     route.fulfill({ json: { csrfToken: 'test-csrf' } }),
@@ -403,6 +493,7 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
     version: view.version,
     view,
   });
+  await installLiveSocketViewFixture(page, envelope);
   await page.route(`**/api/games/${gameId}/view`, (route) =>
     route.fulfill({ json: envelope() }),
   );
@@ -462,9 +553,15 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
         view.phase,
       );
       await expect(page.getByTestId('game-status-bar')).toBeVisible();
-      await expect(page.getByTestId('game-happening-card')).toBeVisible();
+      await expect(page.locator('.game-connection-state')).toHaveAttribute(
+        'aria-label',
+        'Connection status: Live',
+      );
       await expect(
-        page.getByRole('navigation', { name: 'Game navigation' }),
+        page.getByTestId('game-tab-panel').getByTestId('game-happening-card'),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('tablist', { name: 'Game views' }),
       ).toBeVisible();
       await expect(page.getByTestId('game-status-phase')).toContainText(
         view.phase === 'LOBBY'
@@ -502,7 +599,9 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
           (width === 360 || width === 390)
         ) {
           const heading = page.locator('main h1').first();
-          const happening = page.getByTestId('game-happening-card');
+          const happening = page
+            .getByTestId('game-tab-panel')
+            .getByTestId('game-happening-card');
           const firstAction = page
             .locator(
               '.game-action-bar .primary-action, .game-action-dock .primary-action, .game-action-dock button',
@@ -602,7 +701,7 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
         expect(bottomBarBox!.height).toBeGreaterThanOrEqual(52);
         expect(Math.abs(bottomBarBox!.height - 52)).toBeLessThanOrEqual(1);
         for (const tab of ['Game', 'Players']) {
-          const box = await page.getByRole('link', { name: tab }).boundingBox();
+          const box = await page.getByRole('tab', { name: tab }).boundingBox();
           expect(box, `${tab} tab at ${width}px`).not.toBeNull();
           expect(box!.height).toBeGreaterThanOrEqual(44);
         }
@@ -702,14 +801,14 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
         }
         if (
           capture &&
-          (!captureLighter ||
+          (!captureRound7 ||
             (['debate', 'vote', 'shadow', 'dawn'].includes(label) &&
               width !== 360))
         ) {
           const screenshotLabel =
-            captureLighter && label === 'debate'
+            captureRound7 && label === 'debate'
               ? 'conversation'
-              : captureLighter && label === 'shadow'
+              : captureRound7 && label === 'shadow'
                 ? 'night'
                 : label;
           await page.screenshot({
@@ -1123,6 +1222,19 @@ test('phone room shows public game state without a presenter', async ({
     ...createPublicView(gameId),
     canAdvancePhase: true,
   } as FullView;
+  publicView.viewerSeatId = publicView.seats[0]?.id ?? null;
+  publicView.seats = publicView.seats.map((seat, index) => ({
+    ...seat,
+    connected: index % 2 === 0,
+    ...(index === 0
+      ? { role: 'traitor' as const }
+      : index === 1
+        ? {
+            role: 'faithful' as const,
+            status: 'banished' as const,
+          }
+        : {}),
+  }));
   const nextPublicLogSeq =
     Math.max(0, ...publicView.publicLog.map((entry) => entry.seq)) + 1;
   publicView.publicLog = [
@@ -1203,6 +1315,43 @@ test('phone room shows public game state without a presenter', async ({
     0,
   );
 
+  const publicGameTab = page.getByRole('tab', {
+    name: 'Game',
+    exact: true,
+  });
+  const publicPlayersTab = page.getByRole('tab', {
+    name: 'Players',
+    exact: true,
+  });
+  const gamePanel = page.getByTestId('game-tab-panel');
+  const playersPanel = page.getByTestId('players-tab-panel');
+  await expect(publicGameTab).toHaveAttribute('aria-selected', 'true');
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await publicPlayersTab.click();
+    await expect(publicPlayersTab).toHaveAttribute('aria-selected', 'true');
+    await expect(publicGameTab).toHaveAttribute('aria-selected', 'false');
+    await expect(playersPanel).toBeVisible();
+    await expect(gamePanel).toBeHidden();
+    await expect(playersPanel).toContainText(publicView.seats[0]?.name ?? '');
+    await expect(playersPanel).toContainText('You');
+    await expect(playersPanel).toContainText('Playing');
+    await expect(playersPanel).toContainText('Connected');
+    await expect(playersPanel).not.toContainText(
+      /PRIVATE_TASK_SENTINEL|SECRET_ROLE_SENTINEL/,
+    );
+
+    await publicGameTab.click();
+    await expect(publicGameTab).toHaveAttribute('aria-selected', 'true');
+    await expect(publicPlayersTab).toHaveAttribute('aria-selected', 'false');
+    await expect(gamePanel).toBeVisible();
+    await expect(playersPanel).toBeHidden();
+    await expect(page.getByTestId('player-game')).toHaveAttribute(
+      'data-phase',
+      'DEBATE',
+    );
+  }
+
   const phaseHelp = page
     .locator('details')
     .filter({ hasText: 'Everyone talks it over.' });
@@ -1274,8 +1423,20 @@ test('phone room shows public game state without a presenter', async ({
   }
   await phaseHelp.locator('summary').click();
   await expect(prompts).toBeHidden();
+  await publicPlayersTab.click();
+  await expect(playersPanel).toBeVisible();
   await expect(page.getByTestId('player-seat-seat-morgan')).toBeVisible();
   await expect(page.getByTestId('player-seat-seat-alex')).toContainText('Out');
+  await expect(page.getByTestId('player-seat-seat-morgan')).toContainText(
+    'Connected',
+  );
+  await expect(page.getByTestId('player-seat-seat-morgan')).not.toContainText(
+    'Traitor',
+  );
+  await expect(page.getByTestId('player-seat-seat-alex')).toContainText(
+    'Faithful',
+  );
+  await publicGameTab.click();
   await expect(page.getByTestId('status-prize-pot')).toContainText('18 points');
   const publicLog = page.getByTestId('list-public-log');
   await expect(publicLog).toContainText('Alex moved to a new device');
@@ -1323,6 +1484,7 @@ test('phone room shows public game state without a presenter', async ({
     await page.evaluate(() => window.scrollTo(0, 0));
     const headingBox = await page.locator('main h1').first().boundingBox();
     const happeningBox = await page
+      .getByTestId('game-tab-panel')
       .getByTestId('game-happening-card')
       .boundingBox();
     const action = page.locator('.game-action-bar .primary-action').first();
@@ -1367,12 +1529,12 @@ test('phone room shows public game state without a presenter', async ({
   await expect(page.getByTestId('game-notes-sheet')).toHaveCount(0);
   const moveOn = page.getByRole('button', { name: 'Move everyone on' });
   await expect(moveOn).toBeEnabled();
-  const playersTab = page.getByRole('link', { name: 'Players', exact: true });
-  await playersTab.click();
-  await expect(playersTab).toHaveAttribute('aria-current', 'page');
-  const gameTab = page.getByRole('link', { name: 'Game', exact: true });
-  await gameTab.click();
-  await expect(gameTab).toHaveAttribute('aria-current', 'page');
+  await publicPlayersTab.click();
+  await expect(publicPlayersTab).toHaveAttribute('aria-selected', 'true');
+  await expect(playersPanel).toBeVisible();
+  await publicGameTab.click();
+  await expect(publicGameTab).toHaveAttribute('aria-selected', 'true');
+  await expect(gamePanel).toBeVisible();
 });
 
 test('shows Moving on instead of a frozen zero when a deadline passes', async ({
@@ -1846,7 +2008,7 @@ test('out players see vote status without targets or an aggregate counter', asyn
   );
 });
 
-test('Conversation keeps collapsed Help close to the player detail section', async ({
+test('Conversation keeps collapsed Help close to the next game content', async ({
   page,
 }) => {
   const gameId = 'conversation-help-spacing';
@@ -1887,41 +2049,20 @@ test('Conversation keeps collapsed Help close to the player detail section', asy
     'open',
     '',
   );
-  const helpBounds = await page
+  const helpGap = await page
     .getByTestId('game-help-disclosure')
-    .boundingBox();
-  const playersBounds = await page.locator('#game-players').boundingBox();
-  expect(helpBounds).not.toBeNull();
-  expect(playersBounds).not.toBeNull();
-  const interveningLayout = await page.evaluate(
-    ({ helpBottom, playersTop }) =>
-      Array.from(document.querySelectorAll('main *'))
-        .map((element) => {
-          const bounds = element.getBoundingClientRect();
-          return {
-            tag: element.tagName,
-            className:
-              typeof element.className === 'string' ? element.className : '',
-            top: Math.round(bounds.top),
-            bottom: Math.round(bounds.bottom),
-            height: Math.round(bounds.height),
-          };
-        })
-        .filter(
-          (element) =>
-            element.height > 0 &&
-            element.top >= helpBottom &&
-            element.bottom <= playersTop,
-        ),
-    {
-      helpBottom: helpBounds!.y + helpBounds!.height,
-      playersTop: playersBounds!.y,
-    },
-  );
+    .evaluate((details) => {
+      const next = details.nextElementSibling;
+      if (!(next instanceof HTMLElement)) return null;
+      const helpBounds = details.getBoundingClientRect();
+      const nextBounds = next.getBoundingClientRect();
+      return nextBounds.top - helpBounds.bottom;
+    });
   expect(
-    playersBounds!.y - (helpBounds!.y + helpBounds!.height),
-    `Conversation should not leave a blank gap after collapsed Help: ${JSON.stringify(interveningLayout)}`,
-  ).toBeLessThanOrEqual(32);
+    helpGap,
+    'Conversation should not leave a blank gap after collapsed Help',
+  ).not.toBeNull();
+  expect(helpGap).toBeLessThanOrEqual(32);
 });
 
 test('expanded Help leaves every game page scrollable above the dock', async ({
@@ -2047,9 +2188,9 @@ test('expanded Help leaves every game page scrollable above the dock', async ({
 
     const lastItem =
       phase === 'DEBATE'
-        ? page.locator('#game-players .player-tile').last()
+        ? null
         : page.getByTestId('private-choice-list').getByRole('button').last();
-    await expect(lastItem).toBeAttached();
+    if (lastItem) await expect(lastItem).toBeAttached();
 
     for (const width of [320, 375, 390, 430]) {
       await page.setViewportSize({ width, height: 844 });
@@ -2076,22 +2217,48 @@ test('expanded Help leaves every game page scrollable above the dock', async ({
           .toBeGreaterThan(initialScrollY);
       }
 
-      await lastItem.evaluate((element) =>
-        element.scrollIntoView({ block: 'end' }),
-      );
-      const itemAndDock = await lastItem.evaluate((element) => {
-        const dock = document.querySelector<HTMLElement>(
-          '[data-testid="game-action-dock"], .game-action-bar',
+      if (lastItem) {
+        await lastItem.evaluate((element) =>
+          element.scrollIntoView({ block: 'end' }),
         );
-        if (!dock) throw new Error('The game action dock is not rendered.');
-        return {
-          itemBottom: element.getBoundingClientRect().bottom,
-          dockTop: dock.getBoundingClientRect().top,
-          pageScrollY: window.scrollY,
-        };
-      });
-      expect(itemAndDock.pageScrollY).toBeGreaterThan(initialScrollY);
-      expect(itemAndDock.itemBottom).toBeLessThanOrEqual(itemAndDock.dockTop);
+        const itemAndDock = await lastItem.evaluate((element) => {
+          const dock = document.querySelector<HTMLElement>(
+            '[data-testid="game-action-dock"], .game-action-bar',
+          );
+          if (!dock) throw new Error('The game action dock is not rendered.');
+          return {
+            itemBottom: element.getBoundingClientRect().bottom,
+            dockTop: dock.getBoundingClientRect().top,
+            pageScrollY: window.scrollY,
+          };
+        });
+        expect(itemAndDock.pageScrollY).toBeGreaterThan(initialScrollY);
+        expect(itemAndDock.itemBottom).toBeLessThanOrEqual(itemAndDock.dockTop);
+      }
+    }
+
+    if (phase === 'DEBATE') {
+      await page.getByRole('tab', { name: 'Players', exact: true }).click();
+      const lastPlayer = page
+        .getByTestId('players-roster-list')
+        .locator('.player-tile')
+        .last();
+      await expect(lastPlayer).toBeVisible();
+      for (const width of [320, 375, 390, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        await lastPlayer.evaluate((element) =>
+          element.scrollIntoView({ block: 'end' }),
+        );
+        const [playerBox, tabsBox] = await Promise.all([
+          lastPlayer.boundingBox(),
+          page.getByTestId('game-bottom-bar').boundingBox(),
+        ]);
+        expect(playerBox).not.toBeNull();
+        expect(tabsBox).not.toBeNull();
+        expect(playerBox!.y + playerBox!.height).toBeLessThanOrEqual(
+          tabsBox!.y,
+        );
+      }
     }
   }
 });
@@ -2166,10 +2333,11 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   await page.goto(`/game/${gameId}`);
   await viewResponse;
 
-  await expect(page.getByTestId('game-happening-card')).toHaveClass(
-    /game-happening-card--accent/,
-  );
-  await expect(page.getByTestId('game-happening-card')).toContainText(
+  const happening = page
+    .getByTestId('game-tab-panel')
+    .getByTestId('game-happening-card');
+  await expect(happening).toHaveClass(/game-happening-card--accent/);
+  await expect(happening).toContainText(
     'Tied vote. Choose again among the tied players.',
   );
   await expect(page.getByTestId('tie-revote-prompt')).toHaveText(
@@ -3249,14 +3417,32 @@ test('mobile players retain an unfinished private night choice after backgroundi
   );
 
   await page.goto(`/game/${gameId}`);
-  await expect(
-    page.getByRole('dialog', { name: 'Shield your screen' }),
-  ).toBeVisible();
+  const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
+  const gameTab = page.getByRole('tab', { name: 'Game', exact: true });
+  const playersTab = page.getByRole('tab', { name: 'Players', exact: true });
+  const playersPanel = page.getByTestId('players-tab-panel');
+  await expect(shieldDialog).toBeVisible();
+  await playersTab.click();
+  await expect(playersPanel).toBeVisible();
+  await expect(shieldDialog).toHaveCount(0);
+  await gameTab.click();
+  await expect(shieldDialog).toBeVisible();
   await page.clock.fastForward(3_000);
   await page.getByRole('button', { name: 'I’m shielded' }).click();
   const choices = page.getByTestId('private-choice-list');
   await expect(choices).toBeVisible();
   await choices.getByRole('button', { name: 'Jamie', exact: true }).click();
+  await expect(
+    page.getByText('Your pick: Jamie', { exact: true }),
+  ).toBeVisible();
+  await expectOnlyCurrentChoiceIdStored(page, 'SHADOW', 'seat-jamie');
+  await playersTab.click();
+  await expect(playersPanel).toBeVisible();
+  await expect(
+    page.getByText('Your pick: Jamie', { exact: true }),
+  ).toBeHidden();
+  await gameTab.click();
+  await expect(choices).toBeVisible();
   await expect(
     page.getByText('Your pick: Jamie', { exact: true }),
   ).toBeVisible();
@@ -3408,9 +3594,16 @@ test('mobile players hide a held role on background and never store it', async (
   );
 
   await page.goto(`/game/${gameId}`);
-  await expect(
-    page.getByRole('dialog', { name: 'Shield your screen' }),
-  ).toBeVisible();
+  const shieldDialog = page.getByRole('dialog', { name: 'Shield your screen' });
+  const gameTab = page.getByRole('tab', { name: 'Game', exact: true });
+  const playersTab = page.getByRole('tab', { name: 'Players', exact: true });
+  const playersPanel = page.getByTestId('players-tab-panel');
+  await expect(shieldDialog).toBeVisible();
+  await playersTab.click();
+  await expect(playersPanel).toBeVisible();
+  await expect(shieldDialog).toHaveCount(0);
+  await gameTab.click();
+  await expect(shieldDialog).toBeVisible();
   await page.clock.fastForward(3_000);
   await page.getByRole('button', { name: 'I’m shielded' }).click();
   const roleSeal = page.getByTestId('button-hold-reveal');
@@ -3420,9 +3613,28 @@ test('mobile players hide a held role on background and never store it', async (
   await page.clock.fastForward(1_000);
   await expect(roleContent).toContainText('Faithful');
   await expect(roleContent).toContainText('PRIVATE_TASK_SENTINEL');
+  await page.keyboard.up('Space');
   expect(await browserStorageText(page)).not.toMatch(
     /Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
   );
+  await playersTab.click();
+  await expect(playersPanel).toBeVisible();
+  await expect(roleContent).not.toContainText(
+    /Faithful|PRIVATE_TASK_SENTINEL/i,
+  );
+  await expect(playersPanel).not.toContainText(
+    /Faithful|Traitor|PRIVATE_TASK_SENTINEL/i,
+  );
+  await gameTab.click();
+  await expect(roleContent).not.toContainText(
+    /Faithful|PRIVATE_TASK_SENTINEL/i,
+  );
+  await expect(roleSeal).toBeVisible();
+  await roleSeal.focus();
+  await page.keyboard.down('Space');
+  await page.clock.fastForward(1_000);
+  await expect(roleContent).toContainText('Faithful');
+  await expect(roleContent).toContainText('PRIVATE_TASK_SENTINEL');
 
   await page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', {

@@ -636,6 +636,11 @@ export const en = {
     noChoiceAvailable: 'No player to choose',
     playerPlaying: 'Playing',
     playerOut: 'Out',
+    playerConnected: 'Connected',
+    playerOffline: 'Offline',
+    playerConnectionUnknown: 'Connection unavailable',
+    playerYou: 'You',
+    playersLoading: 'Loading players',
     playerOutRole: (role: 'traitor' | 'faithful') =>
       `Out, ${role === 'traitor' ? 'Traitor' : 'Faithful'}`,
     personalTakenFate:

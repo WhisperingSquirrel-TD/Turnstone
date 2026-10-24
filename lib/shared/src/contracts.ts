@@ -444,6 +444,7 @@ export const fullViewSchema = z
           id,
           name: z.string(),
           status: z.enum(['alive', 'banished', 'murdered', 'departed']),
+          connected: z.boolean().optional(),
           role: roleSchema.optional(),
         })
         .strict(),
