@@ -560,6 +560,7 @@ export const en = {
       ARCHIVED: 'Game archived',
     },
     defaultPhase: 'The game',
+    dealAnnouncement: 'Look at your role in private, then hide it.',
     loading: 'Loading your game',
     loadingLabel: 'Loading game',
     unavailableHeading: 'The game view is unavailable',

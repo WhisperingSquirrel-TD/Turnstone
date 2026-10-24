@@ -24,6 +24,13 @@ function announcement(props: Partial<AnnouncementInput>) {
 }
 
 describe('GameStepAnnouncement', () => {
+  it('gives role-neutral guidance during the sealed role reveal', () => {
+    const html = announcement({ phase: 'DEAL' });
+
+    expect(html).toContain('Look at your role in private, then hide it.');
+    expect(html).not.toMatch(/\b(?:Traitor|Faithful)\b/);
+  });
+
   it('puts the actual vote count in normal-size commentary before choices', () => {
     const html = renderToStaticMarkup(
       <GameStepAnnouncement

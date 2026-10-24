@@ -31,7 +31,9 @@ export function GameStepAnnouncement({
 }: GameStepAnnouncementProps) {
   let message: string | null = null;
 
-  if (revote && (phase === 'VOTE' || phase === 'FINAL_BANISH')) {
+  if (phase === 'DEAL') {
+    message = en.game.dealAnnouncement;
+  } else if (revote && (phase === 'VOTE' || phase === 'FINAL_BANISH')) {
     message = en.game.revoteReason;
   } else if (phase === 'SHADOW') {
     if (shadowRound === 2) message = en.game.unanimousNoDecision;

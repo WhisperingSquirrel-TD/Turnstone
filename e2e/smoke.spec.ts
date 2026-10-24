@@ -579,6 +579,15 @@ test('private role and seal stay inside small phone viewports without a play foo
     );
     await shieldConfirmation.click();
 
+    const happeningCard = page.getByTestId('game-happening-card');
+    await expect(happeningCard).toContainText(
+      'Look at your role in private, then hide it.',
+    );
+    await expect(happeningCard).not.toContainText(/\b(?:Traitor|Faithful)\b/);
+    const privateRoleSlot = page.getByTestId('private-role-content');
+    await expect(privateRoleSlot).toBeVisible();
+    await expect(privateRoleSlot).not.toContainText(/\b(?:Traitor|Faithful)\b/);
+
     const progress = page.getByTestId('phase-progress-status');
     await expect(progress).toHaveText('0 of 5 are ready');
     const seal = page.getByTestId('button-hold-reveal');
