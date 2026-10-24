@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Current status: Verify #255 on `abe7fa2` completed red; no Verify run is active. Browser checks and all non-rehearsal jobs passed; rehearsal-live failed. Test-only Stage 1 corrections are local and not pushed. Latest fully green remains Verify #248 (`6f17b40`).**
+**Current status: Verify #256 on `c20820c` completed green; every job passed, including rehearsal-live, Pixel Chromium, iPhone/iPad WebKit, Lighthouse, scenarios, unit, audit and required-checks. This test-only Stage 1 correction is verified; stop for the next owner brief.**
 
 **Round 7 Stage 1 Verify #249–#252:** #251 exposed the mobile dock moving with page scroll because an animated `.enter` ancestor transformed its fixed-position containing block. The fix is on `main` at `9646ab5`; the Pixel 320/375/390/430 layout matrix and away/resume choice checks passed locally, and the dock-covering failure did not recur in #252. Local iPhone WebKit cannot launch because this workspace lacks its system browser dependencies; GitHub WebKit remains authoritative.
 
@@ -8,7 +8,7 @@
 
 **Round 7 Stage 1 browser slice:** pushed as `b7e41f5`. #253 and #254's iPhone/iPad failures were caused by Playwright mobile WebKit not supporting `mouse.wheel`, not by a product scroll failure. Commit `abe7fa2` removes that unsupported interaction from WebKit, keeps the overflow-lock and geometry assertions on all profiles, and restores the existing product scroll-lock code. Verify #255 passed all browser jobs; focused desktop/Pixel tests pass (4/4), and typechecks, ESLint and formatting pass.
 
-**Round 7 Stage 1 rehearsal failures in Verify #253–#255:** H1's 5-second SHADOW failure was an outdated exact-name locator for a selected tile, whose approved UI state adds “Selected”; the H1 replay now passes locally using the visible player-name text. The disconnected-player CI failure (successful create response, but no visible `text-lobby-code` within 30 seconds) is not reproduced locally; its full real-server journey passes, so the CI cause remains unresolved. The offline expectation was stale (“Offline”, not “Reconnecting”). The complete player rehearsal now passes locally after updating checks for the wake-lock test ID, repeated-choice copy in the commentary card, the no-branding play shell/status bar and the actual “Back to start” button. No product code changed.
+**Round 7 Stage 1 rehearsal failures in Verify #253–#255:** H1's 5-second SHADOW failure was an outdated exact-name locator for a selected tile, whose approved UI state adds “Selected”; the H1 replay passes locally using visible player-name text. The #255 disconnected-player CI failure (successful create response, but no visible `text-lobby-code` within 30 seconds) did not reproduce in the local real-server run and passed in Verify #256, so no change was made to that flow. The offline expectation was stale (“Offline”, not “Reconnecting”). The full player rehearsal passes locally and in Verify #256 after updating checks for the wake-lock test ID, repeated-choice copy in the commentary card, the no-branding play shell/status bar and the actual “Back to start” button. No product code changed.
 
 **Round 6 Notes / Zod security update:** the Notes regression passed in CI. #245 exposed a browser assertion that incorrectly rejected a retry at the exact 10-second `Retry-After` boundary; #246 failed because a browser route callback produced `NaN` for fake time. Exact timing now has a deterministic injected-clock unit test, and the browser check verifies back-off and eventual resume. #247's audit found `GHSA-mrhx-c7xc-m3w5` in Zod 3.25.76; the owner approved the upgrade to 4.6.6. Verify #248 passed all jobs, including audit. The complete local `pnpm run verify` also passed: 680 unit tests, 21 property tests, 86.02% server coverage (85% threshold unchanged), 2,572 scenarios with none failing, 126 browser tests passing and 22 skipped because those profiles run only in CI, all 4 real-server rehearsals passing, six public-page Lighthouse checks passing, and audit at 0 high / 0 critical.
 
@@ -28,7 +28,7 @@
 
 **Round 6 Notes:** the draft now clears when the player presses Done. A new browser regression proved it stayed in the textarea after closing and reopening before the fix; the fixed flow passed on all four browser profiles, including in Verify #245. It also checks the released text is absent from the DOM, local/session storage and browser console. Temporary privacy covers still allow a player to return to the open Notes screen.
 
-**Next:** run the final focused checks and push the test-only Stage 1 expectation corrections. Then inspect the new Verify result; if the disconnected-player lobby-code wait fails again, use its uploaded failure report to diagnose before changing anything. Do not start per-screen redesign.
+**Next:** Stage 1 is green on GitHub. Stop here; wait for the owner’s separate Stage 2 brief before per-screen redesign.
 
 **Push isolation:** `99da77a` is on `main`; the push contained progress documentation, virtual-player harness/tests and the pipeline regression test. Attached content and generated Playwright artifacts were excluded.
 
