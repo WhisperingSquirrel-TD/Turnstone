@@ -13,6 +13,23 @@
   --brand-candle: var(--candle);
   --brand-ash: var(--ash);
 
+  --game-day-bg: #faf8f1;
+  --game-day-surface: #f1ecdf;
+  --game-day-line: #d9d1bf;
+  --game-day-text: #26221d;
+  --game-day-muted: #5e564b;
+  --game-day-accent: #7a4e1d;
+  --game-day-on-accent: #ffffff;
+  --game-day-alert: #a3341f;
+  --game-night-bg: #1b1815;
+  --game-night-surface: #272320;
+  --game-night-line: #433c34;
+  --game-night-text: #f3eee4;
+  --game-night-muted: #bfb5a5;
+  --game-night-accent: #e3b35f;
+  --game-night-on-accent: #1b1815;
+  --game-night-alert: #f2927a;
+
   /* Existing foundation-shell aliases stay stable until their screen milestones. */
   --amber: var(--gilt); /* accent only */
   --slate: #5c5652;
@@ -34,14 +51,14 @@
 .game-shell {
   color-scheme: dark;
   color: var(--game-text);
-  --game-bg: #1b1815;
-  --game-surface: #272320;
-  --game-line: #433c34;
-  --game-text: #f3eee4;
-  --game-muted: #bfb5a5;
-  --game-accent: #e3b35f;
-  --game-on-accent: #1b1815;
-  --game-alert: #f2927a;
+  --game-bg: var(--game-night-bg);
+  --game-surface: var(--game-night-surface);
+  --game-line: var(--game-night-line);
+  --game-text: var(--game-night-text);
+  --game-muted: var(--game-night-muted);
+  --game-accent: var(--game-night-accent);
+  --game-on-accent: var(--game-night-on-accent);
+  --game-alert: var(--game-night-alert);
   --game-page-background: var(--game-bg);
   --charcoal: var(--game-bg);
   --hearth: var(--game-surface);
@@ -55,14 +72,14 @@
 
 .game-shell[data-game-theme='day'] {
   color-scheme: light;
-  --game-bg: #faf8f1;
-  --game-surface: #f1ecdf;
-  --game-line: #d9d1bf;
-  --game-text: #26221d;
-  --game-muted: #5e564b;
-  --game-accent: #7a4e1d;
-  --game-on-accent: #ffffff;
-  --game-alert: #a3341f;
+  --game-bg: var(--game-day-bg);
+  --game-surface: var(--game-day-surface);
+  --game-line: var(--game-day-line);
+  --game-text: var(--game-day-text);
+  --game-muted: var(--game-day-muted);
+  --game-accent: var(--game-day-accent);
+  --game-on-accent: var(--game-day-on-accent);
+  --game-alert: var(--game-day-alert);
   --game-page-background: var(--game-bg);
   --charcoal: var(--game-bg);
   --hearth: var(--game-surface);

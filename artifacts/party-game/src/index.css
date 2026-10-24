@@ -34,10 +34,11 @@
   top: max(1rem, env(safe-area-inset-top));
   left: max(1rem, env(safe-area-inset-left));
   right: max(1rem, env(safe-area-inset-right));
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
   align-items: center;
-  justify-content: space-between;
-  min-height: 3.5rem;
+  min-height: 3.25rem;
 }
 
 @font-face {
@@ -600,13 +601,14 @@ h2,
 .entry-experience .entry-action-dock > button {
   width: min(100%, 480px);
   min-height: 56px;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .entry-screen-join-code,
 .entry-screen-join-name,
 .entry-screen-join-pin,
-.entry-screen-lobby {
+.entry-screen-lobby,
+.entry-screen-rehearsal-setup {
   flex-direction: column;
   padding-bottom: calc(10rem + env(safe-area-inset-bottom));
 }

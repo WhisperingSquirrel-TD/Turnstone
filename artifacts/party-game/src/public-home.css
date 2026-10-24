@@ -21,6 +21,40 @@
   margin-inline: auto;
 }
 
+.public-home-brand:not(.player-shell-header) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  min-height: 52px;
+  padding-inline: 16px;
+}
+
+.safe-page:not(.game-shell) {
+  color-scheme: light;
+  --game-bg: var(--game-day-bg);
+  --game-surface: var(--game-day-surface);
+  --game-line: var(--game-day-line);
+  --game-text: var(--game-day-text);
+  --game-muted: var(--game-day-muted);
+  --game-accent: var(--game-day-accent);
+  --game-on-accent: var(--game-day-on-accent);
+  --game-alert: var(--game-day-alert);
+  --game-page-background: var(--game-bg);
+  --charcoal: var(--game-bg);
+  --hearth: var(--game-surface);
+  --stone: var(--game-line);
+  --gilt: var(--game-accent);
+  --candle: var(--game-text);
+  --ash: var(--game-muted);
+  min-height: 100dvh;
+  color: var(--game-text);
+  background: var(--game-page-background);
+}
+
+.safe-page:not(.game-shell) h1 {
+  font-size: 30px;
+  line-height: 1.15;
+}
+
 .public-skip-link {
   position: fixed;
   z-index: 20;
@@ -171,16 +205,18 @@
 }
 
 .public-home-menu {
-  display: none;
+  display: block;
   position: relative;
   justify-self: end;
   color: var(--candle);
 }
 
 .public-home-menu summary {
+  min-width: 44px;
+  min-height: 44px;
   padding-inline: 0.5rem;
   border: 1px solid var(--stone);
-  border-radius: 0.5rem;
+  border-radius: 14px;
   cursor: pointer;
   list-style: none;
 }
@@ -244,12 +280,7 @@
   inset: 0;
   content: '';
   pointer-events: none;
-  background: radial-gradient(
-    ellipse 65% 58% at 50% 45%,
-    rgb(200 148 74 / 0.13) 0%,
-    rgb(200 148 74 / 0.055) 38%,
-    transparent 72%
-  );
+  background: none;
 }
 
 .public-home-hero-copy {
@@ -264,7 +295,7 @@
 .public-home-wordmark {
   margin: 0;
   font-family: var(--font-headline);
-  font-size: clamp(3rem, 7vw, 4.5rem);
+  font-size: 30px;
   font-weight: 400;
   line-height: 1.05;
   white-space: nowrap;
@@ -305,10 +336,15 @@
   align-items: center;
   justify-content: center;
   padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  font-size: 1rem;
+  border-radius: 14px;
+  font-size: 17px;
   text-align: center;
   text-decoration: none;
+}
+
+.public-home-actions .primary-action {
+  color: var(--game-on-accent);
+  background: var(--game-accent);
 }
 
 .public-home-actions .secondary-action {
@@ -318,9 +354,15 @@
 }
 
 .public-home-actions .quiet-action {
-  min-height: 48px;
+  min-height: 56px;
   text-decoration: underline;
   text-underline-offset: 0.2em;
+}
+
+.not-found-action {
+  min-height: 56px;
+  border-radius: 14px;
+  font-size: 17px;
 }
 
 .public-home-demo {
@@ -542,7 +584,7 @@
   }
 
   .public-home-wordmark {
-    font-size: clamp(3rem, 16vw, 4rem);
+    font-size: 30px;
   }
 
   .public-comparison-table th,
@@ -565,7 +607,7 @@
   }
 
   .public-home-wordmark {
-    font-size: clamp(2.75rem, 15vw, 3rem);
+    font-size: 30px;
   }
 }
 

@@ -42,7 +42,7 @@ test('loading the app route does not reload an open public page', async ({
   await appPage.close();
 });
 
-test('the public home page stays mobile-first and glow edges stay contained', async ({
+test('the public home page uses the shared paper surface and stays mobile-first', async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -152,13 +152,29 @@ test('the public home page stays mobile-first and glow edges stay contained', as
       const visualStyles = await page.evaluate(() => {
         const hero = document.querySelector('.public-home-hero');
         const demo = document.querySelector('.public-home-demo');
+        const root = document.querySelector('#static-home');
+        const heading = document.querySelector('.public-home-wordmark');
+        const primary = document.querySelector(
+          '.public-home-actions .primary-action',
+        );
+        const menu = document.querySelector('.public-home-menu');
         return {
           glow: hero ? getComputedStyle(hero, '::before').backgroundImage : '',
           demoShadow: demo ? getComputedStyle(demo).boxShadow : '',
+          surface: root ? getComputedStyle(root).backgroundColor : '',
+          headingSize: heading ? getComputedStyle(heading).fontSize : '',
+          primaryHeight: primary
+            ? Math.round(primary.getBoundingClientRect().height)
+            : 0,
+          menuDisplay: menu ? getComputedStyle(menu).display : 'missing',
         };
       });
-      expect(visualStyles.glow).toContain('radial-gradient');
+      expect(visualStyles.glow).toBe('none');
       expect(visualStyles.demoShadow).toBe('none');
+      expect(visualStyles.surface).toBe('rgb(250, 248, 241)');
+      expect(visualStyles.headingSize).toBe('30px');
+      expect(visualStyles.primaryHeight).toBe(56);
+      expect(visualStyles.menuDisplay).not.toBe('none');
     }
   }
 
@@ -175,6 +191,177 @@ test('the public home page stays mobile-first and glow edges stay contained', as
   await expect(page.getByText(/^(Traitor|Faithful)$/)).toBeVisible();
   await page.mouse.up();
   await expect(demo).toContainText('Hold to reveal');
+});
+
+test('entry pages share the paper shell and keep the brand footer on home only', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !testInfo.project.name.toLowerCase().includes('desktop'),
+    'Entry visual and image regression runs once in desktop Chromium',
+  );
+
+  const screens = [
+    { path: '/', root: '#static-home', hasBrandFooter: true },
+    { path: '/join', root: '.entry-experience', hasBrandFooter: false },
+    {
+      path: '/play?entry=create',
+      root: '.entry-experience',
+      hasBrandFooter: false,
+    },
+    {
+      path: '/play?entry=rehearsal',
+      root: '.entry-experience',
+      hasBrandFooter: false,
+    },
+    {
+      path: '/about',
+      root: '.safe-page:not(.game-shell)',
+      hasBrandFooter: false,
+    },
+    {
+      path: '/how-to-play',
+      root: '.safe-page:not(.game-shell)',
+      hasBrandFooter: false,
+    },
+    {
+      path: '/faq',
+      root: '.safe-page:not(.game-shell)',
+      hasBrandFooter: false,
+    },
+    {
+      path: '/compare',
+      root: '.safe-page:not(.game-shell)',
+      hasBrandFooter: false,
+    },
+    {
+      path: '/coming-soon',
+      root: '.safe-page:not(.game-shell)',
+      hasBrandFooter: false,
+    },
+    {
+      path: '/play/not-a-route',
+      root: '.safe-page:not(.game-shell)',
+      hasBrandFooter: false,
+    },
+  ];
+
+  for (const screen of screens) {
+    await page.goto(screen.path);
+    const root = page.locator(screen.root);
+    await expect(root, `page root at ${screen.path}`).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    await expect(
+      root.locator('.public-home-menu summary, .entry-brand-menu summary'),
+    ).toBeVisible();
+
+    const style = await root.evaluate((element) => {
+      const heading = element.querySelector('h1');
+      const primary =
+        element.querySelector('.public-home-actions .primary-action') ??
+        element.querySelector('.entry-action-dock button') ??
+        element.querySelector('.not-found-action');
+      return {
+        background: getComputedStyle(element).backgroundColor,
+        backgroundImage: getComputedStyle(element).backgroundImage,
+        headingSize: heading ? getComputedStyle(heading).fontSize : '',
+        headingFamily: heading ? getComputedStyle(heading).fontFamily : '',
+        primaryHeight: primary
+          ? Math.round(primary.getBoundingClientRect().height)
+          : null,
+      };
+    });
+    expect(style.background, `${screen.path} paper background`).toBe(
+      'rgb(250, 248, 241)',
+    );
+    expect(style.backgroundImage, `${screen.path} has no form gradient`).toBe(
+      'none',
+    );
+    expect(style.headingSize, `${screen.path} heading size`).toBe('30px');
+    expect(style.headingFamily).toContain('Playfair Display');
+    if (style.primaryHeight !== null) {
+      expect(style.primaryHeight, `${screen.path} primary height`).toBe(56);
+    }
+
+    const brandFooterCount = await page
+      .locator(
+        '[data-testid="brand-footer-static"], [data-testid="brand-footer-entry"], [data-testid="brand-footer-shell"]',
+      )
+      .count();
+    expect(brandFooterCount, `${screen.path} footer visibility`).toBe(
+      screen.hasBrandFooter ? 1 : 0,
+    );
+
+    const brokenImages = await page.locator('img').evaluateAll(async (images) =>
+      (
+        await Promise.all(
+          images.map(async (element) => {
+            const image = element as HTMLImageElement;
+            try {
+              await image.decode();
+              return image.naturalWidth > 0
+                ? null
+                : image.currentSrc || image.src;
+            } catch {
+              return image.currentSrc || image.src;
+            }
+          }),
+        )
+      ).filter((source): source is string => source !== null),
+    );
+    expect(brokenImages, `broken image on ${screen.path}`).toEqual([]);
+  }
+});
+
+test('practice selection and named action stay clear in the narrow dock', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !testInfo.project.name.toLowerCase().includes('desktop'),
+    'Entry dock geometry runs once in Chromium',
+  );
+
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto('/play?entry=rehearsal');
+
+  const fastChoice = page.getByTestId('button-speed-fast');
+  const rehearseButton = page.getByTestId('button-start-rehearsal');
+  const nameField = page.getByTestId('input-rehearsal-name');
+  await expect(fastChoice).toBeVisible();
+  await expect(fastChoice).toHaveAttribute('aria-pressed', 'true');
+  await expect(fastChoice).toContainText('Selected');
+  await expect(
+    page.getByLabel('Your first name', { exact: true }),
+  ).toBeVisible();
+  await expect(rehearseButton).toBeDisabled();
+
+  const tileHeight = await fastChoice.evaluate((element) =>
+    Math.round(element.getBoundingClientRect().height),
+  );
+  expect(tileHeight).toBeGreaterThanOrEqual(56);
+
+  await nameField.fill('Ava');
+  await expect(rehearseButton).toBeEnabled();
+  const dockGeometry = await page.evaluate(() => {
+    const dock = document.querySelector('[data-testid="entry-action-dock"]');
+    const button = document.querySelector(
+      '[data-testid="button-start-rehearsal"]',
+    );
+    if (!dock || !button) throw new Error('Practice dock or action is missing');
+    return {
+      dockBottom: dock.getBoundingClientRect().bottom,
+      buttonHeight: button.getBoundingClientRect().height,
+      buttonBottom: button.getBoundingClientRect().bottom,
+      viewportHeight: window.innerHeight,
+    };
+  });
+  expect(Math.round(dockGeometry.buttonHeight)).toBe(56);
+  expect(dockGeometry.buttonBottom).toBeLessThanOrEqual(
+    dockGeometry.viewportHeight,
+  );
+  expect(dockGeometry.dockBottom).toBeLessThanOrEqual(
+    dockGeometry.viewportHeight,
+  );
 });
 
 test('the 375×667 phone viewport keeps home copy and actions on-screen', async ({

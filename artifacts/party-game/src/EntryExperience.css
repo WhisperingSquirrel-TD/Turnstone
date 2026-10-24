@@ -18,18 +18,32 @@
     max(1.25rem, env(safe-area-inset-right))
     max(1.25rem, env(safe-area-inset-bottom))
     max(1.25rem, env(safe-area-inset-left));
-  color: var(--entry-candle);
-  background:
-    linear-gradient(
-      132deg,
-      transparent 0%,
-      rgba(85, 80, 75, 0.27) 20rem,
-      transparent 43rem
-    ),
-    var(--entry-charcoal);
+  color: var(--game-text, var(--entry-candle));
+  background: var(--game-page-background, var(--entry-charcoal));
   font-family: var(--entry-body);
   font-size: 1rem;
   line-height: 1.5;
+}
+
+.entry-experience.game-shell[data-game-theme] {
+  color-scheme: light;
+  --game-bg: var(--game-day-bg);
+  --game-surface: var(--game-day-surface);
+  --game-line: var(--game-day-line);
+  --game-text: var(--game-day-text);
+  --game-muted: var(--game-day-muted);
+  --game-accent: var(--game-day-accent);
+  --game-on-accent: var(--game-day-on-accent);
+  --game-alert: var(--game-day-alert);
+  --game-page-background: var(--game-bg);
+  --charcoal: var(--game-bg);
+  --hearth: var(--game-surface);
+  --stone: var(--game-line);
+  --gilt: var(--game-accent);
+  --candle: var(--game-text);
+  --ash: var(--game-muted);
+  --game-button-ink: var(--game-on-accent);
+  --game-button-fill: var(--game-accent);
 }
 
 .entry-experience *,
@@ -61,12 +75,8 @@
   content: '';
   inset: -2rem -3rem;
   border-radius: 50%;
-  background: radial-gradient(
-    ellipse,
-    rgba(200, 148, 74, 0.19),
-    transparent 72%
-  );
-  opacity: 0.8;
+  background: none;
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -99,7 +109,7 @@
   white-space: nowrap;
   color: var(--entry-candle);
   font-family: var(--entry-display);
-  font-size: clamp(3rem, 14vw, 3.5rem);
+  font-size: 30px;
   font-weight: 400;
   line-height: 1.05;
   text-wrap: balance;
@@ -156,18 +166,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
+  min-height: 56px;
   padding: 0.7rem 1.1rem;
   border: 1px solid var(--entry-gilt);
-  border-radius: 2px;
+  border-radius: 14px;
+  font-size: 17px;
   font-weight: 500;
   text-align: center;
   text-decoration: none;
 }
 
+.entry-experience .entry-speed-choice {
+  min-height: 56px;
+}
+
 .entry-primary-action {
-  color: var(--entry-hearth) !important;
-  background: var(--entry-gilt);
+  color: var(--game-on-accent, #fff) !important;
+  background: var(--game-accent, var(--entry-gilt));
 }
 
 .entry-primary-action:not(:disabled):hover {
@@ -180,9 +195,12 @@
   background: transparent;
 }
 
-.entry-secondary-action:not(:disabled):hover,
-.entry-speed-choice[aria-pressed='true'] {
+.entry-secondary-action:not(:disabled):hover {
   background: rgba(200, 148, 74, 0.12);
+}
+
+.entry-speed-choice[aria-pressed='true'] {
+  background: var(--game-surface, var(--entry-hearth));
 }
 
 .entry-text-action,
@@ -236,7 +254,7 @@
   margin: 0;
   color: var(--entry-candle);
   font-family: var(--entry-display);
-  font-size: clamp(2rem, 8vw, 2.25rem);
+  font-size: 30px;
   font-weight: 400;
   line-height: 1.15;
   text-wrap: balance;
@@ -277,15 +295,18 @@
   display: block;
   margin-top: 0.25rem;
   color: var(--entry-ash);
-  font-size: 0.9rem;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .entry-field {
   width: 100%;
-  min-height: 48px;
+  min-height: 56px;
   padding: 0.65rem 0.8rem;
   border: 1px solid var(--entry-stone);
-  border-radius: 2px;
+  border-radius: 14px;
   color: var(--entry-candle);
   background: var(--entry-hearth);
 }
@@ -357,8 +378,8 @@
 .entry-error {
   margin: 1rem 0 0;
   padding-left: 0.85rem;
-  border-left: 2px solid var(--entry-gilt);
-  color: var(--entry-candle);
+  border-left: 2px solid var(--game-alert, var(--entry-gilt));
+  color: var(--game-alert, var(--entry-candle));
 }
 
 .entry-wait-panel {
@@ -504,7 +525,15 @@
 }
 
 .entry-speed-choice[aria-pressed='true'] {
-  box-shadow: inset 0 0 0 1px var(--entry-gilt);
+  border: 2.5px solid var(--game-accent, var(--entry-gilt));
+  box-shadow: none;
+  font-weight: 700;
+}
+
+.entry-speed-selected {
+  margin-left: 0.4rem;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .entry-rehearsal-description {
@@ -777,8 +806,8 @@
 
 @media (max-width: 360px) {
   .entry-experience {
-    padding-left: max(0.9rem, env(safe-area-inset-left));
-    padding-right: max(0.9rem, env(safe-area-inset-right));
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
   }
 
   .entry-brand {

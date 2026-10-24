@@ -263,7 +263,8 @@ function Shell({
   privateMode = false,
   privateRevealActive = false,
   connectionStatus = null,
-  hideGameFooter = false,
+  hideGameFooter = true,
+  showBrandFooter = false,
   phase,
   cycle = 1,
   remaining = 0,
@@ -277,6 +278,7 @@ function Shell({
   privateRevealActive?: boolean;
   connectionStatus?: GameConnectionState | null;
   hideGameFooter?: boolean;
+  showBrandFooter?: boolean;
   phase?: string;
   cycle?: number;
   remaining?: number;
@@ -437,47 +439,16 @@ function Shell({
             }
           />
         ) : (
-          <>
-            <Link
-              to={config.routes.home}
-              aria-label={config.appName}
-              className="oathstone-wordmark"
-            >
-              <span>
-                {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
-              </span>
-              <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
-            </Link>
-            <nav
-              aria-label={en.nav.label}
-              className="public-home-nav text-sm text-ash"
-            >
-              <Link
-                className="underline-offset-4 hover:underline"
-                to={config.routes.home}
-              >
-                {en.nav.home}
-              </Link>
-              <Link
-                className="underline-offset-4 hover:underline"
-                to={config.routes.faq}
-              >
-                {en.publicSite.faqHeading}
-              </Link>
-              <Link
-                className="underline-offset-4 hover:underline"
-                to={config.routes.compare}
-              >
-                {en.publicSite.compareHeading}
-              </Link>
-              <Link
-                className="underline-offset-4 hover:underline"
-                to={config.routes.play}
-              >
-                {en.nav.play}
-              </Link>
-            </nav>
-          </>
+          <Link
+            to={config.routes.home}
+            aria-label={config.appName}
+            className="oathstone-wordmark"
+          >
+            <span>
+              {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
+            </span>
+            <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
+          </Link>
         )}
         {!isPlayer && (
           <details className="public-home-menu">
@@ -504,21 +475,17 @@ function Shell({
         className={`mx-auto w-full max-w-5xl flex-1 py-10 sm:py-16${privateMode ? ' private-moment-main' : ''}${isPlayer ? ' game-shell-main' : ''}`}
       >
         <BrandSurfaceContext.Provider
-          value={isPlayer && theme === 'day' ? 'light' : 'dark'}
+          value={isPlayer ? (theme === 'day' ? 'light' : 'dark') : 'light'}
         >
           {children}
         </BrandSurfaceContext.Provider>
       </main>
       {isPlayer && <GameBottomBar active="game" />}
-      {(!isPlayer || !hideGameFooter) && (
+      {!isPlayer && showBrandFooter && (
         <BrandFooter
-          context={isPlayer ? 'game' : 'public'}
-          surface={isPlayer && theme === 'day' ? 'light' : 'dark'}
-          className={
-            isPlayer
-              ? 'game-brand-footer'
-              : 'mx-auto mt-8 w-full max-w-5xl py-3'
-          }
+          context="public"
+          surface="light"
+          className="mx-auto mt-8 w-full max-w-5xl py-3"
           testId="brand-footer-shell"
         />
       )}
@@ -534,7 +501,7 @@ function Home() {
   );
 
   return (
-    <Shell>
+    <Shell showBrandFooter>
       <div className="public-home-content">
         <section
           className="public-home-hero"
@@ -739,7 +706,10 @@ function NotFound() {
     <Shell>
       <h1 className="display text-4xl">{en.notFound.heading}</h1>
       <p className="mt-5 max-w-lg text-lg text-ash">{en.notFound.body}</p>
-      <Link to={config.routes.home} className="quiet-action mt-7 no-underline">
+      <Link
+        to={config.routes.home}
+        className="quiet-action not-found-action mt-7 no-underline"
+      >
         {en.notFound.back}
       </Link>
     </Shell>
@@ -2634,9 +2604,6 @@ function PlayerGame() {
       remaining={
         full?.seats.filter((seat) => seat.status === 'alive').length ?? 0
       }
-      hideGameFooter={Boolean(
-        full && !['LOBBY', 'FINISHED'].includes(full.phase),
-      )}
       organiserControlsVisible={showOrganiserBar}
       organiserTools={
         full && activeGame && !full.rehearsal ? (

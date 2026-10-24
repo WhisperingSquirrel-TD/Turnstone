@@ -8,8 +8,9 @@ import {
   type ClipboardEvent,
   type ReactNode,
 } from 'react';
+import { Link } from 'react-router-dom';
 import { recommended } from '@workspace/shared';
-import { BrandFooter } from './BrandFooter';
+import { config } from './config';
 import { EntryActionError } from './entry-action-error';
 import { GameStatusBar, PlayerTile, WhatIsHappeningCard } from './GameChrome';
 import { en } from './locale/en-GB';
@@ -581,6 +582,17 @@ export function EntryExperience({
           <span>{copy.brand.slice(0, -copy.brandGoldSuffix.length)}</span>
           <span className="entry-gilt">{copy.brandGoldSuffix}</span>
         </span>
+        <details className="public-home-menu entry-brand-menu">
+          <summary>{en.nav.menu}</summary>
+          <div>
+            <Link to={config.routes.home}>{en.nav.home}</Link>
+            <Link to={config.routes.faq}>{en.publicSite.faqHeading}</Link>
+            <Link to={config.routes.compare}>
+              {en.publicSite.compareHeading}
+            </Link>
+            <Link to={config.routes.play}>{en.nav.play}</Link>
+          </div>
+        </details>
       </header>
 
       <main
@@ -1465,6 +1477,7 @@ export function EntryExperience({
               {copy.rehearsalDescription}
             </p>
             <form
+              id="entry-rehearsal-form"
               className="entry-form-area entry-rehearsal-form"
               onSubmit={submitRehearsal}
             >
@@ -1510,18 +1523,26 @@ export function EntryExperience({
                   data-testid="button-speed-fast"
                   type="button"
                   aria-pressed={inputs.rehearsalSpeed === 'fast'}
+                  aria-label={copy.fast}
                   onClick={() => onInputChange('rehearsalSpeed', 'fast')}
                 >
                   {copy.fast}
+                  {inputs.rehearsalSpeed === 'fast' && (
+                    <span className="entry-speed-selected">Selected</span>
+                  )}
                 </button>
                 <button
                   className="entry-speed-choice"
                   data-testid="button-speed-normal"
                   type="button"
                   aria-pressed={inputs.rehearsalSpeed === 'normal'}
+                  aria-label={copy.normal}
                   onClick={() => onInputChange('rehearsalSpeed', 'normal')}
                 >
                   {copy.normal}
+                  {inputs.rehearsalSpeed === 'normal' && (
+                    <span className="entry-speed-selected">Selected</span>
+                  )}
                 </button>
               </fieldset>
               <label className="entry-label" htmlFor="entry-rehearsal-name">
@@ -1531,6 +1552,10 @@ export function EntryExperience({
                 id="entry-rehearsal-name"
                 className="entry-field"
                 data-testid="input-rehearsal-name"
+                aria-invalid={Boolean(visibleError)}
+                aria-describedby={
+                  visibleError ? 'entry-rehearsal-name-error' : undefined
+                }
                 autoComplete="given-name"
                 maxLength={20}
                 value={inputs.rehearsalName}
@@ -1538,24 +1563,17 @@ export function EntryExperience({
                   onInputChange('rehearsalName', event.target.value)
                 }
               />
-              <button
-                className="entry-primary-action"
-                data-testid="button-start-rehearsal"
-                type="submit"
-                disabled={busy.rehearsal || !inputs.rehearsalName.trim()}
-              >
-                {busy.rehearsal ? copy.rehearsalPending : copy.rehearsalButton}
-              </button>
+              {visibleError && (
+                <p
+                  id="entry-rehearsal-name-error"
+                  className="entry-error"
+                  data-testid="status-entry-error"
+                  role="alert"
+                >
+                  {visibleError}
+                </p>
+              )}
             </form>
-            {visibleError && (
-              <p
-                className="entry-error"
-                data-testid="status-entry-error"
-                role="alert"
-              >
-                {visibleError}
-              </p>
-            )}
             <button
               className="entry-back-action"
               data-testid="button-back-entry"
@@ -1594,6 +1612,19 @@ export function EntryExperience({
             }}
           >
             {duplicateName ? copy.duplicateNameYes : copy.continue}
+          </button>
+        </div>
+      )}
+      {screen === 'rehearsal-setup' && (
+        <div className="entry-action-dock" data-testid="entry-action-dock">
+          <button
+            className="entry-primary-action"
+            data-testid="button-start-rehearsal"
+            type="submit"
+            form="entry-rehearsal-form"
+            disabled={busy.rehearsal || !inputs.rehearsalName.trim()}
+          >
+            {busy.rehearsal ? copy.rehearsalPending : copy.rehearsalButton}
           </button>
         </div>
       )}
@@ -1653,13 +1684,6 @@ export function EntryExperience({
           </button>
         </div>
       )}
-
-      <BrandFooter
-        context="game"
-        surface={gameTheme === 'day' ? 'light' : 'dark'}
-        className="entry-footer"
-        testId="brand-footer-entry"
-      />
     </div>
   );
 }

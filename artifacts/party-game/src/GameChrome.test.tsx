@@ -23,10 +23,20 @@ function themeTokens(theme: 'day' | 'night') {
       : themeCSS.match(/\.game-shell\s*\{([^}]+)\}/)?.[1];
   if (!block) throw new Error(`Missing ${theme} theme token block`);
   const token = (name: string) => {
-    const value = block.match(
-      new RegExp(`--game-${name}:\\s*(#[0-9a-fA-F]{6})`),
+    const declaration = block
+      .match(new RegExp(`--game-${name}:\\s*([^;]+)`))?.[1]
+      ?.trim();
+    if (!declaration) throw new Error(`Missing ${theme} --game-${name}`);
+    if (/^#[0-9a-fA-F]{6}$/.test(declaration)) return declaration;
+
+    const referencedVariable = declaration.match(/^var\((--[\w-]+)\)$/)?.[1];
+    if (!referencedVariable) {
+      throw new Error(`Unsupported ${theme} --game-${name}: ${declaration}`);
+    }
+    const value = themeCSS.match(
+      new RegExp(`${referencedVariable}:\\s*(#[0-9a-fA-F]{6})`),
     )?.[1];
-    if (!value) throw new Error(`Missing ${theme} --game-${name}`);
+    if (!value) throw new Error(`Unresolved ${theme} --game-${name}`);
     return value;
   };
   return {

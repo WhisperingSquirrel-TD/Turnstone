@@ -1,7 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { EntryExperience, type EntryExperienceInputs } from './EntryExperience';
+import { MemoryRouter } from 'react-router-dom';
+import {
+  EntryExperience,
+  type EntryExperienceErrors,
+  type EntryExperienceInputs,
+} from './EntryExperience';
 import { en } from './locale/en-GB';
 
 const shellCSS = readFileSync(new URL('./index.css', import.meta.url), 'utf8');
@@ -25,52 +30,61 @@ const inputs: EntryExperienceInputs = {
 };
 
 function renderEntry(
-  screen: 'join-code' | 'lobby' | 'join-wait',
+  screen: 'join-code' | 'lobby' | 'join-wait' | 'rehearsal-setup',
   gameTheme: 'day' | 'night' = 'day',
+  errors: EntryExperienceErrors = {},
+  inputOverrides: Partial<EntryExperienceInputs> = {},
 ) {
   return renderToStaticMarkup(
-    <EntryExperience
-      copy={{
-        ...en.entry,
-        brand: 'Oathstone',
-        brandGoldSuffix: 'stone',
-      }}
-      gameTheme={gameTheme}
-      screen={screen}
-      inputs={inputs}
-      onInputChange={vi.fn()}
-      options={{ tapToReveal: false, largeText: false, simpleLanguage: false }}
-      onOptionChange={vi.fn()}
-      busy={{
-        join: false,
-        create: false,
-        approveJoinerIds: [],
-        startGame: false,
-        rehearsal: false,
-        share: false,
-      }}
-      organiserDisplayName="the organiser"
-      defaultGameName="Oathstone game"
-      joinCode="ABC234"
-      shareUrl=""
-      qrCode={null}
-      players={[
-        { id: 'seat-ada', name: 'Ada' },
-        { id: 'seat-sam', name: 'Sam' },
-      ]}
-      requiredPlayerCount={6}
-      pendingJoiners={[]}
-      onJoin={vi.fn()}
-      onCheckJoinName={vi.fn().mockResolvedValue('available')}
-      onRecover={vi.fn()}
-      onCheckJoinStatus={vi.fn()}
-      onCreate={vi.fn()}
-      onApproveJoiner={vi.fn()}
-      onStartGame={vi.fn()}
-      onRehearsal={vi.fn()}
-      onShare={vi.fn()}
-      onClearSensitiveValues={vi.fn()}
-    />,
+    <MemoryRouter>
+      <EntryExperience
+        copy={{
+          ...en.entry,
+          brand: 'Oathstone',
+          brandGoldSuffix: 'stone',
+        }}
+        gameTheme={gameTheme}
+        screen={screen}
+        inputs={{ ...inputs, ...inputOverrides }}
+        errors={errors}
+        onInputChange={vi.fn()}
+        options={{
+          tapToReveal: false,
+          largeText: false,
+          simpleLanguage: false,
+        }}
+        onOptionChange={vi.fn()}
+        busy={{
+          join: false,
+          create: false,
+          approveJoinerIds: [],
+          startGame: false,
+          rehearsal: false,
+          share: false,
+        }}
+        organiserDisplayName="the organiser"
+        defaultGameName="Oathstone game"
+        joinCode="ABC234"
+        shareUrl=""
+        qrCode={null}
+        players={[
+          { id: 'seat-ada', name: 'Ada' },
+          { id: 'seat-sam', name: 'Sam' },
+        ]}
+        requiredPlayerCount={6}
+        pendingJoiners={[]}
+        onJoin={vi.fn()}
+        onCheckJoinName={vi.fn().mockResolvedValue('available')}
+        onRecover={vi.fn()}
+        onCheckJoinStatus={vi.fn()}
+        onCreate={vi.fn()}
+        onApproveJoiner={vi.fn()}
+        onStartGame={vi.fn()}
+        onRehearsal={vi.fn()}
+        onShare={vi.fn()}
+        onClearSensitiveValues={vi.fn()}
+      />
+    </MemoryRouter>,
   );
 }
 
@@ -105,6 +119,43 @@ describe('Stage 2A entry screens', () => {
     expect(html).toContain('Waiting for the organiser');
     expect(html).not.toContain('button-start-game');
     expect(html).not.toContain('button-approve-');
+  });
+
+  it('puts the named rehearsal action in the dock and labels the selected speed', () => {
+    const html = renderEntry(
+      'rehearsal-setup',
+      'day',
+      {},
+      { rehearsalName: 'Ava' },
+    );
+    const dockIndex = html.indexOf('data-testid="entry-action-dock"');
+    const rehearsalButtonIndex = html.indexOf(
+      'data-testid="button-start-rehearsal"',
+    );
+
+    expect(dockIndex).toBeGreaterThanOrEqual(0);
+    expect(rehearsalButtonIndex).toBeGreaterThan(dockIndex);
+    expect(
+      html.match(/<button[^>]*data-testid="button-start-rehearsal"/)?.[0],
+    ).not.toContain('disabled');
+    expect(html).toContain('Selected');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('data-testid="input-rehearsal-name"');
+    expect(html).not.toContain('data-testid="brand-footer-entry"');
+  });
+
+  it('places practice name errors beside the labelled field', () => {
+    const html = renderEntry('rehearsal-setup', 'day', {
+      rehearsal: 'Enter a name to continue.',
+    });
+    const nameInputIndex = html.indexOf('data-testid="input-rehearsal-name"');
+    const errorIndex = html.indexOf('Enter a name to continue.');
+    const formEndIndex = html.indexOf('</form>', nameInputIndex);
+
+    expect(html).toContain('for="entry-rehearsal-name"');
+    expect(nameInputIndex).toBeGreaterThanOrEqual(0);
+    expect(errorIndex).toBeGreaterThan(nameInputIndex);
+    expect(formEndIndex).toBeGreaterThan(errorIndex);
   });
 
   it('uses the selected public day or night theme on entry screens', () => {

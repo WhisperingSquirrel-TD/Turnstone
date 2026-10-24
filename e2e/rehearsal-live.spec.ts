@@ -1496,13 +1496,27 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       }
       await expect(page.getByTestId('game-status-bar')).toBeVisible();
       const brandFooter = page.getByTestId('brand-footer-shell');
-      if (['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(phase)) {
-        await expect(brandFooter).toContainText(
-          'made by Stackstone Consulting',
+      await expect(brandFooter).toHaveCount(0);
+      const brokenImages = await page
+        .locator('img')
+        .evaluateAll(async (images) =>
+          (
+            await Promise.all(
+              images.map(async (element) => {
+                const image = element as HTMLImageElement;
+                try {
+                  await image.decode();
+                  return image.naturalWidth > 0
+                    ? null
+                    : image.currentSrc || image.src;
+                } catch {
+                  return image.currentSrc || image.src;
+                }
+              }),
+            )
+          ).filter((source): source is string => source !== null),
         );
-      } else {
-        await expect(brandFooter).toHaveCount(0);
-      }
+      expect(brokenImages, `broken image during ${phase}`).toEqual([]);
       if (['DEBATE', 'VERDICT', 'DAWN'].includes(phase)) {
         await expect(
           page.getByText(/players have completed this part/),

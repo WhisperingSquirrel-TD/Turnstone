@@ -61,14 +61,6 @@ function renderPublicHeader(
     <a class="public-skip-link" href="#main">Skip to content</a>
     <header class="public-home-brand">
       ${renderOathstoneWordmark(basePath)}
-      <nav class="public-home-nav" aria-label="${escapeHtml(en.nav.label)}">
-        <a href="${escapeHtml(basePath)}">${escapeHtml(en.nav.home)}</a>
-        <a href="${escapeHtml(`${basePath}about`)}">${escapeHtml(en.publicSite.aboutHeading)}</a>
-        <a href="${escapeHtml(`${basePath}how-to-play`)}">${escapeHtml(en.publicSite.howToPlayHeading)}</a>
-        <a href="${escapeHtml(`${basePath}faq`)}">${escapeHtml(en.publicSite.faqHeading)}</a>
-        <a href="${escapeHtml(`${basePath}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a>
-        ${playLink}
-      </nav>
       <details class="public-home-menu">
         <summary>${escapeHtml(en.nav.menu)}</summary>
         <div>
@@ -85,7 +77,7 @@ function renderPublicHeader(
 }
 
 function renderStackstoneFooterLink(basePath: string): string {
-  return `<a class="brand-credit-link inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.stackstoneIcons.onDark}`)}" alt="Stackstone Consulting" width="24" height="24"></a>`;
+  return `<a class="brand-credit-link inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.stackstoneIcons.onLight}`)}" alt="Stackstone Consulting" width="24" height="24"></a>`;
 }
 
 function renderPublicFooter(basePath: string, extra = ''): string {
@@ -332,7 +324,6 @@ export function renderPublicFaqHtml(
       </section>
       ${renderFactsBlock('public-faq-facts-heading')}
     </main>
-      ${renderPublicFooter(base)}
   `;
 }
 
@@ -364,7 +355,6 @@ export function renderPublicCompareHtml(
         <div class="public-home-faq">${renderFaqDetails(en.publicSite.faq.slice(-3))}</div>
       </section>
     </main>
-      ${renderPublicFooter(base)}
   `;
 }
 
@@ -382,7 +372,6 @@ export function renderPublicAboutHtml(
         <p>${escapeHtml(en.publicSite.independenceStatement)}</p>
       </section>
     </main>
-    ${renderPublicFooter(base)}
   `;
 }
 
@@ -406,7 +395,6 @@ export function renderPublicHowToPlayHtml(
         <ol class="public-home-steps">${steps}</ol>
       </section>
     </main>
-    ${renderPublicFooter(base)}
   `;
 }
 
@@ -433,7 +421,6 @@ export function renderPublicComingSoonHtml(
         </div>
       </section>
     </main>
-    ${renderPublicFooter(base)}
   `;
 }
 
