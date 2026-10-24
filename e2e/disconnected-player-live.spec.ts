@@ -85,6 +85,8 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
     const organiser = pages[0]!;
     const createFlowRequests: string[] = [];
     const createFlowStatuses: string[] = [];
+    const createFlowFailures: string[] = [];
+    const createFlowPending = new Set<string>();
     organiser.on('request', (request) => {
       const path = new URL(request.url()).pathname;
       if (!path.startsWith('/api/')) return;
@@ -94,7 +96,9 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
           /\/api\/join-requests\/[^/]+(?=\/|$)/g,
           '/api/join-requests/:requestId',
         );
-      createFlowRequests.push(`${request.method()} ${safePath} started`);
+      const requestLabel = `${request.method()} ${safePath}`;
+      createFlowRequests.push(`${requestLabel} started`);
+      createFlowPending.add(requestLabel);
     });
     organiser.on('response', (response) => {
       const path = new URL(response.url()).pathname;
@@ -108,6 +112,22 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
       createFlowStatuses.push(
         `${response.request().method()} ${safePath} ${response.status()}`,
       );
+      createFlowPending.delete(`${response.request().method()} ${safePath}`);
+    });
+    organiser.on('requestfailed', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (!path.startsWith('/api/')) return;
+      const safePath = path
+        .replace(/\/api\/games\/[^/]+(?=\/|$)/g, '/api/games/:gameId')
+        .replace(
+          /\/api\/join-requests\/[^/]+(?=\/|$)/g,
+          '/api/join-requests/:requestId',
+        );
+      const requestLabel = `${request.method()} ${safePath}`;
+      createFlowFailures.push(
+        `${requestLabel} ${request.failure()?.errorText ?? 'failed'}`,
+      );
+      createFlowPending.delete(requestLabel);
     });
     await organiser.goto('/');
     await organiser
@@ -154,10 +174,14 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
     expect(creation.view).toHaveProperty('id', gameId);
     expect(creation.view).toHaveProperty('seats');
     const lobbyCode = organiser.getByTestId('text-lobby-code');
-    await expect(
-      lobbyCode,
-      `create-flow requests: ${createFlowRequests.join(' | ')}; responses: ${createFlowStatuses.join(' | ')}`,
-    ).toBeVisible({ timeout: 30_000 });
+    try {
+      await expect(lobbyCode).toBeVisible({ timeout: 30_000 });
+    } catch (error) {
+      throw new Error(
+        `${error instanceof Error ? error.message : String(error)}; create-flow requests: ${createFlowRequests.join(' | ')}; responses: ${createFlowStatuses.join(' | ')}; failed: ${createFlowFailures.join(' | ')}; pending: ${[...createFlowPending].join(' | ')}`,
+        { cause: error },
+      );
+    }
     await expect(lobbyCode).toHaveText(/^[A-Z0-9]{6}$/, {
       timeout: 30_000,
     });

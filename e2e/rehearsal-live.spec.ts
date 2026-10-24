@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { sql } from 'drizzle-orm';
+import { readRehearsalEventsFromDatabase } from './support/read-rehearsal-events';
 
 type Phase =
   | 'DRAFT'
@@ -1418,8 +1419,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         await expect(page.getByTestId('player-fate')).toHaveCount(0);
       }
       if (seatStatus && seatStatus !== 'alive' && !firstCycleNightSafe) {
-        const { readGameEvents } = await import('@workspace/db/game-store');
-        const events = await readGameEvents(activeGameId);
+        const events = await readRehearsalEventsFromDatabase(activeGameId);
         const recentVotes = events
           .filter(
             (event) =>
@@ -1793,8 +1793,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           activeGameId,
         );
         if (dawnView.cycle === 1) {
-          const { readGameEvents } = await import('@workspace/db/game-store');
-          const events = await readGameEvents(activeGameId);
+          const events = await readRehearsalEventsFromDatabase(activeGameId);
           const rolesDealt = events.find(
             (event) => event.type === 'RolesDealt',
           );
@@ -1966,8 +1965,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               page,
               activeGameId,
             );
-            const { readGameEvents } = await import('@workspace/db/game-store');
-            const events = await readGameEvents(activeGameId);
+            const events = await readRehearsalEventsFromDatabase(activeGameId);
             const lastVoteClosedIndex = events.reduce(
               (lastIndex, event, index) =>
                 event.type === 'VoteClosed' ? index : lastIndex,
@@ -1986,7 +1984,6 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             forcedHumanRemovalAfterSafety = true;
           }
           if (phase === 'VOTE' && !submittedVoteToForceTie) {
-            const { readGameEvents } = await import('@workspace/db/game-store');
             await expect
               .poll(
                 async () =>
@@ -2011,7 +2008,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
                 voteView.votedSeatIds.includes(seat.id) ? 'Voted' : 'Waiting',
               );
             }
-            const events = await readGameEvents(activeGameId);
+            const events = await readRehearsalEventsFromDatabase(activeGameId);
             const lastVoteClosedIndex = events.reduce(
               (lastIndex, event, index) =>
                 event.type === 'VoteClosed' ? index : lastIndex,
@@ -2158,8 +2155,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             .toBeGreaterThan(0);
         } catch (error) {
           const latest = await latestServerPhase(page, activeGameId);
-          const { readGameEvents } = await import('@workspace/db/game-store');
-          const recentVotes = (await readGameEvents(activeGameId))
+          const recentVotes = (
+            await readRehearsalEventsFromDatabase(activeGameId)
+          )
             .filter((event) =>
               ['VoteSubmitted', 'VoteClosed', 'SeatRemoved'].includes(
                 event.type,
@@ -2295,8 +2293,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         }
       }
       if (inspectFirstCycleRevoteAfterAdvance) {
-        const { readGameEvents } = await import('@workspace/db/game-store');
-        const events = await readGameEvents(activeGameId);
+        const events = await readRehearsalEventsFromDatabase(activeGameId);
         const voteClosedIndices = events.flatMap((event, index) =>
           event.type === 'VoteClosed' ? [index] : [],
         );
@@ -2339,8 +2336,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     expect(sawForcedVoteTie).toBe(true);
     expect(firstCycleInitialVoteSafe && firstCycleRevoteSafe).toBe(true);
     expect(firstCycleNightSafe).toBe(true);
-    const { readGameEvents } = await import('@workspace/db/game-store');
-    const finalTrace = (await readGameEvents(activeGameId))
+    const finalTrace = (await readRehearsalEventsFromDatabase(activeGameId))
       .filter((event) =>
         [
           'PhaseChanged',
