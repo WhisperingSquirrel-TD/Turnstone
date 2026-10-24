@@ -617,18 +617,11 @@ h2,
 }
 
 .game-help-disclosure__content {
-  max-height: max(
-    6rem,
-    calc(
-      100dvh - var(--game-bottom-stack-height) - 12rem -
-        env(safe-area-inset-top)
-    )
-  );
+  max-height: none;
   padding: 0.25rem 0 0.75rem;
   font-size: 14px;
   line-height: 1.45;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: visible;
 }
 
 .game-help-disclosure__content p {

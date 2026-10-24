@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { en } from '@/locale/en-GB';
 import type { GameConnectionState } from './game-socket';
 import { GameConnectionStatus } from './GameConnectionStatus';
@@ -120,91 +114,13 @@ export function GameHelpDisclosure({
   children: ReactNode;
   screenLockNotice?: string;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const detailsRef = useRef<HTMLDetailsElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const details = detailsRef.current;
-    const content = contentRef.current;
-    if (!details || !content) return;
-    if (!isOpen) {
-      content.style.removeProperty('max-height');
-      return;
-    }
-
-    let attemptedInitialScroll = false;
-    const measureAvailableSpace = () => {
-      const currentDetails = detailsRef.current;
-      const currentContent = contentRef.current;
-      if (!currentDetails?.open || !currentContent) return;
-
-      const bottomEdges = Array.from(
-        document.querySelectorAll<HTMLElement>(
-          '.game-action-bar, [data-testid="game-action-dock"], [data-testid="game-bottom-bar"], .game-brand-footer',
-        ),
-      )
-        .filter((element) => {
-          const style = window.getComputedStyle(element);
-          const box = element.getBoundingClientRect();
-          return (
-            style.display !== 'none' &&
-            style.visibility !== 'hidden' &&
-            box.height > 0
-          );
-        })
-        .map((element) => element.getBoundingClientRect().top);
-      const dockTop =
-        bottomEdges.length > 0 ? Math.min(...bottomEdges) : window.innerHeight;
-      const contentTop = currentContent.getBoundingClientRect().top;
-      const available = Math.max(0, dockTop - contentTop - 8);
-      currentContent.style.maxHeight = `${available}px`;
-
-      if (available >= 96 || attemptedInitialScroll) return;
-      attemptedInitialScroll = true;
-      const maxScroll = Math.max(
-        0,
-        document.documentElement.scrollHeight - window.innerHeight,
-      );
-      const scrollAmount = Math.min(
-        96 - available,
-        Math.max(0, maxScroll - window.scrollY),
-      );
-      if (scrollAmount > 0) {
-        window.scrollBy(0, scrollAmount);
-        window.requestAnimationFrame(measureAvailableSpace);
-      }
-    };
-
-    measureAvailableSpace();
-    window.addEventListener('resize', measureAvailableSpace);
-    window.addEventListener('scroll', measureAvailableSpace, {
-      passive: true,
-    });
-    const observer = new ResizeObserver(measureAvailableSpace);
-    for (const element of document.querySelectorAll<HTMLElement>(
-      '.game-action-bar, [data-testid="game-action-dock"], [data-testid="game-bottom-bar"], .game-brand-footer',
-    )) {
-      observer.observe(element);
-    }
-
-    return () => {
-      content.style.removeProperty('max-height');
-      window.removeEventListener('resize', measureAvailableSpace);
-      window.removeEventListener('scroll', measureAvailableSpace);
-      observer.disconnect();
-    };
-  }, [isOpen]);
-
   return (
     <details
-      ref={detailsRef}
       className="game-help-disclosure"
       data-testid="game-help-disclosure"
-      onToggle={(event) => setIsOpen(event.currentTarget.open)}
     >
       <summary>What&apos;s this?</summary>
-      <div ref={contentRef} className="game-help-disclosure__content">
+      <div className="game-help-disclosure__content">
         {children}
         {screenLockNotice && (
           <p data-testid="wake-lock-notice" role="status">

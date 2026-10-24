@@ -1759,6 +1759,176 @@ test('Conversation keeps collapsed Help close to the player detail section', asy
   ).toBeLessThanOrEqual(32);
 });
 
+test('expanded Help leaves every game page scrollable above the dock', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'The expanded Help scroll path is checked on Android Chrome and iPhone WebKit.',
+  );
+
+  const gameId = 'expanded-help-scroll';
+  const phaseGameIds = {
+    DEBATE: `${gameId}-debate`,
+    VOTE: `${gameId}-vote`,
+    SHADOW: `${gameId}-shadow`,
+  };
+  let currentGameId = phaseGameIds.DEBATE;
+  const seats = Array.from({ length: 20 }, (_, index) => ({
+    id: index === 0 ? 'seat-morgan' : `seat-player-${index}`,
+    name: index === 0 ? 'Morgan' : `Player ${index}`,
+    status: 'alive' as const,
+  }));
+  let view = {
+    ...createPublicView(currentGameId),
+    canAdvancePhase: true,
+    seats,
+    viewerSeatId: 'seat-morgan',
+    progress: { done: 0, total: seats.length },
+    actionStatus: { waiting: 0, total: seats.length },
+    voteCandidates: seats.slice(1).map(({ id }) => id),
+    version: 20,
+  } as FullView;
+  const privateView = {
+    role: 'faithful' as const,
+    team: [],
+    options: seats.map(({ id, name }) => ({ id, name })),
+    choices: {},
+    choiceSlots: [],
+    chat: [],
+    task: null,
+    minimumDurationMs: 0,
+  };
+
+  await page.goto('/');
+  const origin = new URL(page.url()).origin;
+  await page.context().addCookies([
+    ...Object.values(phaseGameIds).map((phaseGameId) => ({
+      name: cookieNameForGame(phaseGameId),
+      value: coldSeatToken,
+      url: origin,
+      httpOnly: true,
+      secure: new URL(origin).protocol === 'https:',
+      sameSite: 'Lax' as const,
+    })),
+  ]);
+  await page.clock.install();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({
+      status: 200,
+      headers: {
+        'Set-Cookie': 'oathstone-csrf=test-csrf; Path=/; SameSite=Strict',
+      },
+      json: { csrfToken: 'test-csrf' },
+    }),
+  );
+  await page.route('**/api/games/*/view', (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route('**/api/games/*/commands', (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route('**/api/games/*/private-view', (route) =>
+    route.fulfill({
+      json: {
+        serverNow: Date.now(),
+        version: view.version,
+        view: { ...view, private: privateView },
+      },
+    }),
+  );
+  await page.route('**/api/games/*/join-requests', (route) =>
+    route.fulfill({ json: { requests: [] } }),
+  );
+
+  for (const phase of ['DEBATE', 'VOTE', 'SHADOW'] as const) {
+    currentGameId = phaseGameIds[phase];
+    view = {
+      ...createPublicView(currentGameId),
+      canAdvancePhase: true,
+      seats,
+      viewerSeatId: 'seat-morgan',
+      progress: { done: 0, total: seats.length },
+      actionStatus: { waiting: 0, total: seats.length },
+      voteCandidates: seats.slice(1).map(({ id }) => id),
+      phase,
+      deadline: null,
+      version: view.version + 1,
+    } as FullView;
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto(`/game/${currentGameId}`);
+
+    if (phase === 'SHADOW') {
+      const shield = page.getByRole('dialog', { name: 'Shield your screen' });
+      await expect(shield).toBeVisible();
+      await page.clock.fastForward(3_000);
+      const acknowledgement = shield.getByRole('button', {
+        name: 'I’m shielded',
+      });
+      await expect(acknowledgement).toBeEnabled();
+      await acknowledgement.click();
+      await expect(shield).toBeHidden();
+    }
+
+    const help = page.getByTestId('game-help-disclosure');
+    await expect(help).toBeVisible();
+    await help.locator('summary').click();
+    await expect(help).toHaveAttribute('open', '');
+
+    const lastItem =
+      phase === 'DEBATE'
+        ? page.locator('#game-players .player-tile').last()
+        : page.getByTestId('private-choice-list').getByRole('button').last();
+    await expect(lastItem).toBeAttached();
+
+    for (const width of [320, 375, 390, 430]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.evaluate(() => {
+        window.scrollTo(0, 0);
+        const content = document.querySelector<HTMLElement>(
+          '.game-help-disclosure__content',
+        );
+        if (content) content.scrollTop = 0;
+      });
+      const initialScrollY = await page.evaluate(() => window.scrollY);
+      const helpContent = await help
+        .locator('.game-help-disclosure__content')
+        .boundingBox();
+      expect(helpContent).not.toBeNull();
+      await page.mouse.move(
+        helpContent!.x + helpContent!.width / 2,
+        helpContent!.y + helpContent!.height / 2,
+      );
+      await page.mouse.wheel(0, 800);
+      await expect
+        .poll(() => page.evaluate(() => window.scrollY))
+        .toBeGreaterThan(initialScrollY);
+
+      await lastItem.evaluate((element) =>
+        element.scrollIntoView({ block: 'end' }),
+      );
+      const itemAndDock = await lastItem.evaluate((element) => {
+        const dock = document.querySelector<HTMLElement>(
+          '[data-testid="game-action-dock"], .game-action-bar',
+        );
+        if (!dock) throw new Error('The game action dock is not rendered.');
+        return {
+          itemBottom: element.getBoundingClientRect().bottom,
+          dockTop: dock.getBoundingClientRect().top,
+          pageScrollY: window.scrollY,
+        };
+      });
+      expect(itemAndDock.pageScrollY).toBeGreaterThan(initialScrollY);
+      expect(itemAndDock.itemBottom).toBeLessThanOrEqual(itemAndDock.dockTop);
+    }
+  }
+});
+
 test('banishment re-vote lists tied seats and reports vote failures accurately', async ({
   page,
 }) => {

@@ -1,12 +1,29 @@
 # Status for reviewer
 
-**Status for reviewer — Round 7 Stage 2B (Vote, Revote and Verdict):** commits `086ae4d`, `aafaaa7`, `7ebb798`, `e1f2e35` and status update `3665dd3` are on `main`; Verify #267 on the harness fix is green (19/19 jobs), and Verify #268 on the status update is green. #265’s stale Vote/Revote expectations are corrected; #266’s CI 429 is addressed by the Q11-approved 65-second harness-only cooldown. No product polling or rate limits changed.
+**Status for reviewer — Round 7 Improvements 1/6 (Help scrolling):** the open Help panel trapped wheel scrolling in its own overflow area. It now expands in normal page flow; held-private scroll locking is unchanged. The Pixel browser test passes for Conversation, Vote and Night at 320, 375, 390 and 430 px, with each last item scrolled clear of the fixed dock. Local iPhone WebKit cannot launch because browser system dependencies are absent; GitHub WebKit will verify it. Code and test checks pass locally; this change is not yet pushed. Latest `main` is `a0d12dc`; Verify #269 is green and no run was active at the last check. Next: push this isolated item, wait for Verify, then start item 2.
+
+**Previous milestone — Round 7 Stage 2B (Vote, Revote and Verdict):** commits `086ae4d`, `aafaaa7`, `7ebb798`, `e1f2e35` and status update `3665dd3` are on `main`; Verify #267 on the harness fix is green (19/19 jobs), and Verify #268 on the status update is green. #265’s stale Vote/Revote expectations are corrected; #266’s CI 429 is addressed by the Q11-approved 65-second harness-only cooldown. No product polling or rate limits changed.
 
 **Stage 2B changes:** vote rows no longer label every unselected player “Waiting”; the viewer's row says “You” and the selected row says “Selected”. Revote has an accented “What is happening” card with the tied-player reason. Public verdict wording covers both a banished player and a no-votes result. The Conversation-only oversized gap below collapsed Help is removed; no other Conversation layout changed. No game rules or security behaviour changed.
 
 **Local checks:** the active Vote screen, out-player vote-progress summary and Revote browser tests pass (3/3); the full real-server Pixel rehearsal and disconnected-player journeys pass locally, the latter with the bounded cooldown; typecheck:tests, lint, formatting and diff checks pass. The opt-in screenshot gallery generated 40 files: Vote, Revote, banished Verdict and no-votes Verdict, in day/night themes at 320, 375, 390, 430 and 1280 px. Its test Socket.IO fixture delivers a schema-valid public view so the app renders the Live chip; this is a visual fixture, not a real-server rehearsal. Local iPhone WebKit cannot launch in this workspace; GitHub WebKit remains authoritative.
 
-**Next:** Round 7 Stage 2B is complete; no later screen batch has been started.
+**Next:** Round 7 Improvements items 2–6 are queued after the Help scrolling fix is green.
+
+### Round 7 Improvements — item 1: expanded Help scrolling
+
+The open `GameHelpDisclosure` previously measured available space and applied a
+fixed `max-height` with `overflow-y: auto`. On a phone, this made the disclosure
+an inner scroll container, so gestures over it did not move the game page.
+Removing that nested scroll area restores document scrolling; the existing
+page-bottom padding still keeps the last item above the fixed dock. The held
+private-reveal scroll lock remains separate and unchanged.
+
+The new browser regression covers Conversation, Vote and Night on Pixel at
+320/375/390/430 px and passes (12 phase/width combinations). TypeScript,
+focused lint, formatting and the GameChrome unit tests pass. The same test is
+configured for iPhone WebKit; it could not be run locally because this
+workspace lacks WebKit system dependencies, so GitHub CI is authoritative.
 
 The #258 browser failures were stale Stage 1 expectations for the status-card geometry, day-text colour and a broad Help locator. The iPhone Axe failure sampled the game action button during its background-colour transition (3.51:1); game action fills now change immediately while border colour may still transition, and the test verifies the approved fill and runs the unchanged Axe check in both themes. Verify #259 passed all browser jobs, but rehearsal-live had two failures: the full rehearsal's test-only dynamic import of `@workspace/db/game-store` failed because `@workspace/shared` did not provide `eventSchema`; the disconnected-player test created the game (201) but its next `/commands` request remained pending for 30 seconds before the lobby appeared. The pending request follows the create flow's initial `AdvancePhase`; no product cause is proven, so no product code or rate limit has been changed. A test-only reader now queries persisted event payloads through the working database root and validates them with the shared schema; regression tests cover query order and malformed rows. The disconnected-player test now includes sanitized request-failure and pending-request diagnostics (no bodies, names, PINs, roles or choices). Both affected real-server Pixel tests pass locally with the rehearsal config (2/2, 3.6 minutes); test type-check, lint and formatting pass. Verify #260 on `6586d79` passed all 19 jobs, including rehearsal-live and desktop Chromium, iPad WebKit, Pixel Chromium and iPhone WebKit. The status-only commit `17c1a89` had a first Verify #261 attempt fail in integration at the 40-seat server-restart test (HTTP 503 at its success assertion); PostgreSQL logs recorded a statement timeout and a duplicate event-sequence key, but the exact cause is not confirmed. The isolated 40-seat test passed locally unchanged, and the failed-job rerun (Verify #261 attempt 2) passed all required jobs. No assertion, limit or product code changed for this incident.
 
