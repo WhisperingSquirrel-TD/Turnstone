@@ -433,7 +433,7 @@ test('entry welcome title and actions stay high in a short desktop viewport', as
 
 test('private role and seal stay inside small phone viewports without a play footer', async ({
   page,
-}) => {
+}, testInfo) => {
   const gameId = 'role-viewport-fit';
   let privateRequests = 0;
   const publicView: FullView = {
@@ -661,9 +661,11 @@ test('private role and seal stay inside small phone viewports without a play foo
       body: getComputedStyle(document.body).overflow,
     }));
     expect(scrollLock).toEqual({ root: 'hidden', body: 'hidden' });
-    await page.mouse.wheel(0, 400);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-    await page.mouse.up();
+    // Playwright mobile WebKit cannot generate mouse-wheel events.
+    if (testInfo.project.use.browserName !== 'webkit') {
+      await page.mouse.wheel(0, 400);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+    }
   }
 });
 

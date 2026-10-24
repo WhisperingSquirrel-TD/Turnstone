@@ -1621,32 +1621,13 @@ function PlayerGame() {
   useEffect(() => {
     if (!held) return;
     const root = document.documentElement;
-    const body = document.body;
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
     const previousRootOverflow = root.style.overflow;
-    const previousBodyStyles = {
-      overflow: body.style.overflow,
-      position: body.style.position,
-      top: body.style.top,
-      left: body.style.left,
-      width: body.style.width,
-    };
+    const previousBodyOverflow = document.body.style.overflow;
     root.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
-    body.style.position = 'fixed';
-    body.style.top = `${-scrollY}px`;
-    body.style.left = `${-scrollX}px`;
-    body.style.width = '100%';
-    window.scrollTo(0, 0);
+    document.body.style.overflow = 'hidden';
     return () => {
       root.style.overflow = previousRootOverflow;
-      body.style.overflow = previousBodyStyles.overflow;
-      body.style.position = previousBodyStyles.position;
-      body.style.top = previousBodyStyles.top;
-      body.style.left = previousBodyStyles.left;
-      body.style.width = previousBodyStyles.width;
-      window.scrollTo(scrollX, scrollY);
+      document.body.style.overflow = previousBodyOverflow;
     };
   }, [held]);
 
