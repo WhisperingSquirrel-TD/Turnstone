@@ -1340,6 +1340,33 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
         tile.left + tile.width / 2,
         tile.top + tile.height / 2,
       );
+      const fixedContainingAncestors = [];
+      for (
+        let ancestor = document.querySelector(
+          '[data-testid="game-action-dock"]',
+        )!.parentElement;
+        ancestor;
+        ancestor = ancestor.parentElement
+      ) {
+        const style = getComputedStyle(ancestor);
+        if (
+          style.transform !== 'none' ||
+          style.filter !== 'none' ||
+          style.perspective !== 'none' ||
+          style.contain !== 'none' ||
+          style.willChange.includes('transform')
+        ) {
+          fixedContainingAncestors.push({
+            tag: ancestor.tagName,
+            className: (ancestor as HTMLElement).className,
+            transform: style.transform,
+            filter: style.filter,
+            perspective: style.perspective,
+            contain: style.contain,
+            willChange: style.willChange,
+          });
+        }
+      }
       return {
         viewportHeight: window.innerHeight,
         tileTop: tile.top,
@@ -1363,6 +1390,8 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
         mainPaddingBottom: getComputedStyle(
           document.querySelector('.game-shell-main')!,
         ).paddingBottom,
+        scrollY: window.scrollY,
+        fixedContainingAncestors,
         centreIsChoice: centreHit === element || element.contains(centreHit),
       };
     });
