@@ -334,10 +334,12 @@ h2,
   display: flex;
   width: 100%;
   max-width: 480px;
+  box-sizing: border-box;
   min-height: 44px;
   align-items: center;
   justify-content: space-between;
-  gap: 0.3rem;
+  flex-wrap: nowrap;
+  gap: 8px;
   margin-inline: auto;
   color: var(--game-text);
   font-size: 13px;
@@ -359,6 +361,23 @@ h2,
   white-space: nowrap;
 }
 
+.game-connection-state {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.game-connection-state--live .game-connection-label--visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
 .game-status-bar > .game-status-chip {
   min-width: 0;
   flex: 1 1 auto;
@@ -370,14 +389,17 @@ h2,
   display: block;
   min-width: 0;
   max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .game-status-right {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
   align-items: center;
-  gap: 0.2rem;
+  gap: 8px;
 }
 
 .game-status-menu {
@@ -439,11 +461,10 @@ h2,
 
 @media (max-width: 430px) {
   .game-shell .game-status-bar {
-    width: calc(100% + 24px);
-    margin-inline: -12px;
-    gap: 0.1rem;
-    padding-inline:
-      max(4px, env(safe-area-inset-left)), max(4px, env(safe-area-inset-right));
+    width: 100%;
+    margin-inline: auto;
+    gap: 8px;
+    padding-inline: 0;
   }
 
   .game-status-bar {
@@ -452,14 +473,14 @@ h2,
 
   .game-status-bar > [data-testid='game-status-phase'] {
     min-height: 44px;
-    justify-content: center;
+    justify-content: flex-start;
     line-height: 1.05;
-    text-align: center;
+    text-align: left;
   }
 
   .game-status-phase-label {
-    white-space: normal;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow-wrap: normal;
   }
 
   .game-status-chip,
@@ -471,13 +492,17 @@ h2,
   }
 
   .game-status-right {
-    gap: 0.1rem;
+    gap: 8px;
   }
 
   .game-status-menu > summary,
   .game-status-notes {
     min-width: 44px;
     min-height: 44px;
+  }
+
+  .game-shell .game-status-bar .game-status-notes {
+    padding-inline: 0.25rem;
   }
 }
 

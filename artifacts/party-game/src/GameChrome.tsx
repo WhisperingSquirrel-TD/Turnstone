@@ -34,6 +34,7 @@ export function GameStatusBar({
   phase,
   cycle,
   remaining,
+  showRemaining = true,
   connectionStatus,
   joinedLabel,
   onOpenNotes,
@@ -42,6 +43,7 @@ export function GameStatusBar({
   phase: string;
   cycle: number;
   remaining: number;
+  showRemaining?: boolean;
   connectionStatus: GameConnectionDisplayState;
   joinedLabel?: string;
   onOpenNotes?: () => void;
@@ -59,9 +61,14 @@ export function GameStatusBar({
         </span>
       </span>
       <div className="game-status-right">
-        <span className="game-status-chip" data-testid="game-status-remaining">
-          {joinedLabel ?? `${remaining} left`}
-        </span>
+        {showRemaining && (
+          <span
+            className="game-status-chip"
+            data-testid="game-status-remaining"
+          >
+            {joinedLabel ?? `${remaining} left`}
+          </span>
+        )}
         <GameConnectionStatus
           status={
             connectionStatus === 'connected' ? 'online' : connectionStatus

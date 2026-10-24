@@ -98,6 +98,101 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
   await alwaysDark.uncheck();
   await expect(shell).toHaveAttribute('data-game-theme', 'day');
   await gameMenu.locator('summary').click();
+  const statusBar = page.getByTestId('game-status-bar');
+  await expect(statusBar.getByTestId('game-status-remaining')).toHaveCount(0);
+  const connection = statusBar.locator('.game-connection-state');
+  await expect(connection).toBeVisible();
+  await expect
+    .poll(() => connection.getAttribute('aria-label'))
+    .toMatch(/^Connection status: (Live|Reconnecting|Offline)$/);
+  const connectionName = await connection.getAttribute('aria-label');
+  const connectionLabel = connection.locator('.game-connection-label');
+  if (connectionName === 'Connection status: Live') {
+    await expect(connectionLabel).toHaveClass(
+      /game-connection-label--visually-hidden/,
+    );
+  } else {
+    await expect(connectionLabel).toBeVisible();
+  }
+  for (const width of [320, 360, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    const geometry = await statusBar.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const phase = element.querySelector('[data-testid="game-status-phase"]')!;
+      const right = element.querySelector('.game-status-right')!;
+      const phaseRect = phase.getBoundingClientRect();
+      const rightRect = right.getBoundingClientRect();
+      const actionRects = Array.from(right.children).map((child) => {
+        const childRect = child.getBoundingClientRect();
+        return {
+          left: childRect.left,
+          right: childRect.right,
+          top: childRect.top,
+          centerY: childRect.top + childRect.height / 2,
+          width: childRect.width,
+          height: childRect.height,
+        };
+      });
+      return {
+        left: rect.left,
+        right: rect.right,
+        rowWidth: rect.width,
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        phaseRight: phaseRect.right,
+        phaseTop: phaseRect.top,
+        actionsLeft: rightRect.left,
+        actionsTop: rightRect.top,
+        actionsCenterY: rightRect.top + rightRect.height / 2,
+        actions: actionRects,
+        flexWrap: getComputedStyle(element).flexWrap,
+      };
+    });
+    expect(geometry.left, `${width}px left gutter`).toBeGreaterThanOrEqual(16);
+    expect(
+      width - geometry.right,
+      `${width}px right gutter`,
+    ).toBeGreaterThanOrEqual(16);
+    expect(
+      geometry.documentWidth,
+      `${width}px document width`,
+    ).toBeLessThanOrEqual(width);
+    expect(
+      geometry.scrollWidth,
+      `${width}px status row width ${JSON.stringify(geometry)}`,
+    ).toBeLessThanOrEqual(geometry.clientWidth);
+    expect(geometry.flexWrap).toBe('nowrap');
+    expect(
+      Math.abs(geometry.phaseTop + 22 - geometry.actionsCenterY),
+    ).toBeLessThanOrEqual(1);
+    expect(geometry.actionsLeft - geometry.phaseRight).toBeGreaterThanOrEqual(
+      8,
+    );
+    expect(geometry.actions).toHaveLength(3);
+    for (const [index, action] of geometry.actions.entries()) {
+      expect(action.centerY, `${width}px item ${index} alignment`).toBeCloseTo(
+        geometry.actionsCenterY,
+        0,
+      );
+      if (index > 0) {
+        expect(
+          action.width,
+          `${width}px action ${index} width`,
+        ).toBeGreaterThanOrEqual(44);
+        expect(
+          action.height,
+          `${width}px action ${index} height`,
+        ).toBeGreaterThanOrEqual(44);
+      }
+      if (index > 0) {
+        expect(
+          action.left - geometry.actions[index - 1].right,
+          `${width}px gap before action ${index}`,
+        ).toBeGreaterThanOrEqual(8);
+      }
+    }
+  }
   const primaryAction = page.getByRole('button', {
     name: 'Move everyone on',
     exact: true,
@@ -130,6 +225,34 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
       phase === 'SHADOW' ? 'night' : 'day',
     );
   }
+});
+
+test('a public player can open Display from Menu without organiser controls', async ({
+  page,
+}) => {
+  const gameId = 'public-display-menu';
+  const view = createPublicView(gameId);
+  view.canAdvancePhase = false;
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+
+  await page.goto(`/game/${gameId}`);
+  await expect(page.getByTestId('player-game')).toHaveAttribute(
+    'data-phase',
+    view.phase,
+  );
+  const menu = page.getByTestId('game-status-menu');
+  await expect(menu).toBeVisible();
+  await menu.locator('summary').click();
+  await expect(menu).toContainText('Display');
+  await expect(menu).toContainText('Always dark');
+  await expect(menu).not.toContainText('Organiser controls');
 });
 
 test('night status card has identical four-row geometry for both roles in both themes', async ({
@@ -198,6 +321,16 @@ test('night status card has identical four-row geometry for both roles in both t
           ?.textContent,
         remaining: el.querySelector('[data-testid="game-status-remaining"]')
           ?.textContent,
+        connection: el
+          .querySelector('.game-connection-state')
+          ?.getAttribute('aria-label'),
+        rightItems: Array.from(
+          el.querySelector('.game-status-right')?.children ?? [],
+        ).map((child) => ({
+          tag: child.tagName,
+          testId: child.getAttribute('data-testid'),
+          className: child.className,
+        })),
       }));
     const happening = await page
       .getByTestId('game-happening-card')

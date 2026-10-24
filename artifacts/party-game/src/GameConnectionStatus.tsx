@@ -7,22 +7,32 @@ export function GameConnectionStatus({
   status: GameConnectionState | 'offline';
 }) {
   const isOnline = status === 'online';
+  const label = isOnline
+    ? en.app.online
+    : status === 'offline'
+      ? en.app.offline
+      : en.app.reconnecting;
 
   return (
     <span
       role="status"
-      aria-label={en.app.connectionStatus}
-      className="game-connection-state"
+      data-testid="game-connection-state"
+      aria-label={`${en.app.connectionStatus}: ${label}`}
+      className={`game-connection-state${isOnline ? ' game-connection-state--live' : ''}`}
     >
       <span
         aria-hidden="true"
         className={`h-2 w-2 rounded-full ${isOnline ? 'bg-gilt' : 'bg-ash'}`}
       />
-      {isOnline
-        ? en.app.online
-        : status === 'offline'
-          ? en.app.offline
-          : en.app.reconnecting}
+      <span
+        className={
+          isOnline
+            ? 'game-connection-label game-connection-label--visually-hidden'
+            : 'game-connection-label'
+        }
+      >
+        {label}
+      </span>
     </span>
   );
 }

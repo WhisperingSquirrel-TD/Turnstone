@@ -393,50 +393,47 @@ function Shell({
             phase={phase ?? 'DRAFT'}
             cycle={cycle}
             remaining={remaining}
+            showRemaining={false}
             connectionStatus={
               !browserOnline ? 'offline' : (connectionStatus ?? 'connecting')
             }
             onOpenNotes={onOpenNotes}
             menuContent={
-              organiserControlsVisible ? (
-                <>
-                  {organiserTools}
-                  <div className="game-display-settings">
-                    <p>{en.app.display}</p>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={alwaysDark}
-                        onChange={(event) =>
-                          setAlwaysDark(event.target.checked)
-                        }
-                      />
-                      {en.app.alwaysDark}
-                    </label>
-                  </div>
-                  {standalone && (
-                    <>
-                      <button
-                        className="quiet-action"
-                        type="button"
-                        onClick={() => {
-                          if (window.history.length > 1) navigate(-1);
-                          else navigate(config.routes.play);
-                        }}
-                      >
-                        {en.app.back}
-                      </button>
-                      <button
-                        className="quiet-action"
-                        type="button"
-                        onClick={() => window.location.reload()}
-                      >
-                        {en.app.refresh}
-                      </button>
-                    </>
-                  )}
-                </>
-              ) : undefined
+              <>
+                {organiserControlsVisible && organiserTools}
+                <div className="game-display-settings">
+                  <p>{en.app.display}</p>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={alwaysDark}
+                      onChange={(event) => setAlwaysDark(event.target.checked)}
+                    />
+                    {en.app.alwaysDark}
+                  </label>
+                </div>
+                {organiserControlsVisible && standalone && (
+                  <>
+                    <button
+                      className="quiet-action"
+                      type="button"
+                      onClick={() => {
+                        if (window.history.length > 1) navigate(-1);
+                        else navigate(config.routes.play);
+                      }}
+                    >
+                      {en.app.back}
+                    </button>
+                    <button
+                      className="quiet-action"
+                      type="button"
+                      onClick={() => window.location.reload()}
+                    >
+                      {en.app.refresh}
+                    </button>
+                  </>
+                )}
+              </>
             }
           />
         ) : (

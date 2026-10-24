@@ -104,6 +104,41 @@ describe('shared game chrome', () => {
     expect(html).not.toContain('Connecting…');
   });
 
+  it('keeps Live accessible without its word crowding the play status row', () => {
+    const liveHtml = renderToStaticMarkup(
+      <GameStatusBar
+        phase="DEBATE"
+        cycle={1}
+        remaining={6}
+        showRemaining={false}
+        connectionStatus="connected"
+      />,
+    );
+    const offlineHtml = renderToStaticMarkup(
+      <GameStatusBar
+        phase="DEBATE"
+        cycle={1}
+        remaining={6}
+        showRemaining={false}
+        connectionStatus="offline"
+      />,
+    );
+
+    expect(liveHtml).not.toContain('data-testid="game-status-remaining"');
+    expect(liveHtml).toContain('aria-label="Connection status: Live"');
+    expect(liveHtml).toContain(
+      'class="game-connection-label game-connection-label--visually-hidden">Live</span>',
+    );
+    expect(shellCSS).toMatch(
+      /\.game-connection-state--live\s+\.game-connection-label--visually-hidden\s*\{[^}]*clip-path:\s*inset\(50%\)/s,
+    );
+    expect(offlineHtml).not.toContain('data-testid="game-status-remaining"');
+    expect(offlineHtml).toContain('aria-label="Connection status: Offline"');
+    expect(offlineHtml).toContain(
+      'class="game-connection-label">Offline</span>',
+    );
+  });
+
   it('keeps Notes and organiser tools in the compact status row', () => {
     const html = renderToStaticMarkup(
       <GameStatusBar
