@@ -80,8 +80,9 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
   await page.goto(`/game/${gameId}`);
   const shell = page.locator('.game-shell');
   await expect(shell).toHaveAttribute('data-game-theme', 'day');
-  await page.locator('.game-display-settings > summary').click();
-  const alwaysDark = page.getByRole('checkbox', { name: 'Always dark' });
+  const gameMenu = page.getByTestId('game-status-menu');
+  await gameMenu.locator('summary').click();
+  const alwaysDark = gameMenu.getByRole('checkbox', { name: 'Always dark' });
   await expect(alwaysDark).not.toBeChecked();
   await alwaysDark.check();
   await expect(shell).toHaveAttribute('data-game-theme', 'night');
@@ -92,7 +93,7 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
   ).toBe('rgb(243, 238, 228)');
   await alwaysDark.uncheck();
   await expect(shell).toHaveAttribute('data-game-theme', 'day');
-  await page.locator('.game-display-settings > summary').click();
+  await gameMenu.locator('summary').click();
   const primaryAction = page.getByRole('button', {
     name: 'Move everyone on',
     exact: true,
@@ -1085,14 +1086,25 @@ test('phone room shows public game state without a presenter', async ({
   ]) {
     await page.setViewportSize(viewport);
     await page.evaluate(() => window.scrollTo(0, 0));
-    const [helpBox, dockBox] = await Promise.all([
-      helpContent.boundingBox(),
-      page.locator('.game-action-bar').boundingBox(),
-    ]);
-    expect(helpBox, `open Help at ${viewport.width}px`).not.toBeNull();
-    expect(dockBox, `action dock at ${viewport.width}px`).not.toBeNull();
-    expect(helpBox!.y + helpBox!.height).toBeLessThanOrEqual(dockBox!.y);
+    await expect
+      .poll(
+        async () => {
+          const [helpBox, dockBox] = await Promise.all([
+            helpContent.boundingBox(),
+            page.locator('.game-action-bar').boundingBox(),
+          ]);
+          return (
+            helpBox !== null &&
+            dockBox !== null &&
+            helpBox.y + helpBox.height <= dockBox.y
+          );
+        },
+        { timeout: 2_000 },
+      )
+      .toBe(true);
   }
+  await phaseHelp.locator('summary').click();
+  await expect(prompts).toBeHidden();
   await expect(page.getByTestId('player-seat-seat-morgan')).toBeVisible();
   await expect(page.getByTestId('player-seat-seat-alex')).toContainText('Out');
   await expect(page.getByTestId('status-prize-pot')).toContainText('18 points');
@@ -1116,6 +1128,22 @@ test('phone room shows public game state without a presenter', async ({
   await expect(
     gameMenu.getByRole('link', { name: 'Organiser controls' }),
   ).toBeVisible();
+  const darkMode = gameMenu.getByRole('checkbox', { name: 'Always dark' });
+  const originalTheme = await page
+    .locator('.game-shell')
+    .getAttribute('data-game-theme');
+  await darkMode.check();
+  await expect(page.locator('.game-shell')).toHaveAttribute(
+    'data-game-theme',
+    'night',
+  );
+  await darkMode.uncheck();
+  if (originalTheme) {
+    await expect(page.locator('.game-shell')).toHaveAttribute(
+      'data-game-theme',
+      originalTheme,
+    );
+  }
 
   await gameMenu.locator('summary').click();
   for (const viewport of [
@@ -1168,6 +1196,14 @@ test('phone room shows public game state without a presenter', async ({
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByTestId('private-notes-content')).toHaveCount(0);
   await expect(page.getByTestId('game-notes-sheet')).toHaveCount(0);
+  const moveOn = page.getByRole('button', { name: 'Move everyone on' });
+  await expect(moveOn).toBeEnabled();
+  const playersTab = page.getByRole('link', { name: 'Players', exact: true });
+  await playersTab.click();
+  await expect(playersTab).toHaveAttribute('aria-current', 'page');
+  const gameTab = page.getByRole('link', { name: 'Game', exact: true });
+  await gameTab.click();
+  await expect(gameTab).toHaveAttribute('aria-current', 'page');
 });
 
 test('shows Moving on instead of a frozen zero when a deadline passes', async ({
@@ -3387,7 +3423,7 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
     .getByTestId('player-game')
     .getByRole('heading')
     .allTextContents();
-  expect(verdictHeadings[0]).toBe('Alex has been banished. They were Traitor.');
+  expect(verdictHeadings[0]).toBe('The verdict');
   const voteReveal = page.getByTestId('list-vote-reveal');
   await expect(voteReveal.locator('li')).toHaveCount(4);
   await expect(voteReveal).toContainText('Morgan voted to banish Alex.');

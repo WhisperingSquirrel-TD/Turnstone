@@ -773,10 +773,14 @@ test('game status bar stays visible and active-play actions stay unobstructed', 
   const footer = page.getByTestId('brand-footer-shell');
   const statusBar = page.getByTestId('game-status-bar');
   const bottomBar = page.getByTestId('game-bottom-bar');
+  const notesButton = page.getByTestId('button-open-notes');
   await expect(actionBar).toBeVisible();
   await expect(footer).toHaveCount(0);
   await expect(statusBar).toHaveCount(1);
   await expect(bottomBar).toHaveCount(1);
+  await expect(notesButton).toBeVisible();
+  await expect(statusBar).toContainText('Notes');
+  await expect(actionBar.getByRole('button', { name: 'Notes' })).toHaveCount(0);
   const scrollMetrics = await page.evaluate(() => {
     const main = document.querySelector('main#main');
     if (!main) throw new Error('Game main region is missing.');
@@ -826,22 +830,17 @@ test('game status bar stays visible and active-play actions stay unobstructed', 
   await page.evaluate(() =>
     window.scrollTo(0, document.documentElement.scrollHeight),
   );
-  const [notesBounds, scrolledActionBounds, scrolledBottomBarBounds] =
-    await Promise.all([
-      page.getByTestId('button-open-notes').boundingBox(),
-      actionBar.boundingBox(),
-      bottomBar.boundingBox(),
-    ]);
-  if (!notesBounds || !scrolledActionBounds || !scrolledBottomBarBounds)
-    throw new Error('The scrolled notes button or action bar has no bounds.');
-  expect(notesBounds.y).toBeGreaterThanOrEqual(scrolledActionBounds.y);
-  expect(notesBounds.y + notesBounds.height).toBeLessThanOrEqual(
-    scrolledActionBounds.y + scrolledActionBounds.height,
-  );
+  const [scrolledActionBounds, scrolledBottomBarBounds] = await Promise.all([
+    actionBar.boundingBox(),
+    bottomBar.boundingBox(),
+  ]);
+  if (!scrolledActionBounds || !scrolledBottomBarBounds)
+    throw new Error('The scrolled action bar has no bounds.');
   expect(scrolledActionBounds.y + scrolledActionBounds.height).toBeCloseTo(
     scrolledBottomBarBounds.y,
     0,
   );
+  await expect(actionBar.getByRole('button', { name: 'Notes' })).toHaveCount(0);
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await page.evaluate(() => window.scrollTo(0, 0));
 

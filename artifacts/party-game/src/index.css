@@ -437,7 +437,7 @@ h2,
   white-space: nowrap;
 }
 
-@media (max-width: 390px) {
+@media (max-width: 430px) {
   .game-shell .game-status-bar {
     width: calc(100% + 24px);
     margin-inline: -12px;

@@ -145,7 +145,7 @@ describe('shared game chrome', () => {
       /\.game-status-menu\s*>\s*summary\s*\{[^}]*min-height:\s*44px/s,
     );
     expect(shellCSS).toMatch(
-      /@media\s*\(max-width:\s*380px\)[\s\S]*?\.game-status-bar\s*\{\s*font-size:\s*13px;/,
+      /@media\s*\(max-width:\s*430px\)[\s\S]*?\.game-status-bar\s*\{\s*font-size:\s*13px;/,
     );
   });
 
