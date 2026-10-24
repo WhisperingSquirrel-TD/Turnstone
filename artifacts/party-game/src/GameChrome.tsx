@@ -1,16 +1,40 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { en } from '@/locale/en-GB';
 import type { GameConnectionState } from './game-socket';
 import { GameConnectionStatus } from './GameConnectionStatus';
 
-export type GameConnectionDisplayState = GameConnectionState | 'offline';
+export type GameConnectionDisplayState =
+  | GameConnectionState
+  | 'offline'
+  | 'connected';
 
 export function gameStatusLabel(phase: string, cycle: number): string {
   if (phase === 'JOIN') return 'Join a game';
   if (phase === 'LOBBY') return 'Lobby';
   const period = phase === 'SHADOW' ? 'Night' : 'Day';
+  const compactPhaseNames: Record<string, string> = {
+    DEAL: 'Deal',
+    MISSION: 'Mission',
+    DEBATE: 'Talk',
+    VOTE: 'Vote',
+    VERDICT: 'Verdict',
+    SHADOW: 'Shadow',
+    DAWN: 'Dawn',
+    ENDGAME: 'Endgame',
+    FINAL_VOTE: 'Final vote',
+    FINAL_BANISH: 'Final verdict',
+    FINISHED: 'Results',
+  };
   const phaseName =
-    (en.game.phases as Record<string, string>)[phase] ?? en.game.defaultPhase;
+    compactPhaseNames[phase] ??
+    (en.game.phases as Record<string, string>)[phase] ??
+    en.game.defaultPhase;
   return `${period} ${cycle} · ${phaseName}`;
 }
 
@@ -20,12 +44,16 @@ export function GameStatusBar({
   remaining,
   connectionStatus,
   joinedLabel,
+  onOpenNotes,
+  menuContent,
 }: {
   phase: string;
   cycle: number;
   remaining: number;
   connectionStatus: GameConnectionDisplayState;
   joinedLabel?: string;
+  onOpenNotes?: () => void;
+  menuContent?: ReactNode;
 }) {
   return (
     <div
@@ -34,13 +62,36 @@ export function GameStatusBar({
       aria-label="Game status"
     >
       <span className="game-status-chip" data-testid="game-status-phase">
-        {gameStatusLabel(phase, cycle)}
+        <span className="game-status-phase-label">
+          {gameStatusLabel(phase, cycle)}
+        </span>
       </span>
       <div className="game-status-right">
         <span className="game-status-chip" data-testid="game-status-remaining">
           {joinedLabel ?? `${remaining} left`}
         </span>
-        <GameConnectionStatus status={connectionStatus} />
+        <GameConnectionStatus
+          status={connectionStatus === 'connected' ? 'online' : connectionStatus}
+        />
+        {onOpenNotes && (
+          <button
+            className="quiet-action game-status-notes"
+            type="button"
+            data-testid="button-open-notes"
+            onClick={onOpenNotes}
+          >
+            {en.game.notesButton}
+          </button>
+        )}
+        {menuContent && (
+          <details
+            className="game-status-menu"
+            data-testid="game-status-menu"
+          >
+            <summary>{en.nav.menu}</summary>
+            <div className="game-status-menu__content">{menuContent}</div>
+          </details>
+        )}
       </div>
     </div>
   );
@@ -72,13 +123,93 @@ export function GameHelpDisclosure({
   children: ReactNode;
   screenLockNotice?: string;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const details = detailsRef.current;
+    const content = contentRef.current;
+    if (!details || !content) return;
+    if (!isOpen) {
+      content.style.removeProperty('max-height');
+      return;
+    }
+
+    let attemptedInitialScroll = false;
+    const measureAvailableSpace = () => {
+      const currentDetails = detailsRef.current;
+      const currentContent = contentRef.current;
+      if (!currentDetails?.open || !currentContent) return;
+
+      const bottomEdges = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '.game-action-bar, [data-testid="game-action-dock"], [data-testid="game-bottom-bar"], .game-brand-footer',
+        ),
+      )
+        .filter((element) => {
+          const style = window.getComputedStyle(element);
+          const box = element.getBoundingClientRect();
+          return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            box.height > 0
+          );
+        })
+        .map((element) => element.getBoundingClientRect().top);
+      const dockTop =
+        bottomEdges.length > 0
+          ? Math.min(...bottomEdges)
+          : window.innerHeight;
+      const contentTop = currentContent.getBoundingClientRect().top;
+      const available = Math.max(0, dockTop - contentTop - 8);
+      currentContent.style.maxHeight = `${available}px`;
+
+      if (available >= 96 || attemptedInitialScroll) return;
+      attemptedInitialScroll = true;
+      const maxScroll = Math.max(
+        0,
+        document.documentElement.scrollHeight - window.innerHeight,
+      );
+      const scrollAmount = Math.min(
+        96 - available,
+        Math.max(0, maxScroll - window.scrollY),
+      );
+      if (scrollAmount > 0) {
+        window.scrollBy(0, scrollAmount);
+        window.requestAnimationFrame(measureAvailableSpace);
+      }
+    };
+
+    measureAvailableSpace();
+    window.addEventListener('resize', measureAvailableSpace);
+    window.addEventListener('scroll', measureAvailableSpace, {
+      passive: true,
+    });
+    const observer = new ResizeObserver(measureAvailableSpace);
+    for (const element of document.querySelectorAll<HTMLElement>(
+      '.game-action-bar, [data-testid="game-action-dock"], [data-testid="game-bottom-bar"], .game-brand-footer',
+    )) {
+      observer.observe(element);
+    }
+
+    return () => {
+      content.style.removeProperty('max-height');
+      window.removeEventListener('resize', measureAvailableSpace);
+      window.removeEventListener('scroll', measureAvailableSpace);
+      observer.disconnect();
+    };
+  }, [isOpen]);
+
   return (
     <details
+      ref={detailsRef}
       className="game-help-disclosure"
       data-testid="game-help-disclosure"
+      onToggle={(event) => setIsOpen(event.currentTarget.open)}
     >
       <summary>What&apos;s this?</summary>
-      <div className="game-help-disclosure__content">
+      <div ref={contentRef} className="game-help-disclosure__content">
         {children}
         {screenLockNotice && (
           <p data-testid="wake-lock-notice" role="status">

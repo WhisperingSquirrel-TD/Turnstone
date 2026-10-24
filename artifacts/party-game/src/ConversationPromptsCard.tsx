@@ -21,7 +21,7 @@ export function ConversationPromptsCard({
         {title}
       </h2>
       <ol className="mt-3 list-decimal space-y-2 pl-5">
-        {prompts.map((prompt) => (
+        {prompts.slice(0, 3).map((prompt) => (
           <li className="text-base leading-relaxed" key={prompt.id}>
             {prompt.text}
           </li>

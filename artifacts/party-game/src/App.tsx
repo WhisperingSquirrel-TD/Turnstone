@@ -269,6 +269,7 @@ function Shell({
   remaining = 0,
   organiserControlsVisible = false,
   organiserTools,
+  onOpenNotes,
 }: {
   children: ReactNode;
   isPlayer?: boolean;
@@ -281,6 +282,7 @@ function Shell({
   remaining?: number;
   organiserControlsVisible?: boolean;
   organiserTools?: ReactNode;
+  onOpenNotes?: () => void;
 }) {
   const navigate = useNavigate();
   const [alwaysDark, setAlwaysDark] = useState(false);
@@ -394,6 +396,48 @@ function Shell({
             connectionStatus={
               !browserOnline ? 'offline' : (connectionStatus ?? 'connecting')
             }
+            onOpenNotes={onOpenNotes}
+            menuContent={
+              organiserControlsVisible ? (
+                <>
+                  {organiserTools}
+                  <div className="game-display-settings">
+                    <p>{en.app.display}</p>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={alwaysDark}
+                        onChange={(event) =>
+                          setAlwaysDark(event.target.checked)
+                        }
+                      />
+                      {en.app.alwaysDark}
+                    </label>
+                  </div>
+                  {standalone && (
+                    <>
+                      <button
+                        className="quiet-action"
+                        type="button"
+                        onClick={() => {
+                          if (window.history.length > 1) navigate(-1);
+                          else navigate(config.routes.play);
+                        }}
+                      >
+                        {en.app.back}
+                      </button>
+                      <button
+                        className="quiet-action"
+                        type="button"
+                        onClick={() => window.location.reload()}
+                      >
+                        {en.app.refresh}
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : undefined
+            }
           />
         ) : (
           <>
@@ -452,46 +496,6 @@ function Shell({
           </details>
         )}
       </header>
-      {isPlayer && organiserControlsVisible && (
-        <div
-          className="game-organiser-tools"
-          aria-label={en.game.organiserControls}
-        >
-          {organiserTools}
-          <details className="game-display-settings">
-            <summary>{en.app.display}</summary>
-            <label>
-              <input
-                type="checkbox"
-                checked={alwaysDark}
-                onChange={(event) => setAlwaysDark(event.target.checked)}
-              />
-              {en.app.alwaysDark}
-            </label>
-          </details>
-          {standalone && (
-            <>
-              <button
-                className="quiet-action"
-                type="button"
-                onClick={() => {
-                  if (window.history.length > 1) navigate(-1);
-                  else navigate(config.routes.play);
-                }}
-              >
-                {en.app.back}
-              </button>
-              <button
-                className="quiet-action"
-                type="button"
-                onClick={() => window.location.reload()}
-              >
-                {en.app.refresh}
-              </button>
-            </>
-          )}
-        </div>
-      )}
       {isPlayer && themeMessage && (
         <div className="game-theme-transition" role="status" aria-live="polite">
           {themeMessage}
@@ -2647,6 +2651,14 @@ function PlayerGame() {
           </Link>
         ) : null
       }
+      onOpenNotes={
+        full && !isResuming && !phaseIsPrivate && !notesOpen
+          ? () => {
+              setNotesStatus('');
+              setNotesOpen(true);
+            }
+          : undefined
+      }
       privateMode={!isResuming && inPrivateMoment}
       privateRevealActive={!isResuming && held}
       connectionStatus={
@@ -2769,6 +2781,11 @@ function PlayerGame() {
             data-progress-done={full.progress.done}
             data-progress-total={full.progress.total}
           >
+            {!notesOpen && (
+              <h1 className="display mt-2 mb-1 text-[30px] leading-[1.15]">
+                {phaseLabel(full.phase)}
+              </h1>
+            )}
             <WhatIsHappeningCard accent={Boolean(full.revote)}>
               <GameStepAnnouncement
                 aliveCount={
@@ -2796,11 +2813,6 @@ function PlayerGame() {
                 }
                 fallback={phaseLabel(full.phase)}
               />
-              {wakeLockFallback && (
-                <GameHelpDisclosure screenLockNotice={en.game.wakeLockFallback}>
-                  <p>{en.game.whatIsHappening}</p>
-                </GameHelpDisclosure>
-              )}
             </WhatIsHappeningCard>
             {watchingRehearsal && (
               <RehearsalWatchCommentary phase={full.phase} />
@@ -2816,16 +2828,9 @@ function PlayerGame() {
                   : en.game.personalOutFate}
               </p>
             )}
-            {full.phase === 'DEBATE' && (
-              <ConversationPromptsCard
-                title={en.game.conversationPromptsTitle}
-                prompts={conversationPrompts}
-              />
-            )}
             {((!isBanishmentPhase &&
               ['DEAL', 'FINAL_VOTE'].includes(full.phase)) ||
-              full.paused ||
-              explanationKey) && (
+              full.paused) && (
               <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
                 {!isBanishmentPhase && (
                   <PhaseProgressStatus
@@ -2840,17 +2845,26 @@ function PlayerGame() {
                     }
                   />
                 )}
-                {explanationKey && (
-                  <details className="text-sm text-ash">
-                    <summary className="min-h-11 cursor-pointer py-2">
-                      {en.game.whatsThis}
-                    </summary>
-                    <p className="mt-2">
-                      {en.game.rehearsalGuide[explanationKey]}
-                    </p>
-                  </details>
-                )}
               </div>
+            )}
+            {(explanationKey ||
+              conversationPrompts.length > 0 ||
+              wakeLockFallback) && (
+              <GameHelpDisclosure
+                screenLockNotice={
+                  wakeLockFallback ? en.game.wakeLockFallback : undefined
+                }
+              >
+                {explanationKey && (
+                  <p>{en.game.rehearsalGuide[explanationKey]}</p>
+                )}
+                {conversationPrompts.length > 0 && (
+                  <ConversationPromptsCard
+                    title={en.game.conversationPromptsTitle}
+                    prompts={conversationPrompts}
+                  />
+                )}
+              </GameHelpDisclosure>
             )}
             {!inPrivateMoment && (
               <VerdictScreen
@@ -2912,18 +2926,7 @@ function PlayerGame() {
               </section>
             )}
             {!inPrivateMoment && (
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                {!(
-                  full.phase === 'VERDICT' &&
-                  (full.publicAnnouncement?.kind === 'verdict' ||
-                    full.publicAnnouncement?.kind === 'no_votes')
-                ) && (
-                  <div>
-                    <h1 className="display mt-2 text-4xl leading-tight sm:text-5xl">
-                      {phaseLabel(full.phase)}
-                    </h1>
-                  </div>
-                )}
+              <div className="flex flex-wrap items-end justify-end gap-4">
                 {!full.rehearsal && secondsLeft !== null && (
                   <p
                     className="text-sm text-ash"
@@ -3229,15 +3232,33 @@ function PlayerGame() {
                         </p>
                       ) : notesOpen && !phaseIsPrivate ? (
                         shielded && privateView ? (
-                          <NotesScreen
-                            privateView={privateView}
-                            seats={full.seats}
-                            notesDraft={notesDraft}
-                            notesStatus={notesStatus}
-                            saving={command.isPending}
-                            onDraftChange={setNotesDraft}
-                            onSave={() => void saveNotes()}
-                          />
+                          <section
+                            className="game-notes-sheet"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Notes"
+                            data-testid="game-notes-sheet"
+                          >
+                            <div className="game-notes-sheet__header">
+                              <h2 className="display text-2xl">Notes</h2>
+                              <button
+                                className="quiet-action"
+                                type="button"
+                                onClick={closeNotes}
+                              >
+                                {en.game.notesDone}
+                              </button>
+                            </div>
+                            <NotesScreen
+                              privateView={privateView}
+                              seats={full.seats}
+                              notesDraft={notesDraft}
+                              notesStatus={notesStatus}
+                              saving={command.isPending}
+                              onDraftChange={setNotesDraft}
+                              onSave={() => void saveNotes()}
+                            />
+                          </section>
                         ) : (
                           <p role="status" className="text-sm text-ash">
                             {holdMessage || en.game.privateLoading}
@@ -3353,15 +3374,6 @@ function PlayerGame() {
                           {en.game.holdInstructions}
                         </p>
                       </>
-                    )}
-                    {notesOpen && !phaseIsPrivate && (
-                      <button
-                        className="primary-action w-full"
-                        type="button"
-                        onClick={closeNotes}
-                      >
-                        {en.game.notesDone}
-                      </button>
                     )}
                   </>
                 )}
@@ -3506,19 +3518,6 @@ function PlayerGame() {
                 {!full.canAdvancePhase && (
                   <p className="mt-7 text-sm text-ash">{en.game.roomNote}</p>
                 )}
-                {full.phase !== 'DEBATE' && (
-                  <button
-                    className="primary-action mt-6 w-full"
-                    type="button"
-                    data-testid="button-open-notes"
-                    onClick={() => {
-                      setNotesStatus('');
-                      setNotesOpen(true);
-                    }}
-                  >
-                    {en.game.notesButton}
-                  </button>
-                )}
                 {full.phase === 'FINISHED' && (
                   <div className="mt-6 grid gap-3">
                     {full.rehearsal && (
@@ -3557,19 +3556,6 @@ function PlayerGame() {
             data-testid="rehearsal-action-bar"
           >
             <div className="mx-auto w-full max-w-[480px]">
-              {full.phase === 'DEBATE' && !notesOpen && (
-                <button
-                  className="quiet-action mb-2 w-full"
-                  type="button"
-                  data-testid="button-open-notes"
-                  onClick={() => {
-                    setNotesStatus('');
-                    setNotesOpen(true);
-                  }}
-                >
-                  {en.game.notesButton}
-                </button>
-              )}
               {!full.rehearsal && (
                 <p className="mb-2 text-sm text-ash">
                   {en.game.organiserControls}
@@ -3608,19 +3594,6 @@ function PlayerGame() {
               </button>
             </div>
           </section>
-        )}
-        {full?.phase === 'DEBATE' && !notesOpen && !showOrganiserBar && (
-          <button
-            className="quiet-action game-notes-dock-button"
-            type="button"
-            data-testid="button-open-notes"
-            onClick={() => {
-              setNotesStatus('');
-              setNotesOpen(true);
-            }}
-          >
-            {en.game.notesButton}
-          </button>
         )}
         {!isResuming && advanceConfirmationOpen && full && !full.rehearsal && (
           <div

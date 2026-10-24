@@ -248,9 +248,14 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
   let role: 'faithful' | 'traitor' = 'faithful';
   const capture =
     process.env.R5_CAPTURE_SCREENS === '1' ||
-    process.env.R7_CAPTURE_SCREENS === '1';
+    process.env.R7_CAPTURE_SCREENS === '1' ||
+    process.env.R7_LIGHTER_CAPTURE_SCREENS === '1';
+  const captureLighter =
+    process.env.R7_LIGHTER_CAPTURE_SCREENS === '1';
   const directory =
-    process.env.R7_CAPTURE_SCREENS === '1'
+    captureLighter
+      ? 'docs/screens/round-7-lighter'
+      : process.env.R7_CAPTURE_SCREENS === '1'
       ? 'docs/screens/round-7-stage-1'
       : 'docs/screens/round-5';
   if (capture) await mkdir(directory, { recursive: true });
@@ -297,13 +302,15 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
       },
     }),
   );
-  const widths = [320, 375, 390, 430, 1280];
+  const widths = [320, 360, 375, 390, 430, 1280];
   async function snapshot(label: string, held = false) {
     for (const width of widths) {
       const height =
         width === 320
           ? 568
-          : width === 375
+          : width === 360
+            ? 740
+            : width === 375
             ? 667
             : width === 430
               ? 932
@@ -354,6 +361,34 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
         await page.locator('.game-shell').evaluate((element, theme) => {
           (element as HTMLElement).dataset.gameTheme = theme;
         }, palette);
+        if (
+          ['debate', 'vote', 'shadow', 'dawn'].includes(label) &&
+          (width === 360 || width === 390)
+        ) {
+          const heading = page.locator('main h1').first();
+          const happening = page.getByTestId('game-happening-card');
+          const firstAction = page.locator(
+            '.game-action-bar .primary-action, .game-action-dock .primary-action, .game-action-dock button',
+          ).first();
+          await expect(heading).toBeVisible();
+          await expect(happening).toBeVisible();
+          await expect(firstAction).toBeVisible();
+          const [headingBox, happeningBox, actionBox] = await Promise.all([
+            heading.boundingBox(),
+            happening.boundingBox(),
+            firstAction.boundingBox(),
+          ]);
+          expect(headingBox).not.toBeNull();
+          expect(happeningBox).not.toBeNull();
+          expect(actionBox).not.toBeNull();
+          expect(headingBox!.y + headingBox!.height).toBeLessThanOrEqual(
+            happeningBox!.y,
+          );
+          expect(happeningBox!.y + happeningBox!.height).toBeLessThan(
+            actionBox!.y,
+          );
+          expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(height);
+        }
         if (held) {
           const seal = page.getByTestId('button-hold-reveal');
           const box = await seal.boundingBox();
@@ -400,6 +435,19 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
             () => document.documentElement.scrollWidth <= innerWidth,
           ),
         ).toBe(true);
+        const phaseChip = page.getByTestId('game-status-phase');
+        const phaseChipSize = await phaseChip
+          .locator('.game-status-phase-label')
+          .evaluate((element) => ({
+            text: element.textContent,
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+            rowWidth: element.parentElement?.parentElement?.clientWidth,
+          }));
+        expect(
+          phaseChipSize.scrollWidth,
+          `${label}/${palette}/${width}: phase chip ${JSON.stringify(phaseChipSize)}`,
+        ).toBeLessThanOrEqual(phaseChipSize.clientWidth);
         const bottomBar = page.getByTestId('game-bottom-bar');
         const bottomBarBox = await bottomBar.boundingBox();
         expect(bottomBarBox).not.toBeNull();
@@ -504,13 +552,25 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
           );
           expect(box!.y + box!.height).toBeLessThanOrEqual(height);
         }
-        if (capture)
+        if (
+          capture &&
+          (!captureLighter ||
+            (['debate', 'vote', 'shadow', 'dawn'].includes(label) &&
+              width !== 360))
+        ) {
+          const screenshotLabel =
+            captureLighter && label === 'debate'
+              ? 'conversation'
+              : captureLighter && label === 'shadow'
+                ? 'night'
+                : label;
           await page.screenshot({
-            path: `${directory}/${label}-${palette}-${width}.jpg`,
+            path: `${directory}/${screenshotLabel}-${palette}-${width}.jpg`,
             type: 'jpeg',
             quality: 72,
             scale: 'css',
           });
+        }
         if (held) await page.mouse.up();
         if (!shielded && !held) {
           const footer = page.getByTestId('brand-footer-shell');
@@ -873,9 +933,13 @@ async function revealNotes(
     });
   });
   await page.goto(`/game/${gameId}`);
-  const notesButton = page.getByRole('button', { name: 'Notes' });
+  const notesButton = page
+    .getByTestId('game-status-bar')
+    .getByRole('button', { name: 'Notes' });
   await expect(notesButton).toBeVisible();
+  await expect(notesButton).toHaveCSS('font-size', '13px');
   await notesButton.click();
+  await expect(page.getByRole('dialog', { name: 'Notes' })).toBeVisible();
   await expect(
     page.getByRole('dialog', { name: 'Shield your screen' }),
   ).toHaveCount(0);
@@ -916,7 +980,10 @@ test('phone room shows public game state without a presenter', async ({
   page,
 }) => {
   const gameId = 'phone-room';
-  const publicView = createPublicView(gameId);
+  const publicView = {
+    ...createPublicView(gameId),
+    canAdvancePhase: true,
+  } as FullView;
   const nextPublicLogSeq =
     Math.max(0, ...publicView.publicLog.map((entry) => entry.seq)) + 1;
   publicView.publicLog = [
@@ -987,6 +1054,9 @@ test('phone room shows public game state without a presenter', async ({
     'data-phase',
     'DEBATE',
   );
+  await expect(page.getByTestId('game-status-phase')).toHaveText(
+    'Day 2 · Talk',
+  );
   await expect(
     page.getByRole('heading', { name: 'Your room', exact: true }),
   ).toHaveCount(0);
@@ -998,10 +1068,31 @@ test('phone room shows public game state without a presenter', async ({
     .locator('details')
     .filter({ hasText: 'Everyone talks it over.' });
   await expect(phaseHelp).toHaveCount(1);
+  await expect(page.getByTestId('conversation-prompts')).toBeHidden();
   await phaseHelp.locator('summary').click();
   await expect(phaseHelp).toContainText(
     'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
   );
+  const prompts = phaseHelp.getByTestId('conversation-prompts');
+  await expect(prompts).toBeVisible();
+  const promptItems = prompts.getByRole('listitem');
+  await expect(promptItems).toHaveCount(3);
+  await expect(promptItems.first()).toHaveCSS('font-size', '16px');
+  const helpContent = phaseHelp.locator('.game-help-disclosure__content');
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 360, height: 740 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const [helpBox, dockBox] = await Promise.all([
+      helpContent.boundingBox(),
+      page.locator('.game-action-bar').boundingBox(),
+    ]);
+    expect(helpBox, `open Help at ${viewport.width}px`).not.toBeNull();
+    expect(dockBox, `action dock at ${viewport.width}px`).not.toBeNull();
+    expect(helpBox!.y + helpBox!.height).toBeLessThanOrEqual(dockBox!.y);
+  }
   await expect(page.getByTestId('player-seat-seat-morgan')).toBeVisible();
   await expect(page.getByTestId('player-seat-seat-alex')).toContainText('Out');
   await expect(page.getByTestId('status-prize-pot')).toContainText('18 points');
@@ -1012,13 +1103,63 @@ test('phone room shows public game state without a presenter', async ({
   await expect(page.getByRole('button', { name: 'Full screen' })).toHaveCount(
     0,
   );
-  const notesButton = page.getByRole('button', { name: 'Notes' });
+  const notesButton = page
+    .getByTestId('game-status-bar')
+    .getByRole('button', { name: 'Notes' });
   await expect(notesButton).toBeVisible();
+
+  const gameMenu = page.getByTestId('game-status-menu');
+  await expect(gameMenu).toBeVisible();
+  await gameMenu.locator('summary').click();
+  await expect(gameMenu).toContainText('Display');
+  await expect(gameMenu).toContainText('Always dark');
+  await expect(
+    gameMenu.getByRole('link', { name: 'Organiser controls' }),
+  ).toBeVisible();
+
+  await gameMenu.locator('summary').click();
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 360, height: 740 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const headingBox = await page.locator('main h1').first().boundingBox();
+    const happeningBox = await page
+      .getByTestId('game-happening-card')
+      .boundingBox();
+    const action = page.locator('.game-action-bar .primary-action').first();
+    const actionBox = await action.boundingBox();
+    expect(headingBox, `heading at ${viewport.width}px`).not.toBeNull();
+    expect(happeningBox, `status card at ${viewport.width}px`).not.toBeNull();
+    expect(actionBox, `first action at ${viewport.width}px`).not.toBeNull();
+    expect(headingBox!.y).toBeGreaterThanOrEqual(0);
+    await expect(page.locator('main h1').first()).toHaveCSS(
+      'font-size',
+      '30px',
+    );
+    expect(happeningBox!.y).toBeGreaterThan(headingBox!.y);
+    expect(happeningBox!.y + happeningBox!.height).toBeLessThan(actionBox!.y);
+    expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(
+      viewport.height,
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+      `no horizontal overflow at ${viewport.width}px`,
+    ).toBe(true);
+    await expect(
+      page.locator('.game-action-bar').getByRole('button', { name: 'Notes' }),
+    ).toHaveCount(0);
+  }
+
   await notesButton.click();
 
   await expect(
     page.getByRole('dialog', { name: 'Shield your screen' }),
   ).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Notes' })).toBeVisible();
   await expect.poll(() => privateRequests).toBe(1);
   await expect(page.getByTestId('private-notes-content')).toBeVisible({
     timeout: 1500,
@@ -1026,6 +1167,7 @@ test('phone room shows public game state without a presenter', async ({
   await expect(page.getByTestId('button-hold-reveal')).toHaveCount(0);
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByTestId('private-notes-content')).toHaveCount(0);
+  await expect(page.getByTestId('game-notes-sheet')).toHaveCount(0);
 });
 
 test('shows Moving on instead of a frozen zero when a deadline passes', async ({
@@ -1422,6 +1564,10 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
       `Last vote tile must clear the dock at ${width}x640: ${JSON.stringify(clearance)}`,
     ).toBeLessThanOrEqual(clearance.dockTop);
     expect(
+      clearance.dockTop + clearance.dockHeight,
+      `Action dock must clear the tabs at ${width}x640`,
+    ).toBeLessThanOrEqual(clearance.bottomBarTop);
+    expect(
       Math.abs(
         Number.parseFloat(clearance.mainPaddingBottom) -
           clearance.requiredPadding,
@@ -1431,6 +1577,12 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
     expect(
       clearance.centreIsChoice,
       `The tile centre must be the top hit target at ${width}x640`,
+    ).toBe(true);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+      `No horizontal overflow at ${width}x640`,
     ).toBe(true);
 
     await lastChoice.tap();

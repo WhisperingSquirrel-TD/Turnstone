@@ -9,6 +9,7 @@ import {
   WhatIsHappeningCard,
   gameStatusLabel,
 } from './GameChrome';
+import { ConversationPromptsCard } from './ConversationPromptsCard';
 
 const themeCSS = readFileSync(new URL('./theme.css', import.meta.url), 'utf8');
 const shellCSS = readFileSync(new URL('./index.css', import.meta.url), 'utf8');
@@ -81,8 +82,9 @@ describe('shared game chrome', () => {
   );
 
   it('labels public phases as day or night without role-specific content', () => {
-    expect(gameStatusLabel('SHADOW', 2)).toBe('Night 2 · A choice in the dark');
-    expect(gameStatusLabel('VOTE', 3)).toBe('Day 3 · Make your vote');
+    expect(gameStatusLabel('DEBATE', 2)).toBe('Day 2 · Talk');
+    expect(gameStatusLabel('SHADOW', 2)).toBe('Night 2 · Shadow');
+    expect(gameStatusLabel('VOTE', 3)).toBe('Day 3 · Vote');
   });
 
   it('shows remaining players and a word-labelled connection state', () => {
@@ -96,10 +98,55 @@ describe('shared game chrome', () => {
     );
 
     expect(html).toContain('data-testid="game-status-bar"');
-    expect(html).toContain('Night 2 · A choice in the dark');
+    expect(html).toContain('Night 2 · Shadow');
     expect(html).toContain('4 left');
     expect(html).toContain('Reconnecting');
     expect(html).not.toContain('Connecting…');
+  });
+
+  it('keeps Notes and organiser tools in the compact status row', () => {
+    const html = renderToStaticMarkup(
+      <GameStatusBar
+        phase="DEBATE"
+        cycle={1}
+        remaining={6}
+        connectionStatus="connected"
+        onOpenNotes={() => undefined}
+        menuContent={
+          <>
+            <a href="/coordinate/game">Organiser controls</a>
+            <details>
+              <summary>Display</summary>
+              <label>Always dark</label>
+            </details>
+          </>
+        }
+      />,
+    );
+
+    expect(html).toContain('data-testid="button-open-notes"');
+    expect(html).toContain('data-testid="game-status-menu"');
+    expect(html).toContain('>Menu</summary>');
+    expect(html).toContain('Organiser controls');
+    expect(html).toContain('Always dark');
+    expect(html).toMatch(
+      /data-testid="game-status-bar"[\s\S]*data-testid="button-open-notes"[\s\S]*data-testid="game-status-menu"/,
+    );
+  });
+
+  it('keeps top-row actions at touch size and status text legible on narrow phones', () => {
+    expect(shellCSS).toMatch(
+      /\.game-status-notes\s*\{[^}]*min-height:\s*44px/s,
+    );
+    expect(shellCSS).toMatch(
+      /\.game-shell\s+\.game-status-bar\s+\.game-status-notes\s*\{[^}]*font-size:\s*13px/s,
+    );
+    expect(shellCSS).toMatch(
+      /\.game-status-menu\s*>\s*summary\s*\{[^}]*min-height:\s*44px/s,
+    );
+    expect(shellCSS).toMatch(
+      /@media\s*\(max-width:\s*380px\)[\s\S]*?\.game-status-bar\s*\{\s*font-size:\s*13px;/,
+    );
   });
 
   it('labels the shared public explanation and marks repeated choices with an accent class', () => {
@@ -153,5 +200,23 @@ describe('shared game chrome', () => {
     expect(html).toContain('>Game<');
     expect(html).toContain('>Players<');
     expect(html).not.toContain('>Notes<');
+  });
+
+  it('limits the conversation prompt card to three body-sized prompts', () => {
+    const html = renderToStaticMarkup(
+      <ConversationPromptsCard
+        title="Conversation prompts"
+        prompts={[
+          { id: 'one', when: 'always', text: 'First prompt?' },
+          { id: 'two', when: 'always', text: 'Second prompt?' },
+          { id: 'three', when: 'always', text: 'Third prompt?' },
+          { id: 'four', when: 'always', text: 'Fourth prompt?' },
+        ]}
+      />,
+    );
+
+    expect(html.match(/<li\b/g)).toHaveLength(3);
+    expect(html).toContain('text-base');
+    expect(html).not.toContain('Fourth prompt?');
   });
 });
