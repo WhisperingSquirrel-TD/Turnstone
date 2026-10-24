@@ -251,12 +251,10 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
     process.env.R5_CAPTURE_SCREENS === '1' ||
     process.env.R7_CAPTURE_SCREENS === '1' ||
     process.env.R7_LIGHTER_CAPTURE_SCREENS === '1';
-  const captureLighter =
-    process.env.R7_LIGHTER_CAPTURE_SCREENS === '1';
-  const directory =
-    captureLighter
-      ? 'docs/screens/round-7-lighter'
-      : process.env.R7_CAPTURE_SCREENS === '1'
+  const captureLighter = process.env.R7_LIGHTER_CAPTURE_SCREENS === '1';
+  const directory = captureLighter
+    ? 'docs/screens/round-7-lighter'
+    : process.env.R7_CAPTURE_SCREENS === '1'
       ? 'docs/screens/round-7-stage-1'
       : 'docs/screens/round-5';
   if (capture) await mkdir(directory, { recursive: true });
@@ -312,12 +310,12 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
           : width === 360
             ? 740
             : width === 375
-            ? 667
-            : width === 430
-              ? 932
-              : width === 1280
-                ? 900
-                : 844;
+              ? 667
+              : width === 430
+                ? 932
+                : width === 1280
+                  ? 900
+                  : 844;
       await page.setViewportSize({ width, height });
       // Establish the viewport before opening a secret. A live resize correctly
       // covers private content, so each visual scene starts with a fresh load.
@@ -368,9 +366,11 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
         ) {
           const heading = page.locator('main h1').first();
           const happening = page.getByTestId('game-happening-card');
-          const firstAction = page.locator(
-            '.game-action-bar .primary-action, .game-action-dock .primary-action, .game-action-dock button',
-          ).first();
+          const firstAction = page
+            .locator(
+              '.game-action-bar .primary-action, .game-action-dock .primary-action, .game-action-dock button',
+            )
+            .first();
           await expect(heading).toBeVisible();
           await expect(happening).toBeVisible();
           await expect(firstAction).toBeVisible();

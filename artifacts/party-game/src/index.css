@@ -442,8 +442,8 @@ h2,
     width: calc(100% + 24px);
     margin-inline: -12px;
     gap: 0.1rem;
-    padding-inline: max(4px, env(safe-area-inset-left)),
-      max(4px, env(safe-area-inset-right));
+    padding-inline:
+      max(4px, env(safe-area-inset-left)), max(4px, env(safe-area-inset-right));
   }
 
   .game-status-bar {

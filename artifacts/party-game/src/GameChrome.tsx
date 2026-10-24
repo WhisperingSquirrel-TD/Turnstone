@@ -10,9 +10,7 @@ import type { GameConnectionState } from './game-socket';
 import { GameConnectionStatus } from './GameConnectionStatus';
 
 export type GameConnectionDisplayState =
-  | GameConnectionState
-  | 'offline'
-  | 'connected';
+  GameConnectionState | 'offline' | 'connected';
 
 export function gameStatusLabel(phase: string, cycle: number): string {
   if (phase === 'JOIN') return 'Join a game';
@@ -71,7 +69,9 @@ export function GameStatusBar({
           {joinedLabel ?? `${remaining} left`}
         </span>
         <GameConnectionStatus
-          status={connectionStatus === 'connected' ? 'online' : connectionStatus}
+          status={
+            connectionStatus === 'connected' ? 'online' : connectionStatus
+          }
         />
         {onOpenNotes && (
           <button
@@ -84,10 +84,7 @@ export function GameStatusBar({
           </button>
         )}
         {menuContent && (
-          <details
-            className="game-status-menu"
-            data-testid="game-status-menu"
-          >
+          <details className="game-status-menu" data-testid="game-status-menu">
             <summary>{en.nav.menu}</summary>
             <div className="game-status-menu__content">{menuContent}</div>
           </details>
@@ -158,9 +155,7 @@ export function GameHelpDisclosure({
         })
         .map((element) => element.getBoundingClientRect().top);
       const dockTop =
-        bottomEdges.length > 0
-          ? Math.min(...bottomEdges)
-          : window.innerHeight;
+        bottomEdges.length > 0 ? Math.min(...bottomEdges) : window.innerHeight;
       const contentTop = currentContent.getBoundingClientRect().top;
       const available = Math.max(0, dockTop - contentTop - 8);
       currentContent.style.maxHeight = `${available}px`;
