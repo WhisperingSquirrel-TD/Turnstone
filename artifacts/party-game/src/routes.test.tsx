@@ -191,23 +191,13 @@ describe('routes', () => {
     expect(staticFooter).toContain('/brand/stackstone-icon-dark.svg');
     expect(staticFooter).toContain('alt="Stackstone Consulting"');
   });
-  it('uses one Oathstone wordmark and puts the Stackstone credit and logo in every footer', async () => {
-    for (const path of [
-      '/',
-      '/faq',
-      '/compare',
-      '/play',
-      '/game/rehearsal-id',
-    ]) {
+  it('keeps the Stackstone credit on entry pages and uses the game status header in play', async () => {
+    for (const path of ['/', '/faq', '/compare', '/play', '/join']) {
       const html = await render(path);
       const footer = html.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
       expect(footer).toContain('made by Stackstone Consulting');
       expect(footer).toContain('href="https://stackstoneconsulting.co.uk/"');
-      expect(footer).toContain(
-        path.startsWith('/game/')
-          ? playerMarkPath(html)
-          : '/brand/stackstone-icon-dark.svg',
-      );
+      expect(footer).toContain('/brand/stackstone-icon-dark.svg');
     }
 
     const playerHtml = await render('/game/rehearsal-id');
@@ -215,7 +205,8 @@ describe('routes', () => {
       playerHtml.match(
         /(?:class="oathstone-wordmark"|data-testid="text-entry-brand")/g,
       ) ?? [],
-    ).toHaveLength(1);
+    ).toHaveLength(0);
+    expect(playerHtml).toContain('data-testid="game-status-bar"');
     const playerHeader =
       playerHtml.match(
         /<header class="public-home-brand public-shell-header[\s\S]*?<\/header>/,
