@@ -815,6 +815,9 @@ body:has(.game-fullscreen-overlay) {
   .enter {
     animation: arrive 0.28s ease-out both;
   }
+  .game-shell .enter {
+    animation-name: arrive-fade;
+  }
   @keyframes arrive {
     from {
       opacity: 0.45;
@@ -823,6 +826,14 @@ body:has(.game-fullscreen-overlay) {
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+  @keyframes arrive-fade {
+    from {
+      opacity: 0.45;
+    }
+    to {
+      opacity: 1;
     }
   }
 }

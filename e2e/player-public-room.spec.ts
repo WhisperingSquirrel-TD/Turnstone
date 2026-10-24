@@ -1376,10 +1376,8 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
         dockBottomStyle: getComputedStyle(
           document.querySelector('[data-testid="game-action-dock"]')!,
         ).bottom,
-        footerHeight: shellStyle.getPropertyValue(
-          '--game-footer-dock-height',
-        ),
-        bottomBarHeight: shellStyle.getPropertyValue(
+        footerHeight: shellStyle.getPropertyValue('--game-footer-dock-height'),
+        bottomBarCssHeight: shellStyle.getPropertyValue(
           '--game-bottom-bar-height',
         ),
         actionDockHeight: shellStyle.getPropertyValue(
@@ -1387,9 +1385,11 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
         ),
         shellClassName: shell.className,
         bottomBarTop: bottomBar.top,
+        bottomBarHeight: bottomBar.height,
         mainPaddingBottom: getComputedStyle(
           document.querySelector('.game-shell-main')!,
         ).paddingBottom,
+        requiredPadding: dock.height + bottomBar.height + 16,
         scrollY: window.scrollY,
         fixedContainingAncestors,
         centreIsChoice: centreHit === element || element.contains(centreHit),
@@ -1399,6 +1399,13 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
       clearance.tileBottom,
       `Last vote tile must clear the dock at ${width}x640: ${JSON.stringify(clearance)}`,
     ).toBeLessThanOrEqual(clearance.dockTop);
+    expect(
+      Math.abs(
+        Number.parseFloat(clearance.mainPaddingBottom) -
+          clearance.requiredPadding,
+      ),
+      `Content padding must include the measured dock and tab bar at ${width}x640`,
+    ).toBeLessThanOrEqual(1);
     expect(
       clearance.centreIsChoice,
       `The tile centre must be the top hit target at ${width}x640`,
