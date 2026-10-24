@@ -1208,6 +1208,35 @@ test('phone room shows public game state without a presenter', async ({
     .filter({ hasText: 'Everyone talks it over.' });
   await expect(phaseHelp).toHaveCount(1);
   await expect(page.getByTestId('conversation-prompts')).toBeHidden();
+  await expect(phaseHelp).not.toHaveAttribute('open', '');
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 360, height: 740 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const collapsedLayout = await phaseHelp.evaluate((element) => {
+      const summary = element.querySelector('summary');
+      const content = element.querySelector('.game-help-disclosure__content');
+      if (!summary || !content) {
+        throw new Error('The collapsed help disclosure is missing its parts.');
+      }
+      const detailsBounds = element.getBoundingClientRect();
+      const summaryBounds = summary.getBoundingClientRect();
+      const nextElement = element.nextElementSibling;
+      if (!nextElement) {
+        throw new Error('The closed help disclosure has no following content.');
+      }
+      const nextBounds = nextElement.getBoundingClientRect();
+      return {
+        spaceBelowSummary: detailsBounds.bottom - summaryBounds.bottom,
+        gapToNextElement: nextBounds.top - detailsBounds.bottom,
+        marginBottom: getComputedStyle(element).marginBottom,
+      };
+    });
+    expect(collapsedLayout.spaceBelowSummary).toBeLessThanOrEqual(1);
+    expect(Math.abs(collapsedLayout.gapToNextElement)).toBeLessThanOrEqual(1);
+    expect(collapsedLayout.marginBottom).toBe('0px');
+  }
   await phaseHelp.locator('summary').click();
   await expect(phaseHelp).toContainText(
     'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
