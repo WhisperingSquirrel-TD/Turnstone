@@ -1,8 +1,12 @@
-import { devices, expect, test, type Page, type Route } from '@playwright/test';
+import { devices, expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 import { cookieNameForGame } from '../artifacts/api-server/src/session-auth';
-import type { FullView } from '../lib/shared/src/contracts';
+import {
+  fullViewSchema,
+  gameViewResponseSchema,
+  type FullView,
+} from '../lib/shared/src/contracts';
 import { pendingJoinRequestsResponseSchema } from '../lib/shared/src/contracts';
 import {
   coldSeatGameId,
@@ -1735,7 +1739,8 @@ test('Conversation keeps collapsed Help close to the player detail section', asy
           const bounds = element.getBoundingClientRect();
           return {
             tag: element.tagName,
-            className: typeof element.className === 'string' ? element.className : '',
+            className:
+              typeof element.className === 'string' ? element.className : '',
             top: Math.round(bounds.top),
             bottom: Math.round(bounds.bottom),
             height: Math.round(bounds.height),
@@ -1979,10 +1984,9 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   ).toHaveCount(1);
 });
 
-test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async (
-  { page },
-  testInfo,
-) => {
+test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async ({
+  page,
+}, testInfo) => {
   test.skip(
     process.env.R7_STAGE_2B_CAPTURE !== '1',
     'Set R7_STAGE_2B_CAPTURE=1 to regenerate the reviewed screenshot set.',
@@ -1999,10 +2003,7 @@ test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async (
     { id: 'seat-jamie', name: 'Jamie', status: 'alive' as const },
   ];
   type GalleryState =
-    | 'vote'
-    | 'revote'
-    | 'verdict-banished'
-    | 'verdict-no-votes';
+    'vote' | 'revote' | 'verdict-banished' | 'verdict-no-votes';
   const galleryStates: GalleryState[] = [
     'vote',
     'revote',
@@ -2016,17 +2017,17 @@ test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async (
   let view: FullView = baseView;
   let socketSequence = 0;
   const socketDiagnostics: string[] = [];
-  const pendingPolls = new Map<string, Route>();
+  const pendingPolls = new Map<string, (packet: string) => void>();
   const queuedPackets = new Map<string, string[]>();
   const replyToPoll = (sid: string, packet: string) => {
     const waiting = pendingPolls.get(sid);
     if (waiting) {
       pendingPolls.delete(sid);
-      void waiting
-        .fulfill({ contentType: 'text/plain; charset=UTF-8', body: packet })
-        .catch(() => {});
+      socketDiagnostics.push('fulfilled a pending Socket.IO poll');
+      waiting(packet);
       return;
     }
+    socketDiagnostics.push('queued a Socket.IO packet');
     queuedPackets.set(sid, [...(queuedPackets.get(sid) ?? []), packet]);
   };
   const viewFor = (state: GalleryState): FullView => {
@@ -2046,8 +2047,7 @@ test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async (
             seats[3],
           ]
         : seats,
-      voteCandidates:
-        state === 'revote' ? ['seat-alex', 'seat-blair'] : [],
+      voteCandidates: state === 'revote' ? ['seat-alex', 'seat-blair'] : [],
       publicAnnouncement:
         state === 'verdict-no-votes'
           ? { kind: 'no_votes', cycle: baseView.cycle }
@@ -2055,15 +2055,30 @@ test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async (
             ? {
                 kind: 'verdict',
                 cycle: baseView.cycle,
-                seat: { name: 'Alex', role: 'traitor' },
+                seat: { id: 'seat-alex', name: 'Alex', role: 'traitor' },
               }
             : null,
       votedSeatIds: [],
       ballots: {},
     } as FullView;
   };
+  for (const state of galleryStates) {
+    const validation = fullViewSchema.safeParse(viewFor(state));
+    expect(
+      validation.success,
+      validation.success
+        ? undefined
+        : `Invalid ${state} screenshot view: ${validation.error.issues
+            .map((issue) => `${issue.path.join('.')}:${issue.message}`)
+            .join('; ')}`,
+    ).toBe(true);
+  }
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  page.on('close', () => {
+    for (const resolve of pendingPolls.values()) resolve('6');
+    pendingPolls.clear();
+  });
   // The screenshot fixture supplies a valid public game:view over Socket.IO
   // polling, so the shared header is genuinely rendered in its Live state.
   await page.route('**/socket.io**', async (route) => {
@@ -2074,6 +2089,8 @@ test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async (
       `${request.method()} ${url.pathname} transport=${url.searchParams.get('transport') ?? 'none'} sid=${sid ? 'present' : 'absent'}`,
     );
     if (request.method() === 'GET' && !sid) {
+      for (const resolve of pendingPolls.values()) resolve('6');
+      pendingPolls.clear();
       const nextSid = `stage-2b-${++socketSequence}`;
       queuedPackets.set(nextSid, []);
       await route.fulfill({
@@ -2100,24 +2117,39 @@ test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async (
           body: packet,
         });
       } else {
-        pendingPolls.set(sid, route);
+        const nextPacket = await new Promise<string>((resolve) => {
+          pendingPolls.set(sid, resolve);
+        });
+        await route
+          .fulfill({
+            contentType: 'text/plain; charset=UTF-8',
+            body: nextPacket,
+          })
+          .catch(() => {});
       }
       return;
     }
 
     const body = (request.postData() ?? '').replace(/^\d+:/, '');
-    if (body === '40') {
+    if (body.startsWith('40')) {
+      socketDiagnostics.push('POST Socket.IO connect');
       replyToPoll(sid, `40${JSON.stringify({ sid: `${sid}-namespace` })}`);
     } else if (body.startsWith('42')) {
       const [eventName] = JSON.parse(body.slice(2)) as [string, unknown];
       if (eventName === 'game:watch') {
-        replyToPoll(
-          sid,
-          `42${JSON.stringify([
-            'game:view',
-            { serverNow: Date.now(), version: view.version, view },
-          ])}`,
+        socketDiagnostics.push('POST Socket.IO watch');
+        const response = {
+          serverNow: Date.now(),
+          version: view.version,
+          view,
+        };
+        const validation = gameViewResponseSchema.safeParse(response);
+        socketDiagnostics.push(
+          validation.success
+            ? 'public view schema accepted'
+            : `public view schema rejected at ${validation.error.issues.map((issue) => issue.path.join('.')).join(',')}`,
         );
+        replyToPoll(sid, `42${JSON.stringify(['game:view', response])}`);
       }
     }
     await route.fulfill({

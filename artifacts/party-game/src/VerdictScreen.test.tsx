@@ -6,18 +6,21 @@ describe('VerdictScreen public wording', () => {
   it.each([
     ['traitor', 'Jordan has been banished. They were Traitor.'],
     ['faithful', 'Jordan has been banished. They were Faithful.'],
-  ] as const)('announces a banished %s by name and public role', (role, text) => {
-    const markup = renderToStaticMarkup(
-      <VerdictScreen
-        announcement={{
-          kind: 'verdict',
-          seat: { name: 'Jordan', role },
-        }}
-      />,
-    );
+  ] as const)(
+    'announces a banished %s by name and public role',
+    (role, text) => {
+      const markup = renderToStaticMarkup(
+        <VerdictScreen
+          announcement={{
+            kind: 'verdict',
+            seat: { name: 'Jordan', role },
+          }}
+        />,
+      );
 
-    expect(markup).toContain(text);
-  });
+      expect(markup).toContain(text);
+    },
+  );
 
   it('says nobody was banished when no votes were cast', () => {
     const markup = renderToStaticMarkup(
