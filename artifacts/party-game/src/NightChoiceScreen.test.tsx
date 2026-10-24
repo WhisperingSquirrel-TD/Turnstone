@@ -33,7 +33,7 @@ describe('NightChoiceScreen', () => {
       />,
     );
     const statusMarkup = html.match(
-      /data-testid="shadow-status"[^>]*>([\s\S]*?)<\/div>/,
+      /data-testid="shadow-status"[^>]*>([\s\S]*?)<\/section>/,
     )?.[1];
 
     expect(html).toContain('data-testid="shadow-slot-label"');
@@ -42,6 +42,7 @@ describe('NightChoiceScreen', () => {
     expect(html).toContain('Complete tonight&#x27;s task.');
     expect(statusMarkup).toBeDefined();
     expect(statusMarkup?.match(/<p(?:\s|>)/g)).toHaveLength(4);
+    expect(html).toContain('aria-label="Night status"');
     expect(html).toContain('data-testid="private-choice-list"');
     expect(html).toContain('Alex');
     expect(html).not.toContain('Shield your screen');
@@ -137,12 +138,12 @@ describe('NightChoiceScreen', () => {
       ],
     );
     const statusMarkup = (html: string) =>
-      html.match(/data-testid="shadow-status"[^>]*>([\s\S]*?)<\/div>/)?.[1];
+      html.match(/data-testid="shadow-status"[^>]*>([\s\S]*?)<\/section>/)?.[1];
 
     const traitorStatus = statusMarkup(traitorHtml);
     const faithfulStatus = statusMarkup(faithfulHtml);
-    expect(traitorHtml).toContain('h-20 grid-rows-4');
-    expect(faithfulHtml).toContain('h-20 grid-rows-4');
+    expect(traitorHtml).toContain('aria-label="Night status"');
+    expect(faithfulHtml).toContain('aria-label="Night status"');
     expect(traitorStatus?.match(/<p(?:\s|>)/g)).toHaveLength(4);
     expect(faithfulStatus?.match(/<p(?:\s|>)/g)).toHaveLength(4);
     expect(

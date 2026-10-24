@@ -279,6 +279,75 @@ Alignment: the same public announcement, player statuses, pot, timer and recent 
 
 Anti-template check: avoid dashboard cards, coloured player avatars, and any role-specific styling. At 320px and 200% text, names, statuses and the Notes action remain readable without horizontal scrolling; respect reduced motion and do not animate ordinary status updates.
 
+## Round 7 Stage 2A — Join, Lobby and Seal
+
+Apply the shared Stage 1 shell to the entry and lobby screens without changing
+join validation, approval, game-start, privacy-shield or held-reveal behaviour.
+Use the existing day/night game tokens, a 30px Playfair Display screen heading,
+the 52px status strip and a fixed 56px primary-action dock with safe-area
+clearance. Keep the entry footer for Join and Lobby; the active game shell
+continues to hide it during Seal.
+
+```text
+Join (short code)
++----------------------------------+
+| Oathstone                        |
+| Join a game · 0 joined · Live    |
+| What is happening                |
+| Enter the room code and your name|
+| Join a game                      |
+| Room code [ ][ ][ ][ ][ ][ ]     |
+| First name [__________________]  |
+|                                  |
+|                       [Continue]|
+| Stackstone Consulting            |
++----------------------------------+
+
+Lobby (organiser)
++----------------------------------+
+| Oathstone                        |
+| Lobby · 3 joined · Live          |
+| What is happening                |
+| Waiting for players              |
+| [QR]      ABC234       [Share]   |
+| Players                           |
+| [Ada · Joined] [Sam · Joined]    |
+| Waiting for approval             |
+|                                  |
+| [Start the game]                 |
+| Stackstone Consulting            |
++----------------------------------+
+
+Seal (all roles, before hold)
++----------------------------------+
+| Night/Day · players · connection |
+| What is happening                |
+| Your role                        |
+|                                  |
+|            [Hold]                |
+|                                  |
+|                                  |
+|                                  |
++----------------------------------+
+```
+
+Join has no game clock until a room is selected, so its phase chip reads
+“Join a game” and its default appearance is day. The Join wizard keeps its
+existing room-code → name-check → PIN sequence; the short-code and name fields
+are presented together, and invite links omit the already-known room code.
+Lobby follows its public phase where available and displays the joined count;
+only the organiser route receives organiser controls. Entry routes do not show
+the in-game Game/Players tabs because there is no active player game yet.
+The screen-lock notice moves into the collapsed “What’s this?” help disclosure.
+The four existing night status strings remain unchanged inside one shared status
+card; no night-specific wording or role-dependent structure changes.
+
+Acceptance: test the short-code join page with a focused field and a simulated
+320px-wide keyboard viewport; verify host Lobby and waiting-player states; keep
+the Seal card and all pre-reveal DOM identical between roles. Capture Join,
+Lobby and sealed Deal at 320, 375, 390, 430 and 1280px in day and night under
+`docs/screens/round-7-stage-2a/`.
+
 ## Round 5 — phase presentation and night screens
 
 ### Implemented palette and review gallery

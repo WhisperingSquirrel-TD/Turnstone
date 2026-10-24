@@ -63,7 +63,6 @@ test('entry distinguishes the shared game code from both players personal four-d
   for (let index = 0; index < 6; index += 1) {
     await characters.nth(index).fill('ABC234'[index]!);
   }
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByLabel('Your first name', { exact: true }).fill('Sam');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByLabel('4-digit PIN', { exact: true })).toHaveAttribute(

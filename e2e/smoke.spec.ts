@@ -353,11 +353,15 @@ test('notes show one privacy line without nested scrolling or excess top space',
   await page.setViewportSize({ width: 320, height: 568 });
   await page.clock.install();
   await page.goto(`/game/${gameId}`);
-  await expect(
-    page.getByText(
-      'Your screen may lock during play. Tap it to keep the game visible.',
-    ),
-  ).toBeVisible();
+  const gameHelp = page.getByTestId('game-help-disclosure');
+  const wakeLockNotice = page.getByTestId('wake-lock-notice');
+  await expect(gameHelp).toBeVisible();
+  await expect(gameHelp).not.toHaveAttribute('open', '');
+  await gameHelp.locator('summary').click();
+  await expect(wakeLockNotice).toHaveText(
+    'Your screen may lock during play. Tap it to keep the game visible.',
+  );
+  await gameHelp.locator('summary').click();
   await page.getByTestId('button-open-notes').click();
 
   await expect(

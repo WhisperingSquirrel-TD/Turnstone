@@ -1022,6 +1022,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
   const wakeLockNoticeText =
     'Your screen may lock during play. Tap it to keep the game visible.';
   const wakeLockNotice = page.getByTestId('wake-lock-notice');
+  const gameHelpDisclosure = page.getByTestId('game-help-disclosure');
   const { db } = await import('@workspace/db');
   let gameId: string | undefined;
   let playerRole: 'Traitor' | 'Faithful' | undefined;
@@ -1385,9 +1386,17 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
       if (phase !== 'FINISHED' && phase !== 'ARCHIVED') {
-        await expect(wakeLockNotice).toBeVisible();
-        await expect(wakeLockNotice).toHaveText(wakeLockNoticeText);
+        await expect(gameHelpDisclosure).toBeVisible();
+        await expect(gameHelpDisclosure).not.toHaveAttribute('open', '');
         await expect(wakeLockNotice).toHaveCount(1);
+        if (step === 0) {
+          const summary = gameHelpDisclosure.locator('summary');
+          await summary.click();
+          await expect(wakeLockNotice).toHaveText(wakeLockNoticeText);
+          await expect(wakeLockNotice).toBeVisible();
+          await summary.click();
+          await expect(gameHelpDisclosure).not.toHaveAttribute('open', '');
+        }
       }
       await expect(page.locator('.game-shell')).toHaveAttribute(
         'data-game-theme',

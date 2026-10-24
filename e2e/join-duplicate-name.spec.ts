@@ -54,7 +54,6 @@ async function enterJoinName(page: import('@playwright/test').Page) {
   for (let index = 0; index < 6; index += 1) {
     await codeBoxes.nth(index).fill('ABC234'[index]!);
   }
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByLabel('Your first name', { exact: true }).fill('Alex');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
 }

@@ -28,22 +28,23 @@ export function NightChoiceScreen({
         {slotLabel}
       </p>
       <p className="mt-2 text-left text-candle">{prompt}</p>
-      <div
-        className="mt-2 grid h-20 grid-rows-4 overflow-hidden text-left text-xs leading-5 text-ash"
+      <section
+        className="night-status-card mt-3"
         data-testid="shadow-status"
+        aria-label="Night status"
         aria-live="polite"
       >
         {Array.from({ length: 4 }, (_, index) => (
           <p
             key={index}
-            className="truncate"
+            className="night-status-card__line"
             title={statusLines[index] ?? ''}
             aria-label={statusLines[index] ?? ''}
           >
             {statusLines[index] ?? ''}
           </p>
         ))}
-      </div>
+      </section>
       <PrivateChoiceControls {...choiceControls} choiceSubmitted={actionDone} />
     </div>
   );

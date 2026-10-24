@@ -145,9 +145,6 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
           .fill(code[digit]!);
       }
       await player
-        .getByRole('button', { name: 'Continue', exact: true })
-        .click();
-      await player
         .getByRole('textbox', { name: 'Your first name' })
         .fill(names[index]!);
       await player

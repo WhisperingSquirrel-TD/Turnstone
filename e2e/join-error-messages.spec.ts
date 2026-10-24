@@ -27,10 +27,49 @@ async function enterName(page: import('@playwright/test').Page) {
   for (let index = 0; index < 6; index += 1) {
     await codeBoxes.nth(index).fill('ABC234'[index]!);
   }
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByLabel('Your first name', { exact: true }).fill('Alex');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
 }
+
+test('Join keeps its primary action clear of a focused mobile keyboard viewport', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'Focused Join layout runs on phone profiles',
+  );
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'c'.repeat(43) } }),
+  );
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto('/play');
+  await page.getByRole('button', { name: 'Join a game', exact: true }).click();
+
+  const codeBoxes = page.getByRole('textbox', { name: /Game code character/ });
+  for (let index = 0; index < 6; index += 1) {
+    await codeBoxes.nth(index).fill('ABC234'[index]!);
+  }
+  const name = page.getByLabel('Your first name', { exact: true });
+  await name.fill('Alex');
+  await name.focus();
+  await page.setViewportSize({ width: 320, height: 360 });
+
+  const primary = page.getByTestId('entry-primary-dock-button');
+  await expect(primary).toBeVisible();
+  const bounds = await primary.boundingBox();
+  expect(bounds?.height).toBeGreaterThanOrEqual(44);
+  expect(bounds).not.toBeNull();
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(360);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+  await expect(page.getByText('Live', { exact: true })).toBeVisible();
+  await page.context().setOffline(true);
+  await expect(page.getByText('Offline', { exact: true })).toBeVisible();
+  await page.context().setOffline(false);
+});
 
 function skipNonPhoneProfiles(projectName: string) {
   test.skip(

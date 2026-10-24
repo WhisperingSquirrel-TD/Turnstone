@@ -3405,3 +3405,137 @@ test('organiser confirms before moving on when players are unfinished', async ({
   await expect.poll(() => commandRequests).toBe(1);
   expect(commandExpectedVersion).toBe(13);
 });
+
+test('Round 7 Stage 2A Join, Lobby and sealed Deal screenshot gallery', async ({
+  page,
+}) => {
+  test.skip(
+    process.env.R7_STAGE_2A_CAPTURE !== '1',
+    'Screenshots are generated explicitly for the design review',
+  );
+  test.setTimeout(180_000);
+  await mkdir('docs/screens/round-7-stage-2a', { recursive: true });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.clock.install();
+
+  const gameId = 'r7-stage-2a-gallery';
+  let view = createPublicView(gameId);
+  let role: 'faithful' | 'traitor' = 'faithful';
+  const envelope = () => ({
+    serverNow: Date.now(),
+    version: view.version,
+    view,
+  });
+
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'stage-2a-test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route(`**/api/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(`**/api/games/${gameId}/coordinator/view`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.route(`**/api/games/${gameId}/invites`, (route) =>
+    route.fulfill({
+      json: {
+        joinUrl: 'https://oathstone.stackstoneconsulting.co.uk/join',
+        shortCode: 'ABC234',
+      },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/private-view`, (route) =>
+    route.fulfill({
+      json: {
+        ...envelope(),
+        view: {
+          ...view,
+          private: {
+            role,
+            team: [],
+            options: view.seats
+              .filter((seat) => seat.status === 'alive')
+              .map(({ id, name }) => ({ id, name })),
+            choices: {},
+            choiceSlots: [],
+            chat: [],
+            task: null,
+            minimumDurationMs: 0,
+          },
+        },
+      },
+    }),
+  );
+
+  const sizes = [
+    { width: 320, height: 640 },
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 1280, height: 900 },
+  ];
+  const themes = ['day', 'night'] as const;
+  const saveScreen = async (
+    screen: 'join' | 'lobby' | 'seal',
+    theme: (typeof themes)[number],
+    width: number,
+  ) => {
+    await page.evaluate(
+      ({ theme, screen }) => {
+        const shell = document.querySelector(
+          screen === 'seal' ? '.game-shell' : '.entry-experience',
+        );
+        shell?.setAttribute('data-game-theme', theme);
+      },
+      { theme, screen },
+    );
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({
+      path: `docs/screens/round-7-stage-2a/${screen}-${theme}-${width}.jpg`,
+      type: 'jpeg',
+      quality: 88,
+    });
+  };
+
+  for (const size of sizes) {
+    for (const theme of themes) {
+      await page.setViewportSize(size);
+      await page.goto('/join');
+      await expect(page.getByTestId('input-join-name')).toBeVisible();
+      await expect(page.getByTestId('game-happening-card')).toBeVisible();
+      await saveScreen('join', theme, size.width);
+    }
+  }
+
+  view = { ...view, phase: 'LOBBY', cycle: 0 };
+  for (const size of sizes) {
+    for (const theme of themes) {
+      await page.setViewportSize(size);
+      await page.goto(`/coordinate/${gameId}`);
+      await expect(page.getByTestId('text-lobby-player-count')).toBeVisible();
+      await expect(page.getByTestId('button-start-game')).toBeVisible();
+      await saveScreen('lobby', theme, size.width);
+    }
+  }
+
+  view = { ...view, phase: 'DEAL', cycle: 1 };
+  for (const size of sizes) {
+    for (const theme of themes) {
+      await page.setViewportSize(size);
+      await page.goto(`/game/${gameId}`);
+      const shield = page.getByRole('dialog', { name: 'Shield your screen' });
+      if (await shield.isVisible()) {
+        await page.clock.fastForward(3_000);
+        await page.getByRole('button', { name: 'I’m shielded' }).click();
+      }
+      await expect(page.getByTestId('button-hold-reveal')).toBeVisible();
+      await saveScreen('seal', theme, size.width);
+    }
+  }
+});

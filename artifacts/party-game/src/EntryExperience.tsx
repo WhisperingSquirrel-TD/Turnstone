@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -10,6 +11,7 @@ import {
 import { recommended } from '@workspace/shared';
 import { BrandFooter } from './BrandFooter';
 import { EntryActionError } from './entry-action-error';
+import { GameStatusBar, PlayerTile, WhatIsHappeningCard } from './GameChrome';
 import { en } from './locale/en-GB';
 import './EntryExperience.css';
 
@@ -187,6 +189,7 @@ export interface EntryExperienceCopy {
 
 export interface EntryExperienceProps {
   copy: EntryExperienceCopy;
+  gameTheme?: 'day' | 'night';
   screen?: EntryScreen;
   inviteMode?: boolean;
   lateJoinMode?: boolean;
@@ -246,6 +249,7 @@ const VALID_CODE = /^[A-HJ-NP-Z2-9]{6}$/;
 
 export function EntryExperience({
   copy,
+  gameTheme = 'day',
   screen: controlledScreen,
   inviteMode = false,
   lateJoinMode = false,
@@ -286,8 +290,40 @@ export function EntryExperience({
   >('speaker-circle');
   const [duplicateName, setDuplicateName] = useState<string | null>(null);
   const [recoveringSeat, setRecoveringSeat] = useState(false);
+  const [browserOnline, setBrowserOnline] = useState(
+    () => typeof navigator === 'undefined' || navigator.onLine,
+  );
   const codeRefs = useRef<Array<HTMLInputElement | null>>([]);
   const screen = controlledScreen ?? internalScreen;
+
+  useEffect(() => {
+    const root = document.querySelector<HTMLElement>('.entry-experience');
+    const viewport = window.visualViewport;
+    if (!root || !viewport) return;
+    const syncViewport = () => {
+      root.style.setProperty('--entry-visual-height', `${viewport.height}px`);
+      root.style.setProperty('--entry-visual-top', `${viewport.offsetTop}px`);
+    };
+    syncViewport();
+    viewport.addEventListener('resize', syncViewport);
+    viewport.addEventListener('scroll', syncViewport);
+    window.addEventListener('resize', syncViewport);
+    return () => {
+      viewport.removeEventListener('resize', syncViewport);
+      viewport.removeEventListener('scroll', syncViewport);
+      window.removeEventListener('resize', syncViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateOnline = () => setBrowserOnline(navigator.onLine);
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOnline);
+    return () => {
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOnline);
+    };
+  }, []);
 
   function moveTo(next: EntryScreen) {
     setInternalScreen(next);
@@ -537,7 +573,8 @@ export function EntryExperience({
 
   return (
     <div
-      className={`entry-experience${options.largeText ? ' entry-large-text' : ''}`}
+      data-game-theme={gameTheme}
+      className={`entry-experience game-shell${options.largeText ? ' entry-large-text' : ''}`}
     >
       <header className="entry-brand" aria-label={copy.brandDescriptor}>
         <span className="entry-wordmark" data-testid="text-entry-brand">
@@ -551,6 +588,20 @@ export function EntryExperience({
         id="entry-main"
         key={screen}
       >
+        {(screen.startsWith('join-') && screen !== 'join-wait' || screen === 'lobby') && (
+          <div className="entry-stage-chrome">
+            <GameStatusBar
+              phase={screen === 'lobby' ? 'LOBBY' : 'JOIN'}
+              cycle={1}
+              remaining={screen === 'lobby' ? players.length : 0}
+              joinedLabel={`${screen === 'lobby' ? players.length : 0} joined`}
+              connectionStatus={browserOnline ? 'online' : 'offline'}
+            />
+            <WhatIsHappeningCard>
+              {screen === 'lobby' ? 'Waiting for players' : 'Enter the room code and your name'}
+            </WhatIsHappeningCard>
+          </div>
+        )}
         {screen === 'welcome' && (
           <section className="entry-welcome" aria-labelledby="entry-title">
             <div className="entry-welcome-copy">
@@ -618,16 +669,27 @@ export function EntryExperience({
 
             {screen === 'join-code' && (
               <form
+                id="entry-join-code-form"
                 className="entry-form-area"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (
-                    VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase())
-                  )
-                    moveTo('join-name');
+                  const validCode = VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase());
+                  const validName = inputs.joinName.trim().length >= 2;
+                  if (!validCode) {
+                    setLocalError(copy.codeError);
+                    return;
+                  }
+                  if (!validName) {
+                    setLocalError(copy.nameError);
+                    return;
+                  }
+                  void checkJoinName();
                 }}
               >
                 <p className="entry-help">{copy.codeHelp}</p>
+                <label className="entry-label" htmlFor="entry-join-code">
+                  {copy.codeHeading}
+                </label>
                 <div
                   className="entry-code-fields"
                   role="group"
@@ -652,16 +714,39 @@ export function EntryExperience({
                     />
                   ))}
                 </div>
-                <button
-                  className="entry-primary-action"
-                  data-testid="button-continue-code"
-                  type="submit"
-                  disabled={
-                    !VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase())
-                  }
-                >
-                  {copy.continue}
-                </button>
+                <label className="entry-label" htmlFor="entry-join-name">
+                  {copy.firstNameLabel}
+                </label>
+                <input
+                  id="entry-join-name"
+                  className="entry-field"
+                  data-testid="input-join-name"
+                  autoComplete="given-name"
+                  minLength={2}
+                  maxLength={20}
+                  value={inputs.joinName}
+                  placeholder={copy.firstNamePlaceholder}
+                  onChange={(event) => {
+                    onInputChange('joinName', event.target.value);
+                    setLocalError('');
+                  }}
+                />
+                {duplicateName && (
+                  <div className="entry-duplicate-choice" role="group" aria-label={copy.duplicateNamePrompt(duplicateName)}>
+                    <p>{copy.duplicateNamePrompt(duplicateName)}</p>
+                    <button
+                      className="entry-secondary-action"
+                      type="button"
+                      onClick={() => {
+                        setDuplicateName(null);
+                        setLocalError(copy.differentNameError(duplicateName));
+                        document.getElementById('entry-join-name')?.focus();
+                      }}
+                    >
+                      {copy.duplicateNameNo}
+                    </button>
+                  </div>
+                )}
               </form>
             )}
 
@@ -744,17 +829,6 @@ export function EntryExperience({
                   >
                     <p>{copy.duplicateNamePrompt(duplicateName)}</p>
                     <button
-                      className="entry-primary-action"
-                      type="button"
-                      onClick={() => {
-                        setRecoveringSeat(true);
-                        onInputChange('joinPin', '');
-                        moveTo('join-pin');
-                      }}
-                    >
-                      {copy.duplicateNameYes}
-                    </button>
-                    <button
                       className="entry-secondary-action"
                       type="button"
                       onClick={() => {
@@ -767,21 +841,13 @@ export function EntryExperience({
                     </button>
                   </div>
                 ) : (
-                  <button
-                    className="entry-primary-action"
-                    data-testid="button-continue-name"
-                    type="button"
-                    disabled={inputs.joinName.trim().length < 2}
-                    onClick={() => void checkJoinName()}
-                  >
-                    {copy.continue}
-                  </button>
+                  <span className="entry-sr-only">{copy.continue}</span>
                 )}
               </div>
             )}
 
             {screen === 'join-pin' && (
-              <form className="entry-form-area" onSubmit={submitJoin}>
+              <form id="entry-join-pin-form" className="entry-form-area" onSubmit={submitJoin}>
                 <label className="entry-label" htmlFor="entry-join-pin">
                   {copy.pinLabel}
                 </label>
@@ -804,14 +870,6 @@ export function EntryExperience({
                   }
                 />
                 <p className="entry-help">{copy.pinHint}</p>
-                <button
-                  className="entry-primary-action"
-                  data-testid="button-submit-join"
-                  type="submit"
-                  disabled={busy.join || !/^\d{4}$/.test(inputs.joinPin)}
-                >
-                  {busy.join ? copy.joinPending : copy.joinButton}
-                </button>
               </form>
             )}
 
@@ -1312,15 +1370,16 @@ export function EntryExperience({
                   {copy.rosterHeading}
                 </h2>
                 <ul
-                  className="entry-player-list"
+                  className="entry-player-list entry-player-rows"
                   data-testid="list-lobby-players"
                 >
                   {players.map((player) => (
-                    <li
-                      key={player.id}
-                      data-testid={`player-lobby-${player.id}`}
-                    >
-                      {player.name}
+                    <li key={player.id}>
+                      <PlayerTile
+                        name={player.name}
+                        statusText="Joined"
+                        testId={`player-lobby-${player.id}`}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -1381,24 +1440,6 @@ export function EntryExperience({
                 {visibleError}
               </p>
             )}
-            <button
-              className="entry-primary-action entry-start-game"
-              data-testid="button-start-game"
-              type="button"
-              disabled={busy.startGame || (!lateJoinMode && players.length < 5)}
-              onClick={() => {
-                setLocalError('');
-                void Promise.resolve(onStartGame()).catch(() =>
-                  setLocalError(copy.errorFallback),
-                );
-              }}
-            >
-              {lateJoinMode
-                ? copy.backToGame
-                : busy.startGame
-                  ? copy.startGamePending
-                  : copy.startGame}
-            </button>
           </section>
         )}
 
@@ -1517,9 +1558,88 @@ export function EntryExperience({
         )}
       </main>
 
+      {screen === 'join-code' && (
+        <div className="entry-action-dock" data-testid="entry-action-dock">
+          <button
+            className="entry-primary-action"
+            data-testid="entry-primary-dock-button"
+            data-legacy-testid="button-continue-code"
+            type="submit"
+            form="entry-join-code-form"
+            disabled={!duplicateName && (!VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase()) || inputs.joinName.trim().length < 2)}
+            onClick={(event) => {
+              if (duplicateName) {
+                event.preventDefault();
+                setRecoveringSeat(true);
+                onInputChange('joinPin', '');
+                moveTo('join-pin');
+              }
+            }}
+          >
+            {duplicateName ? copy.duplicateNameYes : copy.continue}
+          </button>
+        </div>
+      )}
+      {screen === 'join-name' && (
+        <div className="entry-action-dock" data-testid="entry-action-dock">
+          <button
+            className="entry-primary-action"
+            data-testid="button-continue-name"
+            type="button"
+            disabled={!duplicateName && inputs.joinName.trim().length < 2}
+            onClick={() => {
+              if (duplicateName) {
+                setRecoveringSeat(true);
+                onInputChange('joinPin', '');
+                moveTo('join-pin');
+              } else {
+                void checkJoinName();
+              }
+            }}
+          >
+            {duplicateName ? copy.duplicateNameYes : copy.continue}
+          </button>
+        </div>
+      )}
+      {screen === 'join-pin' && (
+        <div className="entry-action-dock" data-testid="entry-action-dock">
+          <button
+            className="entry-primary-action"
+            data-testid="button-submit-join"
+            type="submit"
+            form="entry-join-pin-form"
+            disabled={busy.join || !/^\d{4}$/.test(inputs.joinPin)}
+          >
+            {busy.join ? copy.joinPending : copy.joinButton}
+          </button>
+        </div>
+      )}
+      {screen === 'lobby' && (
+        <div className="entry-action-dock" data-testid="entry-action-dock">
+          <button
+            className="entry-primary-action entry-start-game"
+            data-testid="button-start-game"
+            type="button"
+            disabled={busy.startGame || (!lateJoinMode && players.length < 5)}
+            onClick={() => {
+              setLocalError('');
+              void Promise.resolve(onStartGame()).catch(() =>
+                setLocalError(copy.errorFallback),
+              );
+            }}
+          >
+            {lateJoinMode
+              ? copy.backToGame
+              : busy.startGame
+                ? copy.startGamePending
+                : copy.startGame}
+          </button>
+        </div>
+      )}
+
       <BrandFooter
         context="game"
-        surface="dark"
+        surface={gameTheme === 'day' ? 'light' : 'dark'}
         className="entry-footer"
         testId="brand-footer-entry"
       />

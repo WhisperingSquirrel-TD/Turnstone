@@ -51,6 +51,7 @@ import { config } from '@/config';
 import { BrandFooter, BrandSurfaceContext } from './BrandFooter';
 import {
   GameBottomBar,
+  GameHelpDisclosure,
   PlayerTile,
   GameStatusBar,
   WhatIsHappeningCard,
@@ -2795,16 +2796,12 @@ function PlayerGame() {
                 }
                 fallback={phaseLabel(full.phase)}
               />
+              {wakeLockFallback && (
+                <GameHelpDisclosure screenLockNotice={en.game.wakeLockFallback}>
+                  <p>{en.game.whatIsHappening}</p>
+                </GameHelpDisclosure>
+              )}
             </WhatIsHappeningCard>
-            {wakeLockFallback && (
-              <p
-                role="status"
-                data-testid="wake-lock-notice"
-                className="mb-3 text-sm text-ash"
-              >
-                {en.game.wakeLockFallback}
-              </p>
-            )}
             {watchingRehearsal && (
               <RehearsalWatchCommentary phase={full.phase} />
             )}

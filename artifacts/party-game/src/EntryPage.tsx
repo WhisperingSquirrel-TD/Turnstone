@@ -973,6 +973,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         brandGoldSuffix: config.wordmarkAccentSuffix,
       }}
       screen={screen}
+      gameTheme={coordinatorView?.phase === 'SHADOW' ? 'night' : 'day'}
       lateJoinMode={lateJoinMode}
       coordinatorPanel={coordinatorPanel}
       inviteMode={Boolean(inviteToken)}

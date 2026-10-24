@@ -1087,11 +1087,6 @@ test('virtual players complete a real game across desktop and phone contexts @vi
             })
             .fill(gameCode[digit]!);
         }
-        await pauseForHumanTiming(page, scenario.stage);
-        await page
-          .getByRole('button', { name: 'Continue', exact: true })
-          .click();
-        await pauseForHumanTiming(page, scenario.stage);
         await page
           .getByRole('textbox', { name: 'Your first name' })
           .fill(player.name);

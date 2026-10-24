@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import {
   GameBottomBar,
+  GameHelpDisclosure,
   GameStatusBar,
   PlayerTile,
   WhatIsHappeningCard,
@@ -10,6 +11,7 @@ import {
 } from './GameChrome';
 
 const themeCSS = readFileSync(new URL('./theme.css', import.meta.url), 'utf8');
+const shellCSS = readFileSync(new URL('./index.css', import.meta.url), 'utf8');
 
 function themeTokens(theme: 'day' | 'night') {
   const block =
@@ -121,8 +123,29 @@ describe('shared game chrome', () => {
     expect(selected).toContain('Alex');
     expect(selected).toContain('Selected');
     expect(selected).toContain('aria-pressed="true"');
+    expect(selected).toContain('player-tile--selected');
+    expect(shellCSS).toMatch(
+      /\.player-tile--selected\s*\{[^}]*border:\s*2\.5px solid var\(--game-accent\)/s,
+    );
     expect(out).toContain('Sam');
     expect(out).toContain('Out');
+  });
+
+  it("keeps the screen-lock notice inside the collapsed What's this disclosure", () => {
+    const html = renderToStaticMarkup(
+      <GameHelpDisclosure
+        screenLockNotice="Your screen may lock during play. Tap it to keep the game visible."
+      >
+        <p>Phase guidance.</p>
+      </GameHelpDisclosure>,
+    );
+
+    expect(html).toMatch(
+      /<details[^>]*data-testid="game-help-disclosure"[^>]*><summary[^>]*>What&#x27;s this\?<\/summary>/,
+    );
+    expect(html).toContain('data-testid="wake-lock-notice"');
+    expect(html).toContain('Phase guidance.');
+    expect(html).not.toMatch(/<details[^>]*\sopen(?:=|\s|>)/);
   });
 
   it('provides only the Game and Players destinations in the bottom bar', () => {

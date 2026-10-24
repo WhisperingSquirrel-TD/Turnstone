@@ -6,6 +6,8 @@ import { GameConnectionStatus } from './GameConnectionStatus';
 export type GameConnectionDisplayState = GameConnectionState | 'offline';
 
 export function gameStatusLabel(phase: string, cycle: number): string {
+  if (phase === 'JOIN') return 'Join a game';
+  if (phase === 'LOBBY') return 'Lobby';
   const period = phase === 'SHADOW' ? 'Night' : 'Day';
   const phaseName =
     (en.game.phases as Record<string, string>)[phase] ?? en.game.defaultPhase;
@@ -17,11 +19,13 @@ export function GameStatusBar({
   cycle,
   remaining,
   connectionStatus,
+  joinedLabel,
 }: {
   phase: string;
   cycle: number;
   remaining: number;
   connectionStatus: GameConnectionDisplayState;
+  joinedLabel?: string;
 }) {
   return (
     <div
@@ -34,7 +38,7 @@ export function GameStatusBar({
       </span>
       <div className="game-status-right">
         <span className="game-status-chip" data-testid="game-status-remaining">
-          {remaining} left
+          {joinedLabel ?? `${remaining} left`}
         </span>
         <GameConnectionStatus status={connectionStatus} />
       </div>
@@ -58,6 +62,28 @@ export function WhatIsHappeningCard({
       <p className="game-screen-label">{en.game.whatIsHappening}</p>
       <div className="game-happening-copy">{children}</div>
     </section>
+  );
+}
+
+export function GameHelpDisclosure({
+  children,
+  screenLockNotice,
+}: {
+  children: ReactNode;
+  screenLockNotice?: string;
+}) {
+  return (
+    <details className="game-help-disclosure" data-testid="game-help-disclosure">
+      <summary>What&apos;s this?</summary>
+      <div className="game-help-disclosure__content">
+        {children}
+        {screenLockNotice && (
+          <p data-testid="wake-lock-notice" role="status">
+            {screenLockNotice}
+          </p>
+        )}
+      </div>
+    </details>
   );
 }
 
