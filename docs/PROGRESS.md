@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Status for reviewer — Round 7 Improvements 2/6 (compact status row):** item 1 is complete: `70a554e`, Verify #271 green across required jobs. Item 2 is implemented locally. In-game status no longer has a separate players-left chip; Live is a dot with accessible “Connection status: Live” text, while Reconnecting/Offline show their words; the row keeps 16px gutters and 8px gaps without wrapping. Menu is present for every player with local Display settings, while organiser actions remain restricted. Desktop and Pixel geometry tests pass at 320/360/375/390/430 px; the public-player and role-neutral menu checks pass. Typechecks, lint, formatting, GameChrome unit tests and diff checks pass. Local iPhone WebKit cannot launch because browser system dependencies are absent; GitHub CI will verify it. Item 2 is not pushed yet; no Verify run is active. Next: push item 2 and wait for Verify before item 3.
+**Status for reviewer — Round 7 Improvements 2/6 (compact status row):** item 1 is complete: `70a554e`, Verify #271 green. Item 2 is pushed as `b7974c1`; Verify #272 failed only in Pixel Chromium and its dependent required-check. The Pixel log showed a clipped 320px phase label and the Join keyboard test reading the dock before the simulated viewport-height update. The correction keeps both original bounds checks, makes the full phase label fit, and waits for the existing visual-viewport sync before checking the unchanged Join limit. The other Verify #272 jobs passed, including iPhone/iPad WebKit, desktop Chromium, rehearsal-live and unit. The full Pixel screen matrix, the four focused Pixel tests, typechecks, lint, formatting, GameChrome unit tests and diff checks pass locally. The correction commit is next; do not start item 3 until its Verify is green.
 
 **Previous milestone — Round 7 Stage 2B (Vote, Revote and Verdict):** commits `086ae4d`, `aafaaa7`, `7ebb798`, `e1f2e35` and status update `3665dd3` are on `main`; Verify #267 on the harness fix is green (19/19 jobs), and Verify #268 on the status update is green. #265’s stale Vote/Revote expectations are corrected; #266’s CI 429 is addressed by the Q11-approved 65-second harness-only cooldown. No product polling or rate limits changed.
 
@@ -42,10 +42,14 @@ setting, but no organiser actions. The row uses the existing 16px shell gutters,
 8px gaps and a single non-wrapping line.
 
 Regression coverage first failed on the old count chip and on a public player
-without a Menu; it now passes on desktop and Pixel, along with the role-neutral
-row comparison. Geometry covers 320/360/375/390/430 px with the longer
-Reconnecting state. The iPhone WebKit browser job will provide the CI check;
-local Playwright WebKit is unavailable in this workspace.
+without a Menu; the compact row and role-neutral menu checks pass locally.
+Verify #272 exposed two Pixel failures: the narrow phase chip clipped one long
+label, and the Join test measured before the existing visual-viewport resize
+sync. The phase label now fits at 320px without changing the geometry
+assertion; the Join test waits for that sync and retains the original 360px
+button-clearance assertion. The full Pixel screen matrix passes locally after
+the correction. The iPhone WebKit browser job will provide the CI check; local
+Playwright WebKit is unavailable in this workspace.
 
 The #258 browser failures were stale Stage 1 expectations for the status-card geometry, day-text colour and a broad Help locator. The iPhone Axe failure sampled the game action button during its background-colour transition (3.51:1); game action fills now change immediately while border colour may still transition, and the test verifies the approved fill and runs the unchanged Axe check in both themes. Verify #259 passed all browser jobs, but rehearsal-live had two failures: the full rehearsal's test-only dynamic import of `@workspace/db/game-store` failed because `@workspace/shared` did not provide `eventSchema`; the disconnected-player test created the game (201) but its next `/commands` request remained pending for 30 seconds before the lobby appeared. The pending request follows the create flow's initial `AdvancePhase`; no product cause is proven, so no product code or rate limit has been changed. A test-only reader now queries persisted event payloads through the working database root and validates them with the shared schema; regression tests cover query order and malformed rows. The disconnected-player test now includes sanitized request-failure and pending-request diagnostics (no bodies, names, PINs, roles or choices). Both affected real-server Pixel tests pass locally with the rehearsal config (2/2, 3.6 minutes); test type-check, lint and formatting pass. Verify #260 on `6586d79` passed all 19 jobs, including rehearsal-live and desktop Chromium, iPad WebKit, Pixel Chromium and iPhone WebKit. The status-only commit `17c1a89` had a first Verify #261 attempt fail in integration at the 40-seat server-restart test (HTTP 503 at its success assertion); PostgreSQL logs recorded a statement timeout and a duplicate event-sequence key, but the exact cause is not confirmed. The isolated 40-seat test passed locally unchanged, and the failed-job rerun (Verify #261 attempt 2) passed all required jobs. No assertion, limit or product code changed for this incident.
 

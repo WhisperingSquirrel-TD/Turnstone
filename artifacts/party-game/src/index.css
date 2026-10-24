@@ -506,6 +506,26 @@ h2,
   }
 }
 
+@media (max-width: 360px) {
+  .game-status-bar > [data-testid='game-status-phase'] {
+    flex: 0 0 auto;
+    border: 0;
+    padding-inline: 0.05rem;
+  }
+
+  .game-status-phase-label {
+    letter-spacing: -0.06em;
+  }
+
+  .game-connection-label {
+    letter-spacing: -0.04em;
+  }
+
+  .game-connection-state {
+    gap: 0;
+  }
+}
+
 .game-happening-card {
   margin: 0 0 0.35rem;
   border: 1px solid var(--game-line);

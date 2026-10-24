@@ -576,12 +576,22 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
         const phaseChip = page.getByTestId('game-status-phase');
         const phaseChipSize = await phaseChip
           .locator('.game-status-phase-label')
-          .evaluate((element) => ({
-            text: element.textContent,
-            clientWidth: element.clientWidth,
-            scrollWidth: element.scrollWidth,
-            rowWidth: element.parentElement?.parentElement?.clientWidth,
-          }));
+          .evaluate((element) => {
+            const chip = element.parentElement;
+            const row = chip?.parentElement;
+            return {
+              text: element.textContent,
+              clientWidth: element.clientWidth,
+              scrollWidth: element.scrollWidth,
+              chipWidth: chip?.getBoundingClientRect().width,
+              rowWidth: row?.clientWidth,
+              rowChildren: Array.from(row?.children ?? []).map((child) => ({
+                text: child.textContent?.trim(),
+                width: child.getBoundingClientRect().width,
+                flex: getComputedStyle(child).flex,
+              })),
+            };
+          });
         expect(
           phaseChipSize.scrollWidth,
           `${label}/${palette}/${width}: phase chip ${JSON.stringify(phaseChipSize)}`,
