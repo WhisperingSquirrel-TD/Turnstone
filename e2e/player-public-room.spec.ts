@@ -1271,6 +1271,91 @@ test('rehearsal player can move on from public and voting screens', async ({
   );
 });
 
+test('mobile voting tiles scroll clear of the fixed dock and stay tappable', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'Fixed-dock touch clearance is checked on Android Chrome and iPhone WebKit.',
+  );
+
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+
+  for (const width of [320, 375, 390, 430]) {
+    const gameId = `dock-clearance-${width}`;
+    const seats = Array.from({ length: 11 }, (_, index) => ({
+      id: index === 0 ? 'seat-morgan' : `seat-player-${index}`,
+      name: index === 0 ? 'Morgan' : `Player ${index}`,
+      status: 'alive' as const,
+    }));
+    const publicView = {
+      ...createPublicView(gameId),
+      phase: 'VOTE',
+      seats,
+      voteCandidates: seats.slice(1).map(({ id }) => id),
+      actionStatus: { waiting: 0, total: seats.length },
+    } as FullView;
+
+    await page.route(`**/api/games/${gameId}/view`, (route) =>
+      route.fulfill({
+        json: {
+          serverNow: Date.now(),
+          version: publicView.version,
+          view: publicView,
+        },
+      }),
+    );
+    await page.route(`**/api/games/${gameId}/commands`, (route) =>
+      route.fulfill({
+        json: {
+          serverNow: Date.now(),
+          version: publicView.version,
+          view: publicView,
+        },
+      }),
+    );
+
+    await page.setViewportSize({ width, height: 640 });
+    await page.goto(`/game/${gameId}`);
+    const choices = page.getByTestId('private-choice-list');
+    await expect(choices.getByRole('button')).toHaveCount(seats.length - 1);
+    const lastChoice = choices.getByRole('button').last();
+    await lastChoice.evaluate((element) =>
+      element.scrollIntoView({ block: 'end' }),
+    );
+
+    const clearance = await lastChoice.evaluate((element) => {
+      const tile = element.getBoundingClientRect();
+      const dock = document
+        .querySelector('[data-testid="game-action-dock"]')!
+        .getBoundingClientRect();
+      const centreHit = document.elementFromPoint(
+        tile.left + tile.width / 2,
+        tile.top + tile.height / 2,
+      );
+      return {
+        tileBottom: tile.bottom,
+        dockTop: dock.top,
+        centreIsChoice: centreHit === element || element.contains(centreHit),
+      };
+    });
+    expect(
+      clearance.tileBottom,
+      `Last vote tile must clear the dock at ${width}x640`,
+    ).toBeLessThanOrEqual(clearance.dockTop);
+    expect(
+      clearance.centreIsChoice,
+      `The tile centre must be the top hit target at ${width}x640`,
+    ).toBe(true);
+
+    await lastChoice.tap();
+    await expect(lastChoice).toHaveAttribute('aria-pressed', 'true');
+    await page.goto('about:blank');
+  }
+});
+
 test('out players see vote status without targets or an aggregate counter', async ({
   page,
 }) => {
