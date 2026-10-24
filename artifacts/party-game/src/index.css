@@ -259,6 +259,10 @@ h2,
   overflow: visible;
   padding-top: 1rem !important;
   padding-bottom: calc(var(--game-bottom-stack-height) + 1rem) !important;
+  scroll-padding-bottom: calc(var(--game-bottom-stack-height) + 1rem);
+}
+.game-shell .player-tile {
+  scroll-margin-block-end: calc(var(--game-bottom-stack-height) + 1rem);
 }
 .game-shell-main.private-moment-main {
   display: block;

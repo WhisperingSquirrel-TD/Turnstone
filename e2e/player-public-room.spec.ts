@@ -1331,19 +1331,44 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
       const dock = document
         .querySelector('[data-testid="game-action-dock"]')!
         .getBoundingClientRect();
+      const bottomBar = document
+        .querySelector('[data-testid="game-bottom-bar"]')!
+        .getBoundingClientRect();
+      const shell = document.querySelector('.game-shell')!;
+      const shellStyle = getComputedStyle(shell);
       const centreHit = document.elementFromPoint(
         tile.left + tile.width / 2,
         tile.top + tile.height / 2,
       );
       return {
+        viewportHeight: window.innerHeight,
+        tileTop: tile.top,
         tileBottom: tile.bottom,
         dockTop: dock.top,
+        dockHeight: dock.height,
+        dockBottomStyle: getComputedStyle(
+          document.querySelector('[data-testid="game-action-dock"]')!,
+        ).bottom,
+        footerHeight: shellStyle.getPropertyValue(
+          '--game-footer-dock-height',
+        ),
+        bottomBarHeight: shellStyle.getPropertyValue(
+          '--game-bottom-bar-height',
+        ),
+        actionDockHeight: shellStyle.getPropertyValue(
+          '--game-action-dock-height',
+        ),
+        shellClassName: shell.className,
+        bottomBarTop: bottomBar.top,
+        mainPaddingBottom: getComputedStyle(
+          document.querySelector('.game-shell-main')!,
+        ).paddingBottom,
         centreIsChoice: centreHit === element || element.contains(centreHit),
       };
     });
     expect(
       clearance.tileBottom,
-      `Last vote tile must clear the dock at ${width}x640`,
+      `Last vote tile must clear the dock at ${width}x640: ${JSON.stringify(clearance)}`,
     ).toBeLessThanOrEqual(clearance.dockTop);
     expect(
       clearance.centreIsChoice,
