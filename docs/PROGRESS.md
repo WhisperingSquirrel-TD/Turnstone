@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Status for reviewer — Round 7 Stage 2B (Vote, Revote and Verdict):** commits `086ae4d`, `aafaaa7`, `7ebb798` and `e1f2e35` are on `main`; Verify #267 on `e1f2e35` is green (19/19 jobs, including all browser profiles and rehearsal-live). #265’s stale Vote/Revote expectations are corrected; #266’s CI 429 is addressed by the Q11-approved 65-second harness-only cooldown. No product polling or rate limits changed.
+**Status for reviewer — Round 7 Stage 2B (Vote, Revote and Verdict):** commits `086ae4d`, `aafaaa7`, `7ebb798`, `e1f2e35` and status update `3665dd3` are on `main`; Verify #267 on the harness fix is green (19/19 jobs), and Verify #268 on the status update is green. #265’s stale Vote/Revote expectations are corrected; #266’s CI 429 is addressed by the Q11-approved 65-second harness-only cooldown. No product polling or rate limits changed.
 
 **Stage 2B changes:** vote rows no longer label every unselected player “Waiting”; the viewer's row says “You” and the selected row says “Selected”. Revote has an accented “What is happening” card with the tied-player reason. Public verdict wording covers both a banished player and a no-votes result. The Conversation-only oversized gap below collapsed Help is removed; no other Conversation layout changed. No game rules or security behaviour changed.
 
