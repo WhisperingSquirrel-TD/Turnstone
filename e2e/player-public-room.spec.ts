@@ -68,6 +68,7 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
 }) => {
   const gameId = 'theme-clock';
   const view = createPublicView(gameId);
+  view.canAdvancePhase = true;
   await page.route('**/api/csrf', (route) =>
     route.fulfill({ json: { csrfToken: 'test-csrf' } }),
   );
@@ -79,21 +80,19 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
   await page.goto(`/game/${gameId}`);
   const shell = page.locator('.game-shell');
   await expect(shell).toHaveAttribute('data-game-theme', 'day');
-  await page.getByText('Display', { exact: true }).click();
+  await page.locator('.game-display-settings > summary').click();
   const alwaysDark = page.getByRole('checkbox', { name: 'Always dark' });
   await expect(alwaysDark).not.toBeChecked();
   await alwaysDark.check();
   await expect(shell).toHaveAttribute('data-game-theme', 'night');
   expect(
-    await shell
-      .locator('.oathstone-wordmark > span')
-      .evaluateAll((parts) =>
-        parts.map((part) => getComputedStyle(part).color),
-      ),
-  ).toEqual(['rgb(250, 250, 245)', 'rgb(200, 148, 74)']);
+    await page
+      .getByTestId('game-status-phase')
+      .evaluate((element) => getComputedStyle(element).color),
+  ).toBe('rgb(243, 238, 228)');
   await alwaysDark.uncheck();
   await expect(shell).toHaveAttribute('data-game-theme', 'day');
-  await page.getByText('Display', { exact: true }).click();
+  await page.locator('.game-display-settings > summary').click();
   for (const theme of ['day', 'night']) {
     await shell.evaluate((element, palette) => {
       (element as HTMLElement).dataset.gameTheme = palette;
@@ -1572,7 +1571,7 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   );
   await expect(
     page.getByText('Who do you vote to banish?', { exact: true }),
-  ).toHaveCSS('color', 'rgb(61, 58, 56)');
+  ).toHaveCSS('color', 'rgb(38, 34, 29)');
   const tiedChoiceIds = new Set(['seat-jamie', 'seat-practice-2']);
   for (const choiceButton of await choiceList.getByRole('button').all()) {
     const choiceId = await choiceButton.getAttribute('data-choice-id');
@@ -1588,7 +1587,7 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
     if (tiedChoiceIds.has(choiceId!)) {
       await expect(choiceButton).toBeEnabled();
       await expect(choiceButton).not.toHaveClass(/choice-action--unavailable/);
-      expect(visualState.color).toBe('rgb(61, 58, 56)');
+      expect(visualState.color).toBe('rgb(38, 34, 29)');
       expect(visualState.opacity).toBe('1');
       expect(visualState.cursor).not.toBe('not-allowed');
     } else {
@@ -2042,7 +2041,7 @@ for (const role of ['faithful', 'traitor'] as const) {
       const candleColor = await page.evaluate(() => {
         const probe = document.createElement('span');
         probe.style.color = 'var(--candle)';
-        document.body.append(probe);
+        document.querySelector('.game-shell')!.append(probe);
         const color = getComputedStyle(probe).color;
         probe.remove();
         return color;

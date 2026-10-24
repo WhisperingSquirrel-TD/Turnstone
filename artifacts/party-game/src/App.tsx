@@ -3693,11 +3693,6 @@ function PlayerGame() {
                 {en.game.guideGotIt}
               </button>
             </div>
-            <BrandFooter
-              context="game"
-              className="game-brand-footer-overlay"
-              testId="brand-footer-overlay"
-            />
           </div>
         )}
         {!isResuming && showShieldCard && (

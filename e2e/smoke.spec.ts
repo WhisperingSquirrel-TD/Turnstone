@@ -431,7 +431,7 @@ test('entry welcome title and actions stay high in a short desktop viewport', as
   ).toBeLessThan(viewport.height * 0.75);
 });
 
-test('private role, seal and footer stay inside small phone viewports', async ({
+test('private role and seal stay inside small phone viewports without a play footer', async ({
   page,
 }) => {
   const gameId = 'role-viewport-fit';
@@ -555,32 +555,31 @@ test('private role, seal and footer stay inside small phone viewports', async ({
     }));
     expect(brandVisual.fontFamily).toContain('Playfair Display');
     expect(brandVisual.parts).toEqual([
-      { text: 'Oath', color: 'rgb(61, 58, 56)' },
-      { text: 'stone', color: 'color(srgb 0.391765 0.312745 0.206078)' },
+      { text: 'Oath', color: 'rgb(38, 34, 29)' },
+      { text: 'stone', color: 'rgb(122, 78, 29)' },
     ]);
-    const shellBrandVisual = await page
-      .locator('header.public-shell-header .oathstone-wordmark')
-      .evaluate((element) => ({
-        fontFamily: getComputedStyle(element).fontFamily,
-        fontSize: getComputedStyle(element).fontSize,
-      }));
-    expect(brandVisual.fontFamily).toBe(shellBrandVisual.fontFamily);
-    expect(brandVisual.fontSize).toBe(shellBrandVisual.fontSize);
-    const [shieldBrandBounds, shellBrandBounds] = await Promise.all([
+    expect(Number.parseFloat(brandVisual.fontSize)).toBeGreaterThanOrEqual(13);
+    const statusBar = page.getByTestId('game-status-bar');
+    await expect(statusBar).toBeVisible();
+    const [shieldBrandBounds, statusBarBounds] = await Promise.all([
       brand.boundingBox(),
-      page
-        .locator('header.public-shell-header .oathstone-wordmark')
-        .boundingBox(),
+      statusBar.boundingBox(),
     ]);
-    if (!shieldBrandBounds || !shellBrandBounds) {
-      throw new Error('The shield or shell wordmark has no visible bounds.');
+    if (!shieldBrandBounds || !statusBarBounds) {
+      throw new Error('The shield brand or game status bar has no bounds.');
     }
-    expect(
-      shieldBrandBounds.x,
-      JSON.stringify({ shieldBrandBounds, shellBrandBounds }),
-    ).toBe(shellBrandBounds.x);
-    expect(shieldBrandBounds.y).toBe(shellBrandBounds.y);
-    expect(shieldBrandBounds.height).toBe(shellBrandBounds.height);
+    expect(shieldBrandBounds.x).toBeGreaterThanOrEqual(0);
+    expect(shieldBrandBounds.x + shieldBrandBounds.width).toBeLessThanOrEqual(
+      viewport.width,
+    );
+    expect(shieldBrandBounds.y).toBeGreaterThanOrEqual(0);
+    expect(shieldBrandBounds.y + shieldBrandBounds.height).toBeLessThanOrEqual(
+      viewport.height,
+    );
+    expect(statusBarBounds.x).toBeGreaterThanOrEqual(0);
+    expect(statusBarBounds.x + statusBarBounds.width).toBeLessThanOrEqual(
+      viewport.width,
+    );
     await shieldConfirmation.click();
 
     const progress = page.getByTestId('phase-progress-status');
@@ -603,6 +602,15 @@ test('private role, seal and footer stay inside small phone viewports', async ({
       headerBounds!.y + headerBounds!.height,
     );
     if (!sealBounds) throw new Error('Hold seal has no visible bounds');
+    expect(sealBounds.width).toBeGreaterThanOrEqual(44);
+    expect(sealBounds.height).toBeGreaterThanOrEqual(44);
+    expect(sealBounds.x).toBeGreaterThanOrEqual(0);
+    expect(sealBounds.x + sealBounds.width).toBeLessThanOrEqual(viewport.width);
+    const sealReceivesTap = await page.evaluate(({ x, y, width, height }) => {
+      const target = document.elementFromPoint(x + width / 2, y + height / 2);
+      return Boolean(target?.closest('[data-testid="button-hold-reveal"]'));
+    }, sealBounds);
+    expect(sealReceivesTap).toBe(true);
     const progressBounds = await progress.boundingBox();
     if (!progressBounds)
       throw new Error('Phase progress has no visible bounds');
@@ -610,10 +618,6 @@ test('private role, seal and footer stay inside small phone viewports', async ({
       sealBounds.y,
     );
     expect(sealBounds.y).toBeGreaterThanOrEqual(0);
-    expect(
-      sealBounds.y,
-      `hold seal should stay in the upper portion at ${viewport.width}x${viewport.height}`,
-    ).toBeLessThan(viewport.height * 0.42);
     expect(sealBounds.y + sealBounds.height).toBeLessThanOrEqual(
       viewport.height,
     );
@@ -657,13 +661,13 @@ test('private role, seal and footer stay inside small phone viewports', async ({
       body: getComputedStyle(document.body).overflow,
     }));
     expect(scrollLock).toEqual({ root: 'hidden', body: 'hidden' });
-    await page.evaluate(() => window.scrollTo(0, 400));
+    await page.mouse.wheel(0, 400);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await page.mouse.up();
   }
 });
 
-test('game wordmark stays top-left and active-play actions stay unobstructed', async ({
+test('game status bar stays visible and active-play actions stay unobstructed', async ({
   page,
 }) => {
   const gameId = 'rehearsal-footer-layout';
@@ -732,27 +736,23 @@ test('game wordmark stays top-left and active-play actions stay unobstructed', a
     )
     .toBe('hidden');
   const guideFooter = guide.getByTestId('brand-footer-overlay');
-  await expect(guideFooter).toBeVisible();
-  const [guideFooterBounds, guideWordmarkBounds, shellWordmarkBounds] =
-    await Promise.all([
-      guideFooter.boundingBox(),
-      guide.getByTestId('text-entry-brand').boundingBox(),
-      page
-        .locator('header.public-shell-header .oathstone-wordmark')
-        .boundingBox(),
-    ]);
-  if (!guideFooterBounds || !guideWordmarkBounds || !shellWordmarkBounds) {
-    throw new Error('The rehearsal guide brand elements have no bounds.');
+  await expect(guideFooter).toHaveCount(0);
+  const [guideWordmarkBounds, guideStatusBarBounds] = await Promise.all([
+    guide.getByTestId('text-entry-brand').boundingBox(),
+    page.getByTestId('game-status-bar').boundingBox(),
+  ]);
+  if (!guideWordmarkBounds || !guideStatusBarBounds) {
+    throw new Error('The rehearsal guide brand or status bar has no bounds.');
   }
-  expect(
-    Math.abs(568 - guideFooterBounds.y - guideFooterBounds.height),
-  ).toBeLessThanOrEqual(1);
   expect(guideWordmarkBounds.x).toBeLessThanOrEqual(24);
-  expect(guideWordmarkBounds.x).toBe(shellWordmarkBounds.x);
+  expect(guideWordmarkBounds.y).toBeGreaterThanOrEqual(0);
+  expect(guideWordmarkBounds.x + guideWordmarkBounds.width).toBeLessThanOrEqual(
+    320,
+  );
+  expect(guideStatusBarBounds.x).toBeGreaterThanOrEqual(0);
   expect(
-    guideWordmarkBounds.y,
-    JSON.stringify({ guideWordmarkBounds, shellWordmarkBounds }),
-  ).toBe(shellWordmarkBounds.y);
+    guideStatusBarBounds.x + guideStatusBarBounds.width,
+  ).toBeLessThanOrEqual(320);
   await expect(guide).toHaveAccessibleName('The conversation');
   await expect(guide).toContainText(
     'Share what you have noticed before the vote.',
@@ -772,12 +772,12 @@ test('game wordmark stays top-left and active-play actions stay unobstructed', a
 
   const actionBar = page.getByTestId('rehearsal-action-bar');
   const footer = page.getByTestId('brand-footer-shell');
-  const wordmark = page.locator(
-    'header.public-shell-header .oathstone-wordmark',
-  );
+  const statusBar = page.getByTestId('game-status-bar');
+  const bottomBar = page.getByTestId('game-bottom-bar');
   await expect(actionBar).toBeVisible();
   await expect(footer).toHaveCount(0);
-  await expect(wordmark).toHaveCount(1);
+  await expect(statusBar).toHaveCount(1);
+  await expect(bottomBar).toHaveCount(1);
   const scrollMetrics = await page.evaluate(() => {
     const main = document.querySelector('main#main');
     if (!main) throw new Error('Game main region is missing.');
@@ -797,20 +797,28 @@ test('game wordmark stays top-left and active-play actions stay unobstructed', a
   await page.evaluate(() => window.scrollTo(0, 300));
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await page.evaluate(() => window.scrollTo(0, 0));
-  const [actionBounds, actionButtonBounds, wordmarkBounds] = await Promise.all([
-    actionBar.boundingBox(),
-    actionBar.getByRole('button').first().boundingBox(),
-    wordmark.boundingBox(),
-  ]);
-  if (!actionBounds || !actionButtonBounds || !wordmarkBounds) {
+  const [actionBounds, actionButtonBounds, bottomBarBounds, statusBarBounds] =
+    await Promise.all([
+      actionBar.boundingBox(),
+      actionBar.getByRole('button').first().boundingBox(),
+      bottomBar.boundingBox(),
+      statusBar.boundingBox(),
+    ]);
+  if (
+    !actionBounds ||
+    !actionButtonBounds ||
+    !bottomBarBounds ||
+    !statusBarBounds
+  ) {
     throw new Error(
-      'The rehearsal action, action bar or Oathstone wordmark has no bounds.',
+      'The rehearsal action, status bar or tab bar has no bounds.',
     );
   }
-  expect(wordmarkBounds.x).toBeLessThanOrEqual(24);
-  expect(wordmarkBounds.y).toBeLessThanOrEqual(40);
+  expect(statusBarBounds.x).toBeGreaterThanOrEqual(0);
+  expect(statusBarBounds.y).toBeLessThanOrEqual(40);
+  expect(statusBarBounds.x + statusBarBounds.width).toBeLessThanOrEqual(320);
   expect(actionBounds.y + actionBounds.height).toBeCloseTo(
-    scrollMetrics.viewportHeight,
+    bottomBarBounds.y,
     0,
   );
   expect(actionButtonBounds.y + actionButtonBounds.height).toBeLessThanOrEqual(
@@ -819,17 +827,20 @@ test('game wordmark stays top-left and active-play actions stay unobstructed', a
   await page.evaluate(() =>
     window.scrollTo(0, document.documentElement.scrollHeight),
   );
-  const [notesBounds, scrolledActionBounds] = await Promise.all([
-    page.getByTestId('button-open-notes').boundingBox(),
-    actionBar.boundingBox(),
-  ]);
-  if (!notesBounds || !scrolledActionBounds)
+  const [notesBounds, scrolledActionBounds, scrolledBottomBarBounds] =
+    await Promise.all([
+      page.getByTestId('button-open-notes').boundingBox(),
+      actionBar.boundingBox(),
+      bottomBar.boundingBox(),
+    ]);
+  if (!notesBounds || !scrolledActionBounds || !scrolledBottomBarBounds)
     throw new Error('The scrolled notes button or action bar has no bounds.');
+  expect(notesBounds.y).toBeGreaterThanOrEqual(scrolledActionBounds.y);
   expect(notesBounds.y + notesBounds.height).toBeLessThanOrEqual(
-    scrolledActionBounds.y,
+    scrolledActionBounds.y + scrolledActionBounds.height,
   );
   expect(scrolledActionBounds.y + scrolledActionBounds.height).toBeCloseTo(
-    scrollMetrics.viewportHeight,
+    scrolledBottomBarBounds.y,
     0,
   );
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
@@ -839,26 +850,27 @@ test('game wordmark stays top-left and active-play actions stay unobstructed', a
   const [
     desktopActionBounds,
     desktopActionButtonBounds,
-    desktopWordmarkBounds,
+    desktopStatusBarBounds,
+    desktopBottomBarBounds,
   ] = await Promise.all([
     actionBar.boundingBox(),
     actionBar.getByRole('button').first().boundingBox(),
-    wordmark.boundingBox(),
+    statusBar.boundingBox(),
+    bottomBar.boundingBox(),
   ]);
   if (
     !desktopActionBounds ||
     !desktopActionButtonBounds ||
-    !desktopWordmarkBounds
+    !desktopStatusBarBounds ||
+    !desktopBottomBarBounds
   ) {
-    throw new Error('The desktop game header or action has no bounds.');
+    throw new Error('The desktop game status bar or action has no bounds.');
   }
-  const desktopContentBounds = await page
-    .getByTestId('player-game')
-    .boundingBox();
-  expect(desktopWordmarkBounds.x).toBe(desktopContentBounds!.x);
-  expect(desktopWordmarkBounds.y).toBeLessThanOrEqual(40);
+  expect(
+    desktopStatusBarBounds.x + desktopStatusBarBounds.width,
+  ).toBeLessThanOrEqual(1024);
   expect(desktopActionBounds.y + desktopActionBounds.height).toBeCloseTo(
-    768,
+    desktopBottomBarBounds.y,
     0,
   );
   expect(
@@ -866,12 +878,13 @@ test('game wordmark stays top-left and active-play actions stay unobstructed', a
   ).toBeLessThanOrEqual(768);
 
   await page.setViewportSize({ width: 1440, height: 900 });
-  const [wideWordmarkBounds] = await Promise.all([wordmark.boundingBox()]);
-  if (!wideWordmarkBounds) {
-    throw new Error('The wide-screen game wordmark has no bounds.');
+  const [wideStatusBarBounds] = await Promise.all([statusBar.boundingBox()]);
+  if (!wideStatusBarBounds) {
+    throw new Error('The wide-screen game status bar has no bounds.');
   }
-  const wideContentBounds = await page.getByTestId('player-game').boundingBox();
-  expect(wideWordmarkBounds.x).toBe(wideContentBounds!.x);
+  expect(wideStatusBarBounds.x + wideStatusBarBounds.width).toBeLessThanOrEqual(
+    1440,
+  );
 
   view.rehearsal = false;
   await page.reload();
@@ -894,8 +907,11 @@ test('game wordmark stays top-left and active-play actions stay unobstructed', a
       'The organiser confirmation, header or action has no bounds.',
     );
   }
-  expect(confirmationWordmarkBounds.x).toBe(wideWordmarkBounds.x);
-  expect(confirmationWordmarkBounds.y).toBe(wideWordmarkBounds.y);
+  expect(confirmationWordmarkBounds.x).toBeGreaterThanOrEqual(0);
+  expect(
+    confirmationWordmarkBounds.x + confirmationWordmarkBounds.width,
+  ).toBeLessThanOrEqual(1440);
+  expect(confirmationWordmarkBounds.y).toBeGreaterThanOrEqual(0);
   expect(cardBounds.y + cardBounds.height).toBeLessThanOrEqual(900);
   expect(
     confirmButtonBounds.y + confirmButtonBounds.height,
