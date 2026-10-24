@@ -720,17 +720,8 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
           });
         }
         if (held) await page.mouse.up();
+        await expect(page.getByTestId('brand-footer-shell')).toHaveCount(0);
         if (!shielded && !held) {
-          const footer = page.getByTestId('brand-footer-shell');
-          const phase = await page
-            .getByTestId('player-game')
-            .getAttribute('data-phase');
-          const footerExpected = ['LOBBY', 'FINISHED'].includes(phase ?? '');
-          if (footerExpected) {
-            await expect(footer).toBeVisible();
-          } else {
-            await expect(footer).toHaveCount(0);
-          }
           const last = page
             .locator(
               'main button:visible:not(.game-action-bar button):not(.game-action-dock button):not(.game-notes-dock-button)',

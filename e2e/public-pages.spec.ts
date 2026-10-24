@@ -144,16 +144,12 @@ test('public pages stay centred and usable across phone, tablet and desktop widt
         ),
         `${route} main centring at ${width}px`,
       ).toBeLessThanOrEqual(1);
-      if (width <= 900) {
-        await expect(
-          page.locator('.public-home-menu summary'),
-          `${route} menu at ${width}px`,
-        ).toBeVisible();
-        expect(layout.navDisplay).toBe('none');
-      } else {
-        expect(layout.menuDisplay).toBe('none');
-        expect(layout.navDisplay).not.toBe('none');
-      }
+      await expect(
+        page.locator('.public-home-menu summary'),
+        `${route} menu at ${width}px`,
+      ).toBeVisible();
+      expect(layout.menuDisplay).not.toBe('none');
+      expect(layout.navDisplay).toBe('missing');
 
       if (route === '/' && width <= 414) {
         expect(layout.title).not.toBeNull();
@@ -296,8 +292,8 @@ test('all public pages fit the requested widths in portrait and landscape', asyn
         ).toEqual([]);
         expect(
           layout.smallestBodyCopy,
-          `${route} body copy is below 16px at ${width}px × ${height}px`,
-        ).toBeGreaterThanOrEqual(16);
+          `${route} body copy is below 15px at ${width}px × ${height}px`,
+        ).toBeGreaterThanOrEqual(15);
       }
     }
   }

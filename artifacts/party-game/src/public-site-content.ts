@@ -84,6 +84,10 @@ function renderPublicFooter(basePath: string, extra = ''): string {
   return `<footer class="public-home-footer" data-testid="brand-footer-static"><span>${escapeHtml(config.byline)}</span><p class="public-independence">${escapeHtml(en.publicSite.independenceStatement)}</p>${renderStackstoneFooterLink(basePath)}${extra}</footer>`;
 }
 
+function renderPublicIndependenceNote(): string {
+  return `<p class="public-independence-note">${escapeHtml(en.publicSite.independenceStatement)}</p>`;
+}
+
 function renderFaqDetails(
   items: ReadonlyArray<{ question: string; answer: string }>,
 ): string {
@@ -609,9 +613,14 @@ export function renderPublicPageDocument({
     compare: renderPublicCompareHtml(basePath, mode),
     'coming-soon': renderPublicComingSoonHtml(basePath, mode),
   }[page];
+  const contentWithIndependence =
+    page === 'home' ||
+    content.includes(escapeHtml(en.publicSite.independenceStatement))
+      ? content
+      : content.replace('</main>', `${renderPublicIndependenceNote()}</main>`);
 
   return renderPublicStaticDocument({
-    content,
+    content: contentWithIndependence,
     title,
     description,
     canonicalUrl:

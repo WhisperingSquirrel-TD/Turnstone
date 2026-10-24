@@ -158,6 +158,13 @@
   color: var(--ash);
 }
 
+.public-independence-note {
+  margin: 1rem 0 0;
+  color: var(--ash);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
 .public-home-footer > a {
   min-height: 44px;
   display: inline-flex;
