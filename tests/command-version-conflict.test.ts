@@ -43,6 +43,10 @@ vi.mock('@workspace/db/game-store', () => ({
   readLatestGameSnapshot: async () => null,
 }));
 
+vi.mock('@workspace/db/seat-presence-store', () => ({
+  listConnectedSeatIds: async () => [],
+}));
+
 import type { Event } from '../lib/shared/src';
 
 function stateAt(phase: 'VOTE' | 'SHADOW', count = 6) {
