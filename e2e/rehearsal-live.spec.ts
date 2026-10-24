@@ -1509,9 +1509,16 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         ).toHaveCount(0);
       }
       if (phase === 'DEBATE') {
+        const help = page
+          .locator('details')
+          .filter({ hasText: 'Everyone talks it over.' });
+        await expect(help).toHaveCount(1);
         const prompts = page.getByTestId('conversation-prompts');
+        await expect(prompts).toBeHidden();
+        await help.locator('summary').click();
         await expect(prompts).toBeVisible();
         await expect(prompts.getByRole('listitem')).toHaveCount(3);
+        await help.locator('summary').click();
       } else {
         await expect(page.getByTestId('conversation-prompts')).toHaveCount(0);
       }
