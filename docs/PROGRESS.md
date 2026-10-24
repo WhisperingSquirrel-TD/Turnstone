@@ -1,8 +1,14 @@
 # Status for reviewer
 
-**Latest green on GitHub: Verify #248 (`6f17b40`), all listed jobs succeeded. Verify #247 on `1d8f485` failed the unchanged dependency audit; the approved Zod 4.6.6 update cleared it.**
+**Current status: Verify #250 on `a3bea86` completed red. The unit job passed; audit, all four browser profiles, and rehearsal-live failed. Latest fully green remains Verify #248 (`6f17b40`).**
 
-**Round 7 Stage 1 — local slice ready, not yet pushed:** the shared day/night tokens, status bar, “What is happening” card, action dock, player tiles, Game/Players bar, Notes action, and play-screen branding placement are in place. The Pixel geometry matrix passed at 320, 375, 390, 430 and 1280px in day and night themes; its screenshot capture passed and generated 170 images under `docs/screens/round-7-stage-1/`. Typecheck, test typecheck, lint, formatting and 17 focused component tests passed. The skip link now has a 44×44px minimum target. No cosmetic matrix failures remain. Next: push this slice and wait for Verify.
+**Round 7 Stage 1 Verify #249 cause:** the shared UI foundation is on `main` at `3f2049d`. The unit failure was an old game-header wordmark expectation; `a3bea86` updates that expectation to the new status header. Its focused route tests (9/9), test typecheck, lint and formatting passed locally, and the unit job passed in #250.
+
+**Audit:** #249/#250 found high advisory `GHSA-27r3-jxmh-p828` in transitive `body-parser` 2.3.0 (`express > body-parser`, API server and party-game), plus fast-uri advisories `GHSA-w74x-v6f9-j3xg`, `GHSA-wjr9-j795-jxcr`, `GHSA-xhq7-xmqj-769h` and `GHSA-333x-w4r6-6crp` through Lighthouse/Ajv. Express is updated to 5.3.0; the lockfile resolves `body-parser` 2.4.0 and the existing fast-uri override is updated from 3.1.8 to 3.1.9, both within the same major. The audit gate is unchanged and reports 0 high / 0 critical locally; API and party-game typechecks and the 28 HTTP tests pass. The audit change is ready to push.
+
+**Browser failures to fix next:** the logs confirm stale palette expectations (`#3d3a38` / `#fafaf5` versus the approved game tokens) and a selector for the removed shell wordmark. Two mobile away/resync browser tests also timed out; their cause is not yet established, so their assertions will not be changed without reproducing the failure.
+
+**Rehearsal-live:** #249/#250 still fail. The offline assertion expects “Reconnecting” where the new connection chip correctly shows “Offline”; the separate H1 timeout still needs its exact failing step inspected. Next: finish the audit change, then update browser expectations and investigate the rehearsal failure without weakening behaviour checks.
 
 **Round 6 Notes / Zod security update:** the Notes regression passed in CI. #245 exposed a browser assertion that incorrectly rejected a retry at the exact 10-second `Retry-After` boundary; #246 failed because a browser route callback produced `NaN` for fake time. Exact timing now has a deterministic injected-clock unit test, and the browser check verifies back-off and eventual resume. #247's audit found `GHSA-mrhx-c7xc-m3w5` in Zod 3.25.76; the owner approved the upgrade to 4.6.6. Verify #248 passed all jobs, including audit. The complete local `pnpm run verify` also passed: 680 unit tests, 21 property tests, 86.02% server coverage (85% threshold unchanged), 2,572 scenarios with none failing, 126 browser tests passing and 22 skipped because those profiles run only in CI, all 4 real-server rehearsals passing, six public-page Lighthouse checks passing, and audit at 0 high / 0 critical.
 
@@ -22,7 +28,7 @@
 
 **Round 6 Notes:** the draft now clears when the player presses Done. A new browser regression proved it stayed in the textarea after closing and reopening before the fix; the fixed flow passed on all four browser profiles, including in Verify #245. It also checks the released text is absent from the DOM, local/session storage and browser console. Temporary privacy covers still allow a player to return to the open Notes screen.
 
-**Next:** Round 7 Stage 1 shared foundations only: tokens, common shell, dock, tiles and footer placement. After its green Verify, stop and report; do not start per-screen redesign.
+**Next:** complete the Round 7 Stage 1 Verify fixes in order: audit, browser profiles, then rehearsal-live. Do not start per-screen redesign.
 
 **Push isolation:** `99da77a` is on `main`; the push contained progress documentation, virtual-player harness/tests and the pipeline regression test. Attached content and generated Playwright artifacts were excluded.
 
