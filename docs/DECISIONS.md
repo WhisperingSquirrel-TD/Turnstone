@@ -1470,3 +1470,11 @@ wording or timing by role.
 **Choice:** Upgrade the workspace Zod dependency and the explicit shared-library pin to 4.6.6. Migrate the Zod 4 record schema signatures, preserve nested configuration defaults with `.prefault()`, and update compatibility types and the public-log validation spy without weakening validation assertions.
 
 **Consequence:** The existing audit threshold remains unchanged. `pnpm audit --audit-level high` reports 0 high and 0 critical findings, and the complete local `pnpm run verify` passes. GitHub Verify remains pending until the isolated changes are pushed.
+
+## D97 — Treat the combined local rehearsal 429 as accumulated state (reviewer-approved, 24 October 2026)
+
+**Context:** A combined local rehearsal received HTTP 429 from the join-request polling endpoint, while the focused real-server rehearsal and the disconnected-player journey passed separately. The clean GitHub Verify runs for the lighter shell and button sweep passed.
+
+**Choice:** Treat the 429 as accumulated local rate-limit state. Leave the harness and all limits unchanged, and rely on the clean CI run. If the 429 recurs in CI, add a bounded cooldown in the harness only.
+
+**Consequence:** No product polling behaviour or rate limit changes. Q11 is resolved; no request bodies or player data are logged.

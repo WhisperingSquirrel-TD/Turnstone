@@ -72,21 +72,16 @@ export function PrivateChoiceControls({
         {orderedVoteProgressRows
           ? orderedVoteProgressRows.map((row) => {
               const choice = choiceById.get(row.id);
-              const status = row.hasVoted
-                ? en.game.voteVoted
-                : en.game.voteWaiting;
-              const statusId = `vote-status-${row.id}`;
+              const isViewer = row.id === viewerSeatId;
 
               if (!choice) {
                 return (
                   <PlayerTile
                     key={row.id}
                     name={row.name}
-                    statusText={status}
-                    statusId={statusId}
-                    statusTestId={statusId}
+                    statusText={isViewer ? en.game.voteYou : undefined}
                     testId={
-                      row.id === viewerSeatId
+                      isViewer
                         ? 'vote-self-status'
                         : `vote-progress-row-${row.id}`
                     }
@@ -99,15 +94,11 @@ export function PrivateChoiceControls({
                   key={choice.id}
                   name={choice.name}
                   state={selected === choice.id ? 'selected' : 'available'}
-                  statusText={status}
-                  statusId={statusId}
-                  statusTestId={statusId}
                   dataChoiceId={choice.id}
                   disabled={
                     choiceSelectionLocked || disabledChoiceIdSet.has(choice.id)
                   }
                   ariaLabel={choice.name}
-                  ariaDescribedBy={statusId}
                   onSelect={() => onSelect(choice.id)}
                 />
               );

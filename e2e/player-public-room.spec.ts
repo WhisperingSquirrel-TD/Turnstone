@@ -1,4 +1,4 @@
-import { devices, expect, test, type Page } from '@playwright/test';
+import { devices, expect, test, type Page, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 import { cookieNameForGame } from '../artifacts/api-server/src/session-auth';
@@ -1681,6 +1681,83 @@ test('out players see vote status without targets or an aggregate counter', asyn
   );
 });
 
+test('Conversation keeps collapsed Help close to the player detail section', async ({
+  page,
+}) => {
+  const gameId = 'conversation-help-spacing';
+  const view = {
+    ...createPublicView(gameId),
+    phase: 'DEBATE',
+    deadline: null,
+    missionsEnabled: false,
+  } as FullView;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.clock.install();
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({ json: { requests: [] } }),
+  );
+
+  await page.goto(`/game/${gameId}`);
+  await expect(page.getByTestId('player-game')).toHaveAttribute(
+    'data-phase',
+    'DEBATE',
+  );
+  const privacyShield = page.getByRole('dialog', {
+    name: 'Shield your screen',
+  });
+  if (await privacyShield.isVisible()) {
+    await page.clock.fastForward(6_000);
+    await privacyShield.getByRole('button', { name: 'I’m shielded' }).click();
+  }
+  await expect(page.getByTestId('game-help-disclosure')).not.toHaveAttribute(
+    'open',
+    '',
+  );
+  const helpBounds = await page
+    .getByTestId('game-help-disclosure')
+    .boundingBox();
+  const playersBounds = await page.locator('#game-players').boundingBox();
+  expect(helpBounds).not.toBeNull();
+  expect(playersBounds).not.toBeNull();
+  const interveningLayout = await page.evaluate(
+    ({ helpBottom, playersTop }) =>
+      Array.from(document.querySelectorAll('main *'))
+        .map((element) => {
+          const bounds = element.getBoundingClientRect();
+          return {
+            tag: element.tagName,
+            className: typeof element.className === 'string' ? element.className : '',
+            top: Math.round(bounds.top),
+            bottom: Math.round(bounds.bottom),
+            height: Math.round(bounds.height),
+          };
+        })
+        .filter(
+          (element) =>
+            element.height > 0 &&
+            element.top >= helpBottom &&
+            element.bottom <= playersTop,
+        ),
+    {
+      helpBottom: helpBounds!.y + helpBounds!.height,
+      playersTop: playersBounds!.y,
+    },
+  );
+  expect(
+    playersBounds!.y - (helpBounds!.y + helpBounds!.height),
+    `Conversation should not leave a blank gap after collapsed Help: ${JSON.stringify(interveningLayout)}`,
+  ).toBeLessThanOrEqual(32);
+});
+
 test('banishment re-vote lists tied seats and reports vote failures accurately', async ({
   page,
 }) => {
@@ -1751,6 +1828,15 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   await page.goto(`/game/${gameId}`);
   await viewResponse;
 
+  await expect(page.getByTestId('game-happening-card')).toHaveClass(
+    /game-happening-card--accent/,
+  );
+  await expect(page.getByTestId('game-happening-card')).toContainText(
+    'Tied vote. Choose again among the tied players.',
+  );
+  await expect(page.getByTestId('tie-revote-prompt')).toHaveText(
+    'Tied players: Jamie and Practice player 2.',
+  );
   await expect(
     page.getByRole('dialog', { name: 'Shield your screen' }),
   ).toHaveCount(0);
@@ -1891,6 +1977,214 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
   await expect(
     page.getByText('Thanks. Waiting for everyone.', { exact: true }),
   ).toHaveCount(1);
+});
+
+test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async (
+  { page },
+  testInfo,
+) => {
+  test.skip(
+    process.env.R7_STAGE_2B_CAPTURE !== '1',
+    'Set R7_STAGE_2B_CAPTURE=1 to regenerate the reviewed screenshot set.',
+  );
+  test.skip(testInfo.project.name !== 'Pixel', 'Capture the gallery once.');
+  test.setTimeout(180_000);
+
+  const gameId = 'round-7-stage-2b-gallery';
+  const baseView = createPublicView(gameId);
+  const seats = [
+    { id: 'seat-morgan', name: 'Morgan', status: 'alive' as const },
+    { id: 'seat-alex', name: 'Alex', status: 'alive' as const },
+    { id: 'seat-blair', name: 'Blair', status: 'alive' as const },
+    { id: 'seat-jamie', name: 'Jamie', status: 'alive' as const },
+  ];
+  type GalleryState =
+    | 'vote'
+    | 'revote'
+    | 'verdict-banished'
+    | 'verdict-no-votes';
+  const galleryStates: GalleryState[] = [
+    'vote',
+    'revote',
+    'verdict-banished',
+    'verdict-no-votes',
+  ];
+  const widths = [320, 375, 390, 430, 1280];
+  const directory = 'docs/screens/round-7-stage-2b';
+  await mkdir(directory, { recursive: true });
+
+  let view: FullView = baseView;
+  let socketSequence = 0;
+  const socketDiagnostics: string[] = [];
+  const pendingPolls = new Map<string, Route>();
+  const queuedPackets = new Map<string, string[]>();
+  const replyToPoll = (sid: string, packet: string) => {
+    const waiting = pendingPolls.get(sid);
+    if (waiting) {
+      pendingPolls.delete(sid);
+      void waiting
+        .fulfill({ contentType: 'text/plain; charset=UTF-8', body: packet })
+        .catch(() => {});
+      return;
+    }
+    queuedPackets.set(sid, [...(queuedPackets.get(sid) ?? []), packet]);
+  };
+  const viewFor = (state: GalleryState): FullView => {
+    const isVote = state === 'vote' || state === 'revote';
+    const isBanishment = state === 'verdict-banished';
+    return {
+      ...baseView,
+      phase: isVote ? 'VOTE' : isBanishment ? 'DAWN' : 'VERDICT',
+      revote: state === 'revote',
+      deadline: null,
+      missionsEnabled: false,
+      seats: isBanishment
+        ? [
+            seats[0],
+            { ...seats[1], status: 'departed' as const },
+            seats[2],
+            seats[3],
+          ]
+        : seats,
+      voteCandidates:
+        state === 'revote' ? ['seat-alex', 'seat-blair'] : [],
+      publicAnnouncement:
+        state === 'verdict-no-votes'
+          ? { kind: 'no_votes', cycle: baseView.cycle }
+          : isBanishment
+            ? {
+                kind: 'verdict',
+                cycle: baseView.cycle,
+                seat: { name: 'Alex', role: 'traitor' },
+              }
+            : null,
+      votedSeatIds: [],
+      ballots: {},
+    } as FullView;
+  };
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  // The screenshot fixture supplies a valid public game:view over Socket.IO
+  // polling, so the shared header is genuinely rendered in its Live state.
+  await page.route('**/socket.io**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const sid = url.searchParams.get('sid');
+    socketDiagnostics.push(
+      `${request.method()} ${url.pathname} transport=${url.searchParams.get('transport') ?? 'none'} sid=${sid ? 'present' : 'absent'}`,
+    );
+    if (request.method() === 'GET' && !sid) {
+      const nextSid = `stage-2b-${++socketSequence}`;
+      queuedPackets.set(nextSid, []);
+      await route.fulfill({
+        contentType: 'text/plain; charset=UTF-8',
+        body: `0${JSON.stringify({
+          sid: nextSid,
+          upgrades: [],
+          pingInterval: 600_000,
+          pingTimeout: 60_000,
+          maxPayload: 1_000_000,
+        })}`,
+      });
+      return;
+    }
+    if (!sid) {
+      await route.fulfill({ status: 400, body: 'Missing session.' });
+      return;
+    }
+    if (request.method() === 'GET') {
+      const packet = queuedPackets.get(sid)?.shift();
+      if (packet) {
+        await route.fulfill({
+          contentType: 'text/plain; charset=UTF-8',
+          body: packet,
+        });
+      } else {
+        pendingPolls.set(sid, route);
+      }
+      return;
+    }
+
+    const body = (request.postData() ?? '').replace(/^\d+:/, '');
+    if (body === '40') {
+      replyToPoll(sid, `40${JSON.stringify({ sid: `${sid}-namespace` })}`);
+    } else if (body.startsWith('42')) {
+      const [eventName] = JSON.parse(body.slice(2)) as [string, unknown];
+      if (eventName === 'game:watch') {
+        replyToPoll(
+          sid,
+          `42${JSON.stringify([
+            'game:view',
+            { serverNow: Date.now(), version: view.version, view },
+          ])}`,
+        );
+      }
+    }
+    await route.fulfill({
+      contentType: 'text/plain; charset=UTF-8',
+      body: 'ok',
+    });
+  });
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/commands`, (route) =>
+    route.fulfill({
+      json: {
+        serverNow: Date.now(),
+        version: view.version + 1,
+        view: { ...view, version: view.version + 1 },
+      },
+    }),
+  );
+  await page.route(`**/api/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(`**/api/games/${gameId}/private-view`, (route) =>
+    route.fulfill({ status: 500, json: { error: 'Not a private phase.' } }),
+  );
+
+  for (const state of galleryStates) {
+    view = viewFor(state);
+    for (const width of widths) {
+      const height =
+        width === 320 ? 640 : width === 375 ? 667 : width === 1280 ? 900 : 844;
+      await page.setViewportSize({ width, height });
+      await page.goto(`/game/${gameId}`);
+      await expect(page.getByTestId('player-game')).toHaveAttribute(
+        'data-phase',
+        view.phase,
+      );
+      await expect(
+        page.getByRole('status', { name: 'Connection status' }),
+        `Socket handshake diagnostics: ${socketDiagnostics.join('; ')}`,
+      ).toHaveText('Live', { timeout: 30_000 });
+      if (state === 'vote' || state === 'revote') {
+        const alex = page.getByRole('button', { name: 'Alex', exact: true });
+        await expect(alex).toBeVisible();
+        await alex.click();
+        await expect(page.getByText('Selected', { exact: true })).toBeVisible();
+      }
+
+      for (const theme of ['day', 'night'] as const) {
+        await page.locator('.game-shell').evaluate((element, value) => {
+          (element as HTMLElement).dataset.gameTheme = value;
+        }, theme);
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({
+          path: `${directory}/${state}-${theme}-${width}.jpg`,
+          type: 'jpeg',
+          quality: 86,
+          fullPage: false,
+        });
+      }
+    }
+  }
 });
 
 test('Notes requests during SHADOW retain their purpose without acknowledging the night', async ({

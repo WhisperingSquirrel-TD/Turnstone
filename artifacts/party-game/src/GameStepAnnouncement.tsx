@@ -10,6 +10,7 @@ type GameStepAnnouncementProps = {
   murderSlots: number;
   phase: string;
   shadowRound: number;
+  revote?: boolean;
   progress?: { done: number; total: number };
   context?: CommentaryContext;
   coachingTip?: string;
@@ -22,6 +23,7 @@ export function GameStepAnnouncement({
   murderSlots,
   phase,
   shadowRound,
+  revote = false,
   progress,
   context,
   coachingTip,
@@ -29,7 +31,9 @@ export function GameStepAnnouncement({
 }: GameStepAnnouncementProps) {
   let message: string | null = null;
 
-  if (phase === 'SHADOW') {
+  if (revote && (phase === 'VOTE' || phase === 'FINAL_BANISH')) {
+    message = en.game.revoteReason;
+  } else if (phase === 'SHADOW') {
     if (shadowRound === 2) message = en.game.unanimousNoDecision;
     else if (murderSlots === 2) message = en.game.doubleMurderReason;
   } else if (phase === 'FINAL_VOTE' || phase === 'ENDGAME') {

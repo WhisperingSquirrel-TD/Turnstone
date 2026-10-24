@@ -28,9 +28,7 @@ describe('BanishmentVoteScreen', () => {
 
     const html = renderToString(<BanishmentVoteScreen {...props} />);
 
-    expect(html).toContain(
-      'It&#x27;s a tie between Alex and Blair. Vote again, choosing between them.',
-    );
+    expect(html).toContain('Tied players: Alex and Blair.');
   });
 
   it('does not show the tie explanation on an initial vote', () => {
@@ -47,9 +45,7 @@ describe('BanishmentVoteScreen', () => {
     };
     const html = renderToString(<BanishmentVoteScreen {...props} />);
 
-    expect(html).toContain(
-      'It&#x27;s a tie between Alex, Blair and Casey. Vote again, choosing between them.',
-    );
+    expect(html).toContain('Tied players: Alex, Blair and Casey.');
   });
 
   it('keeps only tied candidates selectable and dims the rest of the re-vote list', () => {
@@ -83,8 +79,6 @@ describe('BanishmentVoteScreen', () => {
     expect(html).toMatch(
       /<button(?=[^>]*data-choice-id="seat-c")(?=[^>]*disabled="")(?=[^>]*choice-action--unavailable)[^>]*>/,
     );
-    expect(html).toContain(
-      'It&#x27;s a tie between Alex and Blair. Vote again, choosing between them.',
-    );
+    expect(html).toContain('Tied players: Alex and Blair.');
   });
 });

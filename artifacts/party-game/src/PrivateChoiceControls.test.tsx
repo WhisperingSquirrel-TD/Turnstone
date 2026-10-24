@@ -30,4 +30,37 @@ describe('PrivateChoiceControls waiting state', () => {
     expect(markup).not.toContain('uncertain response');
     expect(markup).not.toContain('Choose again');
   });
+
+  it('hides progress labels on unselected vote rows and marks the viewer as You', () => {
+    const markup = renderToStaticMarkup(
+      <PrivateChoiceControls
+        choices={[
+          { id: 'seat-alex', name: 'Alex' },
+          { id: 'seat-blair', name: 'Blair' },
+        ]}
+        selected="seat-alex"
+        confirmChoice={false}
+        isPending={false}
+        voteProgressRows={[
+          { id: 'seat-alex', name: 'Alex', hasVoted: false },
+          { id: 'seat-blair', name: 'Blair', hasVoted: true },
+          { id: 'seat-viewer', name: 'Morgan', hasVoted: false },
+        ]}
+        viewerSeatId="seat-viewer"
+        hasToken
+        commandMessage=""
+        onSelect={() => {}}
+        onReview={() => {}}
+        onConfirm={() => {}}
+        onChooseAgain={() => {}}
+      />,
+    );
+
+    expect(markup).toMatch(
+      /data-testid="vote-self-status"[\s\S]*?>You<\/span>/,
+    );
+    expect(markup).not.toContain('>Waiting</span>');
+    expect(markup).not.toContain('>Voted</span>');
+    expect(markup).toContain('>Selected</span>');
+  });
 });

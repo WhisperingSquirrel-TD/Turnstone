@@ -840,8 +840,9 @@ export const en = {
         names.length === 2
           ? `${names[0]} and ${names[1]}`
           : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-      return `It's a tie between ${tiedNames}. Vote again, choosing between them.`;
+      return `Tied players: ${tiedNames}.`;
     },
+    revoteReason: 'Tied vote. Choose again among the tied players.',
     shadowTraitorPrompt: 'Who will the Traitors take tonight?',
     shadowFaithfulPrompt: 'Who do you think the Traitors will take tonight?',
     firstChoice: 'First choice',
@@ -883,6 +884,7 @@ export const en = {
     everyoneVotedPlayer: 'Everyone has voted. The result is coming.',
     voteVoted: 'Voted',
     voteWaiting: 'Waiting',
+    voteYou: 'You',
     voteProgressLabel: 'Vote progress',
     movingOn: 'Moving on...',
     chooseOption: 'Choose an option',

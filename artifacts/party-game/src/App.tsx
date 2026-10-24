@@ -2795,6 +2795,7 @@ function PlayerGame() {
                 murderSlots={full.murderSlots}
                 phase={full.phase}
                 shadowRound={full.shadowRound}
+                revote={full.revote}
                 progress={full.progress}
                 context={{
                   phase: full.phase,
@@ -3381,7 +3382,13 @@ function PlayerGame() {
             )}
 
             {!inPrivateMoment && (
-              <div className="mt-12 border-t border-stone pt-6">
+              <div
+                className={
+                  full.phase === 'DEBATE'
+                    ? 'border-t border-stone pt-0'
+                    : 'mt-12 border-t border-stone pt-6'
+                }
+              >
                 {full.phase === 'LOBBY' && full.lobbyCode && (
                   <section
                     className="mt-5 flex flex-col items-center gap-3 border-y border-stone py-5 text-center"
@@ -3451,7 +3458,7 @@ function PlayerGame() {
 
                 <section
                   id="game-players"
-                  className="mt-7"
+                  className={full.phase === 'DEBATE' ? 'mt-0' : 'mt-7'}
                   aria-labelledby="players-heading"
                 >
                   <h2 id="players-heading" className="display text-2xl">
