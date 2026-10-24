@@ -3473,7 +3473,7 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
   );
   await expect(
     page.getByTestId('player-game').getByRole('heading').first(),
-  ).toHaveText('No votes were cast. Nobody is banished.');
+  ).toHaveText('The verdict');
   await expect(page.getByTestId('while-away-card')).toContainText(
     'No votes were cast. Nobody is banished.',
   );

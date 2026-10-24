@@ -1473,9 +1473,12 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             .locator('details')
             .filter({ hasText: 'Everyone talks it over.' });
           await details.locator('summary').click();
-          await expect(details.locator('p')).toHaveText(
-            'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
-          );
+          await expect(
+            details.getByText(
+              'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
+              { exact: true },
+            ),
+          ).toBeVisible();
           await details.locator('summary').click();
         }
       }
