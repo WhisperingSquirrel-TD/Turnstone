@@ -455,7 +455,7 @@ async function submitPrivateChoice(
       await page.getByTestId('player-game').getAttribute('data-shadow-round'),
     ) === 2
   ) {
-    await expect(page.getByTestId('game-context-line')).toHaveText(
+    await expect(page.getByTestId('game-commentary')).toContainText(
       'No decision yet. One more round of choosing tonight.',
     );
     await expect(page.getByTestId('selected-choice')).toBeVisible();
@@ -607,10 +607,15 @@ async function submitPrivateChoice(
     }
   }
   if (!selectedName) throw new Error('The choice list is empty.');
-  const selectedChoice = choiceList.getByRole('button', {
+  const initialChoice = choiceList.getByRole('button', {
     name: selectedName,
     exact: true,
   });
+  const selectedChoiceId = await initialChoice.getAttribute('data-choice-id');
+  expect(Boolean(selectedChoiceId)).toBe(true);
+  const selectedChoice = choiceList.locator(
+    `button[data-choice-id="${selectedChoiceId}"]`,
+  );
   const commandStatuses: number[] = [];
   const privateRestoreResponses: string[] = [];
   const recordCommandStatus = (response: {
@@ -640,8 +645,6 @@ async function submitPrivateChoice(
     await selectedChoice.evaluate((choice: HTMLButtonElement) =>
       choice.click(),
     );
-    const selectedChoiceId =
-      await selectedChoice.getAttribute('data-choice-id');
     const savedChoiceDrafts = await page.evaluate(() => {
       const drafts: Array<[string, string | null]> = [];
       for (let index = 0; index < window.sessionStorage.length; index += 1) {
@@ -653,7 +656,7 @@ async function submitPrivateChoice(
       return drafts;
     });
     expect(savedChoiceDrafts).toHaveLength(1);
-    expect(savedChoiceDrafts[0]?.[1]).toBe(selectedChoiceId);
+    expect(savedChoiceDrafts[0]?.[1] === selectedChoiceId).toBe(true);
     await page
       .getByRole('button', { name: 'Review this choice' })
       .evaluate((button: HTMLButtonElement) => button.click());
@@ -791,12 +794,8 @@ async function submitPrivateChoice(
         }),
       ).toBeEnabled();
       if (exerciseBackgroundResume) {
-        await choiceList
-          .getByRole('button', {
-            name: selectedName,
-            exact: true,
-          })
-          .click();
+        // The selected tile's accessible name includes its visible state label.
+        await selectedChoice.click();
         await expect(
           page.getByRole('button', { name: 'Review this choice' }),
         ).toHaveCount(0);
@@ -1020,8 +1019,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     commandForwardQueue = queuedForward.catch(() => undefined);
     await queuedForward;
   });
-  const wakeLockNotice =
+  const wakeLockNoticeText =
     'Your screen may lock during play. Tap it to keep the game visible.';
+  const wakeLockNotice = page.getByTestId('wake-lock-notice');
   const { db } = await import('@workspace/db');
   let gameId: string | undefined;
   let playerRole: 'Traitor' | 'Faithful' | undefined;
@@ -1334,7 +1334,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     });
     await expect(connectionStatus).toHaveText('Live');
     await page.context().setOffline(true);
-    await expect(connectionStatus).toHaveText('Reconnecting', {
+    await expect(connectionStatus).toHaveText('Offline', {
       timeout: 5_000,
     });
     await page.context().setOffline(false);
@@ -1385,14 +1385,9 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     for (let step = 0; step < 80; step += 1) {
       const phase = await currentPhase(page);
       if (phase !== 'FINISHED' && phase !== 'ARCHIVED') {
-        await expect(
-          page
-            .locator('.player-shell-header')
-            .getByText(wakeLockNotice, { exact: true }),
-        ).toBeVisible();
-        await expect(
-          page.getByText(wakeLockNotice, { exact: true }),
-        ).toHaveCount(1);
+        await expect(wakeLockNotice).toBeVisible();
+        await expect(wakeLockNotice).toHaveText(wakeLockNoticeText);
+        await expect(wakeLockNotice).toHaveCount(1);
       }
       await expect(page.locator('.game-shell')).toHaveAttribute(
         'data-game-theme',
@@ -1469,7 +1464,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           page
             .getByTestId('rehearsal-explainer')
             .getByTestId('brand-footer-overlay'),
-        ).toBeVisible();
+        ).toHaveCount(0);
         await page.getByRole('button', { name: 'Got it' }).click();
         seenExplanations.add(phase);
         if (phase === 'DEBATE') {
@@ -1495,9 +1490,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         ).toBeVisible();
         watchModePhases.add(phase);
       }
-      await expect(
-        page.locator('header.public-shell-header .oathstone-wordmark'),
-      ).toHaveCount(1);
+      await expect(page.getByTestId('game-status-bar')).toBeVisible();
       const brandFooter = page.getByTestId('brand-footer-shell');
       if (['DRAFT', 'LOBBY', 'FINISHED', 'ARCHIVED'].includes(phase)) {
         await expect(brandFooter).toContainText(
@@ -2456,9 +2449,11 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(
       page.getByRole('button', { name: 'Back to start', exact: true }),
     ).toBeVisible({ timeout: 5_000 });
-    await page.locator('.player-shell-header .oathstone-wordmark').click();
+    await page
+      .getByRole('button', { name: 'Back to start', exact: true })
+      .click();
     await expect(
-      page.getByRole('link', { name: 'Start a new game', exact: true }),
+      page.getByRole('button', { name: 'Start a new game', exact: true }),
     ).toBeVisible();
     expect(appDocumentLoads).toBe(0);
     await page.goBack();

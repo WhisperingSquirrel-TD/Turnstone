@@ -280,7 +280,9 @@ async function chooseFirstVisiblePlayer(
     name: string;
   }[] = [];
   for (const button of buttons) {
-    const name = (await button.innerText()).trim();
+    const name = (
+      await button.locator('.player-tile__name').innerText()
+    ).trim();
     if (!preferredName && name === player.name) continue;
     if (
       (await button.isVisible().catch(() => false)) &&
@@ -297,9 +299,8 @@ async function chooseFirstVisiblePlayer(
       }
     }
   } else if (preferredName) {
-    const selfChoice = page.getByRole('button', {
-      name: preferredName,
-      exact: true,
+    const selfChoice = choices.filter({
+      has: page.getByText(preferredName, { exact: true }),
     });
     await expect(selfChoice).toBeVisible();
     await expect(selfChoice).toBeEnabled();
@@ -1301,10 +1302,12 @@ test('virtual players complete a real game across desktop and phone contexts @vi
                 { exact: true },
               ),
             ).toBeVisible();
-            const selfOption = page.getByRole('button', {
-              name: player.name,
-              exact: true,
-            });
+            const selfOption = page
+              .getByTestId('private-choice-list')
+              .getByRole('button')
+              .filter({
+                has: page.getByText(player.name, { exact: true }),
+              });
             await expect(selfOption).toBeVisible();
             await expect(selfOption).toBeEnabled();
           }
