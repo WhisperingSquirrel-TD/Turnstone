@@ -114,10 +114,13 @@ export function GameHelpDisclosure({
   children: ReactNode;
   screenLockNotice?: string;
 }) {
+  const [, setIsOpen] = useState(false);
+
   return (
     <details
       className="game-help-disclosure"
       data-testid="game-help-disclosure"
+      onToggle={(event) => setIsOpen(event.currentTarget.open)}
     >
       <summary>What&apos;s this?</summary>
       <div className="game-help-disclosure__content">

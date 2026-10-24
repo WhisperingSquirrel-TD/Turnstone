@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Status for reviewer — Round 7 Improvements 1/6 (Help scrolling):** the open Help panel trapped wheel scrolling in its own overflow area. It now expands in normal page flow; held-private scroll locking is unchanged. The Pixel browser test passes for Conversation, Vote and Night at 320, 375, 390 and 430 px, with each last item scrolled clear of the fixed dock. Local iPhone WebKit cannot launch because browser system dependencies are absent; GitHub WebKit will verify it. Code and test checks pass locally; this change is not yet pushed. Latest `main` is `a0d12dc`; Verify #269 is green and no run was active at the last check. Next: push this isolated item, wait for Verify, then start item 2.
+**Status for reviewer — Round 7 Improvements 1/6 (Help scrolling):** commit `822479f` is on `main`; Verify #270 failed only in the four browser jobs (and dependent required-checks). Logs show two test issues, not a new product defect: the existing public-room geometry assertion expected expanded Help to fit without scrolling, and iPhone WebKit does not support `page.mouse.wheel`. Both are fixed locally without removing assertions: the existing check scrolls to the end of the page before measuring clearance, and iPhone verifies document scroll via the last item’s `scrollIntoView`; Pixel retains the real wheel gesture. Desktop and Pixel focused tests, typechecks, lint, formatting and GameChrome unit tests pass locally. The corrective test/doc commit is ready; no Verify run is active. Next: push the small test correction and wait for a green Verify before item 2.
 
 **Previous milestone — Round 7 Stage 2B (Vote, Revote and Verdict):** commits `086ae4d`, `aafaaa7`, `7ebb798`, `e1f2e35` and status update `3665dd3` are on `main`; Verify #267 on the harness fix is green (19/19 jobs), and Verify #268 on the status update is green. #265’s stale Vote/Revote expectations are corrected; #266’s CI 429 is addressed by the Q11-approved 65-second harness-only cooldown. No product polling or rate limits changed.
 
@@ -19,11 +19,17 @@ Removing that nested scroll area restores document scrolling; the existing
 page-bottom padding still keeps the last item above the fixed dock. The held
 private-reveal scroll lock remains separate and unchanged.
 
-The new browser regression covers Conversation, Vote and Night on Pixel at
-320/375/390/430 px and passes (12 phase/width combinations). TypeScript,
-focused lint, formatting and the GameChrome unit tests pass. The same test is
-configured for iPhone WebKit; it could not be run locally because this
-workspace lacks WebKit system dependencies, so GitHub CI is authoritative.
+The new browser regression covers Conversation, Vote and Night at
+320/375/390/430 px and passes locally on Pixel (12 phase/width combinations).
+Its iPhone WebKit path uses `scrollIntoView` because Playwright mobile WebKit
+does not support mouse-wheel input; the test still asserts that the document
+scrolls and the final choice is clear of the dock. The existing public-room
+geometry check now scrolls to the document end before asserting Help clearance,
+preserving the geometry assertion under the normal-flow layout. Verify #270
+confirmed this adjustment is needed: all four browser jobs failed on those two
+test assumptions, while the other jobs passed. The iPhone path could not be
+run locally because this workspace lacks WebKit system dependencies; GitHub CI
+remains authoritative.
 
 The #258 browser failures were stale Stage 1 expectations for the status-card geometry, day-text colour and a broad Help locator. The iPhone Axe failure sampled the game action button during its background-colour transition (3.51:1); game action fills now change immediately while border colour may still transition, and the test verifies the approved fill and runs the unchanged Axe check in both themes. Verify #259 passed all browser jobs, but rehearsal-live had two failures: the full rehearsal's test-only dynamic import of `@workspace/db/game-store` failed because `@workspace/shared` did not provide `eventSchema`; the disconnected-player test created the game (201) but its next `/commands` request remained pending for 30 seconds before the lobby appeared. The pending request follows the create flow's initial `AdvancePhase`; no product cause is proven, so no product code or rate limit has been changed. A test-only reader now queries persisted event payloads through the working database root and validates them with the shared schema; regression tests cover query order and malformed rows. The disconnected-player test now includes sanitized request-failure and pending-request diagnostics (no bodies, names, PINs, roles or choices). Both affected real-server Pixel tests pass locally with the rehearsal config (2/2, 3.6 minutes); test type-check, lint and formatting pass. Verify #260 on `6586d79` passed all 19 jobs, including rehearsal-live and desktop Chromium, iPad WebKit, Pixel Chromium and iPhone WebKit. The status-only commit `17c1a89` had a first Verify #261 attempt fail in integration at the 40-seat server-restart test (HTTP 503 at its success assertion); PostgreSQL logs recorded a statement timeout and a duplicate event-sequence key, but the exact cause is not confirmed. The isolated 40-seat test passed locally unchanged, and the failed-job rerun (Verify #261 attempt 2) passed all required jobs. No assertion, limit or product code changed for this incident.
 

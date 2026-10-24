@@ -1089,7 +1089,9 @@ test('phone room shows public game state without a presenter', async ({
     { width: 360, height: 740 },
   ]) {
     await page.setViewportSize(viewport);
-    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.evaluate(() =>
+      window.scrollTo(0, document.documentElement.scrollHeight),
+    );
     await expect
       .poll(
         async () => {
@@ -1900,14 +1902,16 @@ test('expanded Help leaves every game page scrollable above the dock', async ({
         .locator('.game-help-disclosure__content')
         .boundingBox();
       expect(helpContent).not.toBeNull();
-      await page.mouse.move(
-        helpContent!.x + helpContent!.width / 2,
-        helpContent!.y + helpContent!.height / 2,
-      );
-      await page.mouse.wheel(0, 800);
-      await expect
-        .poll(() => page.evaluate(() => window.scrollY))
-        .toBeGreaterThan(initialScrollY);
+      if (testInfo.project.name === 'Pixel') {
+        await page.mouse.move(
+          helpContent!.x + helpContent!.width / 2,
+          helpContent!.y + helpContent!.height / 2,
+        );
+        await page.mouse.wheel(0, 800);
+        await expect
+          .poll(() => page.evaluate(() => window.scrollY))
+          .toBeGreaterThan(initialScrollY);
+      }
 
       await lastItem.evaluate((element) =>
         element.scrollIntoView({ block: 'end' }),
