@@ -1473,8 +1473,8 @@ wording or timing by role.
 
 ## D97 — Treat the combined local rehearsal 429 as accumulated state (reviewer-approved, 24 October 2026)
 
-**Context:** A combined local rehearsal received HTTP 429 from the join-request polling endpoint, while the focused real-server rehearsal and the disconnected-player journey passed separately. The clean GitHub Verify runs for the lighter shell and button sweep passed.
+**Context:** A combined local rehearsal received HTTP 429 from the join-request polling endpoint. Verify #266 reproduced it in the disconnected-player real-server test after H1 had used the shared per-IP 60/minute bucket; the other real-server journeys passed.
 
-**Choice:** Treat the 429 as accumulated local rate-limit state. Leave the harness and all limits unchanged, and rely on the clean CI run. If the 429 recurs in CI, add a bounded cooldown in the harness only.
+**Choice:** Keep every rate limit unchanged. Because the 429 recurred in CI, add a bounded 65-second cooldown before the disconnected-player journey in the single-worker rehearsal harness: one 60-second limiter window plus a 5-second margin.
 
-**Consequence:** No product polling behaviour or rate limit changes. Q11 is resolved; no request bodies or player data are logged.
+**Consequence:** The pause is test-harness pacing only; no product polling behaviour or rate limit changes. Q11 is resolved, and no request bodies or player data are logged.

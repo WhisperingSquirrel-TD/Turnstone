@@ -16,6 +16,8 @@ import {
 // Playwright's 5-second default. The lobby itself uses the same 30-second
 // allowance as the H1 creation flow below.
 const expect = playwrightExpect.configure({ timeout: 20_000 });
+const joinRequestRateLimitWindowMs = 60_000;
+const rehearsalRateLimitCooldownMs = joinRequestRateLimitWindowMs + 5_000;
 
 // This spec belongs to the real-server rehearsal runner, not the routed UI
 // suite. Every mutation below is a user interaction; HTTP reads only observe.
@@ -63,6 +65,12 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
   // Includes six real joins, the unmodified 60-second server grace, and
   // shield/hold minimums. No browser clock or server-presence overrides.
   test.setTimeout(240_000);
+  // This test follows H1 in the single-worker rehearsal. The organiser's
+  // join-request poll shares a per-IP 60/minute bucket, so let that window
+  // expire before starting this real-UI journey. This is harness pacing only.
+  await new Promise<void>((resolve) =>
+    setTimeout(resolve, rehearsalRateLimitCooldownMs),
+  );
   if (!baseURL) throw new Error('The real-server runner requires a baseURL.');
   const { db } = await import('@workspace/db');
   const contexts: BrowserContext[] = [];

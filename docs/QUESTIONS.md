@@ -10,9 +10,10 @@ interval. Current evidence does not identify a harness action that exceeds
 human timing, and no request body or player data was logged.
 
 **Resolution (reviewer decision, 24 October 2026):** Treat the combined-run
-429 as accumulated local rate-limit state. Leave the harness unchanged and
-rely on the clean CI run. If it recurs in CI, add a bounded cooldown in the
-harness only. Never change a rate limit.
+429 as accumulated local rate-limit state. It recurred in Verify #266, so the
+single-worker rehearsal now waits 65 seconds before the disconnected-player
+journey (the 60-second window plus a 5-second margin). This is harness pacing
+only. Never change a rate limit.
 
 **Status:** Resolved. No rate limit or production polling behaviour changed.
 
