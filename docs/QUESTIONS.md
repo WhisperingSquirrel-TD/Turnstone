@@ -11,15 +11,14 @@ FINISHED, and displays public roles only for banished seats. This is a
 product presentation regression from moving the roster, not a stale
 appearance assertion to remove.
 
-**Proposed fix, awaiting approval:** At FINISHED only, restore the existing
+**Resolution (owner-approved):** At FINISHED only, restore the existing
 final-result roster presentation: no “Playing” labels, and display only
 roles already supplied by the public projection. During play, retain the
 current banished-only role display. Never infer or restore a role suppressed
 by the disconnected-removal rule. Keep all existing result and privacy
 assertions, add a regression first, and make no server or rule change.
 
-**Question:** May this narrowly scoped finished-roster correction be included
-in the Verify repair?
+The owner approved this narrowly scoped finished-roster correction in chat.
 
 ## Q11 — Local rehearsal received a join-request 429 (resolved)
 

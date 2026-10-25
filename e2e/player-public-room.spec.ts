@@ -4466,6 +4466,56 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
   expect(presenterRequests).toEqual([]);
 });
 
+test('finished roster restores public results without changing in-game role visibility', async ({
+  page,
+}) => {
+  const gameId = 'finished-roster';
+  let view: FullView = {
+    ...createPublicView(gameId),
+    phase: 'DEBATE',
+    seats: [
+      { id: 'seat-morgan', name: 'Morgan', status: 'alive', role: 'traitor' },
+      { id: 'seat-alex', name: 'Alex', status: 'murdered', role: 'faithful' },
+      { id: 'seat-jamie', name: 'Jamie', status: 'banished', role: 'faithful' },
+      { id: 'seat-dana', name: 'Dana', status: 'departed' },
+    ],
+  };
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.goto(`/game/${gameId}`);
+  await page.getByRole('tab', { name: 'Players', exact: true }).click();
+  const row = (id: string) => page.getByTestId(`player-seat-${id}`);
+  await expect(row('seat-morgan')).toContainText('Playing');
+  await expect(row('seat-morgan')).not.toContainText(/Traitor|Faithful/);
+  await expect(row('seat-alex')).not.toContainText(/Traitor|Faithful/);
+  await expect(row('seat-jamie')).toContainText('Faithful');
+  await expect(row('seat-dana')).not.toContainText(/Traitor|Faithful/);
+
+  view = {
+    ...view,
+    version: view.version + 1,
+    phase: 'FINISHED',
+    winner: 'traitor',
+    publicAnnouncement: { kind: 'finished', winner: 'traitor' },
+  };
+  await page.reload();
+  await page.getByRole('tab', { name: 'Players', exact: true }).click();
+  await expect(page.getByTestId('players-roster-list')).not.toContainText(
+    'Playing',
+  );
+  await expect(row('seat-morgan')).toContainText('Traitor');
+  await expect(row('seat-alex')).toContainText('Out, Faithful');
+  await expect(row('seat-jamie')).toContainText('Out, Faithful');
+  await expect(row('seat-dana')).toContainText('Out');
+  await expect(row('seat-dana')).not.toContainText(/Traitor|Faithful/);
+});
+
 test('the lobby code and join QR are shared on each seated player phone', async ({
   page,
 }) => {

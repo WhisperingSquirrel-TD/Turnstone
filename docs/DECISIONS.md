@@ -1488,3 +1488,11 @@ wording or timing by role.
 **Consequence:** Server validation, timing, targets, idempotency and private-choice draft rules remain unchanged. The same guard applies to every role. The regression delays the response explicitly, then checks the replacement slot remains interactive; the real-server harness also fails if an organiser-pending night step shows a waiting-only screen.
 
 **Harness follow-up:** After this repair, the local H1 replay submitted both slots and reached FINISHED on every phone, with no pending seats. Its advance helper nevertheless awaited `isEnabled()` on the now-removed Move-on button before evaluating the already-observed phase transition. Check phase/step transitions first, then inspect the real enabled control only within the unchanged step. Deterministic helper tests retain the pending-step gate and prove a terminal transition never reads the removed control. This is a harness correction, not a game-rule or timeout change.
+
+## D99 — Restore public result labels in the finished roster (owner-approved)
+
+**Context:** Moving the roster into the Players panel kept its in-game “Playing” label and banished-only role filter even after FINISHED. Verify #282's existing final-roster assertions caught this presentation regression.
+
+**Choice:** At FINISHED only, omit “Playing” and render result roles already supplied by the public projection, with the existing “Out, …” wording for eliminated seats. During play, retain the banished-only role filter. A role omitted by the public projection stays omitted, including disconnected removals.
+
+**Consequence:** No rule, projection, timer or private-data behaviour changes. The new browser regression fails on the old roster, checks before/after visibility, and includes a departed seat with no public role.

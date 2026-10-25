@@ -2690,7 +2690,10 @@ function PlayerGame() {
       <ul className="game-roster-grid mt-3" data-testid="players-roster-list">
         {full.seats.map((seat) => {
           const isAlive = seat.status === 'alive';
-          const publicRole = seat.status === 'banished' ? seat.role : undefined;
+          const publicRole =
+            full.phase === 'FINISHED' || seat.status === 'banished'
+              ? seat.role
+              : undefined;
           return (
             <li key={seat.id} data-testid={`player-seat-${seat.id}`}>
               <PlayerTile
@@ -2698,7 +2701,9 @@ function PlayerGame() {
                 state={isAlive ? 'available' : 'out'}
                 statusText={
                   <>
-                    {isAlive && <span>{en.game.playerPlaying}</span>}
+                    {isAlive && full.phase !== 'FINISHED' && (
+                      <span>{en.game.playerPlaying}</span>
+                    )}
                     <span>
                       {seat.connected === undefined
                         ? en.game.playerConnectionUnknown
@@ -2711,9 +2716,11 @@ function PlayerGame() {
                     )}
                     {publicRole && (
                       <span>
-                        {publicRole === 'traitor'
-                          ? en.game.roleTraitor
-                          : en.game.roleFaithful}
+                        {full.phase === 'FINISHED' && !isAlive
+                          ? en.game.playerOutRole(publicRole)
+                          : publicRole === 'traitor'
+                            ? en.game.roleTraitor
+                            : en.game.roleFaithful}
                       </span>
                     )}
                   </>
