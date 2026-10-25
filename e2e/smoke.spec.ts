@@ -598,7 +598,7 @@ test('private role and seal stay inside small phone viewports with a linked play
       await page
         .locator('.game-shell-main')
         .evaluate((element) => getComputedStyle(element).overflowY),
-    ).toBe('visible');
+    ).toBe('auto');
     const roleHeading = await page
       .getByRole('heading', { name: 'Your role', exact: true })
       .boundingBox();
@@ -671,8 +671,14 @@ test('private role and seal stay inside small phone viewports with a linked play
     expect(scrollLock).toEqual({ root: 'hidden', body: 'hidden' });
     // Playwright mobile WebKit cannot generate mouse-wheel events.
     if (testInfo.project.use.browserName !== 'webkit') {
+      const mainScrollBeforeHold = await page
+        .locator('main')
+        .evaluate((main) => main.scrollTop);
       await page.mouse.wheel(0, 400);
       await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+      await expect
+        .poll(() => page.locator('main').evaluate((main) => main.scrollTop))
+        .toBe(mainScrollBeforeHold);
     }
   }
 });
@@ -803,14 +809,19 @@ test('game status bar stays visible and active-play actions stay unobstructed', 
       mainOverflowY: getComputedStyle(main).overflowY,
     };
   });
-  expect(scrollMetrics.mainScrollHeight).toBe(scrollMetrics.mainHeight);
-  expect(scrollMetrics.mainOverflowY).toBe('visible');
-  expect(scrollMetrics.documentHeight).toBeGreaterThan(
+  expect(scrollMetrics.mainScrollHeight).toBeGreaterThan(
+    scrollMetrics.mainHeight,
+  );
+  expect(scrollMetrics.mainOverflowY).toBe('auto');
+  expect(scrollMetrics.documentHeight).toBeLessThanOrEqual(
     scrollMetrics.viewportHeight,
   );
-  await page.evaluate(() => window.scrollTo(0, 300));
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator('main').evaluate((main) => main.scrollTo(0, 300));
+  expect(
+    await page.locator('main').evaluate((main) => main.scrollTop),
+  ).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await page.locator('main').evaluate((main) => main.scrollTo(0, 0));
   const [actionBounds, actionButtonBounds, bottomBarBounds, statusBarBounds] =
     await Promise.all([
       actionBar.boundingBox(),
@@ -838,9 +849,9 @@ test('game status bar stays visible and active-play actions stay unobstructed', 
   expect(actionButtonBounds.y + actionButtonBounds.height).toBeLessThanOrEqual(
     scrollMetrics.viewportHeight,
   );
-  await page.evaluate(() =>
-    window.scrollTo(0, document.documentElement.scrollHeight),
-  );
+  await page
+    .locator('main')
+    .evaluate((main) => main.scrollTo(0, main.scrollHeight));
   const [scrolledActionBounds, scrolledBottomBarBounds] = await Promise.all([
     actionBar.boundingBox(),
     bottomBar.boundingBox(),
@@ -852,8 +863,11 @@ test('game status bar stays visible and active-play actions stay unobstructed', 
     0,
   );
   await expect(actionBar.getByRole('button', { name: 'Notes' })).toHaveCount(0);
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-  await page.evaluate(() => window.scrollTo(0, 0));
+  expect(
+    await page.locator('main').evaluate((main) => main.scrollTop),
+  ).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await page.locator('main').evaluate((main) => main.scrollTo(0, 0));
 
   await page.setViewportSize({ width: 1024, height: 768 });
   const [

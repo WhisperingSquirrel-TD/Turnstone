@@ -1538,9 +1538,9 @@ test('phone room shows public game state without a presenter', async ({
     { width: 360, height: 740 },
   ]) {
     await page.setViewportSize(viewport);
-    await page.evaluate(() =>
-      window.scrollTo(0, document.documentElement.scrollHeight),
-    );
+    await page
+      .locator('main')
+      .evaluate((main) => main.scrollTo(0, main.scrollHeight));
     await expect
       .poll(
         async () => {
@@ -1903,8 +1903,15 @@ test('rehearsal player can move on from public and voting screens', async ({
   const voteLayout = await page.locator('main#main').evaluate((main) => ({
     contentHeight: main.scrollHeight,
     viewportHeight: main.clientHeight,
+    overflow: getComputedStyle(main).overflowY,
+    bottom: main.getBoundingClientRect().bottom,
+    dockTop: document
+      .querySelector('[data-testid="game-action-dock"]')!
+      .getBoundingClientRect().top,
   }));
-  expect(voteLayout.contentHeight).toBeLessThanOrEqual(
+  expect(voteLayout.overflow).toBe('auto');
+  expect(voteLayout.bottom).toBeLessThanOrEqual(voteLayout.dockTop);
+  expect(voteLayout.contentHeight).toBeGreaterThanOrEqual(
     voteLayout.viewportHeight,
   );
   await expect(page.getByText('Who do you vote to banish?')).toBeVisible();

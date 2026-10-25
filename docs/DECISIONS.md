@@ -1638,3 +1638,12 @@ when fractional scroll rounding consumes part of a nominal 16px gap.
 Verify #291 passed every gate except iPhone's old fixed night-card height.
 Wrapping status text is intentional (D105); assert four whole-line rows and
 the exact combined height while preserving exact cross-role geometry equality.
+
+**Verify #292 follow-up:** The real-server rehearsal and all full application
+audit cases passed. Five older browser checks still assumed document scrolling
+or an unbounded main area. They now scroll the main area, assert it ends above
+the dock, and verify that the document stays still. Held-reveal tests additionally
+check that the main scroll offset stays locked. Footer ordering is still tested
+after scrolling the footer into view. Restore zero spacing after closed
+Conversation Help; the extra font-glyph clearance applies only to Deal and the
+no-votes announcement, not as a global Help margin. No geometry tolerance changed.

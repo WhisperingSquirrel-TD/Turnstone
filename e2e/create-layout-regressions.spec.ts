@@ -151,9 +151,9 @@ test('Create explains missing fields and docks only a complete form above a flow
   await page.getByTestId('input-organiser-pin').fill('1234');
   await expect(create).toBeEnabled();
   await expect(page.getByTestId('entry-action-dock')).toBeVisible();
-  await page.evaluate(() =>
-    window.scrollTo(0, document.documentElement.scrollHeight),
-  );
+  await page
+    .locator('main')
+    .evaluate((main) => main.scrollTo(0, main.scrollHeight));
   const [button, footer] = await Promise.all([
     create.boundingBox(),
     page.getByTestId('brand-footer-entry').boundingBox(),

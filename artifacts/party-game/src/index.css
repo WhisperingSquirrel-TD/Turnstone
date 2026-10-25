@@ -708,6 +708,11 @@ a[href='#main']:focus {
   margin-top: 0.75rem;
   border-top: 1px solid var(--game-line);
   color: var(--game-muted);
+}
+
+.private-moment-shell
+  [data-testid='player-game'][data-phase='DEAL']
+  > .game-help-disclosure {
   margin-bottom: 0.5rem;
 }
 
