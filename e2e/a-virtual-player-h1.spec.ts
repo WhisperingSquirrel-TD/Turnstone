@@ -1032,7 +1032,7 @@ test('virtual players complete a real game across desktop and phone contexts @vi
     await organiserPage.goto('/');
     await pauseForHumanTiming(organiserPage, scenario.stage);
     await organiserPage
-      .getByRole('link', { name: 'Start a new game', exact: true })
+      .getByRole('button', { name: 'Create a new game', exact: true })
       .click();
     await expect(
       organiserPage.getByRole('heading', { name: 'Name your game' }),

@@ -9,6 +9,39 @@
   white-space: nowrap;
 }
 
+.game-entry-static {
+  width: min(100% - 32px, 480px);
+  margin: 32px auto;
+}
+.game-entry-static h1 {
+  font: 400 30px/1.15 var(--font-headline);
+}
+.game-entry-static nav {
+  display: grid;
+  gap: 12px;
+  margin-block: 24px;
+}
+.game-entry-static nav a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border: 1.5px solid var(--game-line, #d9d1bf);
+  border-radius: 14px;
+  color: var(--game-text, #26221d);
+  font-size: 17px;
+  text-decoration: none;
+}
+.game-entry-static nav a:first-child {
+  color: #fff;
+  background: #7a4e1d;
+}
+.game-entry-about {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 .public-home-brand {
   position: relative;
   z-index: 5;

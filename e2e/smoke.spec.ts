@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { FullView } from '../lib/shared/src/contracts';
 import { PRE_LAUNCH_NOINDEX } from '../lib/security/src/deployment';
 
-test('home and play are accessible, reloadable and responsive', async ({
+test('the root entry and public information pages are accessible and responsive', async ({
   page,
 }) => {
   const homeResponse = await page.goto('/');
@@ -15,14 +15,6 @@ test('home and play are accessible, reloadable and responsive', async ({
     'made by Stackstone Consulting',
   );
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  const homeCopy = (await page.getByRole('main').innerText()).toLowerCase();
-  expect(homeCopy).not.toContain('vote at the round table');
-  expect(homeCopy.match(/vote together/g) ?? []).toHaveLength(1);
-  const firstFaqQuestion = page.locator('.public-home-faq summary').first();
-  await expect(firstFaqQuestion).toHaveCSS('min-height', '52px');
-  await expect
-    .poll(async () => (await firstFaqQuestion.boundingBox())?.height ?? 0)
-    .toBeGreaterThanOrEqual(44);
   expect(
     (
       await new AxeBuilder({ page })
@@ -30,7 +22,18 @@ test('home and play are accessible, reloadable and responsive', async ({
         .analyze()
     ).violations,
   ).toEqual([]);
+  await page.goto('/how-to-play');
+  const howToPlayCopy = (
+    await page.getByRole('main').innerText()
+  ).toLowerCase();
+  expect(howToPlayCopy).not.toContain('vote at the round table');
+  expect(howToPlayCopy.match(/vote together/g) ?? []).toHaveLength(1);
   await page.goto('/faq');
+  const firstFaqQuestion = page.locator('.public-home-faq summary').first();
+  await expect(firstFaqQuestion).toHaveCSS('min-height', '52px');
+  await expect
+    .poll(async () => (await firstFaqQuestion.boundingBox())?.height ?? 0)
+    .toBeGreaterThanOrEqual(44);
   await expect(
     page.getByRole('heading', { name: 'Frequently asked questions' }),
   ).toBeVisible();
@@ -39,8 +42,8 @@ test('home and play are accessible, reloadable and responsive', async ({
   expect(faqCopy).not.toContain('vote at the round table');
   expect(faqCopy).toContain('vote together');
   await page.goto('/');
-  await page.getByRole('link', { name: 'Start a new game' }).click();
-  await expect(page).toHaveURL(/\/play\?entry=create$/);
+  await page.getByTestId('button-create-game').click();
+  await expect(page).toHaveURL(/\/$/);
   await expect(
     page.getByRole('heading', { name: 'Name your game' }),
   ).toBeVisible();
@@ -62,6 +65,7 @@ test('home and play are accessible, reloadable and responsive', async ({
   await expect(continueCreateName).toBeEnabled();
   await expect(continueCreateName).toHaveCSS('cursor', 'pointer');
   await expect(continueCreateName).toHaveCSS('opacity', '1');
+  await page.goto('/?entry=create');
   const playResponse = await page.reload();
   expect(playResponse?.headers()['x-robots-tag']).toBe(
     PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,
@@ -91,7 +95,7 @@ test('home and play are accessible, reloadable and responsive', async ({
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  await page.goto('/play');
+  await page.goto('/');
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -405,7 +409,7 @@ test('entry welcome title and actions stay high in a short desktop viewport', as
 
   const viewport = { width: 1024, height: 696 };
   await page.setViewportSize(viewport);
-  await page.goto('/play');
+  await page.goto('/');
   const title = page.locator('#entry-title');
   const actions = page.locator('.entry-choice-list');
   await expect(title).toBeVisible();

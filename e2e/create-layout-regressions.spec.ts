@@ -24,7 +24,7 @@ async function capture(page: Page, state: string) {
 }
 
 async function nameAndPin(page: Page) {
-  await page.goto('/play?entry=create');
+  await page.goto('/?entry=create');
   await capture(page, 'create-1-game-name');
   await page.getByTestId('button-continue-create-name').click();
   await capture(page, 'create-2-player-count');
@@ -122,7 +122,7 @@ test('Create presenter rows keep the checkbox clear of both text lines and suppo
       await capture(page, 'create-4-voting-ready');
       for (const [path, state] of [
         ['/join', 'join'],
-        ['/play?entry=rehearsal', 'practice'],
+        ['/?entry=rehearsal', 'practice'],
       ] as const) {
         await page.goto(path);
         await expect(page.locator('main h1')).toBeVisible();
@@ -176,7 +176,7 @@ test('Create describes self-paced sharing without promising an app-held order', 
 test('incomplete Join and Practice forms explain their disabled actions without a fixed dock', async ({
   page,
 }) => {
-  for (const path of ['/join', '/play?entry=rehearsal']) {
+  for (const path of ['/join', '/?entry=rehearsal']) {
     await page.goto(path);
     await expect(page.getByTestId('entry-primary-hint')).toContainText(
       'first name',

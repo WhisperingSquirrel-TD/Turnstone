@@ -46,7 +46,7 @@ async function enterJoinName(page: import('@playwright/test').Page) {
   await page.route('**/api/csrf', (route) =>
     route.fulfill({ json: { csrfToken: 'c'.repeat(43) } }),
   );
-  await page.goto('/play');
+  await page.goto('/');
   await page.getByRole('button', { name: 'Join a game', exact: true }).click();
   const codeBoxes = page.getByRole('textbox', {
     name: /Game code character/,

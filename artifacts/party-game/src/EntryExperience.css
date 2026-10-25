@@ -30,15 +30,6 @@
 }
 
 .entry-experience.game-shell[data-game-theme] {
-  color-scheme: light;
-  --game-bg: var(--game-day-bg);
-  --game-surface: var(--game-day-surface);
-  --game-line: var(--game-day-line);
-  --game-text: var(--game-day-text);
-  --game-muted: var(--game-day-muted);
-  --game-accent: var(--game-day-accent);
-  --game-on-accent: var(--game-day-on-accent);
-  --game-alert: var(--game-day-alert);
   --game-page-background: var(--game-bg);
   --charcoal: var(--game-bg);
   --hearth: var(--game-surface);
@@ -48,6 +39,30 @@
   --ash: var(--game-muted);
   --game-button-ink: var(--game-on-accent);
   --game-button-fill: var(--game-accent);
+}
+
+.entry-experience.game-shell[data-game-theme='day'] {
+  color-scheme: light;
+  --game-bg: var(--game-day-bg);
+  --game-surface: var(--game-day-surface);
+  --game-line: var(--game-day-line);
+  --game-text: var(--game-day-text);
+  --game-muted: var(--game-day-muted);
+  --game-accent: var(--game-day-accent);
+  --game-on-accent: var(--game-day-on-accent);
+  --game-alert: var(--game-day-alert);
+}
+
+.entry-experience.game-shell[data-game-theme='night'] {
+  color-scheme: dark;
+  --game-bg: var(--game-night-bg);
+  --game-surface: var(--game-night-surface);
+  --game-line: var(--game-night-line);
+  --game-text: var(--game-night-text);
+  --game-muted: var(--game-night-muted);
+  --game-accent: var(--game-night-accent);
+  --game-on-accent: var(--game-night-on-accent);
+  --game-alert: var(--game-night-alert);
 }
 
 .entry-experience *,
@@ -1054,4 +1069,16 @@
   min-width: 44px;
   min-height: 44px;
   max-width: 9rem;
+}
+
+.entry-about-link {
+  margin-top: 0.5rem;
+  color: var(--entry-ash);
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+.entry-choice-list .entry-text-action {
+  min-height: 56px;
 }

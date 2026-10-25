@@ -68,7 +68,7 @@ test.describe('built client through the real Node server', () => {
       )
         violations.push(message.text());
     });
-    const response = await page.goto(origin + '/play');
+    const response = await page.goto(origin + '/');
     expect(response?.status()).toBe(200);
     expect(response?.headers()['content-type']).toContain('text/html');
     await expect(
@@ -92,20 +92,19 @@ test.describe('built client through the real Node server', () => {
     });
     try {
       const plain = await context.newPage();
-      for (const path of ['/', '/play']) {
+      for (const path of ['/', '/join']) {
         const response = await plain.goto(origin + path);
         expect(response?.headers()['x-robots-tag']).toBe('noindex, nofollow');
         await expect(plain.locator('html')).toHaveCSS(
           'background-color',
           'rgb(46, 43, 41)',
         );
-        await expect(
-          plain.getByRole('link', { name: 'Oathstone', exact: true }).first(),
-        ).toBeVisible();
-        await expect(
-          plain.getByRole('link', { name: 'Oathstone', exact: true }).first(),
-        ).toHaveCSS('font-family', /Playfair Display/);
-        if (path === '/play')
+        await expect(plain.getByTestId('text-entry-brand')).toBeVisible();
+        await expect(plain.getByTestId('text-entry-brand')).toHaveCSS(
+          'font-family',
+          /Playfair Display/,
+        );
+        if (path === '/join')
           expect(await response!.text()).not.toContain(
             'Frequently asked questions',
           );

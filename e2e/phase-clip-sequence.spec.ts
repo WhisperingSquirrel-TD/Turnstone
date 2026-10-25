@@ -75,7 +75,7 @@ for (const rehearsal of [false, true]) {
     });
 
     if (rehearsal) {
-      await page.goto('/play?entry=rehearsal');
+      await page.goto('/?entry=rehearsal');
       await page.getByTestId('input-rehearsal-name').fill('Morgan');
       await page.getByTestId('button-start-rehearsal').click();
     } else {

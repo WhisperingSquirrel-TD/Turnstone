@@ -263,7 +263,7 @@ for (const width of widths)
         page.getByRole('heading', { name: /Waiting/ }),
       ).toBeVisible();
       await audit('join-waiting-approval');
-      await go('/play?entry=create');
+      await go('/?entry=create');
       await audit('create-name');
       await page.getByTestId('button-continue-create-name').click();
       await audit('create-count');
@@ -274,7 +274,7 @@ for (const width of widths)
       await page.getByTestId('input-organiser-name').fill('Morgan');
       await page.getByTestId('input-organiser-pin').fill('1234');
       await audit('create-complete');
-      await go('/play?entry=rehearsal');
+      await go('/?entry=rehearsal');
       await audit('practice-empty');
       await page.getByTestId('input-rehearsal-name').fill('Morgan');
       await audit('practice-ready');

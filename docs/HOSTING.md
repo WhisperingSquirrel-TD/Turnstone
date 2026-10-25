@@ -1,5 +1,16 @@
 # Hosting decision and owner checklist
 
+## Amendment A — entry surface only (25 October 2026)
+
+The company page https://stackstoneconsulting.co.uk/oathstone is the single
+findable home and must not be changed or redirected. The game host has one
+paper entry at `/`; `/play` permanently redirects there, retaining query
+parameters. Its canonical is the company page; app routes remain noindex.
+Public information pages remain accessible with the same indexing policy.
+This updates entry presentation only, not deployment approval, DNS, domains,
+production settings or the older proposed hosting origin. See the wording
+reconciliation in QUESTIONS. Nothing has been published.
+
 ## Public invitation URLs — owner step (25 October 2026)
 
 `PUBLIC_BASE_URL` is the single, non-secret base for player share links, Lobby

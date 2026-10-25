@@ -1,7 +1,6 @@
 import './index.css';
 import './public-home.css';
 import './HoldRoleDemo.css';
-import { installPublicHoldDemo } from './public-demo';
 import { PUBLIC_MARKETING_ROUTE_PATHS } from '@workspace/shared/app-routes';
 import { gameThemeForPhase, readDisplayPreference } from './game-theme';
 import { config } from './config';
@@ -16,7 +15,9 @@ const path = window.location.pathname.startsWith(`${basePath}/`)
 const normalizedPath = path.replace(/\/+$/, '') || '/';
 const isStaticPublicPage =
   normalizedPath === '/llms.txt' ||
-  PUBLIC_MARKETING_ROUTE_PATHS.some((route) => route === normalizedPath);
+  PUBLIC_MARKETING_ROUTE_PATHS.some(
+    (route) => route !== '/' && route === normalizedPath,
+  );
 
 if (isStaticPublicPage) {
   const phoneTheme = window.matchMedia('(prefers-color-scheme: dark)');
@@ -38,14 +39,13 @@ if (isStaticPublicPage) {
   updateTheme();
   phoneTheme.addEventListener('change', updateTheme);
   window.addEventListener('storage', updateTheme);
-  if (normalizedPath === '/') installPublicHoldDemo();
 } else {
-  document.getElementById('static-home')?.remove();
   void (async () => {
     const [{ createRoot }, { default: App }] = await Promise.all([
       import('react-dom/client'),
       import('./App'),
     ]);
+    document.getElementById('static-home')?.remove();
     createRoot(document.getElementById('root')!).render(<App />);
 
     if (import.meta.env.PROD && 'serviceWorker' in navigator) {

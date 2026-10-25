@@ -8,12 +8,18 @@ test('the dev server serves the shared first-paint shell only on app routes', as
     for (const path of [route, `${route}/deep-link`]) {
       const response = await request.get(path, {
         headers: { accept: 'text/html' },
+        maxRedirects: 0,
       });
+      if (path === '/play') {
+        expect(response.status(), path).toBe(301);
+        expect(response.headers().location).toBe('/');
+        continue;
+      }
       expect(response.status(), path).toBe(200);
       const html = await response.text();
       expect(html, path).toContain('class="oathstone-wordmark"');
       expect(html, path).toContain('<link rel="stylesheet"');
-      expect(html, path).not.toContain('Start a new game');
+      expect(html, path).not.toContain('Create a new game');
       expect(html, path).not.toContain('A game of traitors and faithful.');
     }
   }

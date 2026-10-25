@@ -23,6 +23,7 @@ export const config = {
   byline,
   builder,
   siteOrigin,
+  companyPageUrl: 'https://stackstoneconsulting.co.uk/oathstone',
   productionRpId: new URL(siteOrigin).hostname,
   apiOrigin: configuredApiOrigin,
   appIconPath: 'brand/stackstone-icon-dark.svg',

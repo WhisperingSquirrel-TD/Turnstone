@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { renderPublicHomeHtml } from '../artifacts/party-game/src/public-site-content';
+import {
+  displayPreferenceKey,
+  readDisplayPreference,
+} from '../artifacts/party-game/src/game-theme';
 
-test('loading the app route does not reload an open public page', async ({
+test('loading the root entry does not reload an open public information page', async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -8,8 +13,10 @@ test('loading the app route does not reload an open public page', async ({
     'Vite development-server navigation regression runs once in desktop Chromium',
   );
 
-  await page.goto('/');
-  await expect(page.locator('.public-home-hero')).toBeVisible();
+  await page.goto('/faq');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Frequently asked questions' }),
+  ).toBeVisible();
 
   const homeNavigations: string[] = [];
   page.on('framenavigated', (frame) => {
@@ -31,18 +38,18 @@ test('loading the app route does not reload an open public page', async ({
     );
 
   const appPage = await page.context().newPage();
-  await appPage.goto('/play?entry=create');
+  await appPage.goto('/?entry=create');
   await expect(appPage.locator('body')).toBeVisible();
 
   expect(
     await unexpectedReload,
-    'loading /play must not navigate the already-open public page',
+    'loading the root entry must not navigate the already-open public page',
   ).toBe(false);
   expect(homeNavigations).toEqual([]);
   await appPage.close();
 });
 
-test('the public home page uses the shared paper surface and stays mobile-first', async ({
+test('the root entry uses the shared paper surface and stays mobile-first', async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -53,15 +60,13 @@ test('the public home page uses the shared paper surface and stays mobile-first'
   await page.setViewportSize({ width: 320, height: 900 });
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'Start a new game' }),
-  ).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Join a game' })).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'Practise alone first' }),
-  ).toBeVisible();
+  for (const label of ['Create a new game', 'Join a game', 'Practise alone']) {
+    await expect(
+      page.getByRole('button', { name: label, exact: true }),
+    ).toBeVisible();
+  }
 
-  for (const width of [320, 375, 390, 414, 768, 1280]) {
+  for (const width of [320, 375, 390, 414, 430, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     const pageWidth = await page.evaluate(
       () => document.documentElement.scrollWidth,
@@ -72,7 +77,7 @@ test('the public home page uses the shared paper surface and stays mobile-first'
 
     const targets = await page
       .locator(
-        '.public-home-actions a, .public-home-nav a, .public-home-menu summary, .public-home-brand a, .public-home-faq summary, .public-home-demo [data-public-role-demo]',
+        '.entry-choice-list button, .entry-brand-menu summary, .entry-brand-menu a',
       )
       .evaluateAll((elements) =>
         elements.map((element) => {
@@ -97,70 +102,52 @@ test('the public home page uses the shared paper surface and stays mobile-first'
       ),
       `undersized targets at ${width}px`,
     ).toEqual([]);
-    const seal = await page
-      .locator('[data-public-role-demo]')
-      .evaluate((element) => {
-        const rect = element.getBoundingClientRect();
+    if (width <= 430) {
+      const alignment = await page.evaluate(() => {
+        const title = document.querySelector('main#entry-main h1');
+        const choices = document.querySelector('.entry-choice-list');
+        if (!title || !choices) {
+          throw new Error('Entry title or choices are missing');
+        }
+        const bounds = (element: Element) => {
+          const { x, width: elementWidth } = element.getBoundingClientRect();
+          return { center: x + elementWidth / 2, width: elementWidth };
+        };
         return {
-          width: rect.width,
-          height: rect.height,
-          borderRadius: getComputedStyle(element).borderRadius,
+          viewportWidth: window.innerWidth,
+          title: bounds(title),
+          choices: bounds(choices),
+          buttonHeights: Array.from(
+            choices.querySelectorAll('button'),
+            (button) => button.getBoundingClientRect().height,
+          ),
         };
       });
-    expect(seal.width, `demo seal width at ${width}px`).toBeGreaterThanOrEqual(
-      168,
-    );
-    expect(
-      seal.height,
-      `demo seal height at ${width}px`,
-    ).toBeGreaterThanOrEqual(168);
-    expect(seal.borderRadius).toBe('50%');
-    if (width <= 760) {
-      const menu = page.locator('.public-home-menu');
-      const menuButton = menu.locator('summary');
-      await expect(menuButton).toBeVisible();
-      await menuButton.click();
-      await expect(
-        menu.getByRole('link', { name: 'Frequently asked questions' }),
-      ).toBeVisible();
-      await menuButton.click();
-    }
-    if (width <= 760) {
-      const mobileLayout = await page.evaluate(() => {
-        const copy = document.querySelector('.public-home-hero-copy');
-        const actions = document.querySelector('.public-home-actions');
-        const demo = document.querySelector('.public-home-demo');
-        return {
-          viewportHeight: window.innerHeight,
-          actionsBottom: actions?.getBoundingClientRect().bottom ?? Infinity,
-          copyBottom: copy?.getBoundingClientRect().bottom ?? 0,
-          demoTop: demo?.getBoundingClientRect().top ?? 0,
-        };
-      });
-      expect(mobileLayout.actionsBottom).toBeLessThanOrEqual(
-        mobileLayout.viewportHeight,
+      expect(
+        Math.abs(alignment.title.center - alignment.viewportWidth / 2),
+        `entry title centring at ${width}px`,
+      ).toBeLessThanOrEqual(2);
+      expect(
+        Math.abs(alignment.choices.center - alignment.viewportWidth / 2),
+        `entry choices centring at ${width}px`,
+      ).toBeLessThanOrEqual(2);
+      expect(alignment.buttonHeights.every((height) => height >= 44)).toBe(
+        true,
       );
-      expect(mobileLayout.demoTop).toBeGreaterThan(mobileLayout.copyBottom);
     }
 
     if ([320, 390, 768, 1280].includes(width)) {
       const image = await page.screenshot({
-        path: testInfo.outputPath(`public-home-${width}.png`),
+        path: testInfo.outputPath(`root-entry-${width}.png`),
         fullPage: false,
       });
       expect(image.readUInt32BE(16)).toBe(width);
       const visualStyles = await page.evaluate(() => {
-        const hero = document.querySelector('.public-home-hero');
-        const demo = document.querySelector('.public-home-demo');
-        const root = document.querySelector('#static-home');
-        const heading = document.querySelector('.public-home-wordmark');
-        const primary = document.querySelector(
-          '.public-home-actions .primary-action',
-        );
-        const menu = document.querySelector('.public-home-menu');
+        const root = document.querySelector('.entry-experience');
+        const heading = root?.querySelector('h1');
+        const primary = root?.querySelector('.entry-choice-list button');
+        const menu = document.querySelector('.entry-brand-menu');
         return {
-          glow: hero ? getComputedStyle(hero, '::before').backgroundImage : '',
-          demoShadow: demo ? getComputedStyle(demo).boxShadow : '',
           surface: root ? getComputedStyle(root).backgroundColor : '',
           headingSize: heading ? getComputedStyle(heading).fontSize : '',
           primaryHeight: primary
@@ -169,28 +156,12 @@ test('the public home page uses the shared paper surface and stays mobile-first'
           menuDisplay: menu ? getComputedStyle(menu).display : 'missing',
         };
       });
-      expect(visualStyles.glow).toBe('none');
-      expect(visualStyles.demoShadow).toBe('none');
       expect(visualStyles.surface).toBe('rgb(250, 248, 241)');
       expect(visualStyles.headingSize).toBe('30px');
       expect(visualStyles.primaryHeight).toBe(56);
       expect(visualStyles.menuDisplay).not.toBe('none');
     }
   }
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
-  const demo = page.getByRole('button', { name: 'Hold to see your role' });
-  await demo.scrollIntoViewIfNeeded();
-  await expect(demo).toBeVisible();
-  await expect(page.getByText(/^(Traitor|Faithful)$/)).toHaveCount(0);
-  const seal = await demo.boundingBox();
-  if (!seal) throw new Error('Public role demo has no visible bounds');
-  await page.mouse.move(seal.x + seal.width / 2, seal.y + seal.height / 2);
-  await page.mouse.down();
-  await expect(page.getByText(/^(Traitor|Faithful)$/)).toBeVisible();
-  await page.mouse.up();
-  await expect(demo).toContainText('Hold to reveal');
 });
 
 test('entry pages share the paper shell and linked brand footer', async ({
@@ -202,15 +173,15 @@ test('entry pages share the paper shell and linked brand footer', async ({
   );
 
   const screens = [
-    { path: '/', root: '#static-home', hasBrandFooter: true },
+    { path: '/', root: '.entry-experience', hasBrandFooter: true },
     { path: '/join', root: '.entry-experience', hasBrandFooter: false },
     {
-      path: '/play?entry=create',
+      path: '/?entry=create',
       root: '.entry-experience',
       hasBrandFooter: false,
     },
     {
-      path: '/play?entry=rehearsal',
+      path: '/?entry=rehearsal',
       root: '.entry-experience',
       hasBrandFooter: false,
     },
@@ -258,7 +229,7 @@ test('entry pages share the paper shell and linked brand footer', async ({
     const style = await root.evaluate((element) => {
       const heading = element.querySelector('h1');
       const primary =
-        element.querySelector('.public-home-actions .primary-action') ??
+        element.querySelector('.entry-choice-list button') ??
         element.querySelector('.entry-action-dock button') ??
         element.querySelector('.not-found-action');
       return {
@@ -311,6 +282,69 @@ test('entry pages share the paper shell and linked brand footer', async ({
   }
 });
 
+test('legacy static-public demo fixture keeps its role secret until held', async ({
+  page,
+}) => {
+  const fixtureHtml = `<!doctype html>
+    <html lang="en-GB">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <title>Legacy static-public demo fixture</title>
+        <link rel="stylesheet" href="/src/index.css">
+        <link rel="stylesheet" href="/src/public-home.css">
+        <link rel="stylesheet" href="/src/HoldRoleDemo.css">
+      </head>
+      <body>
+        ${renderPublicHomeHtml('/', { staticOnly: false })}
+        <script type="module">
+          import { installPublicHoldDemo } from '/src/public-demo.ts';
+          installPublicHoldDemo();
+        </script>
+      </body>
+    </html>`;
+  await page.route('**/__fixtures/legacy-static-public-demo', (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: fixtureHtml }),
+  );
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/__fixtures/legacy-static-public-demo');
+    const sealBounds = await page
+      .locator('[data-public-role-demo]')
+      .evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          width: rect.width,
+          height: rect.height,
+          borderRadius: getComputedStyle(element).borderRadius,
+        };
+      });
+    expect(
+      sealBounds.width,
+      `legacy fixture seal width at ${width}px`,
+    ).toBeGreaterThanOrEqual(168);
+    expect(
+      sealBounds.height,
+      `legacy fixture seal height at ${width}px`,
+    ).toBeGreaterThanOrEqual(168);
+    expect(sealBounds.borderRadius).toBe('50%');
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/__fixtures/legacy-static-public-demo');
+  const demo = page.getByRole('button', { name: 'Hold to see your role' });
+  await demo.scrollIntoViewIfNeeded();
+  await expect(demo).toBeVisible();
+  await expect(page.getByText(/^(Traitor|Faithful)$/)).toHaveCount(0);
+  const seal = await demo.boundingBox();
+  if (!seal) throw new Error('Public role demo has no visible bounds');
+  await page.mouse.move(seal.x + seal.width / 2, seal.y + seal.height / 2);
+  await page.mouse.down();
+  await expect(page.getByText(/^(Traitor|Faithful)$/)).toBeVisible();
+  await page.mouse.up();
+  await expect(demo).toContainText('Hold to reveal');
+});
+
 test('practice selection and named action stay clear in the narrow dock', async ({
   page,
 }, testInfo) => {
@@ -320,7 +354,7 @@ test('practice selection and named action stay clear in the narrow dock', async 
   );
 
   await page.setViewportSize({ width: 320, height: 640 });
-  await page.goto('/play?entry=rehearsal');
+  await page.goto('/?entry=rehearsal');
 
   const fastChoice = page.getByTestId('button-speed-fast');
   const rehearseButton = page.getByTestId('button-start-rehearsal');
@@ -376,65 +410,96 @@ test('the 375×667 phone viewport keeps home copy and actions on-screen', async 
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-  const geometry = await page.evaluate(() => {
-    const hero = document.querySelector('.public-home-hero');
-    const actions = document.querySelector('.public-home-actions');
-    if (!hero || !actions) throw new Error('Home hero or actions are missing');
-
-    const textBounds = (selector: string) => {
-      const element = document.querySelector(selector);
-      if (!element) throw new Error(`Missing home text: ${selector}`);
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      const { left, right } = range.getBoundingClientRect();
-      return { left, right };
-    };
-    const heroBounds = hero.getBoundingClientRect();
-    const actionBounds = Array.from(
-      actions.querySelectorAll('a'),
-      (element) => {
+  const entryBounds = await page.locator('.entry-experience').boundingBox();
+  const titleBounds = await page
+    .getByRole('heading', { level: 1 })
+    .boundingBox();
+  if (!entryBounds || !titleBounds) {
+    throw new Error('Root entry or title has no visible bounds');
+  }
+  const actionBounds = await page
+    .getByRole('button', {
+      name: /^(Create a new game|Join a game|Practise alone)$/,
+    })
+    .evaluateAll((elements) =>
+      elements.map((element) => {
         const { left, right, bottom } = element.getBoundingClientRect();
         return { left, right, bottom };
-      },
+      }),
     );
 
-    return {
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      hero: { left: heroBounds.left, right: heroBounds.right },
-      text: [
-        textBounds('.public-home-wordmark'),
-        textBounds('.public-home-subtitle'),
-        textBounds('.public-home-byline'),
-      ],
-      actionBounds,
-    };
-  });
-
-  expect(geometry.viewportWidth).toBe(375);
-  expect(geometry.actionBounds).toHaveLength(3);
-  for (const [index, bounds] of geometry.text.entries()) {
-    expect(
-      bounds.left,
-      `home text ${index + 1} clips past the left edge`,
-    ).toBeGreaterThanOrEqual(geometry.hero.left);
-    expect(
-      bounds.right,
-      `home text ${index + 1} clips past the right edge`,
-    ).toBeLessThanOrEqual(geometry.hero.right);
-  }
-  for (const [index, bounds] of geometry.actionBounds.entries()) {
+  expect(actionBounds).toHaveLength(3);
+  expect(titleBounds.x).toBeGreaterThanOrEqual(entryBounds.x);
+  expect(titleBounds.x + titleBounds.width).toBeLessThanOrEqual(
+    entryBounds.x + entryBounds.width,
+  );
+  for (const [index, bounds] of actionBounds.entries()) {
     expect(
       bounds.left,
       `entry action ${index + 1} clips past the left edge`,
-    ).toBeGreaterThanOrEqual(geometry.hero.left);
+    ).toBeGreaterThanOrEqual(entryBounds.x);
     expect(
       bounds.right,
       `entry action ${index + 1} clips past the right edge`,
-    ).toBeLessThanOrEqual(geometry.hero.right);
+    ).toBeLessThanOrEqual(entryBounds.x + entryBounds.width);
     expect(
       bounds.bottom,
       `entry action ${index + 1} is below the first screen`,
-    ).toBeLessThanOrEqual(geometry.viewportHeight);
+    ).toBeLessThanOrEqual(667);
+  }
+});
+
+test('Amendment A entry screenshot capture', async ({ page }, testInfo) => {
+  test.skip(
+    process.env.R7_AMENDMENT_A_CAPTURE !== '1' ||
+      testInfo.project.name !== 'desktop',
+    'Set R7_AMENDMENT_A_CAPTURE=1 to capture the reviewed desktop entry screens.',
+  );
+
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const preference of ['light', 'dark'] as const) {
+      await page.goto('/');
+      await page.evaluate(
+        ({ key, value }) => window.localStorage.setItem(key, value),
+        { key: displayPreferenceKey, value: preference },
+      );
+      const storedPreference = await page.evaluate((key) => {
+        return window.localStorage.getItem(key);
+      }, displayPreferenceKey);
+      expect(readDisplayPreference({ getItem: () => storedPreference })).toBe(
+        preference,
+      );
+
+      await page.goto('/');
+      const entry = page.locator('.entry-experience');
+      await expect(entry).toBeVisible();
+      await expect(entry).toHaveAttribute(
+        'data-game-theme',
+        preference === 'light' ? 'day' : 'night',
+      );
+      await expect(entry).toHaveCSS(
+        'background-color',
+        preference === 'light' ? 'rgb(250, 248, 241)' : 'rgb(27, 24, 21)',
+      );
+      await expect(
+        page.getByRole('button', { name: 'Create a new game', exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Join a game', exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Practise alone', exact: true }),
+      ).toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      const themeName = preference === 'light' ? 'day' : 'night';
+      await page.screenshot({
+        path: `docs/screens/round-7-improvements/entry-${width}-${themeName}.jpg`,
+        type: 'jpeg',
+        quality: 85,
+        fullPage: false,
+      });
+      expect(await page.evaluate(() => window.innerWidth)).toBe(width);
+    }
   }
 });

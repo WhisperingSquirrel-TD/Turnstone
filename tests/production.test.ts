@@ -22,7 +22,8 @@ describe('actual built production website', () => {
     );
     const home = await request(app).get('/');
     expect(home.status).toBe(200);
-    expect(home.text).toContain('Start a new game');
+    expect(home.text).toContain('Create a new game');
+    expect(home.text).toContain('https://stackstoneconsulting.co.uk/oathstone');
 
     const appShellPaths = APP_SHELL_ROUTE_BASES.flatMap((route) => [
       route,
@@ -30,13 +31,18 @@ describe('actual built production website', () => {
     ]);
     for (const path of appShellPaths) {
       const response = await request(app).get(path);
+      if (path === '/play') {
+        expect(response.status).toBe(301);
+        expect(response.headers.location).toBe('/');
+        continue;
+      }
       expect(response.status, path).toBe(200);
       expect(response.text).toContain(
         '<header class="public-home-brand public-shell-header',
       );
       expect(response.text).toContain('class="oathstone-wordmark"');
       expect(response.text).toMatch(/<link\b[^>]*rel="stylesheet"/);
-      expect(response.text).not.toContain('Start a new game');
+      expect(response.text).not.toContain('Create a new game');
       expect(response.text).not.toContain('A game of traitors and faithful.');
       expect(response.text).not.toContain('Frequently asked questions');
       expect(response.text).not.toContain('application/ld+json');
@@ -49,7 +55,7 @@ describe('actual built production website', () => {
     const app = createWebApp(
       new URL('../artifacts/party-game/dist/public', import.meta.url).pathname,
     );
-    for (const path of ['/', '/play']) {
+    for (const path of ['/', '/join']) {
       const first = await request(app).get(path);
       const second = await request(app).get(path);
       expect(first.status).toBe(200);

@@ -14,13 +14,11 @@ import { createWebManifest } from './src/pwa-manifest';
 import { validatePublicBaseUrl } from './src/lobby-code-url';
 import { buildStaticPublicSite } from './src/static-public-build';
 import {
-  getPublicTitle,
   renderLlmsTxt,
-  renderPublicHomeHtml,
+  renderGameEntryHtml,
   renderPublicAppShellHtml,
   renderPublicPageDocument,
   renderSitemapXml,
-  structuredPublicData,
   type PublicPageSlug,
 } from './src/public-site-content';
 import { en } from './src/locale/en-GB';
@@ -193,21 +191,18 @@ export default defineConfig({
             throw new Error(`Unexpected HTML route: ${route}`);
           }
           return html
-            .replaceAll('__PUBLIC_TITLE__', escapeHtml(getPublicTitle()))
+            .replaceAll('__PUBLIC_TITLE__', escapeHtml(config.appName))
             .replaceAll(
               '__PUBLIC_DESCRIPTION__',
-              escapeHtml(en.publicSite.answer(config.appName)),
+              escapeHtml(en.entry.welcomeDescription),
             )
             .replaceAll(
               '__PUBLIC_ROBOTS__',
               config.preLaunch ? 'noindex, nofollow' : 'index, follow',
             )
-            .replaceAll('__CANONICAL_URL__', escapeHtml(config.siteOrigin))
-            .replaceAll(
-              '__PUBLIC_JSON_LD__',
-              JSON.stringify(structuredPublicData()).replaceAll('<', '\\u003c'),
-            )
-            .replaceAll('__PUBLIC_HOME__', renderPublicHomeHtml(basePath));
+            .replaceAll('__CANONICAL_URL__', escapeHtml(config.companyPageUrl))
+            .replaceAll('__PUBLIC_JSON_LD__', '[]')
+            .replaceAll('__PUBLIC_HOME__', renderGameEntryHtml(basePath));
         },
       },
       configureServer(server) {
@@ -215,6 +210,14 @@ export default defineConfig({
           const pathname = new URL(request.url ?? '/', 'http://vite.local')
             .pathname;
           const route = appRelativePath(pathname);
+          if (route === APP_ROUTE_PATHS.play) {
+            const query = new URL(request.url ?? '/', 'http://vite.local')
+              .search;
+            response.statusCode = 301;
+            response.setHeader('Location', `${baseHref}${query}`);
+            response.end();
+            return;
+          }
           if (route === '/robots.txt') {
             response.statusCode = 200;
             response.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -309,7 +312,13 @@ export default defineConfig({
         if (fontPreloadHrefs.length !== 3) {
           throw new Error('Expected three self-hosted public font assets.');
         }
-        for (const page of ['faq', 'compare'] as const) {
+        for (const page of [
+          'about',
+          'how-to-play',
+          'faq',
+          'compare',
+          'coming-soon',
+        ] as const) {
           this.emitFile({
             type: 'asset',
             fileName: `${page}/index.html`,

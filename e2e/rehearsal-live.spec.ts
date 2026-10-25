@@ -1238,7 +1238,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         });
       }
     });
-    await page.goto('/play');
+    await page.goto('/');
     captureAppDocumentLoads = true;
     await page.getByTestId('button-practise-alone').click();
     await expect(
@@ -1301,7 +1301,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     await expect(page.getByTestId('text-entry-brand')).toBeVisible();
     await page.getByTestId('text-entry-brand').click();
     await expect(
-      page.getByRole('link', { name: 'Start a new game', exact: true }),
+      page.getByRole('button', { name: 'Create a new game', exact: true }),
     ).toBeVisible();
     expect(appDocumentLoads).toBe(0);
     await page.goBack();
@@ -2486,7 +2486,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       .getByRole('button', { name: 'Back to start', exact: true })
       .click();
     await expect(
-      page.getByRole('button', { name: 'Start a new game', exact: true }),
+      page.getByRole('button', { name: 'Create a new game', exact: true }),
     ).toBeVisible();
     expect(appDocumentLoads).toBe(0);
     await page.goBack();
@@ -2520,7 +2520,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
       .getByRole('button', { name: 'Back to start', exact: true })
       .click({ timeout: 5_000 });
     await expect(
-      page.getByRole('button', { name: 'Start a new game', exact: true }),
+      page.getByRole('button', { name: 'Create a new game', exact: true }),
     ).toBeVisible({ timeout: 5_000 });
     expect(appDocumentLoads).toBe(0);
 
@@ -2571,7 +2571,7 @@ test('a cold browser restart restores the existing seat from its stored token @r
   let coldContext: Awaited<ReturnType<typeof browser.newContext>> | null = null;
 
   try {
-    await page.goto('/play');
+    await page.goto('/');
     await page.getByTestId('button-practise-alone').click();
     await page.getByTestId('input-rehearsal-name').fill('Cold restart');
     await page.getByTestId('button-speed-fast').click();

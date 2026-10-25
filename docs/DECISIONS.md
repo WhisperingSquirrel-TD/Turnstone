@@ -1,5 +1,30 @@
 # Decisions and open choices — complete specification
 
+## Round 7 Amendment A — entry surface (25 October 2026)
+
+The owner-designated findable home is https://stackstoneconsulting.co.uk/oathstone.
+Do not edit or redirect that company page. The game host's `/` is the existing
+paper entry, not a second marketing home. `/play` and `/play/` return HTTP 301
+to `/`, preserving query parameters; browsers retain the fragment. React
+navigation replaces the legacy location too. The root canonical points to
+the company page. App routes retain noindex and no canonical, including after
+client navigation. Public information pages and their indexing policy stay,
+with a company-page link. The separate static-public build keeps its purpose.
+
+The production document/route map omitted About, How to play and Coming soon;
+retain those existing development information pages in the built server too.
+Apply the entry decision only: do not change SPEC section 28 or hosting
+configuration to reconcile older contradictory wording. See QUESTIONS.
+
+The screenshot check exposed entry CSS forcing day variables even when the
+saved preference had correctly set `data-game-theme="night"`. A failing
+computed-background test reproduced paper instead of night; separate
+day/night variable aliases now honour the existing preference. This is an
+appearance correction, not a new theme rule. The default entry stays paper.
+Legacy public-demo geometry and hold/release privacy checks now use a
+test-only fulfilled fixture made from the real renderer/module/CSS; no demo
+was added to a production information page.
+
 ## 19 October 2026 — Milestone 5 acceptance
 
 The owner accepted the Milestone 5 real-phone rehearsal and authorized work on Milestone 6. This clears the Milestone 5 review gate only; it does not approve publishing, paid services, production secrets, domain or DNS changes.

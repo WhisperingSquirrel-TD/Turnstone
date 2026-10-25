@@ -139,7 +139,7 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
     });
     await organiser.goto('/');
     await organiser
-      .getByRole('link', { name: 'Start a new game', exact: true })
+      .getByRole('button', { name: 'Create a new game', exact: true })
       .click();
     await organiser
       .getByRole('textbox', { name: 'Game name (optional)' })

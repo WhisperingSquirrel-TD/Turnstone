@@ -37,22 +37,32 @@ const render = (path: string) =>
   });
 
 describe('routes', () => {
-  it('renders the answer-first public home and byline', async () => {
+  it('renders the entry welcome at root with one heading and no marketing content', async () => {
     const html = await render('/');
-    expect(html).toContain('Oathstone is a free game of traitors and faithful');
-    expect(html).toContain('How it works');
-    expect(html).toContain(
-      'How do we play a traitor game at home with 15 people?',
-    );
+    expect(html.match(/<h1\b/g)).toHaveLength(1);
+    expect(html).toContain('Join a game');
+    expect(html).toContain('data-testid="link-about-oathstone"');
+    expect(html).not.toContain('How it works');
+    expect(html).not.toContain('Oathstone is a free game of traitors');
     expect(html).toContain('made by Stackstone Consulting');
+    expect(html.indexOf('button-join-game')).toBeLessThan(
+      html.indexOf('button-create-game'),
+    );
+    expect(html.indexOf('button-create-game')).toBeLessThan(
+      html.indexOf('button-practise-alone'),
+    );
+  });
+  it('puts the invite code straight into the name field on join links', async () => {
+    const html = await render('/join/abc');
+    expect(html).toContain('data-testid="brand-footer-entry"');
   });
   it('starts with the E1 title card and keeps all entry actions enabled without fields', async () => {
-    const html = await render('/play');
+    const html = await render('/');
     expect(html).toContain('A game of traitors and faithful.');
     expect(html).toContain('Everyone plays. Even the host.');
-    expect(html).toContain('Start a new game');
+    expect(html).toContain('Create a new game');
     expect(html).toContain('Join a game');
-    expect(html).toContain('Practise alone first');
+    expect(html).toContain('Practise alone');
     expect(html).not.toContain('<input');
     expect(html).not.toContain('in the room');
     expect(html).not.toContain('Rejoin an existing seat');
@@ -110,14 +120,14 @@ describe('routes', () => {
     expect(html).not.toContain('Traitor');
   });
   it('keeps headers Oathstone-only and restores the Stackstone footer on entry and player screens', async () => {
-    const entryHtml = await render('/play');
+    const entryHtml = await render('/');
     const entryHeader =
       entryHtml.match(/<header class="entry-brand"[\s\S]*?<\/header>/)?.[0] ??
       '';
     const entryFooter =
       entryHtml.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
 
-    expect(entryHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(entryHeader).not.toContain('made by Stackstone');
     expect(entryHeader).not.toContain('stackstone-icon-dark-outlined.svg');
     expect(entryFooter).toContain('made by Stackstone Consulting');
     expect(entryFooter).toContain('href="https://stackstoneconsulting.co.uk/"');
@@ -129,13 +139,13 @@ describe('routes', () => {
       )?.[0] ?? '';
     const playerFooter =
       playerHtml.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
-    expect(playerHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(playerHeader).not.toContain('made by Stackstone');
     expect(playerHeader).not.toContain('stackstone-icon-dark-outlined.svg');
     expect(playerFooter).toContain('made by Stackstone Consulting');
     expect(playerHtml).toContain('href="https://stackstoneconsulting.co.uk/"');
   });
   it('links the Stackstone mark externally, opening a new tab only in the player app', async () => {
-    const publicHtml = await render('/');
+    const publicHtml = await render('/faq');
     const playerHtml = await render('/game/rehearsal-id');
     const publicFooter =
       publicHtml.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
@@ -149,7 +159,7 @@ describe('routes', () => {
     expect(playerFooter).toContain('rel="noopener noreferrer"');
   });
   it('keeps public headers Oathstone-only and links to Stackstone in the footer', async () => {
-    const publicHtml = await render('/');
+    const publicHtml = await render('/faq');
     const header =
       publicHtml.match(
         /<header class="public-home-brand public-shell-header[\s\S]*?<\/header>/,
@@ -170,7 +180,7 @@ describe('routes', () => {
       staticHome.match(
         /<footer class="public-home-footer"[\s\S]*?<\/footer>/,
       )?.[0] ?? '';
-    expect(staticHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(staticHeader).not.toContain('made by Stackstone');
     expect(staticHeader).not.toContain('/brand/stackstone-icon-dark.svg');
     expect(staticFooter).toContain('made by Stackstone Consulting');
     expect(staticFooter).toContain(
@@ -180,7 +190,7 @@ describe('routes', () => {
     expect(staticFooter).toContain('alt="Stackstone Consulting"');
   });
   it('shows the Stackstone credit on every app screen', async () => {
-    const homeHtml = await render('/');
+    const homeHtml = await render('/faq');
     expect(homeHtml).toContain('made by Stackstone Consulting');
     expect(homeHtml).toContain('data-testid="brand-footer-shell"');
     expect(homeHtml).toContain('src="/brand/stackstone-icon.svg"');
@@ -188,7 +198,7 @@ describe('routes', () => {
     for (const path of [
       '/faq',
       '/compare',
-      '/play',
+      '/',
       '/join',
       '/game/rehearsal-id',
       '/nope',
@@ -217,22 +227,22 @@ describe('routes', () => {
       playerHtml.match(
         /<header class="public-home-brand public-shell-header[\s\S]*?<\/header>/,
       )?.[0] ?? '';
-    expect(playerHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(playerHeader).not.toContain('made by Stackstone');
     expect(playerHeader).not.toContain('stackstone-icon-dark-outlined.svg');
 
-    const entryHtml = await render('/play');
+    const entryHtml = await render('/');
     const entryHeader =
       entryHtml.match(/<header class="entry-brand"[\s\S]*?<\/header>/)?.[0] ??
       '';
-    expect(entryHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(entryHeader).not.toContain('made by Stackstone');
     expect(entryHeader).not.toContain('stackstone-icon-dark-outlined.svg');
 
-    const publicHtml = await render('/');
+    const publicHtml = await render('/faq');
     const publicHeader =
       publicHtml.match(
         /<header class="public-home-brand public-shell-header[\s\S]*?<\/header>/,
       )?.[0] ?? '';
-    expect(publicHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(publicHeader).not.toContain('made by Stackstone');
     expect(publicHeader).not.toContain('stackstone-icon-dark-outlined.svg');
 
     const staticHome = renderPublicHomeHtml('/');
@@ -242,7 +252,7 @@ describe('routes', () => {
       staticHome.match(
         /<footer class="public-home-footer"[\s\S]*?<\/footer>/,
       )?.[0] ?? '';
-    expect(staticHeader).not.toContain('stackstoneconsulting.co.uk');
+    expect(staticHeader).not.toContain('made by Stackstone');
     expect(staticHeader).not.toContain('stackstone-icon-dark-outlined.svg');
     expect(staticFooter).toContain('made by Stackstone Consulting');
     expect(staticFooter).toContain(

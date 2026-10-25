@@ -45,12 +45,12 @@ for (const width of [320, 390, 430]) {
       }
     }
     // Setup screens use the same saved device choice, not hard-coded paper.
-    await page.goto('/play');
+    await page.goto('/');
     await expect(page.locator('.entry-experience')).toHaveAttribute(
       'data-game-theme',
       'day',
     );
-    await page.goto('/play?testDisplay=dark');
+    await page.goto('/?testDisplay=dark');
     await expect(page.locator('.entry-experience')).toHaveAttribute(
       'data-game-theme',
       'night',

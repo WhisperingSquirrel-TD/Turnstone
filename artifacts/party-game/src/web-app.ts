@@ -83,6 +83,16 @@ export function createWebApp(
     }),
   );
   app.get('/{*path}', async (req, res) => {
+    if (
+      !activeDeploymentMode.comingSoonMode &&
+      req.path.replace(/\/+$/, '') === APP_ROUTE_PATHS.play
+    ) {
+      const query = req.originalUrl.includes('?')
+        ? req.originalUrl.slice(req.originalUrl.indexOf('?'))
+        : '';
+      res.redirect(301, `/${query}`);
+      return;
+    }
     const isHomePage = req.path === APP_ROUTE_PATHS.home;
     if (!isHomePage && !isAppShellRoute(req.path)) {
       res.status(404).type('text').send('Not Found');

@@ -1,5 +1,16 @@
 # Status for reviewer
 
+**Round 7 Amendment A — ready to push after Verify #306 GREEN
+(`4bc42ca2`).** One paper entry at `/`, HTTP 301 from `/play`, company canonical/
+About link, app noindex and direct join-name prefill. Local: 152 client tests,
+18 targeted Node tests, typecheck, ESLint, format, build and focused desktop/
+Pixel/iPhone checks pass (latest entry routing: 15/15). Six entry JPEGs are in
+`docs/screens/round-7-improvements/entry-{320,390,430}-{day,night}.jpg`.
+The capture test caught an existing entry CSS override forcing day colours
+despite a saved Dark choice: red computed-colour test first, theme-variable
+fix, then all six captures passed. No rules or deployment settings changed.
+Missions review has not started and waits for Amendment A's green Verify.
+
 **Round 7 real-phone findings COMPLETE — main `4bc42ca2`, Verify #306 GREEN
 (first attempt). Implementation `e44f8c99`, gallery `8585d689`.**
 All 236 client unit tests, both type checks, lint and the focused Pixel/iPhone

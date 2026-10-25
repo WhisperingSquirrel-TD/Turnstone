@@ -73,8 +73,18 @@ export function staticClient(directory: string): RequestHandler {
         [APP_ROUTE_PATHS.home]: '/index.html',
         [APP_ROUTE_PATHS.faq]: '/faq/index.html',
         [APP_ROUTE_PATHS.compare]: '/compare/index.html',
+        [APP_ROUTE_PATHS.about]: '/about/index.html',
+        [APP_ROUTE_PATHS.howToPlay]: '/how-to-play/index.html',
+        [APP_ROUTE_PATHS.comingSoon]: '/coming-soon/index.html',
       };
       const normalized = pathname.replace(/\/+$/, '') || '/';
+      if (normalized === APP_ROUTE_PATHS.play) {
+        const query = request.originalUrl.includes('?')
+          ? request.originalUrl.slice(request.originalUrl.indexOf('?'))
+          : '';
+        response.redirect(301, `/${query}`);
+        return;
+      }
       const resource = isAppShellRoute(pathname)
         ? '/app-shell.html'
         : (publicPages[normalized] ?? pathname);

@@ -1,5 +1,19 @@
 # Open owner questions
 
+## Amendment A versus older hosting wording — non-blocking reconciliation
+
+Amendment A designates https://stackstoneconsulting.co.uk/oathstone as the
+single findable home and explicitly says not to redirect it. SPEC section 28
+and older HOSTING wording instead expect that company page to redirect to the
+game host; older requirements also describe a marketing home at `/`.
+
+Applied the approved decision to the game-host entry only: paper entry,
+company canonical/About link, legacy `/play` redirect and information pages
+preserved. No SPEC, hosting setting or company site was changed.
+Recommendation: the owner should formally reconcile that older wording in a
+later documentation-only decision. This is non-blocking for the explicitly
+approved entry work, not permission to deploy or change DNS.
+
 ## Q12 — Finished-game roster regression found after the slot-2 repair
 
 **Evidence:** Verify #282 on `5329db7` passed every suite except

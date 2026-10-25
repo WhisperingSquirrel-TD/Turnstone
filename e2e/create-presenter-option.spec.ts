@@ -7,7 +7,7 @@ test('presenter screen is off by default and can be opted into at game creation'
     route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
   );
 
-  await page.goto('/play');
+  await page.goto('/');
   await page.getByTestId('button-create-game').click();
   await page.getByTestId('button-continue-create-name').click();
   await page.getByTestId('button-continue-player-count').click();

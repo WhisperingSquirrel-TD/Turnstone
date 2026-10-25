@@ -14,11 +14,16 @@ beforeAll(async () => {
   await mkdir(join(directory, 'assets'));
   await mkdir(join(directory, 'faq'));
   await mkdir(join(directory, 'compare'));
+  for (const page of ['about', 'how-to-play', 'coming-soon'])
+    await mkdir(join(directory, page));
   for (const [name, text] of Object.entries({
     'index.html': '<main>Public home</main>',
     'app-shell.html': '<main>Oathstone shell</main>',
     'faq/index.html': '<main>Questions</main>',
     'compare/index.html': '<main>Comparison</main>',
+    'about/index.html': '<main>About</main>',
+    'how-to-play/index.html': '<main>How to play</main>',
+    'coming-soon/index.html': '<main>Coming soon</main>',
     'manifest.webmanifest': '{"name":"Oathstone"}',
     'sw.js': 'self.addEventListener("fetch", () => {});',
     'robots.txt': 'User-agent: *\nDisallow: /\n',
@@ -53,6 +58,12 @@ describe('single-origin production client', () => {
     for (const route of APP_SHELL_ROUTE_BASES) {
       for (const suffix of ['', '/example']) {
         const response = await request(server).get(route + suffix);
+        if (route === '/play' && suffix === '') {
+          expect(response.status).toBe(301);
+          expect(response.headers.location).toBe('/');
+          expect(response.headers['x-robots-tag']).toBe('noindex, nofollow');
+          continue;
+        }
         expect(response.status).toBe(200);
         expect(response.text).toBe('<main>Oathstone shell</main>');
         expect(response.headers['cache-control']).toBe('no-cache');
@@ -62,6 +73,9 @@ describe('single-origin production client', () => {
       ['/', 'Public home'],
       ['/faq', 'Questions'],
       ['/compare/', 'Comparison'],
+      ['/about', 'About'],
+      ['/how-to-play', 'How to play'],
+      ['/coming-soon', 'Coming soon'],
     ]) {
       expect((await request(server).get(path!)).text).toContain(text);
     }

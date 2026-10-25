@@ -10,7 +10,7 @@ test('six game-code inputs remain reachable touch targets from 320px upward', as
   await page.route('**/api/csrf', (route) =>
     route.fulfill({ json: { csrfToken: 'c'.repeat(64) } }),
   );
-  await page.goto('/play');
+  await page.goto('/');
   await page.getByRole('button', { name: 'Join a game', exact: true }).click();
 
   const characters = page.getByRole('textbox', {
@@ -53,7 +53,7 @@ test('entry distinguishes the shared game code from both players personal four-d
   await page.route('**/api/join/name-check', (route) =>
     route.fulfill({ json: { status: 'available' } }),
   );
-  await page.goto('/play');
+  await page.goto('/');
   await page.getByRole('button', { name: 'Join a game', exact: true }).click();
   await expect(
     page.getByText(/shared code has six letters or numbers/),
@@ -72,9 +72,9 @@ test('entry distinguishes the shared game code from both players personal four-d
   await expect(
     page.getByText(/your private 4-digit PIN, not the game code/),
   ).toBeVisible();
-  await page.goto('/play');
+  await page.goto('/');
   await page
-    .getByRole('button', { name: 'Start a new game', exact: true })
+    .getByRole('button', { name: 'Create a new game', exact: true })
     .click();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
@@ -143,7 +143,7 @@ test('mobile join and rehearsal stay enabled after the same-origin CSRF handshak
     (response) => new URL(response.url()).pathname === '/api/csrf',
     { timeout: 15_000 },
   );
-  await page.goto('/play');
+  await page.goto('/');
   const csrfResponse = await csrfResponsePromise.catch(async () => {
     const browserState = await page
       .evaluate(() => ({
@@ -174,14 +174,14 @@ test('mobile join and rehearsal stay enabled after the same-origin CSRF handshak
   await expect(page.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Join a game' })).toBeEnabled();
   await expect(
-    page.getByRole('button', { name: 'Practise alone first' }),
+    page.getByRole('button', { name: 'Practise alone' }),
   ).toBeEnabled();
   await page.getByRole('button', { name: 'Join a game' }).click();
   await expect(
     page.getByRole('heading', { name: 'What’s the game code?' }),
   ).toBeVisible();
-  await page.goto('/play');
-  await page.getByRole('button', { name: 'Practise alone first' }).click();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Practise alone' }).click();
   await expect(
     page.getByRole('heading', { name: 'Practise alone first' }),
   ).toBeVisible();
@@ -213,7 +213,7 @@ test('mobile CSRF setup failures explain how to recover', async ({
     }),
   );
 
-  await page.goto('/play');
+  await page.goto('/');
   const alert = page.getByRole('alert');
   await expect(alert).toContainText('Check your connection');
   await expect(alert.getByRole('button', { name: 'Try again' })).toBeVisible();

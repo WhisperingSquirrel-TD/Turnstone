@@ -81,9 +81,9 @@ test('the public home page does not request CSRF on load', async ({ page }) => {
 test('public pages stay centred and usable across phone, tablet and desktop widths', async ({
   page,
 }) => {
-  for (const width of [320, 375, 390, 414, 768, 1280]) {
+  for (const width of [320, 375, 390, 414, 430, 768, 1280]) {
     await page.setViewportSize({ width, height: width < 500 ? 844 : 1024 });
-    for (const route of ['/', '/faq', '/compare']) {
+    for (const route of ['/about', '/how-to-play', '/faq', '/compare']) {
       await page.goto(route);
       const layout = await page.evaluate(() => {
         const rect = (selector: string) => {
@@ -93,25 +93,7 @@ test('public pages stay centred and usable across phone, tablet and desktop widt
           return { x, y, width, height };
         };
         const main = rect('main');
-        const title = rect('#public-home-title');
-        const actions = rect('.public-home-actions');
-        const titleElement = document.querySelector('#public-home-title');
-        const titleRange = document.createRange();
-        if (titleElement) titleRange.selectNodeContents(titleElement);
-        const titleTextBounds = titleElement
-          ? (() => {
-              const { x, width } = titleRange.getBoundingClientRect();
-              return { x, width };
-            })()
-          : null;
-        const heroCopy = document.querySelector<HTMLElement>(
-          '.public-home-hero-copy',
-        );
-        const demo = rect('.public-home-demo');
         const menu = document.querySelector<HTMLElement>('.public-home-menu');
-        const nav = document.querySelector<HTMLElement>(
-          '.public-home-brand > .public-home-nav',
-        );
         return {
           viewportWidth: window.innerWidth,
           scrollWidth: Math.max(
@@ -119,18 +101,7 @@ test('public pages stay centred and usable across phone, tablet and desktop widt
             document.body.scrollWidth,
           ),
           main,
-          title,
-          titleTextBounds,
-          actions,
-          demo,
-          heroCopyTextAlign: heroCopy
-            ? getComputedStyle(heroCopy).textAlign
-            : 'missing',
           menuDisplay: menu ? getComputedStyle(menu).display : 'missing',
-          navDisplay: nav ? getComputedStyle(nav).display : 'missing',
-          actionHeights: Array.from(
-            document.querySelectorAll<HTMLElement>('.public-home-actions a'),
-          ).map((element) => element.getBoundingClientRect().height),
         };
       });
 
@@ -149,39 +120,6 @@ test('public pages stay centred and usable across phone, tablet and desktop widt
         `${route} menu at ${width}px`,
       ).toBeVisible();
       expect(layout.menuDisplay).not.toBe('none');
-      expect(layout.navDisplay).toBe('missing');
-
-      if (route === '/' && width <= 414) {
-        expect(layout.title).not.toBeNull();
-        expect(layout.titleTextBounds).not.toBeNull();
-        expect(layout.actions).not.toBeNull();
-        expect(
-          Math.abs(
-            layout.titleTextBounds!.x +
-              layout.titleTextBounds!.width / 2 -
-              layout.viewportWidth / 2,
-          ),
-          `hero title centring at ${width}px`,
-        ).toBeLessThanOrEqual(2);
-        expect(layout.heroCopyTextAlign).toBe('center');
-        expect(
-          Math.abs(
-            layout.actions!.x +
-              layout.actions!.width / 2 -
-              layout.viewportWidth / 2,
-          ),
-          `actions centring at ${width}px`,
-        ).toBeLessThanOrEqual(2);
-        expect(layout.actionHeights.every((height) => height >= 44)).toBe(true);
-      }
-
-      if (route === '/' && width === 768) {
-        expect(layout.demo).not.toBeNull();
-        expect(
-          layout.title!.x + layout.title!.width,
-          'tablet hero copy must not overlap the demo',
-        ).toBeLessThan(layout.demo!.x);
-      }
     }
   }
 });
@@ -207,7 +145,7 @@ test('the comparison route opens directly in a fresh browser page', async ({
 test('all public pages fit the requested widths in portrait and landscape', async ({
   page,
 }) => {
-  const widths = [320, 360, 375, 390, 414, 768, 1024, 1280];
+  const widths = [320, 360, 375, 390, 414, 430, 768, 1024, 1280];
 
   for (const route of PUBLIC_MARKETING_ROUTE_PATHS) {
     const response = await page.goto(route);
@@ -302,7 +240,7 @@ test('all public pages fit the requested widths in portrait and landscape', asyn
 test('public pages have a working keyboard skip link and visible focus style', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/about');
   const skipLink = page.getByRole('link', { name: 'Skip to content' });
   await page.keyboard.press('Tab');
   await expect(skipLink).toBeFocused();
@@ -380,43 +318,34 @@ test('home and app first paint stay styled with JavaScript disabled', async ({
 
   const homeResponse = await page.goto('/');
   expect(homeResponse?.status()).toBe(200);
-  const homeBrand = page.locator(
-    '#static-home header.public-home-brand .oathstone-wordmark',
-  );
-  await expect(homeBrand).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'Start a new game' }),
-  ).toBeVisible();
-  await expect(page.locator('#static-home')).toContainText(
-    'A game of traitors and faithful.',
-  );
+  const rootEntry = page.locator('#static-home.safe-page');
+  await expect(rootEntry).toBeVisible();
+  await expect(rootEntry.locator('.game-entry-static')).toBeVisible();
+  for (const choice of ['Create a new game', 'Join a game', 'Practise alone']) {
+    await expect(
+      page.getByRole('link', { name: choice, exact: true }),
+    ).toBeVisible();
+  }
   expect(
-    await homeBrand.evaluate((element) => getComputedStyle(element).fontFamily),
+    await page
+      .getByRole('heading', { level: 1 })
+      .evaluate((element) => getComputedStyle(element).fontFamily),
   ).toContain('Playfair Display');
   expect(
     await page
-      .locator('body')
-      .evaluate((element) => getComputedStyle(element).backgroundImage),
-  ).toContain('linear-gradient');
+      .locator('#static-home.safe-page')
+      .evaluate((element) => getComputedStyle(element).backgroundColor),
+  ).toBe('rgb(250, 248, 241)');
 
-  const playResponse = await page.goto('/play');
-  expect(playResponse?.status()).toBe(200);
-  const appBrand = page.locator(
-    '#static-home header.public-home-brand.public-shell-header .oathstone-wordmark',
+  const aboutResponse = await page.goto('/about');
+  expect(aboutResponse?.status()).toBe(200);
+  await expect(page.locator('main#main')).toContainText(
+    'Oathstone is an independent game made by Stackstone Consulting',
   );
-  await expect(appBrand).toBeVisible();
-  await expect(appBrand.locator('.text-gilt')).toBeVisible();
-  expect((await appBrand.innerText()).replace(/\s+/g, '')).toBe('Oathstone');
-  const appShellText = await page.locator('#static-home').innerText();
-  expect(appShellText).not.toContain('Start a new game');
-  expect(appShellText).not.toContain('A game of traitors and faithful.');
-  expect(
-    await appBrand.evaluate((element) => getComputedStyle(element).fontFamily),
-  ).toContain('Playfair Display');
   expect(
     await page
-      .locator('body')
+      .locator('main#main')
       .evaluate((element) => getComputedStyle(element).backgroundImage),
-  ).toContain('linear-gradient');
+  ).toBe('none');
   expect(blockedScripts).toBeGreaterThan(0);
 });

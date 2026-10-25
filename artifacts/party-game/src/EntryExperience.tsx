@@ -670,7 +670,7 @@ export function EntryExperience({
             <Link to={config.routes.compare}>
               {en.publicSite.compareHeading}
             </Link>
-            <Link to={config.routes.play}>{en.nav.play}</Link>
+            <a href={config.companyPageUrl}>About Oathstone</a>
           </div>
         </details>
       </header>
@@ -710,6 +710,14 @@ export function EntryExperience({
             <nav className="entry-choice-list" aria-label={copy.brand}>
               <button
                 className="entry-primary-action"
+                data-testid="button-join-game"
+                type="button"
+                onClick={beginJoin}
+              >
+                {copy.joinGame}
+              </button>
+              <button
+                className="entry-secondary-action"
                 data-testid="button-create-game"
                 type="button"
                 onClick={() => moveTo('create-name')}
@@ -718,14 +726,6 @@ export function EntryExperience({
               </button>
               <button
                 className="entry-secondary-action"
-                data-testid="button-join-game"
-                type="button"
-                onClick={beginJoin}
-              >
-                {copy.joinGame}
-              </button>
-              <button
-                className="entry-text-action"
                 data-testid="button-practise-alone"
                 type="button"
                 onClick={() => moveTo('rehearsal-setup')}
@@ -733,6 +733,13 @@ export function EntryExperience({
                 {copy.practiseAlone}
               </button>
             </nav>
+            <a
+              className="entry-about-link"
+              data-testid="link-about-oathstone"
+              href={config.companyPageUrl}
+            >
+              About Oathstone
+            </a>
           </section>
         )}
 

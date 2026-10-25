@@ -70,10 +70,28 @@ function renderPublicHeader(
           <a href="${escapeHtml(`${basePath}faq`)}">${escapeHtml(en.publicSite.faqHeading)}</a>
           <a href="${escapeHtml(`${basePath}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a>
           ${playLink}
+          <a href="${escapeHtml(config.companyPageUrl)}">About Oathstone</a>
         </div>
       </details>
     </header>
   `;
+}
+
+/** The game host is a play surface; public information documents stay separate. */
+export function renderGameEntryHtml(basePath = '/'): string {
+  const base = normaliseBasePath(basePath);
+  return `${renderPublicHeader(base)}
+    <main id="main" class="game-entry-static">
+      <h1>${escapeHtml(config.appName)}</h1>
+      <p>${escapeHtml(en.entry.welcomeDescription)}</p>
+      <nav aria-label="${escapeHtml(config.appName)}">
+        <a href="${escapeHtml(`${base}join`)}">${escapeHtml(en.entry.joinGame)}</a>
+        <a href="${escapeHtml(`${base}?entry=create`)}">${escapeHtml(en.entry.createGame)}</a>
+        <a href="${escapeHtml(`${base}?entry=rehearsal`)}">${escapeHtml(en.entry.practiseAlone)}</a>
+      </nav>
+      <a class="game-entry-about" href="${escapeHtml(config.companyPageUrl)}">About Oathstone</a>
+    </main>
+    ${renderStackstoneFooterLink(base)}`;
 }
 
 function renderStackstoneFooterLink(basePath: string): string {

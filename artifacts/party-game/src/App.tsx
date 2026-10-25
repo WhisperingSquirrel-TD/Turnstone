@@ -22,6 +22,7 @@ import {
 import {
   BrowserRouter,
   Link,
+  Navigate,
   Route,
   Routes,
   useLocation,
@@ -50,6 +51,7 @@ import type {
   VisitorView,
 } from '@workspace/api-client-react';
 import { config } from '@/config';
+import { RouteMetadata } from './RouteMetadata';
 import { BrandFooter, BrandSurfaceContext } from './BrandFooter';
 import {
   GameBottomBar,
@@ -91,13 +93,12 @@ import {
   type GameConnectionState,
   type GameRealtimeSocket,
 } from './game-socket';
-import { HoldRoleDemo } from './HoldRoleDemo';
 import { lobbyCodeJoinUrl } from './lobby-code-url';
 import {
   rehearsalGuideStepKey,
   shouldShowRehearsalGuide,
 } from './rehearsal-guide-step';
-import { getPublicFacts } from './public-site-content';
+import { canonicalPlayTarget } from './legacy-play-redirect';
 import { getAdvanceControlState, isAdvanceConflict } from './advance-control';
 import {
   clearPrivateChoiceDraft,
@@ -467,7 +468,7 @@ function Shell({
               <Link to={config.routes.compare}>
                 {en.publicSite.compareHeading}
               </Link>
-              <Link to={config.routes.play}>{en.nav.play}</Link>
+              <Link to={config.routes.home}>{en.nav.play}</Link>
             </div>
           </details>
         )}
@@ -531,126 +532,11 @@ function Shell({
   );
 }
 
-function Home() {
-  const facts = getPublicFacts();
-  const firstPart = config.appName.slice(
-    0,
-    config.appName.length - config.wordmarkAccentSuffix.length,
-  );
-
-  return (
-    <Shell>
-      <div className="public-home-content">
-        <section
-          className="public-home-hero"
-          aria-labelledby="public-home-title"
-        >
-          <div className="public-home-hero-copy">
-            <h1 id="public-home-title" className="public-home-wordmark">
-              <span>{firstPart}</span>
-              <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
-            </h1>
-            <p className="public-home-subtitle">{en.entry.subtitle}</p>
-            <p className="public-home-byline">{en.entry.welcomeDescription}</p>
-            <nav className="public-home-actions" aria-label="Get started">
-              <Link
-                to={`${config.routes.play}?entry=create`}
-                className="primary-action no-underline"
-              >
-                {en.publicSite.play}
-              </Link>
-              <Link
-                to={config.routes.join}
-                className="secondary-action no-underline"
-              >
-                {en.publicSite.joinGame}
-              </Link>
-              <Link
-                to={config.routes.rehearsal}
-                className="quiet-action no-underline"
-              >
-                {en.publicSite.practiseAlone}
-              </Link>
-            </nav>
-          </div>
-          <HoldRoleDemo />
-        </section>
-
-        <section className="public-home-section public-home-answer-section">
-          <p className="public-home-answer">
-            {en.publicSite.answer(config.appName)}
-          </p>
-        </section>
-
-        <section
-          className="public-home-section"
-          aria-labelledby="public-how-heading"
-        >
-          <h2 id="public-how-heading">{en.publicSite.howItWorksHeading}</h2>
-          <ol className="public-home-steps">
-            {en.publicSite.howItWorks.map((step, index) => (
-              <li key={step.heading}>
-                <h3>
-                  {index + 1}. {step.heading}
-                </h3>
-                <p>{step.body}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section
-          className="public-home-section"
-          aria-labelledby="public-formats-heading"
-        >
-          <h2 id="public-formats-heading">{en.publicSite.formatsHeading}</h2>
-          <div className="public-home-formats">
-            {en.publicSite.formats.map((format) => (
-              <article key={format.name}>
-                <h3>{format.name}</h3>
-                <p className="public-format-duration">{format.duration}</p>
-                <p>{format.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section
-          className="public-home-section"
-          aria-labelledby="public-facts-heading"
-        >
-          <h2 id="public-facts-heading">{en.publicSite.factsHeading}</h2>
-          <p className="text-ash">{en.publicSite.factsIntro}</p>
-          <dl className="public-home-facts">
-            {facts.map((fact) => (
-              <div className="public-fact" key={fact.id}>
-                <dt>{fact.label}</dt>
-                <dd>{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        <section
-          className="public-home-section"
-          aria-labelledby="public-faq-heading"
-        >
-          <h2 id="public-faq-heading">{en.publicSite.faqHeading}</h2>
-          <div className="public-home-faq">
-            {en.publicSite.faq.map((item) => (
-              <details key={item.question}>
-                <summary>{item.question}</summary>
-                <p>{item.answer}</p>
-              </details>
-            ))}
-          </div>
-          <Link className="public-page-link" to={config.routes.faq}>
-            {en.publicSite.seeAllQuestions}
-          </Link>
-        </section>
-      </div>
-    </Shell>
-  );
+function LegacyPlayRedirect() {
+  const location = useLocation();
+  const target =
+    canonicalPlayTarget(location, config.routes.play) ?? config.routes.home;
+  return <Navigate to={target} replace />;
 }
 
 function PublicFaq() {
@@ -3820,11 +3706,12 @@ export function AppRoutes() {
     <QueryClientProvider client={queryClient}>
       <InstallPromptProvider>
         <CsrfProvider>
+          <RouteMetadata />
           <Routes>
-            <Route path={config.routes.home} element={<Home />} />
+            <Route path={config.routes.home} element={<Play />} />
             <Route path={config.routes.faq} element={<PublicFaq />} />
             <Route path={config.routes.compare} element={<PublicCompare />} />
-            <Route path={config.routes.play} element={<Play />} />
+            <Route path={config.routes.play} element={<LegacyPlayRedirect />} />
             <Route path={config.routes.join} element={<Play mode="join" />} />
             <Route
               path={`${config.routes.join}/:gameId`}

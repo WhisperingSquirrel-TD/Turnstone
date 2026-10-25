@@ -89,7 +89,7 @@ test('practice Back and primary action clear the linked footer at phone sizes', 
   );
   for (const width of [320, 375, 390, 430]) {
     await page.setViewportSize({ width, height: 640 });
-    await page.goto('/play?entry=rehearsal');
+    await page.goto('/?entry=rehearsal');
     await page.getByTestId('input-rehearsal-name').fill('Thom');
     const dock = page.getByTestId('entry-action-dock');
     const footer = page.getByTestId('brand-footer-entry');
