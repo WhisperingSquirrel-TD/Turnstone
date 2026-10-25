@@ -1,10 +1,11 @@
 # Status for reviewer
 
-**Round 7 real-phone findings COMPLETE — implementation `e44f8c99`, gallery
-`8585d689`, Verify #305 GREEN (attempt 2).**
+**Round 7 real-phone findings COMPLETE — main `4bc42ca2`, Verify #306 GREEN
+(first attempt). Implementation `e44f8c99`, gallery `8585d689`.**
 All 236 client unit tests, both type checks, lint and the focused Pixel/iPhone
 regressions pass locally. The exact iPad crash case also passes locally.
 The final status/gallery-name follow-up changes no app behavior or assertion.
+All Verify jobs passed. No further work from the queue was started.
 No owner decision is pending; no publishing or configuration changes.
 
 ## Round 7 real-phone evidence
