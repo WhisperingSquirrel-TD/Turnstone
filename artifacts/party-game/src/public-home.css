@@ -16,6 +16,9 @@
 .game-entry-static h1 {
   font: 400 30px/1.15 var(--font-headline);
 }
+.game-entry-static > h1 + p {
+  margin-top: 8px;
+}
 .game-entry-static nav {
   display: grid;
   gap: 12px;

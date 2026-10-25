@@ -140,6 +140,10 @@ for (const width of widths)
       async function go(path: string, heading?: string) {
         await page.goto(path);
         await expect(
+          page.locator('.entry-experience'),
+          'Wait for the hydrated entry experience, not the SSR first-paint fallback.',
+        ).toBeVisible({ timeout: 30_000 });
+        await expect(
           page.locator('main h1, [data-testid="player-game"] h1').first(),
         ).toBeVisible();
         if (heading)
@@ -239,6 +243,8 @@ for (const width of widths)
         .click();
       await page.getByTestId('game-status-menu').locator('summary').click();
       await go('/');
+      await expect(page.locator('.entry-welcome .entry-display')).toBeVisible();
+      await expect(page.getByTestId('button-create-game')).toBeVisible();
       await audit('entry');
       await page.keyboard.press('Tab');
       await audit('entry-keyboard-focus');
@@ -247,6 +253,7 @@ for (const width of widths)
       await audit('entry-menu');
       await page.locator('header details').first().locator('summary').click();
       await go('/join');
+      await expect(page.getByTestId('input-join-name')).toBeVisible();
       await audit('join-empty');
       await page.getByTestId('input-join-name').fill('Morgan');
       for (let i = 0; i < 6; i++)
@@ -263,7 +270,11 @@ for (const width of widths)
         page.getByRole('heading', { name: /Waiting/ }),
       ).toBeVisible();
       await audit('join-waiting-approval');
-      await go('/?entry=create');
+      await go('/?entry=create', 'Name your game');
+      await expect(page.getByTestId('input-game-name')).toBeVisible();
+      await expect(
+        page.getByTestId('button-continue-create-name'),
+      ).toBeVisible();
       await audit('create-name');
       await page.getByTestId('button-continue-create-name').click();
       await audit('create-count');
@@ -274,7 +285,8 @@ for (const width of widths)
       await page.getByTestId('input-organiser-name').fill('Morgan');
       await page.getByTestId('input-organiser-pin').fill('1234');
       await audit('create-complete');
-      await go('/?entry=rehearsal');
+      await go('/?entry=rehearsal', 'Practise alone first');
+      await expect(page.getByTestId('input-rehearsal-name')).toBeVisible();
       await audit('practice-empty');
       await page.getByTestId('input-rehearsal-name').fill('Morgan');
       await audit('practice-ready');

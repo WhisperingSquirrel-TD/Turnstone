@@ -1097,7 +1097,7 @@ test('virtual players complete a real game across desktop and phone contexts @vi
         await page.goto('/');
         await pauseForHumanTiming(page, scenario.stage);
         await page
-          .getByRole('link', { name: 'Join a game', exact: true })
+          .getByRole('button', { name: 'Join a game', exact: true })
           .click();
         for (let digit = 0; digit < gameCode.length; digit += 1) {
           await page

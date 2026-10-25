@@ -331,6 +331,18 @@ test('home and app first paint stay styled with JavaScript disabled', async ({
       .getByRole('heading', { level: 1 })
       .evaluate((element) => getComputedStyle(element).fontFamily),
   ).toContain('Playfair Display');
+  const entryCopyGap = await rootEntry
+    .locator('.game-entry-static > p')
+    .first()
+    .evaluate((paragraph) => {
+      const heading = paragraph.previousElementSibling;
+      if (!(heading instanceof HTMLElement)) return -1;
+      return (
+        paragraph.getBoundingClientRect().top -
+        heading.getBoundingClientRect().bottom
+      );
+    });
+  expect(entryCopyGap).toBeGreaterThanOrEqual(8);
   expect(
     await page
       .locator('#static-home.safe-page')

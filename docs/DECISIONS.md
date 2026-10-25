@@ -25,6 +25,14 @@ Legacy public-demo geometry and hold/release privacy checks now use a
 test-only fulfilled fixture made from the real renderer/module/CSS; no demo
 was added to a production information page.
 
+Verify #307 exposed old tests treating `/play` as HTML rather than a redirect,
+and an H1 Join locator matching the server fallback anchor that React replaces.
+Keep private HTML/CSP assertions on actual private paths and test the 301
+explicitly. The gallery must wait for the intended hydrated heading/form, not
+merely a styled fallback. Keep fallback/no-JS tests separately. Once the real
+forms were audited, contain the invisible welcome pseudo-element horizontally
+and make About a 44px link; do not exempt these from strict geometry checks.
+
 ## 19 October 2026 — Milestone 5 acceptance
 
 The owner accepted the Milestone 5 real-phone rehearsal and authorized work on Milestone 6. This clears the Milestone 5 review gate only; it does not approve publishing, paid services, production secrets, domain or DNS changes.

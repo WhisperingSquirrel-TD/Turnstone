@@ -202,7 +202,7 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
       const player = pages[index]!;
       await player.goto('/');
       await player
-        .getByRole('link', { name: 'Join a game', exact: true })
+        .getByRole('button', { name: 'Join a game', exact: true })
         .click();
       for (let digit = 0; digit < code.length; digit += 1) {
         await player

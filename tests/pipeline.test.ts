@@ -247,7 +247,13 @@ describe('owner-approved delivery policy', () => {
       throw new Error('Production test server did not start');
 
     try {
-      for (const path of ['/', '/play', '/game/rehearsal-id', '/robots.txt']) {
+      const legacy = await fetch(
+        `http://127.0.0.1:${address.port}/play?entry=rehearsal#ignored`,
+        { redirect: 'manual' },
+      );
+      expect(legacy.status).toBe(301);
+      expect(legacy.headers.get('location')).toBe('/?entry=rehearsal');
+      for (const path of ['/', '/join', '/game/rehearsal-id', '/robots.txt']) {
         const response = await fetch(`http://127.0.0.1:${address.port}${path}`);
         expect(response.status).toBe(200);
         expect(response.headers.get('x-robots-tag')).toBe(

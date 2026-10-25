@@ -6461,7 +6461,12 @@ it.each([5, 40])(
         Cookie: `oathstone-csrf=${csrfToken}`,
         'X-CSRF-Token': csrfToken,
       };
-      expect((await request(runtime.url).get('/play')).text).toBe(
+      const legacyPlay = await request(runtime.url)
+        .get('/play?entry=create')
+        .redirects(0);
+      expect(legacyPlay.status).toBe(301);
+      expect(legacyPlay.headers.location).toBe('/?entry=create');
+      expect((await request(runtime.url).get('/join')).text).toBe(
         '<main>Oathstone restart shell</main>',
       );
       for (let index = 0; index < commands.length; index++) {

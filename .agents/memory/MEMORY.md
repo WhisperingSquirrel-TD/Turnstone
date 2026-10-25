@@ -30,3 +30,4 @@
 - [Rehearsal overlay test order](rehearsal-overlay-test-order.md) — dismiss privacy and guide overlays before testing shared help; scope duplicate disclosure labels.
 - [Night theme precedence](night-theme-precedence.md) — owner requires dark night screens; saved Display choices apply to day/setup and must survive night unchanged.
 - [Entry hosting boundary](entry-hosting-boundary.md) — company page remains the findable home; entry changes do not authorise hosting or company-site changes.
+- [Entry prerender readiness](prerender-readiness.md) — wait for the intended hydrated screen; styled fallback HTML is not application-state readiness.

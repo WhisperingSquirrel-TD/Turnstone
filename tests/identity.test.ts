@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { config } from '../artifacts/party-game/src/config';
-import { getPublicTitle } from '../artifacts/party-game/src/public-site-content';
 
 describe('single-source owner identity', () => {
   it('stores the confirmed name, tagline/byline and organisation in config', () => {
@@ -35,12 +34,10 @@ describe('single-source owner identity', () => {
       ),
       'utf8',
     );
-    expect(output).toContain(`<title>${getPublicTitle()}</title>`);
+    expect(output).toContain(`<title>${config.appName}</title>`);
+    expect(output).toContain(`property="og:title" content="${config.appName}"`);
     expect(output).toContain(
-      `property="og:title" content="${getPublicTitle()}"`,
-    );
-    expect(output).toContain(
-      `name="twitter:title" content="${getPublicTitle()}"`,
+      `name="twitter:title" content="${config.appName}"`,
     );
     expect(output).not.toContain('__APP_NAME__');
     expect(output).not.toContain('__PUBLIC_TITLE__');

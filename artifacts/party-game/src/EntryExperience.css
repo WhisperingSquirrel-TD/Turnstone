@@ -92,7 +92,7 @@
   position: absolute;
   z-index: -1;
   content: '';
-  inset: -2rem -3rem;
+  inset: -2rem 0;
   border-radius: 50%;
   background: none;
   opacity: 0;
@@ -1072,6 +1072,9 @@
 }
 
 .entry-about-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   margin-top: 0.5rem;
   color: var(--entry-ash);
   font-size: 0.875rem;

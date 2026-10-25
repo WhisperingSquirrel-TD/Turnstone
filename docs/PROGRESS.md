@@ -1,7 +1,21 @@
 # Status for reviewer
 
-**Round 7 Amendment A — ready to push after Verify #306 GREEN
-(`4bc42ca2`).** One paper entry at `/`, HTTP 301 from `/play`, company canonical/
+**Round 7 Amendment A — pushed `fa3a17bf`; Verify #307 FAILED.**
+Logs read: stale marketing-title and `/play` shell assertions in unit/integration;
+H1 still sought a Join link instead of the hydrated entry button; the strict
+layout audit caught touching entry heading/descriptor boxes at short height.
+Fixing these without changing any rule, security/geometry assertion or timeout.
+Missions review remains paused until Amendment A is green.
+
+The fix is locally green: 22 identity/pipeline tests, types/lint, the complete
+H1 and disconnected-player real-server journeys (2/2, 3.9 minutes), all eight
+desktop application-state audits plus four Pixel/iPhone 320 day/night audits.
+Each audit now waits for the requested hydrated form instead of the fallback.
+This exposed and fixed an invisible pseudo-element's horizontal overflow and
+the new About link's 21px target (now 44px). The fallback has an independently
+tested 8px heading gap. No check was removed or relaxed; six JPEGs refreshed.
+
+One paper entry at `/`, HTTP 301 from `/play`, company canonical/
 About link, app noindex and direct join-name prefill. Local: 152 client tests,
 18 targeted Node tests, typecheck, ESLint, format, build and focused desktop/
 Pixel/iPhone checks pass (latest entry routing: 15/15). Six entry JPEGs are in
