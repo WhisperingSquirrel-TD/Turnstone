@@ -484,18 +484,75 @@
 
 .entry-presenter-option {
   display: grid;
-  grid-template-columns: 1.25rem minmax(0, 1fr);
+  grid-template-columns: 44px minmax(0, 1fr);
   align-items: start;
   gap: 0.75rem;
+  min-height: 56px;
   padding: 0.8rem 0;
   border-top: 1px solid var(--entry-stone);
 }
 
 .entry-presenter-option input {
-  width: 1.25rem;
-  height: 1.25rem;
-  margin-top: 0.25rem;
+  width: 44px;
+  height: 44px;
+  margin: 0;
   accent-color: var(--entry-gilt);
+}
+
+.entry-presenter-option input:focus-visible {
+  outline: 2px solid var(--game-accent);
+  outline-offset: 3px;
+}
+
+.entry-presenter-option > span {
+  display: grid;
+  min-width: 0;
+}
+
+.entry-inline-primary {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.entry-experience > .entry-inline-primary {
+  width: min(100%, 480px);
+  margin-inline: auto;
+}
+
+.entry-experience .entry-action-dock {
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.entry-action-dock > .entry-help {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
+
+.entry-experience--flow-footer {
+  padding-bottom: calc(var(--entry-measured-dock-height, 0px) + 1rem);
+}
+
+.entry-experience--flow-footer .entry-main {
+  padding-bottom: 1rem;
+}
+
+.entry-experience--flow-footer > .game-brand-footer {
+  position: static;
+  inset: auto;
+  transform: none;
+  margin-top: 1rem;
+}
+
+.entry-stage-chrome .game-status-bar {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.entry-stage-chrome .game-status-bar > .game-status-chip,
+.entry-stage-chrome .game-status-right {
+  flex: 0 0 auto;
 }
 
 .entry-presenter-option .entry-label {

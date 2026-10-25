@@ -355,3 +355,48 @@ updates are included. The audit threshold and all other checks remain
 unchanged. `pnpm audit --audit-level high` reports 0 high and 0 critical
 findings; the complete local `pnpm run verify` passes. GitHub Verify is pending
 the next push.
+
+## Voting-circle copy versus server order — BACKLOG for the later voting-circle brief
+
+Owner direction, 25 October 2026: the approved circle is self-paced; each player
+says their vote and presses their own sharing button. The Create description now
+reads: “Each player says who they voted for and why, then presses a button to
+show their vote.”
+
+The current engine still calls `shuffledVoters` when closing a circle ballot and
+stores that reveal order. This batch intentionally changes no engine behaviour.
+Align the order and its remaining instructions only under the later
+voting-circle brief; do not infer approval to alter it from this copy fix.
+
+## Automatic layout audit — normal scroll boundaries (OPEN)
+
+**Owner clarification required before the complete audit gate is implemented.**
+The requested “no visible text or control clipped by the viewport” at every
+scroll position conflicts with normal whole-page scrolling: a perfectly
+reachable control necessarily crosses the viewport edge. A deterministic
+390×844 browser reproducer demonstrates this using a 56px button crossing the
+bottom edge. The initial audit correctly reports viewport clipping. Similarly,
+an opaque fixed dock can temporarily pass over content while scrolling, even
+though the last control has enough bottom clearance.
+
+**Proposed interpretation:** permit ordinary vertical viewport crossings, but
+probe every control by scrolling it fully into the unobscured viewport and
+require it to be reachable above all fixed bars, including the last control at
+the end of the document. Never exempt horizontal overflow, overlapping sibling
+text/controls, CSS truncation by a non-scrolling ancestor, an unreachable
+control, undersized targets, missing disabled-action reasons or broken images.
+Intentional open menus and privacy dialogs must be assessed as foreground
+surfaces, not falsely compared with their covered background.
+
+**Question:** May the audit exempt normal vertical viewport-edge crossings,
+while still requiring every control to scroll completely clear of fixed bars?
+
+**Delivered so far:** the known Create/Lobby defects have red-first regression
+coverage; the initial audit helper reports anonymous selectors, geometry and
+screen names without text contents; its checkbox-overlap and scroll-boundary
+reproducers run in Verify. The complete application-state audit is NOT yet a
+gate and is NOT claimed complete. The initial 72-image gallery covers the
+missing Create, organiser Lobby, Join and Practice views at the four requested
+widths in both system colour schemes. Form screens currently deliberately use
+paper in both schemes. The remaining game/overlay inventory and its gallery
+await this policy clarification.

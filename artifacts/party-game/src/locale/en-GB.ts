@@ -450,7 +450,15 @@ export const en = {
     votingStyleLabel: 'How should votes be revealed?',
     speakerCircleLabel: 'In-room voting circle (recommended)',
     speakerCircleDescription:
-      'Each player says who they voted for and why, in a random order.',
+      'Each player says who they voted for and why, then presses a button to show their vote.',
+    missingNameAndPin: 'Enter your first name and a 4-digit PIN.',
+    missingNameAndCode: 'Enter your first name and the game code.',
+    missingCode: 'Enter the 6-character game code.',
+    missingName: 'Enter your first name.',
+    missingPin: 'Enter a 4-digit PIN.',
+    actionPending: 'Please wait while this is saved.',
+    waitingForPlayers: (count: number) =>
+      `Waiting for ${count} more ${count === 1 ? 'player' : 'players'}.`,
     automaticRevealLabel: 'Automatic reveal',
     automaticRevealDescription: 'Use this for video-call or multi-day games.',
     presenterToggleLabel: 'Use an optional TV presenter screen',

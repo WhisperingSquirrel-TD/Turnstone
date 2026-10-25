@@ -297,6 +297,9 @@ export function EntryExperience({
   );
   const codeRefs = useRef<Array<HTMLInputElement | null>>([]);
   const screen = controlledScreen ?? internalScreen;
+  const createReady =
+    inputs.organiserName.trim().length >= 2 &&
+    /^\d{4}$/.test(inputs.organiserPin);
 
   useEffect(() => {
     const root = document.querySelector<HTMLElement>('.entry-experience');
@@ -314,7 +317,10 @@ export function EntryExperience({
       const dock = root.querySelector('.entry-action-dock');
       const footer = root.querySelector('.game-brand-footer');
       const dockHeight = dock?.getBoundingClientRect().height ?? 0;
-      const footerHeight = footer?.getBoundingClientRect().height ?? 0;
+      const footerHeight =
+        footer && getComputedStyle(footer).position === 'fixed'
+          ? footer.getBoundingClientRect().height
+          : 0;
       root.style.setProperty('--entry-measured-dock-height', `${dockHeight}px`);
       root.style.setProperty('--entry-footer-height', `${footerHeight}px`);
     };
@@ -339,7 +345,7 @@ export function EntryExperience({
       viewport?.removeEventListener('scroll', syncViewport);
       window.removeEventListener('resize', syncViewport);
     };
-  }, []);
+  }, [screen, createReady]);
 
   useEffect(() => {
     const updateOnline = () => setBrowserOnline(navigator.onLine);
@@ -576,6 +582,50 @@ export function EntryExperience({
     0,
     Math.min(3, inputs.createCoCoordinatorCount),
   );
+  const primaryHintText =
+    screen === 'join-code' && !duplicateName
+      ? inputs.joinName.trim().length < 2
+        ? en.entry.missingNameAndCode
+        : !VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase())
+          ? en.entry.missingCode
+          : ''
+      : screen === 'join-name' &&
+          !duplicateName &&
+          inputs.joinName.trim().length < 2
+        ? en.entry.missingName
+        : screen === 'join-pin'
+          ? busy.join
+            ? en.entry.actionPending
+            : !/^\d{4}$/.test(inputs.joinPin)
+              ? en.entry.missingPin
+              : ''
+          : screen === 'rehearsal-setup'
+            ? busy.rehearsal
+              ? en.entry.actionPending
+              : !inputs.rehearsalName.trim()
+                ? en.entry.missingName
+                : ''
+            : screen === 'lobby'
+              ? busy.startGame
+                ? en.entry.actionPending
+                : !lateJoinMode && players.length < 5
+                  ? en.entry.waitingForPlayers(5 - players.length)
+                  : ''
+              : '';
+  const primaryHint = primaryHintText ? (
+    <p
+      className="entry-help"
+      id="entry-primary-hint"
+      data-testid="entry-primary-hint"
+      role="status"
+    >
+      {primaryHintText}
+    </p>
+  ) : null;
+  const actionPlacement = (ready: boolean) => ({
+    className: ready ? 'entry-action-dock' : 'entry-inline-primary',
+    'data-testid': ready ? 'entry-action-dock' : undefined,
+  });
   const pageTitle =
     screen === 'welcome'
       ? copy.brand
@@ -600,7 +650,7 @@ export function EntryExperience({
   return (
     <div
       data-game-theme={gameTheme}
-      className={`entry-experience game-shell${options.largeText ? ' entry-large-text' : ''}`}
+      className={`entry-experience game-shell${screen !== 'lobby' ? ' entry-experience--flow-footer' : ''}${options.largeText ? ' entry-large-text' : ''}`}
     >
       <header className="entry-brand" aria-label={copy.brandDescriptor}>
         <span className="entry-wordmark" data-testid="text-entry-brand">
@@ -1296,18 +1346,43 @@ export function EntryExperience({
                   </span>
                 </label>
               </fieldset>
-              <button
-                className="entry-primary-action"
-                data-testid="button-create-submit"
-                type="submit"
-                disabled={
-                  busy.create ||
-                  !inputs.organiserName.trim() ||
-                  !/^\d{4}$/.test(inputs.organiserPin)
+              <div
+                className={
+                  createReady ? 'entry-action-dock' : 'entry-inline-primary'
                 }
+                data-testid={createReady ? 'entry-action-dock' : undefined}
               >
-                {busy.create ? copy.createPending : copy.createButton}
-              </button>
+                <button
+                  className="entry-primary-action"
+                  data-testid="button-create-submit"
+                  type="submit"
+                  disabled={busy.create || !createReady}
+                  aria-describedby={
+                    !createReady || busy.create
+                      ? 'entry-primary-hint'
+                      : undefined
+                  }
+                >
+                  {busy.create ? copy.createPending : copy.createButton}
+                </button>
+                {(!createReady || busy.create) && (
+                  <p
+                    id="entry-primary-hint"
+                    data-testid="entry-primary-hint"
+                    className="entry-help"
+                    role="status"
+                  >
+                    {busy.create
+                      ? en.entry.actionPending
+                      : inputs.organiserName.trim().length < 2 &&
+                          !/^\d{4}$/.test(inputs.organiserPin)
+                        ? en.entry.missingNameAndPin
+                        : inputs.organiserName.trim().length < 2
+                          ? en.entry.missingName
+                          : en.entry.missingPin}
+                  </p>
+                )}
+              </div>
             </form>
             {visibleError && (
               <p
@@ -1615,11 +1690,20 @@ export function EntryExperience({
       </main>
 
       {screen === 'join-code' && (
-        <div className="entry-action-dock" data-testid="entry-action-dock">
+        <div
+          {...actionPlacement(
+            Boolean(duplicateName) ||
+              (VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase()) &&
+                inputs.joinName.trim().length >= 2),
+          )}
+        >
           <button
             className="entry-primary-action"
             data-testid="entry-primary-dock-button"
             data-legacy-testid="button-continue-code"
+            aria-describedby={
+              primaryHintText ? 'entry-primary-hint' : undefined
+            }
             type="submit"
             form="entry-join-code-form"
             disabled={
@@ -1638,26 +1722,38 @@ export function EntryExperience({
           >
             {duplicateName ? copy.duplicateNameYes : copy.continue}
           </button>
+          {primaryHint}
         </div>
       )}
       {screen === 'rehearsal-setup' && (
-        <div className="entry-action-dock" data-testid="entry-action-dock">
+        <div {...actionPlacement(Boolean(inputs.rehearsalName.trim()))}>
           <button
             className="entry-primary-action"
             data-testid="button-start-rehearsal"
+            aria-describedby={
+              primaryHintText ? 'entry-primary-hint' : undefined
+            }
             type="submit"
             form="entry-rehearsal-form"
             disabled={busy.rehearsal || !inputs.rehearsalName.trim()}
           >
             {busy.rehearsal ? copy.rehearsalPending : copy.rehearsalButton}
           </button>
+          {primaryHint}
         </div>
       )}
       {screen === 'join-name' && (
-        <div className="entry-action-dock" data-testid="entry-action-dock">
+        <div
+          {...actionPlacement(
+            Boolean(duplicateName) || inputs.joinName.trim().length >= 2,
+          )}
+        >
           <button
             className="entry-primary-action"
             data-testid="button-continue-name"
+            aria-describedby={
+              primaryHintText ? 'entry-primary-hint' : undefined
+            }
             type="button"
             disabled={!duplicateName && inputs.joinName.trim().length < 2}
             onClick={() => {
@@ -1672,19 +1768,24 @@ export function EntryExperience({
           >
             {duplicateName ? copy.duplicateNameYes : copy.continue}
           </button>
+          {primaryHint}
         </div>
       )}
       {screen === 'join-pin' && (
-        <div className="entry-action-dock" data-testid="entry-action-dock">
+        <div {...actionPlacement(/^\d{4}$/.test(inputs.joinPin))}>
           <button
             className="entry-primary-action"
             data-testid="button-submit-join"
+            aria-describedby={
+              primaryHintText ? 'entry-primary-hint' : undefined
+            }
             type="submit"
             form="entry-join-pin-form"
             disabled={busy.join || !/^\d{4}$/.test(inputs.joinPin)}
           >
             {busy.join ? copy.joinPending : copy.joinButton}
           </button>
+          {primaryHint}
         </div>
       )}
       {screen === 'lobby' && (
@@ -1692,6 +1793,9 @@ export function EntryExperience({
           <button
             className="entry-primary-action entry-start-game"
             data-testid="button-start-game"
+            aria-describedby={
+              primaryHintText ? 'entry-primary-hint' : undefined
+            }
             type="button"
             disabled={busy.startGame || (!lateJoinMode && players.length < 5)}
             onClick={() => {
@@ -1707,6 +1811,7 @@ export function EntryExperience({
                 ? copy.startGamePending
                 : copy.startGame}
           </button>
+          {primaryHint}
         </div>
       )}
       <BrandFooter

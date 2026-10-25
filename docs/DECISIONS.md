@@ -1542,3 +1542,35 @@ wording or timing by role.
 **Evidence:** The opening failed in the real-server Practice journey before the fix. The cover interception and delayed public verdict also failed browser regressions before their fixes. Normal and Practice projection journeys exercise all six supplied media files, both public winning-side endings, tap-to-skip and reload suppression (including without the stored marker). Real-server Practice with the real media and cold seat restart pass; the six-context normal H1 game passes on isolated replay. An earlier combined H1 run stopped at SHADOW round 2 with all five actions pending; no product or harness assertion was changed to hide it.
 
 **WebKit limitation:** Local Nix WebKit reports empty support for MP4/H.264 and VP9. Its real-video assertions remain failed locally, not skipped or weakened; the supported GitHub WebKit container is the authority for those profiles. No media files or fixtures changed.
+
+## D104 — Create/Lobby layout corrections and audit boundary (25 October 2026)
+
+**Scope:** Owner-phone bug batch only; amendment A remains queued. No game,
+security, rate-limit, private-screen or SPEC rule changes.
+
+**Rows:** A global 44px checkbox was occupying a 20px grid column. Presenter and
+voting-option rows now reserve 44px plus a 12px gap, keep their text in a separate
+column, have a minimum 56px tap row and preserve a visible keyboard focus ring.
+
+**Forms and actions:** Setup/form credits stay in normal document flow, never
+in the fixed stack. Measure footer space only when it is actually fixed. A
+complete form docks its action; incomplete Join, PIN, Practice and final Create
+forms retain an inline disabled action with an associated short explanation.
+Create's enabled state matches the existing native two-character name and
+four-digit PIN constraints. Lobby chips use their intrinsic width, and the
+share control is tested clear of its dock. Every linked official credit stays.
+
+**Copy only:** Use the owner's exact self-paced Create description. The server
+still holds a shuffled reveal order; the mismatch is recorded in QUESTIONS for
+the later voting-circle brief, not silently changed here.
+
+**Audit scope is explicit:** The initial checker and controlled regressions do
+not constitute the requested complete screen inventory. Literal viewport-edge
+clipping during normal scrolling needs the policy answer recorded in QUESTIONS
+before a full gate can be claimed. No tolerance or existing check was weakened.
+The first gallery contains 72 JPEGs in docs/screens/round-7-audit; Create's name,
+count, empty name/PIN, checked/unchecked presenter and completed voting settings,
+plus organiser Lobby, Join and Practice are included. The application has three
+Create route states: name/PIN and voting share the third, so both are captured
+without inventing an extra wizard step. These entry forms intentionally remain
+paper under both operating-system colour schemes.

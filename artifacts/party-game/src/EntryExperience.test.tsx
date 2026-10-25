@@ -89,16 +89,32 @@ function renderEntry(
 }
 
 describe('Stage 2A entry screens', () => {
-  it('shows the room code and name together with one docked primary action', () => {
+  it('shows the room code and name together with one explained inline action until complete', () => {
     const html = renderEntry('join-code');
 
     expect(html).toContain('data-testid="input-join-code-1"');
     expect(html).toContain('data-testid="input-join-code-6"');
     expect(html).toContain('data-testid="input-join-name"');
-    expect(html).toContain('data-testid="entry-action-dock"');
+    expect(html).toContain('class="entry-inline-primary"');
+    expect(html).not.toContain('data-testid="entry-action-dock"');
+    expect(html).toContain(en.entry.missingNameAndCode);
     expect(html).toContain('data-testid="entry-primary-dock-button"');
     expect(html).toContain('data-testid="game-status-bar"');
     expect(html).toContain('data-testid="game-happening-card"');
+  });
+
+  it('docks the single Join action when the code and name are complete', () => {
+    const html = renderEntry(
+      'join-code',
+      'day',
+      {},
+      {
+        joinCodeEntry: 'ABC234',
+        joinName: 'Ava',
+      },
+    );
+    expect(html.match(/data-testid="entry-action-dock"/g)).toHaveLength(1);
+    expect(html).not.toContain('data-testid="entry-primary-hint"');
   });
 
   it('renders host roster rows and the player count in the Lobby status bar', () => {
