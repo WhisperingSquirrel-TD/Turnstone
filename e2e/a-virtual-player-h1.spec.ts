@@ -1280,10 +1280,49 @@ test('virtual players complete a real game across desktop and phone contexts @vi
               .isVisible()
               .catch(() => false)
           ) {
-            actionTrace.push(
-              `${phase}:${player.id}:step=${stepBefore ?? 'unknown'}:skip-waiting`,
-            );
-            continue;
+            if (phase === 'SHADOW') {
+              const pendingNames = await coordinatorScreen
+                .locator('[data-testid^="text-pending-name-"]')
+                .allTextContents();
+              if (pendingNames.some((name) => name.trim() === player.name)) {
+                await expect
+                  .poll(
+                    async () => {
+                      const waiting = await page
+                        .getByTestId('waiting-for-everyone')
+                        .isVisible();
+                      const pending = await coordinatorScreen
+                        .locator('[data-testid^="text-pending-name-"]')
+                        .allTextContents();
+                      return (
+                        !waiting ||
+                        !pending.some((name) => name.trim() === player.name)
+                      );
+                    },
+                    {
+                      timeout: 20_000,
+                      message:
+                        'A pending night step must retain its choice controls.',
+                    },
+                  )
+                  .toBe(true);
+                if (await page.getByTestId('waiting-for-everyone').isVisible())
+                  continue;
+                await expect(
+                  page.getByTestId('private-choice-list'),
+                ).toBeVisible();
+              } else {
+                actionTrace.push(
+                  `${phase}:${player.id}:step=${stepBefore ?? 'unknown'}:skip-waiting`,
+                );
+                continue;
+              }
+            } else {
+              actionTrace.push(
+                `${phase}:${player.id}:step=${stepBefore ?? 'unknown'}:skip-waiting`,
+              );
+              continue;
+            }
           }
           if (phase === 'SHADOW') {
             const role = rolesByPlayer.get(player.id);

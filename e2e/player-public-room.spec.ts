@@ -2934,6 +2934,107 @@ test('a shielded night automatically recovers a stale private view after delayed
 });
 
 for (const role of ['faithful', 'traitor'] as const) {
+  test(`late slot-one acknowledgement cannot hide slot-two controls (${role})`, async ({
+    page,
+  }) => {
+    const gameId = 'shadow-late-ack';
+    let view = {
+      ...createPublicView(gameId),
+      phase: 'SHADOW',
+      shadowRound: 1,
+      shadowSlot: 1,
+      murderSlots: 2,
+      progress: { done: 0, total: 2 },
+    } as FullView;
+    let submitted = false;
+    let releaseAcknowledgement!: () => void;
+    const acknowledgementGate = new Promise<void>((resolve) => {
+      releaseAcknowledgement = resolve;
+    });
+    const envelope = () => ({
+      serverNow: Date.now(),
+      version: view.version,
+      view,
+    });
+    await page.route('**/api/csrf', (route) =>
+      route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+    );
+    await page.route(`**/api/games/${gameId}/view`, (route) =>
+      route.fulfill({ json: envelope() }),
+    );
+    await page.route(`**/api/games/${gameId}/commands`, async (route) => {
+      const command = route.request().postDataJSON();
+      if (command.type === 'SubmitShadowChoice') submitted = true;
+      else if (submitted && view.shadowSlot === 1) {
+        const response = envelope();
+        view = { ...view, version: view.version + 1, shadowSlot: 2 };
+        await acknowledgementGate;
+        await route.fulfill({ json: response });
+        return;
+      }
+      await route.fulfill({ json: envelope() });
+    });
+    await page.route(`**/api/games/${gameId}/private-view`, (route) =>
+      route.fulfill({
+        json: {
+          ...envelope(),
+          view: {
+            ...view,
+            private: {
+              role,
+              team: [],
+              options: [{ id: 'seat-jamie', name: 'Jamie' }],
+              choices: {},
+              choiceSlots: [],
+              chat: [],
+              task: null,
+              minimumDurationMs: 5000,
+            },
+          },
+        },
+      }),
+    );
+    await page.goto(`/game/${gameId}`);
+    const shield = page.getByRole('dialog', { name: 'Shield your screen' });
+    const shieldButton = shield.getByRole('button', { name: /i’m shielded/i });
+    await expect(shieldButton).toHaveAttribute('aria-disabled', 'false', {
+      timeout: 6500,
+    });
+    await shieldButton.click();
+    await page.getByTestId('private-choice-list').getByRole('button').click();
+    await page.getByRole('button', { name: 'Review this choice' }).click();
+    await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+    await expect.poll(() => view.shadowSlot).toBe(2);
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(page.getByTestId('player-game')).toHaveAttribute(
+      'data-shadow-slot',
+      '2',
+    );
+    await expect(page.getByTestId('private-choice-list')).toBeVisible();
+    const lateResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/api/games/${gameId}/commands`) &&
+        response.request().postDataJSON().type === 'AcknowledgePrivate' &&
+        response.status() === 200,
+    );
+    releaseAcknowledgement();
+    await (await lateResponse).finished();
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    await expect(page.getByTestId('waiting-for-everyone')).toBeHidden();
+    await page.getByTestId('private-choice-list').getByRole('button').click();
+    await expect(
+      page.getByRole('button', { name: 'Review this choice' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Review this choice' }).click();
+    await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+    await expect(page.getByTestId('waiting-for-everyone')).toBeVisible();
+  });
+
   test(
     role === 'traitor'
       ? 'shadow explicitly refuses fellow Traitor Jamie, then accepts Faithful Sam'

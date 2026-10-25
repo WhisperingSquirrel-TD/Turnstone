@@ -1015,6 +1015,8 @@ function PlayerGame() {
         shadowSlot: full.shadowSlot,
       })
     : '';
+  const currentCommandStepKeyRef = useRef(commandStepKey);
+  currentCommandStepKeyRef.current = commandStepKey;
   useEffect(() => {
     if (commandStepKey) pendingCommands.clearForStep(commandStepKey);
   }, [commandStepKey, pendingCommands]);
@@ -2232,6 +2234,7 @@ function PlayerGame() {
         pendingCommands.confirm('player-choice', stepKey);
         actionAccepted = true;
         command.reset();
+        if (currentCommandStepKeyRef.current !== stepKey) return;
         await pendingCommands.send(
           'choice-acknowledgement',
           stepKey,
@@ -2244,6 +2247,9 @@ function PlayerGame() {
       }
       pendingCommands.confirm('choice-acknowledgement', stepKey);
       command.reset();
+      // A response for the previous slot can arrive after realtime has
+      // already opened the next one. Never mark that new choice as submitted.
+      if (currentCommandStepKeyRef.current !== stepKey) return;
       if (privateChoiceDraftKey) {
         try {
           clearPrivateChoiceDraft(window.sessionStorage, privateChoiceDraftKey);

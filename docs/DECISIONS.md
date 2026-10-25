@@ -1478,3 +1478,11 @@ wording or timing by role.
 **Choice:** Keep every rate limit unchanged. Because the 429 recurred in CI, add a bounded 65-second cooldown before the disconnected-player journey in the single-worker rehearsal harness: one 60-second limiter window plus a 5-second margin.
 
 **Consequence:** The pause is test-harness pacing only; no product polling behaviour or rate limit changes. Q11 is resolved, and no request bodies or player data are logged.
+
+## D98 — Scope asynchronous choice completion to its original step
+
+**Context:** Verify #281 exposed a pending second night slot with no Review or Confirm controls. A deterministic browser regression reproduced this for both roles: realtime opened slot 2 while the slot-1 acknowledgement response was still in flight. When that old response completed, its handler set the shared submitted flag for the new slot.
+
+**Choice:** Compare the current command-step identity with the submitted step before sending its follow-up acknowledgement and before applying completion state. A completed old-step request must not hide the next step's controls or clear its draft.
+
+**Consequence:** Server validation, timing, targets, idempotency and private-choice draft rules remain unchanged. The same guard applies to every role. The regression delays the response explicitly, then checks the replacement slot remains interactive; the real-server harness also fails if an organiser-pending night step shows a waiting-only screen.

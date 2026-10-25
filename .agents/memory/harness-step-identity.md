@@ -12,3 +12,8 @@ reported the correctly disabled organiser control as a stuck game.
 
 **How to apply:** Use the full public step identity for harness progress and
 pre-click checks. Do not bypass pending-action gates or increase waits to mask it.
+
+Apply the same identity boundary to asynchronous client completion handlers.
+**Why:** Realtime can open the next night slot before the previous slot's
+acknowledgement response arrives; completion for the old step must not overwrite
+the new step's controls or draft.

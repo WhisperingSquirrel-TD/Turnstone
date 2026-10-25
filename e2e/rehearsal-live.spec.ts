@@ -456,9 +456,9 @@ async function submitPrivateChoice(
       await page.getByTestId('player-game').getAttribute('data-shadow-round'),
     ) === 2
   ) {
-    await expect(page.getByTestId('game-commentary')).toContainText(
-      'No decision yet. One more round of choosing tonight.',
-    );
+    await expect(
+      page.getByTestId('player-game').getByTestId('game-commentary'),
+    ).toContainText('No decision yet. One more round of choosing tonight.');
     await expect(page.getByTestId('selected-choice')).toBeVisible();
   }
   if (phaseBeforeChoice === 'FINAL_VOTE') {

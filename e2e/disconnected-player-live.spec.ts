@@ -447,6 +447,7 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
       id: target.id,
       name: 'Faye',
       status: 'departed',
+      connected: false,
     });
     const removalEntry = removed.publicLog.find(
       (entry) => entry.action === 'seat_left_disconnected',
