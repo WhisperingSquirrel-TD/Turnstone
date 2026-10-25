@@ -1,5 +1,15 @@
 # Status for reviewer
 
+**Round 7 UI bug batch — public share-base fix:** implemented HTTPS-validated
+`PUBLIC_BASE_URL` for room/invitation links and all QR/share/copy surfaces.
+Unconfigured private previews retain the room code and show the owner's exact
+Lobby warning, without a private QR/link. Code links open and focus the name step.
+Local evidence: 26 unit/component/build-wiring tests and 16 four-profile browser
+checks pass. Last published-to-GitHub baseline: `365da5d`, Verify #294 green.
+No app publishing, environment values, domains, DNS, production secrets,
+authentication origins, rules or rate limits changed. Owner publishing/base-URL
+steps are recorded in HOSTING; next is Verify for this isolated change.
+
 **Round 7 application-state audit COMPLETE.** Source `0390b26` is verified green by [Verify #293](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/40195265989): all browser profiles, the full audit, real-server rehearsal and every other required gate passed. The implementation and refreshed screenshot gallery are on main.
 
 **Coverage:** 71 UI states × four widths × day/night × four browser profiles (2,272 audited combinations), plus the named checkbox, footer and Lobby-share regressions. The canonical 568 JPEGs are in `docs/screens/round-7-audit/`. These are browser/device-profile tests, not physical-phone certification. No rules, limits, secrecy checks or geometry thresholds changed; no owner question is pending.

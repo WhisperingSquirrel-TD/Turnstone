@@ -8,6 +8,7 @@ import {
   type EntryExperienceInputs,
 } from './EntryExperience';
 import { en } from './locale/en-GB';
+import { previewShareWarning } from './lobby-code-url';
 
 const shellCSS = readFileSync(new URL('./index.css', import.meta.url), 'utf8');
 const entryCSS = readFileSync(
@@ -29,11 +30,45 @@ const inputs: EntryExperienceInputs = {
   rehearsalName: '',
 };
 
+it('keeps the room code and shows the plain preview warning only in the organiser lobby', () => {
+  const warning = previewShareWarning('https://private.replit.dev', '');
+  expect(warning).not.toBeNull();
+  const lobby = renderEntry('lobby', 'day', {}, {}, warning);
+  expect(lobby).toContain('data-testid="preview-share-warning"');
+  expect(lobby).toContain(warning);
+  expect(lobby).not.toContain(en.entry.shareUnavailable);
+  expect(lobby).toContain('ABC234');
+  expect(renderEntry('join-code', 'day', {}, {}, warning)).not.toContain(
+    warning,
+  );
+  expect(renderEntry('lobby')).not.toContain('preview-share-warning');
+});
+
+it('compiles the public environment setting into the browser bundle and validates it in Vite', async () => {
+  const { transformWithEsbuild } = await import('vite');
+  const source = readFileSync(
+    new URL('./lobby-code-url.ts', import.meta.url),
+    'utf8',
+  );
+  const transformed = await transformWithEsbuild(source, 'lobby-code-url.ts', {
+    define: { 'import.meta.env.PUBLIC_BASE_URL': '"https://public.example/"' },
+  });
+  expect(transformed.code).toContain(
+    'const configuredPublicBaseUrl = "https://public.example/";',
+  );
+  const vite = readFileSync(
+    new URL('../vite.config.ts', import.meta.url),
+    'utf8',
+  );
+  expect(vite).toContain('validatePublicBaseUrl(process.env.PUBLIC_BASE_URL)');
+});
+
 function renderEntry(
   screen: 'join-code' | 'lobby' | 'join-wait' | 'rehearsal-setup',
   gameTheme: 'day' | 'night' = 'day',
   errors: EntryExperienceErrors = {},
   inputOverrides: Partial<EntryExperienceInputs> = {},
+  previewWarning?: string | null,
 ) {
   return renderToStaticMarkup(
     <MemoryRouter>
@@ -67,6 +102,7 @@ function renderEntry(
         joinCode="ABC234"
         shareUrl=""
         qrCode={null}
+        previewWarning={previewWarning}
         players={[
           { id: 'seat-ada', name: 'Ada' },
           { id: 'seat-sam', name: 'Sam' },

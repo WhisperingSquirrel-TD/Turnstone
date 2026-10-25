@@ -328,9 +328,11 @@ export function PresenterPage({ csrfToken }: { csrfToken: string | null }) {
               </p>
               <p>{en.presenter.playersJoined(full.seats.length)}</p>
             </div>
-            <div data-testid="presenter-join-qr">
-              <PresenterQr value={joinUrl} title={en.presenter.qrLabel} />
-            </div>
+            {joinUrl && (
+              <div data-testid="presenter-join-qr">
+                <PresenterQr value={joinUrl} title={en.presenter.qrLabel} />
+              </div>
+            )}
           </section>
         )}
         {resultLine && (

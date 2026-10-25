@@ -1647,3 +1647,25 @@ check that the main scroll offset stays locked. Footer ordering is still tested
 after scrolling the footer into view. Restore zero spacing after closed
 Conversation Help; the extra font-glyph clearance applies only to Deal and the
 no-votes announcement, not as a global Help margin. No geometry tolerance changed.
+
+## D107 — Public invitations are independent of preview/authentication origins
+
+**Owner direction, 25 October 2026:** all public invitations use one HTTPS
+`PUBLIC_BASE_URL`. An unconfigured `replit.dev` preview must retain its code and
+warn the organiser, not create a QR/link to a private preview.
+
+**Why:** a friend's own phone reached Replit's private-preview sign-in page.
+Changing the link must not change API/CSRF origins or publish the application.
+
+**Implementation:** one formatter handles room-code and opaque invitation
+fragments for organiser/player/presenter QR and share/copy actions. The setting is
+validated and embedded by Vite at build time; configured public mounts replace
+preview mounts. No setting falls back to the current origin only on a
+non-development host. The name-only join step focuses its field and preserves
+the code through the real name-check UI action. Publishing, the actual public
+URL and environment configuration remain with the owner (see HOSTING).
+
+**Evidence:** failing tests first; helper/validation/build-wiring/component tests
+and browser tests across Pixel, iPhone, iPad and desktop. Browser host/config
+variants mock the served configuration module only; no production test hook,
+configuration endpoint or security projection field was added.

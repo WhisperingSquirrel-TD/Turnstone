@@ -1,3 +1,7 @@
+.entry-preview-warning {
+  grid-column: 1 / -1;
+}
+
 .entry-experience {
   --entry-charcoal: var(--charcoal, #3d3a38);
   --entry-hearth: var(--hearth, #2e2b29);

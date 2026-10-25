@@ -3527,28 +3527,34 @@ function PlayerGame() {
                     >
                       {full.lobbyCode}
                     </p>
-                    <Suspense
-                      fallback={
-                        <span role="status">{en.entry.qrPreparing}</span>
-                      }
-                    >
-                      <span
-                        data-testid="lobby-join-qr"
-                        data-join-url={lobbyCodeJoinUrl({
-                          origin: window.location.origin,
-                          joinPath: webPath(config.routes.join),
-                          code: full.lobbyCode,
-                        })}
+                    {lobbyCodeJoinUrl({
+                      origin: window.location.origin,
+                      joinPath: webPath(config.routes.join),
+                      code: full.lobbyCode,
+                    }) && (
+                      <Suspense
+                        fallback={
+                          <span role="status">{en.entry.qrPreparing}</span>
+                        }
                       >
-                        <LobbyQRCode
-                          value={lobbyCodeJoinUrl({
+                        <span
+                          data-testid="lobby-join-qr"
+                          data-join-url={lobbyCodeJoinUrl({
                             origin: window.location.origin,
                             joinPath: webPath(config.routes.join),
                             code: full.lobbyCode,
                           })}
-                        />
-                      </span>
-                    </Suspense>
+                        >
+                          <LobbyQRCode
+                            value={lobbyCodeJoinUrl({
+                              origin: window.location.origin,
+                              joinPath: webPath(config.routes.join),
+                              code: full.lobbyCode,
+                            })}
+                          />
+                        </span>
+                      </Suspense>
+                    )}
                     {typeof document !== 'undefined' &&
                       typeof document.documentElement.requestFullscreen ===
                         'function' && (

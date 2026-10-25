@@ -11,6 +11,7 @@ import {
 import { noncePlugin } from './vite.security';
 import { config } from './src/config';
 import { createWebManifest } from './src/pwa-manifest';
+import { validatePublicBaseUrl } from './src/lobby-code-url';
 import { buildStaticPublicSite } from './src/static-public-build';
 import {
   getPublicTitle,
@@ -109,6 +110,11 @@ function appShellDocument(html: string, basePath: string): string {
 
 export default defineConfig({
   base: basePath,
+  define: {
+    'import.meta.env.PUBLIC_BASE_URL': JSON.stringify(
+      validatePublicBaseUrl(process.env.PUBLIC_BASE_URL) ?? '',
+    ),
+  },
   plugins: [
     noncePlugin(),
     {

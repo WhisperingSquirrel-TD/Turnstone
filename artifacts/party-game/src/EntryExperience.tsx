@@ -207,6 +207,7 @@ export interface EntryExperienceProps {
   joinCode: string;
   shareUrl: string;
   qrCode: ReactNode;
+  previewWarning?: string | null;
   players: EntryPlayer[];
   requiredPlayerCount?: number;
   pendingJoiners: EntryJoiner[];
@@ -267,6 +268,7 @@ export function EntryExperience({
   joinCode,
   shareUrl,
   qrCode,
+  previewWarning,
   players,
   requiredPlayerCount = 5,
   pendingJoiners,
@@ -853,6 +855,7 @@ export function EntryExperience({
                 </label>
                 <input
                   id="entry-join-name"
+                  autoFocus
                   className="entry-field"
                   data-testid="input-join-name"
                   autoComplete="given-name"
@@ -1437,6 +1440,14 @@ export function EntryExperience({
               </>
             )}
             <div className="entry-lobby-logistics">
+              {previewWarning && (
+                <p
+                  className="entry-preview-warning"
+                  data-testid="preview-share-warning"
+                >
+                  {previewWarning}
+                </p>
+              )}
               {qrCode && (
                 <div
                   className="entry-qr"
@@ -1473,7 +1484,7 @@ export function EntryExperience({
                 >
                   {busy.share ? copy.sharePending : copy.share}
                 </button>
-                {!shareUrl && !lateJoinMode && (
+                {!shareUrl && !lateJoinMode && !previewWarning && (
                   <p
                     className="entry-help"
                     data-testid="status-share-unavailable"

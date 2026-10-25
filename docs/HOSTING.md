@@ -1,5 +1,35 @@
 # Hosting decision and owner checklist
 
+## Public invitation URLs — owner step (25 October 2026)
+
+`PUBLIC_BASE_URL` is the single, non-secret base for player share links, Lobby
+QR codes, copy/share actions and invitation links (including the presenter QR).
+Set it to the **actual public game host**, optionally including its mount path,
+before building/publishing. It must be HTTPS and cannot contain credentials,
+a query, a fragment or a `replit.dev` development hostname. Invalid values fail
+the Vite configuration rather than silently producing an unsafe link.
+
+The value is embedded at **build time**: after changing it, rebuild/publish the
+game. A preview's artifact mount is not copied into the public URL; if the public
+app itself has a mount path, include that path in the setting. Do not use the
+company marketing page as the game URL unless that page actually serves the game.
+
+When the setting is absent, a non-development host uses its own origin.
+An unconfigured `replit.dev` preview shows no share QR/link and retains the room
+code, with this organiser Lobby notice:
+
+> Players outside your Replit account cannot open this preview link. It will work once the game is published.
+
+Publishing and setting the public base are the **owner's next steps**. This patch
+does not publish, set environment values, connect a domain, change DNS or touch
+production secrets. A public URL does not make a private preview accessible and
+does not move preview games, seats or databases: create/share games on the public
+game environment itself.
+
+`PUBLIC_BASE_URL` controls invitations only. Existing API, cookie, CSRF and
+`APP_BASE_URL` authentication-origin settings are unchanged; do not replace those
+with a different public host to make a preview invitation appear public.
+
 ## Approved direction
 
 On 14 October 2026 the owner chose one Replit Reserved VM deployment for Oathstone. After separate launch approval, that one deployment will serve the public pages, app shell/PWA, API, Socket.IO and durable scheduler from `https://oathstone.stackstoneconsulting.co.uk`. There is no Vercel deployment and no `live.` subdomain. Stackstone Consulting's company site stays separate and is expected to redirect `stackstoneconsulting.co.uk/oathstone` to Oathstone.

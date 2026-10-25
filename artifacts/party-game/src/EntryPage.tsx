@@ -44,7 +44,12 @@ import {
 } from './EntryExperience';
 import type { CoordinatorCommand } from './CoordinatorConsole';
 import { attachGameView, type GameRealtimeSocket } from './game-socket';
-import { lobbyCodeJoinUrl, parseLobbyCodeFragment } from './lobby-code-url';
+import {
+  lobbyCodeJoinUrl,
+  parseLobbyCodeFragment,
+  publicShareUrl,
+  previewShareWarning,
+} from './lobby-code-url';
 import { recoverSeat } from './recovery-client';
 import { buildNewGameConfig } from './new-game-config';
 import { createAdaptivePoller } from './polling-backoff';
@@ -221,9 +226,11 @@ function webPath(path: string): string {
 
 function invitationUrl(gameId: string, inviteUrl: string): string {
   const token = new URL(inviteUrl).hash.slice(1);
-  return `${window.location.origin}${webPath(
-    `/join/${encodeURIComponent(gameId)}`,
-  )}#${token}`;
+  return publicShareUrl({
+    origin: window.location.origin,
+    path: webPath(`/join/${encodeURIComponent(gameId)}`),
+    fragment: token,
+  });
 }
 
 function readEntryOptions(): EntryExperienceOptions {
@@ -1007,6 +1014,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       joinCode={lateJoinMode ? '' : joinCode}
       shareUrl={visibleShareUrl}
       qrCode={qrCode}
+      previewWarning={previewShareWarning(window.location.origin)}
       players={playerList}
       requiredPlayerCount={
         Number(new URLSearchParams(location.search).get('players')) ||
