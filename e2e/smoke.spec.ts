@@ -428,7 +428,7 @@ test('entry welcome title and actions stay high in a short desktop viewport', as
   ).toBeLessThan(viewport.height * 0.75);
 });
 
-test('private role and seal stay inside small phone viewports without a play footer', async ({
+test('private role and seal stay inside small phone viewports with a linked play footer', async ({
   page,
 }, testInfo) => {
   const gameId = 'role-viewport-fit';
@@ -526,14 +526,14 @@ test('private role and seal stay inside small phone viewports without a play foo
     const shieldDialog = page.getByRole('dialog', {
       name: 'Shield your screen',
     });
-    const shieldFooter = shieldDialog.getByTestId('brand-footer-overlay');
+    const shieldFooter = shieldDialog.getByTestId('brand-footer-shield');
     const shieldConfirmation = shieldDialog.getByRole('button', {
       name: /i’m shielded/i,
     });
     await expect(shieldConfirmation).toHaveAttribute('aria-disabled', 'false', {
       timeout: 6500,
     });
-    await expect(shieldFooter).toHaveCount(0);
+    await expect(shieldFooter).toBeVisible();
     await expect(shieldConfirmation).toBeVisible();
     const shieldConfirmationBounds = await shieldConfirmation.boundingBox();
     if (!shieldConfirmationBounds)
@@ -605,7 +605,7 @@ test('private role and seal stay inside small phone viewports without a play foo
     const headerBounds = await page
       .locator('.player-shell-header')
       .boundingBox();
-    await expect(page.getByTestId('brand-footer-shell')).toHaveCount(0);
+    await expect(page.getByTestId('brand-footer-shell')).toBeVisible();
     expect(roleHeading!.y).toBeGreaterThanOrEqual(
       headerBounds!.y + headerBounds!.height,
     );
@@ -745,8 +745,8 @@ test('game status bar stays visible and active-play actions stay unobstructed', 
         .evaluate((main) => getComputedStyle(main).overflowY),
     )
     .toBe('hidden');
-  const guideFooter = guide.getByTestId('brand-footer-overlay');
-  await expect(guideFooter).toHaveCount(0);
+  const guideFooter = guide.getByTestId('brand-footer-rehearsal-guide');
+  await expect(guideFooter).toBeVisible();
   const [guideWordmarkBounds, guideStatusBarBounds] = await Promise.all([
     guide.getByTestId('text-entry-brand').boundingBox(),
     page.getByTestId('game-status-bar').boundingBox(),
@@ -786,7 +786,7 @@ test('game status bar stays visible and active-play actions stay unobstructed', 
   const bottomBar = page.getByTestId('game-bottom-bar');
   const notesButton = page.getByTestId('button-open-notes');
   await expect(actionBar).toBeVisible();
-  await expect(footer).toHaveCount(0);
+  await expect(footer).toBeVisible();
   await expect(statusBar).toHaveCount(1);
   await expect(bottomBar).toHaveCount(1);
   await expect(notesButton).toBeVisible();
@@ -903,7 +903,7 @@ test('game status bar stays visible and active-play actions stay unobstructed', 
   const confirmationFooter = page.getByTestId('brand-footer-confirmation');
   const confirmationWordmark = confirmation.getByTestId('text-entry-brand');
   await expect(confirmation).toBeVisible();
-  await expect(confirmationFooter).toHaveCount(0);
+  await expect(confirmationFooter).toBeVisible();
   await expect(confirmationWordmark).toBeVisible();
   const [cardBounds, confirmButtonBounds, confirmationWordmarkBounds] =
     await Promise.all([

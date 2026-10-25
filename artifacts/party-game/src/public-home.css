@@ -259,6 +259,7 @@
 
 .public-home-content {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(4rem, 9vw, 7rem);
   width: min(100%, 72rem);
   margin-inline: auto;

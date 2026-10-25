@@ -1941,6 +1941,9 @@ test('rehearsal player can move on from public and voting screens', async ({
   await expect(stepGuide).toContainText(
     'Share what you have noticed before the vote.',
   );
+  await expect(
+    stepGuide.getByRole('link', { name: 'Visit Stackstone Consulting' }),
+  ).toBeVisible();
   await stepGuide.getByRole('button', { name: 'Got it' }).click();
   await expect(stepGuide).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Next step' })).toBeVisible();

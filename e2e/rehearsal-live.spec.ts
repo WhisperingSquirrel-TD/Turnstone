@@ -328,8 +328,9 @@ async function handleShield(
           )
           .catch(() => null)
       : null;
-  await expect(shield.getByTestId('brand-footer-overlay')).toHaveCount(0);
-  await expect(page.getByTestId('brand-footer-shell')).toHaveCount(0);
+  await expect(shield.getByTestId('brand-footer-shield')).toBeVisible();
+  await expect(page.getByTestId('brand-footer-shell')).toBeHidden();
+  await expect(page.locator('.brand-credit:visible')).toHaveCount(1);
   await expect(page.getByTestId('rehearsal-action-bar')).toHaveCount(0);
   const button = shield.getByRole('button', { name: 'I’m shielded' });
   await expect(button).toHaveAttribute('aria-disabled', 'false', {
@@ -1464,8 +1465,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         await expect(
           page
             .getByTestId('rehearsal-explainer')
-            .getByTestId('brand-footer-overlay'),
-        ).toHaveCount(0);
+            .getByTestId('brand-footer-rehearsal-guide'),
+        ).toBeVisible();
         await page.getByRole('button', { name: 'Got it' }).click();
         seenExplanations.add(phase);
         if (phase === 'DEBATE') {
@@ -1495,8 +1496,8 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
         watchModePhases.add(phase);
       }
       await expect(page.getByTestId('game-status-bar')).toBeVisible();
-      const brandFooter = page.getByTestId('brand-footer-shell');
-      await expect(brandFooter).toHaveCount(0);
+      const brandFooter = page.locator('.brand-credit:visible');
+      await expect(brandFooter).toHaveCount(1);
       const brokenImages = await page
         .locator('img')
         .evaluateAll(async (images) =>

@@ -3715,6 +3715,11 @@ function PlayerGame() {
                 </button>
               </div>
             </div>
+            <BrandFooter
+              context="game"
+              className="game-brand-footer"
+              testId="brand-footer-confirmation"
+            />
           </div>
         )}
         {!isResuming && full?.rehearsal && rehearsalGuideVisible && (
@@ -3751,6 +3756,11 @@ function PlayerGame() {
                 {en.game.guideGotIt}
               </button>
             </div>
+            <BrandFooter
+              context="game"
+              className="game-brand-footer"
+              testId="brand-footer-rehearsal-guide"
+            />
           </div>
         )}
         {!isResuming && showShieldCard && (
