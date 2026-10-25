@@ -11,6 +11,7 @@ export type GameViewTab = 'game' | 'players';
 export function gameStatusLabel(phase: string, cycle: number): string {
   if (phase === 'JOIN') return 'Join a game';
   if (phase === 'LOBBY') return 'Lobby';
+  if (phase === 'LOADING') return en.game.tabGame;
   const period = phase === 'SHADOW' ? 'Night' : 'Day';
   const compactPhaseNames: Record<string, string> = {
     DEAL: 'Deal',

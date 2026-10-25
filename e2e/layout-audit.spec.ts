@@ -1,8 +1,67 @@
 import { expect, test } from '@playwright/test';
+import { choiceCompletionScope } from './support/choice-completion';
+
 import {
   auditApplicationLayout,
+  auditFocusAndBorders,
   inspectVisibleLayout,
 } from './support/layout-audit';
+
+test('night completion checks the submitted round, not a new round’s dock controls', async ({
+  page,
+}) => {
+  await page.setContent(`<div data-testid="player-game" data-phase="SHADOW"
+    data-shadow-round="1" data-shadow-slot="1"></div>
+    <aside><button>Review this choice</button><button>Confirm this choice</button></aside>`);
+  const submitted = page.locator(
+    choiceCompletionScope({ phase: 'SHADOW', round: '1', slot: '1' }),
+  );
+  await expect(
+    submitted.getByRole('button', { name: 'Review this choice' }),
+  ).toBeVisible();
+  await page
+    .getByTestId('player-game')
+    .evaluate((el) => el.setAttribute('data-shadow-round', '2'));
+  await expect(
+    submitted.getByRole('button', { name: 'Review this choice' }),
+  ).toBeHidden();
+  await expect(
+    submitted.getByRole('button', { name: 'Confirm this choice' }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: 'Review this choice' }),
+  ).toBeVisible();
+});
+
+test('owner regression: clipped focus ring is detected and an inset ring stays visible', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 640 });
+  await page.setContent(`<meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>body{margin:16px}main{overflow:hidden}input{box-sizing:border-box;width:100%;height:56px}
+    input:focus{outline:3px solid brown;outline-offset:3px}</style>
+    <main><input id="name" aria-label="Name"></main>`);
+  expect(
+    (await auditFocusAndBorders(page, 'clipped-focus-ring')).some(
+      (f) => f.kind === 'focus-ring-clipped',
+    ),
+  ).toBe(true);
+  await page.addStyleTag({ content: 'input:focus{outline-offset:-3px}' });
+  expect(await auditFocusAndBorders(page, 'inset-focus-ring')).toEqual([]);
+});
+
+test('owner regression: scrollbar overlap includes bordered boxes, not just text', async ({
+  page,
+}) => {
+  await page.setContent(`<style>main{width:260px;height:200px;overflow:auto;scrollbar-gutter:stable}
+    .card{width:280px;height:100px;border:1px solid black}</style>
+    <main><div class="card" id="card"></div><div style="height:500px"></div></main>`);
+  expect(
+    (await auditFocusAndBorders(page, 'scrollbar-overlap')).some(
+      (f) => f.kind === 'border-under-scrollbar-or-clipped',
+    ),
+  ).toBe(true);
+});
 
 test('bounded main scroll area keeps every target clear at both edges', async ({
   page,
@@ -101,3 +160,57 @@ for (const [name, html, kind] of [
     );
   });
 }
+
+test('unresolved game header and recovery controls fit every phone width', async ({
+  page,
+}, info) => {
+  test.setTimeout(60_000);
+  await page.clock.install();
+  await page.route('**/api/games/header-unavailable/**', (route) =>
+    route.fulfill({
+      status: 404,
+      json: { error: { code: 'NOT_FOUND', message: 'Game not found' } },
+    }),
+  );
+  for (const width of [320, 360, 375, 390, 430]) {
+    for (const palette of ['day', 'night'] as const) {
+      await page.setViewportSize({
+        width,
+        height: width === 320 ? 640 : width === 360 ? 740 : 844,
+      });
+      await page.emulateMedia({
+        colorScheme: palette === 'night' ? 'dark' : 'light',
+        reducedMotion: 'reduce',
+      });
+      const failedView = page.waitForResponse(
+        (response) =>
+          response.url().includes('/api/games/header-unavailable/view') &&
+          response.status() === 404,
+      );
+      await page.goto('/game/header-unavailable?clips=off');
+      await failedView;
+      await page.clock.fastForward(300);
+      await expect(page.locator('main')).toContainText(
+        /could|can[’']t|cannot|unavailable|not found|problem|check|error/i,
+      );
+      await expect(page.locator('.game-status-phase-label')).toHaveText('Game');
+      await page.evaluate(() => document.fonts.ready);
+      expect(
+        await auditApplicationLayout(page, `game-error-${width}-${palette}`),
+      ).toEqual([]);
+      expect(
+        await auditFocusAndBorders(page, `game-error-${width}-${palette}`),
+      ).toEqual([]);
+      if (
+        process.env.R7_AUDIT_CAPTURE === '1' &&
+        info.project.name === 'Pixel'
+      ) {
+        await page.screenshot({
+          path: `docs/screens/round-7-audit/game-error-${width}-${palette === 'night' ? 'dark' : 'light'}.jpg`,
+          type: 'jpeg',
+          quality: 40,
+        });
+      }
+    }
+  }
+});

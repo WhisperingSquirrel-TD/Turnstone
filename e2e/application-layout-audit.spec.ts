@@ -4,6 +4,7 @@ import { createPublicView } from './support/public-view';
 import { installLiveSocketViewFixture } from './support/live-socket-view';
 import {
   auditApplicationLayout,
+  auditFocusAndBorders,
   type LayoutFinding,
 } from './support/layout-audit';
 import type { FullView } from '../lib/shared/src/contracts';
@@ -41,6 +42,7 @@ for (const width of widths)
       await page.clock.install();
       const gameId = 'layout-audit-room';
       let role: 'faithful' | 'traitor' = 'faithful';
+      let privateAvailable = true;
       let view = createPublicView(gameId);
       const envelope = () => ({
         serverNow: Date.now(),
@@ -78,6 +80,8 @@ for (const width of widths)
               joinUrl: `https://oathstone.test/join/${gameId}#${'i'.repeat(43)}`,
             },
           });
+        if (path.endsWith('/private-view') && !privateAvailable)
+          return route.fulfill({ json: envelope() });
         if (path.endsWith('/private-view'))
           return route.fulfill({
             json: {
@@ -104,6 +108,11 @@ for (const width of widths)
       const findings: LayoutFinding[] = [];
       const coverage: string[] = [];
       async function audit(name: string) {
+        if (name.startsWith('shadow') || name.startsWith('night-'))
+          await expect(
+            page.locator('.game-shell'),
+            'owner regression: every night state is dark',
+          ).toHaveAttribute('data-game-theme', 'night');
         coverage.push(name);
         findings.push(...(await auditApplicationLayout(page, name)));
         if (
@@ -126,6 +135,7 @@ for (const width of widths)
             );
           }
         }
+        findings.push(...(await auditFocusAndBorders(page, name)));
       }
       async function go(path: string, heading?: string) {
         await page.goto(path);
@@ -395,6 +405,19 @@ for (const width of widths)
           await page.getByRole('textbox').fill('Fixture note');
           await audit('notes-sheet-with-draft');
           await page.getByRole('button', { name: 'Done', exact: true }).click();
+          privateAvailable = false;
+          await page
+            .getByTestId('game-status-bar')
+            .getByRole('button', { name: 'Notes', exact: true })
+            .click();
+          await expect(
+            page
+              .getByTestId('private-screen-recovery')
+              .getByRole('button', { name: 'Try again', exact: true }),
+          ).toBeEnabled();
+          await audit('notes-sheet-recovery');
+          await page.getByRole('button', { name: 'Done', exact: true }).click();
+          privateAvailable = true;
           await page.getByTestId('game-status-menu').locator('summary').click();
           await audit('game-menu-display');
           await page.getByTestId('game-status-menu').locator('summary').click();

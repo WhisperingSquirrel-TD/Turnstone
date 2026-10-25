@@ -1,7 +1,15 @@
 # Status for reviewer
 
-**Round 7 real-phone findings — main `0b76445`, Verify #303 RED.**
-Recovery is pushed. Every job passed except the iPhone SHADOW return-notice
+**Round 7 real-phone findings — main `ab3ddee`, Verify #304 GREEN.**
+The remaining clipping/header audit fixes are locally ready: 236 client unit
+tests, both type checks, lint, focused Pixel/iPhone regressions and refreshed
+gallery pass. Next: push this layout batch, then check its Verify.
+No owner decision is pending; no publishing or configuration changes.
+
+## Round 7 real-phone evidence
+
+Recovery and safe failure diagnostics are pushed. In Verify #303 (`0b76445`),
+every job passed except the iPhone SHADOW return-notice
 test: the initial choice list did not appear after the shield click.
 The job log and available artifacts do not establish why; the run contains
 scenario reports, not browser traces. Do not call this a product or fixture
@@ -9,15 +17,16 @@ defect without evidence. Failure-only diagnostics now record endpoint,
 status, allowlisted command type and public step attributes only, never
 roles, choices, bodies, cookies or tokens.
 
-The scrollbar/focus/header audit batch remains local. The combined phone run
+The scrollbar/focus/header audit batch is ready locally. The combined phone run
 passed 48/50 cases; only the 320px iPhone error-state Menu clearance failed.
 A focused replay now passes all four 320px day/night phone audits and both
-SHADOW return cases, retaining the full assertions. Missing Notes snapshots leave Done and Try again usable;
+SHADOW return cases, retaining the full assertions. A separate real-app error
+regression passes at 320/360/375/390/430 in both themes on Pixel and iPhone,
+and refreshes those gallery images. Missing Notes snapshots leave Done and Try again usable;
 the Practice Talk retry sends no gameplay command. All night-state audit
 cases remain dark. The held-card target is 96px, above both touch minimums.
-No owner decision is pending; no publishing or configuration changes.
-
-Latest fully green reference: `d33a6cd`, Verify #302 attempt 2. Its unchanged
+Verify #304 passed every job, including the unchanged SHADOW return assertion.
+The earlier fully green reference is `d33a6cd`, Verify #302 attempt 2. Its unchanged
 iPad opener rerun passed; H1 and rehearsal-live passed on the first attempt.
 Local WebKit reports neither VP9 nor H.264 support, so local video decoding
 cannot be claimed. The supported CI container passed the clip checks.

@@ -407,7 +407,7 @@ function Shell({
       >
         {isPlayer ? (
           <GameStatusBar
-            phase={phase ?? 'DRAFT'}
+            phase={phase ?? 'LOADING'}
             cycle={cycle}
             remaining={remaining}
             showRemaining={false}

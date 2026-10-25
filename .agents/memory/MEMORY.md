@@ -28,3 +28,4 @@
 - [Playwright pool lifetime](playwright-pool-lifetime.md) — shared database teardown belongs to the worker, not individual spec files.
 - [Harness step identity](harness-step-identity.md) — night rounds and slots can advance without changing the phase name.
 - [Rehearsal overlay test order](rehearsal-overlay-test-order.md) — dismiss privacy and guide overlays before testing shared help; scope duplicate disclosure labels.
+- [Night theme precedence](night-theme-precedence.md) — owner requires dark night screens; saved Display choices apply to day/setup and must survive night unchanged.

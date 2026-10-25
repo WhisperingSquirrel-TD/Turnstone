@@ -8,6 +8,160 @@ export type LayoutFinding = {
   boxes?: { x: number; y: number; width: number; height: number }[];
 };
 
+/** Run after the state screenshot: focusing a held private control can hide it. */
+export async function auditFocusAndBorders(
+  page: Page,
+  screen: string,
+): Promise<LayoutFinding[]> {
+  await page.keyboard.press('Tab');
+  return page.evaluate((name) => {
+    const findings: LayoutFinding[] = [];
+    const selector = (el: Element) =>
+      el.id
+        ? `#${CSS.escape(el.id)}`
+        : el.getAttribute('data-testid')
+          ? `[data-testid="${CSS.escape(el.getAttribute('data-testid')!)}"]`
+          : `${el.tagName.toLowerCase()}[data-layout-audit-node="${el.getAttribute('data-layout-audit-node')}"]`;
+    const add = (kind: string, el: Element, ancestor?: Element) =>
+      findings.push({
+        screen: name,
+        viewport: `${innerWidth}x${innerHeight}`,
+        kind,
+        selectors: [el, ...(ancestor ? [ancestor] : [])].map(selector),
+        boxes: [el, ...(ancestor ? [ancestor] : [])].map((node) => {
+          const { x, y, width, height } = node.getBoundingClientRect();
+          return { x, y, width, height };
+        }),
+      });
+    const visible = (el: Element) =>
+      el.isConnected &&
+      el.getClientRects().length > 0 &&
+      el.checkVisibility?.({ checkOpacity: true, checkVisibilityCSS: true }) !==
+        false &&
+      !el.closest(
+        '[hidden], [inert], [aria-hidden="true"], .sr-only, .game-connection-label--visually-hidden',
+      );
+    const focusable =
+      'button:not(:disabled), a[href], input:not(:disabled):not([type=hidden]), select:not(:disabled), textarea:not(:disabled), summary, [tabindex="0"]';
+    const targets = Array.from(
+      document.querySelectorAll<HTMLElement>('*'),
+    ).filter((el) => {
+      if (!visible(el)) return false;
+      const css = getComputedStyle(el);
+      return (
+        el.matches(focusable) ||
+        parseFloat(css.borderLeftWidth) > 0 ||
+        parseFloat(css.borderRightWidth) > 0
+      );
+    });
+    const initialFocus = document.activeElement;
+    for (const bar of Array.from(
+      document.querySelectorAll('.game-status-bar'),
+    )) {
+      const chip = bar.querySelector('[data-testid="game-status-phase"]');
+      const label = chip?.querySelector('.game-status-phase-label');
+      const menu = bar.querySelector('.game-status-menu > summary');
+      if (chip && label) {
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        if (
+          chip.getBoundingClientRect().width >
+          range.getBoundingClientRect().width + 24
+        )
+          add('phase-chip-stretched', chip);
+      }
+      if (menu && menu.getBoundingClientRect().right > innerWidth - 15.5)
+        add('menu-missing-edge-clearance', menu, bar);
+    }
+    for (const el of targets) {
+      if (!visible(el)) continue;
+      el.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: 'instant',
+      });
+      const before = getComputedStyle(el).boxShadow;
+      if (el.matches(focusable)) el.focus({ preventScroll: true });
+      if (!visible(el)) continue;
+      const css = getComputedStyle(el),
+        r = el.getBoundingClientRect();
+      let outset =
+        document.activeElement === el && css.outlineStyle !== 'none'
+          ? Math.max(
+              0,
+              parseFloat(css.outlineWidth) + parseFloat(css.outlineOffset),
+            )
+          : 0;
+      if (document.activeElement === el && css.boxShadow !== before) {
+        for (const shadow of css.boxShadow.split(/,(?![^(]*\))/)) {
+          if (shadow.includes('inset')) continue;
+          const lengths =
+            shadow
+              .replace(/rgba?\([^)]*\)/g, '')
+              .match(/-?[\d.]+px/g)
+              ?.map(parseFloat) ?? [];
+          if (lengths.length >= 3)
+            outset = Math.max(
+              outset,
+              Math.max(Math.abs(lengths[0]!), Math.abs(lengths[1]!)) +
+                Math.max(0, (lengths[2] ?? 0) * 1.5 + (lengths[3] ?? 0)),
+            );
+        }
+      }
+      const box = {
+        left: r.left - outset,
+        right: r.right + outset,
+        top: r.top - outset,
+        bottom: r.bottom + outset,
+      };
+      if (
+        outset &&
+        (box.left < -0.5 ||
+          box.right > innerWidth + 0.5 ||
+          box.top < -0.5 ||
+          box.bottom > innerHeight + 0.5)
+      )
+        add('focus-ring-clipped', el);
+      for (
+        let ancestor = el.parentElement;
+        ancestor;
+        ancestor = ancestor.parentElement
+      ) {
+        if (css.position === 'fixed' || el.matches('dialog:modal')) break;
+        const style = getComputedStyle(ancestor),
+          bounds = ancestor.getBoundingClientRect();
+        const left = bounds.left + ancestor.clientLeft,
+          right = left + ancestor.clientWidth;
+        const top = bounds.top + ancestor.clientTop,
+          bottom = top + ancestor.clientHeight;
+        if (
+          ['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowX) &&
+          (box.left < left - 0.5 || box.right > right + 0.5)
+        )
+          add(
+            outset ? 'focus-ring-clipped' : 'border-under-scrollbar-or-clipped',
+            el,
+            ancestor,
+          );
+        if (
+          outset &&
+          ['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowY) &&
+          (box.top < top - 0.5 || box.bottom > bottom + 0.5)
+        )
+          add('focus-ring-clipped', el, ancestor);
+        if (ancestor.matches('dialog:modal') || style.position === 'fixed')
+          break;
+      }
+    }
+    if (initialFocus instanceof HTMLElement && visible(initialFocus))
+      initialFocus.focus({ preventScroll: true });
+    document
+      .querySelectorAll('main')
+      .forEach((el) => el.scrollTo({ top: 0, behavior: 'instant' }));
+    return findings;
+  }, screen);
+}
+
 /** No text contents, private values or request bodies enter the report. */
 export async function inspectVisibleLayout(
   page: Page,

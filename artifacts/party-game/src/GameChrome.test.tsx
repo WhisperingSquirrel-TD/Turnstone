@@ -95,6 +95,8 @@ describe('shared game chrome', () => {
     expect(gameStatusLabel('DEBATE', 2)).toBe('Day 2 · Talk');
     expect(gameStatusLabel('SHADOW', 2)).toBe('Night 2 · Shadow');
     expect(gameStatusLabel('VOTE', 3)).toBe('Day 3 · Vote');
+    expect(gameStatusLabel('LOADING', 0)).toBe('Game');
+    expect(gameStatusLabel('DRAFT', 0)).toBe('Day 0 · Preparing the game');
   });
 
   it('shows remaining players and a word-labelled connection state', () => {

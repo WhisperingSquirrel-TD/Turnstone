@@ -119,7 +119,7 @@ h2,
 }
 :focus-visible {
   outline: 3px solid var(--gilt);
-  outline-offset: 4px;
+  outline-offset: -3px;
 }
 ::selection {
   color: var(--hearth);
@@ -269,6 +269,11 @@ h2,
   padding-bottom: 1.25rem !important;
   scroll-padding-block: 1rem;
   overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.game-shell-main::-webkit-scrollbar {
+  display: none;
 }
 .game-shell .player-tile {
   scroll-margin-block-end: 1rem;
@@ -411,23 +416,22 @@ a[href='#main']:focus {
 
 .game-status-bar > .game-status-chip {
   min-width: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 0 1 auto;
+  overflow: visible;
 }
 
 .game-status-phase-label {
   display: block;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  white-space: normal;
 }
 
 .game-status-right {
   display: flex;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
+  margin-inline-start: auto;
   min-width: 0;
   align-items: center;
   gap: 8px;
@@ -1187,9 +1191,9 @@ button.player-tile {
   }
 
   .private-moment-shell .hold-seal {
-    width: 112px;
-    min-width: 112px;
-    min-height: 112px;
+    width: 96px;
+    min-width: 96px;
+    min-height: 96px;
   }
 }
 

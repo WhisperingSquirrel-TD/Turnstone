@@ -86,6 +86,17 @@
   transform: translateY(0);
 }
 
+/* Keep keyboard focus inside clipped demo/form panels as well as the page. */
+.safe-page :is(a, button, input, textarea, select, summary, [tabindex]) {
+  outline-offset: -3px;
+}
+
+.safe-page :focus-visible {
+  outline: 3px solid var(--gilt);
+  outline-offset: -3px;
+  box-shadow: none;
+}
+
 .player-shell-header {
   position: relative;
   z-index: 20;

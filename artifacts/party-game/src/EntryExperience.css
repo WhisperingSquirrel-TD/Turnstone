@@ -506,7 +506,7 @@
 
 .entry-presenter-option input:focus-visible {
   outline: 2px solid var(--game-accent);
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
 
 .entry-presenter-option > span {
@@ -573,6 +573,11 @@
   padding-bottom: 1rem;
   scroll-padding-block: 1rem;
   overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.entry-experience .entry-main::-webkit-scrollbar {
+  display: none;
 }
 
 .entry-stage-chrome .game-status-bar {
@@ -787,7 +792,7 @@
 
 .entry-experience :focus-visible {
   outline: 3px solid var(--entry-gilt);
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
 
 @media (min-width: 700px) {

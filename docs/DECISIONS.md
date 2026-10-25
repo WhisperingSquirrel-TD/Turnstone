@@ -1735,3 +1735,40 @@ step. Scope only night completion assertions to the submitted public round
 and slot. Qualify the body so portalled dock controls remain included. Do not
 use version (other players can change it), private values or roles. All
 existing assertions and timeouts remain. No game or limiter change.
+
+### Real-phone scrollbar, focus and recovery follow-up — 25 October 2026
+
+Hide the main scroll area's native scrollbar rather than allowing its thumb
+to cover bordered cards. Keep the one-main-scroll-area layout and the existing
+held-private-screen lock. Focus outlines sit inside controls; the shared public
+focus rule also removes the additional focus shadow so clipped form/demo
+containers cannot cut off an outer or double ring. The phase chip no longer
+grows into spare header width; the right controls retain their own width.
+
+The stronger audit found that the compact held-role instructions overlapped
+the bottom tabs at 320×640. Reduce the existing compact hold target from 112px
+to 96px, still larger than the 56px primary and 44px touch minimums. Do not
+unlock the private screen or exempt the overlap.
+
+The empty Practice Talk path was Notes opened without a usable private
+snapshot: the old branch gated the entire sheet and Done control on that
+snapshot. Keep the sheet and Done available independently, show the existing
+status, and offer Try again through the existing recovery path. In a public
+phase this fetches Notes without sending a gameplay acknowledgement. Closing
+still clears the draft and private DOM; nothing new is stored or logged.
+
+Audit every focusable control's outline against the viewport and clipping
+ancestors, and every bordered box against the scroll container's horizontal
+client box. Keep all existing geometry, hit-target and privacy checks. Add the
+missing-snapshot Notes sheet to the full state/gallery inventory.
+
+The unresolved/error game header must not invent a day and setup phase while
+no public phase is available. Use the existing neutral “Game” label for that
+UI-only loading state, preserving all known phase labels, including DRAFT.
+Keep the Menu target and edge clearance intact rather than shrinking text or
+truncating public state to make room.
+
+Verify #303's iPhone return-notice failure is not diagnosed by its log alone.
+Its available artifacts contain no browser trace. Add bounded, failure-only
+network/status and public-step diagnostics; retain the original visibility
+assertion and timeout. Never log private content, request bodies or credentials.
