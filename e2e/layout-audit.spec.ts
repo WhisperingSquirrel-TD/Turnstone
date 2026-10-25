@@ -206,7 +206,7 @@ test('unresolved game header and recovery controls fit every phone width', async
         info.project.name === 'Pixel'
       ) {
         await page.screenshot({
-          path: `docs/screens/round-7-audit/game-error-${width}-${palette === 'night' ? 'dark' : 'light'}.jpg`,
+          path: `docs/screens/round-7-audit/game-error-${width}-${palette}.jpg`,
           type: 'jpeg',
           quality: 40,
         });

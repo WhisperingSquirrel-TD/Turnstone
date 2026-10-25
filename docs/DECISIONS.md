@@ -1772,3 +1772,8 @@ Verify #303's iPhone return-notice failure is not diagnosed by its log alone.
 Its available artifacts contain no browser trace. Add bounded, failure-only
 network/status and public-step diagnostics; retain the original visibility
 assertion and timeout. Never log private content, request bodies or credentials.
+
+Keep error gallery captures on the same `day`/`night` filename convention as
+the full state audit. Replace the newly generated duplicate `light`/`dark`
+error aliases with their identical canonical captures; do not remove or alter
+user-supplied assets.

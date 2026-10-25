@@ -1,9 +1,10 @@
 # Status for reviewer
 
-**Round 7 real-phone findings — main `ab3ddee`, Verify #304 GREEN.**
-The remaining clipping/header audit fixes are locally ready: 236 client unit
-tests, both type checks, lint, focused Pixel/iPhone regressions and refreshed
-gallery pass. Next: push this layout batch, then check its Verify.
+**Round 7 real-phone findings COMPLETE — implementation `e44f8c99`, gallery
+`8585d689`, Verify #305 GREEN (attempt 2).**
+All 236 client unit tests, both type checks, lint and the focused Pixel/iPhone
+regressions pass locally. The exact iPad crash case also passes locally.
+The final status/gallery-name follow-up changes no app behavior or assertion.
 No owner decision is pending; no publishing or configuration changes.
 
 ## Round 7 real-phone evidence
@@ -17,7 +18,7 @@ defect without evidence. Failure-only diagnostics now record endpoint,
 status, allowlisted command type and public step attributes only, never
 roles, choices, bodies, cookies or tokens.
 
-The scrollbar/focus/header audit batch is ready locally. The combined phone run
+The scrollbar/focus/header audit batch is pushed and Verify-green. The combined phone run
 passed 48/50 cases; only the 320px iPhone error-state Menu clearance failed.
 A focused replay now passes all four 320px day/night phone audits and both
 SHADOW return cases, retaining the full assertions. A separate real-app error
@@ -26,6 +27,12 @@ and refreshes those gallery images. Missing Notes snapshots leave Done and Try a
 the Practice Talk retry sends no gameplay command. All night-state audit
 cases remain dark. The held-card target is 96px, above both touch minimums.
 Verify #304 passed every job, including the unchanged SHADOW return assertion.
+Verify #305 attempt 1: all jobs passed except iPad WebKit (`Page crashed` at
+the final `page.goto`, not an assertion or timeout failure). The exact iPad
+430px day audit passes locally using the configured browser runtime. Do not
+claim a crash cause from that. Its single unchanged failed-job rerun passed;
+Verify #305 attempt 2 is green. No assertion, timeout or product behavior was
+changed in response to the crash.
 The earlier fully green reference is `d33a6cd`, Verify #302 attempt 2. Its unchanged
 iPad opener rerun passed; H1 and rehearsal-live passed on the first attempt.
 Local WebKit reports neither VP9 nor H.264 support, so local video decoding
