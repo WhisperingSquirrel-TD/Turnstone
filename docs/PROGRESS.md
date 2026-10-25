@@ -1,13 +1,20 @@
 # Status for reviewer
 
-**Round 7 real-phone findings — night fix `7bc6505`; Verify #301 red in H1 only.**
-All four browser jobs, unit, audit and the other gates passed. Failure trace:
-SHADOW round 1 was complete (version 62, 5/5), then round 2 opened (version 68,
-0/5); the helper incorrectly required the new round's Review button to hide.
-The test-first correction scopes completion to the submitted public round/slot,
-with unchanged assertions/timeouts. The real six-context replay passed locally
-(`h1-seed-6001`). Next: finish the scrollbar/focus/header and private-screen
-recovery batch; refreshed full-state gallery/audit in progress.
+**Round 7 real-phone findings — main `d33a6cd`, Verify #302 GREEN (attempt 2).**
+Night precedence (`7bc6505`) and the public-step-scoped H1 correction
+(`d33a6cd`) are on main. H1 and rehearsal-live passed on the first attempt.
+The iPad opener check initially recorded only `loadstart`, with no `playing`
+event; its single unchanged failed-job rerun passed. No media code, assertion,
+start limit or threshold was changed.
+
+The remaining scrollbar/focus/header and private-screen recovery batch is
+local, undergoing its final combined phone audit. Missing private snapshots
+now leave Notes with Done and Try again rather than an isolated placeholder;
+the Practice Day 1 Talk regression verifies retry sends no gameplay command.
+The audit now checks focused rings and bordered-box edges, includes missing
+Notes recovery, and requires every night state to remain dark. Its 320px
+held-card finding is fixed in the existing compact layout (96px hold target).
+No owner decision is pending; no publishing or configuration changes.
 
 **Round 7 Lobby first-view follow-up — local checks passed.** QR is 200px square,
 with its encoded quiet zone unchanged. Mobile spacing is tightened without

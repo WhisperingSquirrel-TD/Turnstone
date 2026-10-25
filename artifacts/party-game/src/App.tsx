@@ -3325,24 +3325,24 @@ function PlayerGame() {
                           {completedVoteMessage ?? en.game.waitingForEveryone}
                         </p>
                       ) : notesOpen && !phaseIsPrivate ? (
-                        shielded && privateView ? (
-                          <section
-                            className="game-notes-sheet"
-                            role="dialog"
-                            aria-modal="true"
-                            aria-label="Notes"
-                            data-testid="game-notes-sheet"
-                          >
-                            <div className="game-notes-sheet__header">
-                              <h2 className="display text-2xl">Notes</h2>
-                              <button
-                                className="quiet-action"
-                                type="button"
-                                onClick={closeNotes}
-                              >
-                                {en.game.notesDone}
-                              </button>
-                            </div>
+                        <section
+                          className="game-notes-sheet"
+                          role="dialog"
+                          aria-modal="true"
+                          aria-label="Notes"
+                          data-testid="game-notes-sheet"
+                        >
+                          <div className="game-notes-sheet__header">
+                            <h2 className="display text-2xl">Notes</h2>
+                            <button
+                              className="quiet-action"
+                              type="button"
+                              onClick={closeNotes}
+                            >
+                              {en.game.notesDone}
+                            </button>
+                          </div>
+                          {shielded && privateView ? (
                             <NotesScreen
                               privateView={privateView}
                               seats={full.seats}
@@ -3352,12 +3352,27 @@ function PlayerGame() {
                               onDraftChange={setNotesDraft}
                               onSave={() => void saveNotes()}
                             />
-                          </section>
-                        ) : (
-                          <p role="status" className="text-sm text-ash">
-                            {holdMessage || en.game.privateLoading}
-                          </p>
-                        )
+                          ) : (
+                            <div
+                              className="space-y-3"
+                              data-testid="private-screen-recovery"
+                            >
+                              <p role="status" className="text-sm text-ash">
+                                {notesStatus ||
+                                  holdMessage ||
+                                  en.game.privateLoading}
+                              </p>
+                              <button
+                                className="quiet-action"
+                                type="button"
+                                disabled={reveal.isPending || shieldPending}
+                                onClick={() => void acknowledge(true)}
+                              >
+                                {en.app.tryAgain}
+                              </button>
+                            </div>
+                          )}
+                        </section>
                       ) : shielded &&
                         !privateCovered &&
                         isActionPhase &&
@@ -3415,9 +3430,22 @@ function PlayerGame() {
                           </div>
                         )
                       ) : held || reveal.isPending || holdMessage ? (
-                        <p role="status" className="text-sm text-ash">
-                          {holdMessage || en.game.privateLoading}
-                        </p>
+                        <div
+                          className="space-y-3"
+                          data-testid="private-screen-recovery"
+                        >
+                          <p role="status" className="text-sm text-ash">
+                            {holdMessage || en.game.privateLoading}
+                          </p>
+                          <button
+                            className="quiet-action"
+                            type="button"
+                            disabled={reveal.isPending || shieldPending}
+                            onClick={() => void acknowledge(true)}
+                          >
+                            {en.app.tryAgain}
+                          </button>
+                        </div>
                       ) : null}
                     </div>
                     {!actionDone && full.phase === 'DEAL' && !notesOpen && (
