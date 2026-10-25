@@ -1,10 +1,13 @@
 # Status for reviewer
 
-**Round 7 real-phone findings — item 1 ready for Verify.** Public night phases
-override Light without changing the saved Display choice. Day and setup pages,
-including the static home, follow that choice/phone setting. Six Pixel/iPhone
-regressions passed at 320/390/430. Remaining: scrollbar/focus/header audit and
-the empty private-screen recovery path. Baseline Verify #300 is green.
+**Round 7 real-phone findings — night fix `7bc6505`; Verify #301 red in H1 only.**
+All four browser jobs, unit, audit and the other gates passed. Failure trace:
+SHADOW round 1 was complete (version 62, 5/5), then round 2 opened (version 68,
+0/5); the helper incorrectly required the new round's Review button to hide.
+The test-first correction scopes completion to the submitted public round/slot,
+with unchanged assertions/timeouts. The real six-context replay passed locally
+(`h1-seed-6001`). Next: finish the scrollbar/focus/header and private-screen
+recovery batch; refreshed full-state gallery/audit in progress.
 
 **Round 7 Lobby first-view follow-up — local checks passed.** QR is 200px square,
 with its encoded quiet zone unchanged. Mobile spacing is tightened without

@@ -7,6 +7,7 @@ import {
   type TestInfo,
 } from '@playwright/test';
 import { test } from './support/rehearsal-test';
+import { choiceCompletionScope } from './support/choice-completion';
 import { mkdir, rm } from 'node:fs/promises';
 import {
   buildVirtualPlayerScenario,
@@ -331,6 +332,23 @@ async function chooseFirstVisiblePlayer(
     }
     await review.click();
     await expect(confirm).toBeVisible({ timeout: 5_000 });
+    const completionScope = page.locator(
+      choiceCompletionScope(
+        await page.getByTestId('player-game').evaluate((el) => ({
+          phase: el.getAttribute('data-phase') ?? '',
+          round: el.getAttribute('data-shadow-round') ?? '',
+          slot: el.getAttribute('data-shadow-slot') ?? '',
+        })),
+      ),
+    );
+    const completedReview = completionScope.getByRole('button', {
+      name: reviewChoice,
+      exact: true,
+    });
+    const completedConfirm = completionScope.getByRole('button', {
+      name: confirmChoice,
+      exact: true,
+    });
     const beforeConfirm = await playerScreenFingerprint(page);
     await pauseForHumanTiming(page, scenario.stage);
     await confirm.click();
@@ -348,8 +366,8 @@ async function chooseFirstVisiblePlayer(
           if (await rejectedChoiceMessage.isVisible().catch(() => false))
             return 'rejected';
           if (
-            !(await review.isVisible().catch(() => false)) &&
-            !(await confirm.isVisible().catch(() => false))
+            !(await completedReview.isVisible().catch(() => false)) &&
+            !(await completedConfirm.isVisible().catch(() => false))
           )
             return 'complete';
           return 'pending';
@@ -370,8 +388,8 @@ async function chooseFirstVisiblePlayer(
       continue;
     }
 
-    await expect(review).toBeHidden({ timeout: 2_000 });
-    await expect(confirm).toBeHidden({ timeout: 2_000 });
+    await expect(completedReview).toBeHidden({ timeout: 2_000 });
+    await expect(completedConfirm).toBeHidden({ timeout: 2_000 });
     return true;
   }
   return false;

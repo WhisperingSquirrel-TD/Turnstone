@@ -1725,3 +1725,13 @@ system mode follows the phone by day. DAWN remains a day screen, as before.
 Night never rewrites the saved preference. Entry, game and static home share
 the same pure theme policy; the public bootstrap does not import React or game
 state. Static-home branding selects the unmodified official light/dark icon.
+
+### Verify #301 night completion assertion — 25 October 2026
+
+The failure trace shows a completed public SHADOW round (version 62, 5/5)
+followed by a new round (version 68, 0/5). Review controls for the new round
+are legitimate; an unscoped disappearance assertion was checking the wrong
+step. Scope only night completion assertions to the submitted public round
+and slot. Qualify the body so portalled dock controls remain included. Do not
+use version (other players can change it), private values or roles. All
+existing assertions and timeouts remain. No game or limiter change.
