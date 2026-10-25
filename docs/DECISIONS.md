@@ -1600,12 +1600,41 @@ Primary controls are at least 56px; night status lines wrap rather than
 ellipsis; empty choices/notes and pending join checks have associated visible
 explanations. The three named owner regressions stay asserted.
 
-**Remaining decision:** The full audit still fails at-rest body/dock overlap.
-It does not excuse this merely because every element can eventually scroll
-clear. D89's whole-document scrolling conflicts with a bounded content pane;
-QUESTIONS requests approval for one main scroll area above the fixed stack.
+**Resolved decision:** The owner explicitly approved one main scroll area above
+the fixed controls on 25 October 2026; see D106. The audit did not waive the
+at-rest failures while awaiting that decision.
 No existing assertion, timer, threshold, game rule or limit is relaxed.
 
 **Rename guard:** Both complete local runs hit its unchanged 5s timeout;
 the same test passes alone in 279ms. The other 729 assertions pass. This is
 reported rather than raising the guard's timeout or claiming a clean full run.
+
+## D106 — One bounded main scroll area (owner-approved, 25 October 2026)
+
+**Owner answer:** “Use one main scroll area (recommended)”.
+
+**Choice:** Bound the game/form main area above the measured fixed bottom stack.
+The main area is the one scrolling content surface; choice lists do not become
+nested scrollers. Entry credits remain in normal flow at the end of that main
+area. Game credits, tabs and docks retain their measured, non-overlapping stack.
+Keyboard viewport changes still use the existing visual-viewport measurements.
+Held secrets and full-screen dialogs retain their background scroll lock.
+
+**Why:** The strict at-rest audit must not allow content to paint underneath
+fixed controls. This explicitly supersedes the earlier “R5 commentary,
+explainers and scrolling” whole-document contract, not any game/secrecy rule.
+The earlier audit note's D89 reference was mistaken: D89 concerns hosting.
+
+**Tests:** The checker has a red-first bounded-scrollport calibration. At rest
+it compares painted rectangles intersected with actual scrollports, not
+unpainted off-edge geometry. It still scrolls every target fully into view,
+checks every clipping ancestor, centre hit-target, both scroll edges, fixed
+bars throughout scrolling, horizontal overflow and last-control clearance.
+The existing R5 expectations now measure the bounded main and its real scroll
+offset; all hit-target, role-neutral, privacy and geometry checks remain.
+Increase actual bottom padding rather than lower the 15.5px clearance check
+when fractional scroll rounding consumes part of a nominal 16px gap.
+
+Verify #291 passed every gate except iPhone's old fixed night-card height.
+Wrapping status text is intentional (D105); assert four whole-line rows and
+the exact combined height while preserving exact cross-role geometry equality.

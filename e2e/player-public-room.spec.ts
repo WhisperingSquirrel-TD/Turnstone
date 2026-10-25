@@ -98,9 +98,9 @@ test('practice Back and primary action clear the linked footer at phone sizes', 
       'href',
       'https://stackstoneconsulting.co.uk/',
     );
-    await page.evaluate(() =>
-      window.scrollTo(0, document.documentElement.scrollHeight),
-    );
+    await page
+      .locator('main')
+      .evaluate((main) => main.scrollTo(0, main.scrollHeight));
     const back = await page
       .getByRole('button', { name: 'Back', exact: true })
       .boundingBox();
@@ -557,8 +557,15 @@ test('night status card has identical four-row geometry for both roles in both t
       });
       if (role === 'faithful') snapshots[theme] = geometry;
       else expect(geometry).toEqual(snapshots[theme]);
-      expect(geometry.height).toBe(112.375);
-      expect(geometry.lines).toEqual([24, 24, 24, 24]);
+      // Wrapping preserves meaning rather than enforcing the old ellipsis height.
+      expect(geometry.lines).toHaveLength(4);
+      for (const height of geometry.lines) {
+        expect(height).toBeGreaterThanOrEqual(24);
+        expect(height % 24).toBe(0);
+      }
+      expect(geometry.height).toBe(
+        16.375 + geometry.lines.reduce((sum, height) => sum + height, 0),
+      );
     }
   }
 });
@@ -698,7 +705,7 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
       for (const palette of ['day', 'night']) {
         if (view.phase === 'SHADOW' && !label.startsWith('shield-'))
           await expect(page.getByTestId('shadow-status')).toBeVisible();
-        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.locator('main').evaluate((main) => main.scrollTo(0, 0));
         await page.locator('.game-shell').evaluate((element, theme) => {
           (element as HTMLElement).dataset.gameTheme = theme;
         }, palette);
@@ -874,7 +881,7 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
             await page
               .locator('main')
               .evaluate((element) => getComputedStyle(element).overflowY),
-          ).toBe('visible');
+          ).toBe('auto');
         const undersizedTargets = await page
           .locator(
             'button:visible, a:visible, input:visible, select:visible, [role="button"]:visible',
@@ -935,9 +942,9 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
             )
             .last();
           if (await last.count()) {
-            await page.evaluate(() =>
-              window.scrollTo(0, document.documentElement.scrollHeight),
-            );
+            await page
+              .locator('main')
+              .evaluate((main) => main.scrollTo(0, main.scrollHeight));
             // A private Notes dialog has its own permitted scroll area.
             // The restored credit reduces its height, not its reachability.
             if (
@@ -2046,10 +2053,9 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
         shellClassName: shell.className,
         bottomBarTop: bottomBar.top,
         bottomBarHeight: bottomBar.height,
-        mainPaddingBottom: getComputedStyle(
-          document.querySelector('.game-shell-main')!,
-        ).paddingBottom,
-        requiredPadding: dock.height + bottomBar.height + 16,
+        mainBottom: document
+          .querySelector('.game-shell-main')!
+          .getBoundingClientRect().bottom,
         scrollY: window.scrollY,
         fixedContainingAncestors,
         centreIsChoice: centreHit === element || element.contains(centreHit),
@@ -2064,11 +2070,8 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
       `Action dock must clear the tabs at ${width}x640`,
     ).toBeLessThanOrEqual(clearance.bottomBarTop);
     expect(
-      Math.abs(
-        Number.parseFloat(clearance.mainPaddingBottom) -
-          (clearance.requiredPadding + parseFloat(clearance.footerHeight)),
-      ),
-      `Content padding must include the measured dock and tab bar at ${width}x640`,
+      Math.abs(clearance.mainBottom - clearance.dockTop),
+      `Main scrollport must end above the measured dock at ${width}x640`,
     ).toBeLessThanOrEqual(1);
     expect(
       clearance.centreIsChoice,
@@ -2329,12 +2332,15 @@ test('expanded Help leaves every game page scrollable above the dock', async ({
       await page.setViewportSize({ width, height: 844 });
       await page.evaluate(() => {
         window.scrollTo(0, 0);
+        document.querySelector('main')?.scrollTo(0, 0);
         const content = document.querySelector<HTMLElement>(
           '.game-help-disclosure__content',
         );
         if (content) content.scrollTop = 0;
       });
-      const initialScrollY = await page.evaluate(() => window.scrollY);
+      const initialScrollY = await page
+        .locator('main')
+        .evaluate((main) => main.scrollTop);
       const helpContent = await help
         .locator('.game-help-disclosure__content')
         .boundingBox();
@@ -2346,7 +2352,7 @@ test('expanded Help leaves every game page scrollable above the dock', async ({
         );
         await page.mouse.wheel(0, 800);
         await expect
-          .poll(() => page.evaluate(() => window.scrollY))
+          .poll(() => page.locator('main').evaluate((main) => main.scrollTop))
           .toBeGreaterThan(initialScrollY);
       }
 
@@ -2362,7 +2368,7 @@ test('expanded Help leaves every game page scrollable above the dock', async ({
           return {
             itemBottom: element.getBoundingClientRect().bottom,
             dockTop: dock.getBoundingClientRect().top,
-            pageScrollY: window.scrollY,
+            pageScrollY: document.querySelector('main')!.scrollTop,
           };
         });
         expect(itemAndDock.pageScrollY).toBeGreaterThan(initialScrollY);
@@ -2537,17 +2543,18 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
     .getByTestId('private-choice-content')
     .evaluate((element) => getComputedStyle(element).overflowY);
   expect(contentOverflow).not.toMatch(/auto|scroll/);
-  // R5 item 25: genuine overflow scrolls the document, never an inner game pane.
+  // Owner-approved bounded main: one scrollport, with no nested choice scroller.
   const scrolling = await page.locator('.game-shell-main').evaluate((main) => ({
     innerOverflow: getComputedStyle(main).overflowY,
     innerScroll: main.scrollHeight > main.clientHeight,
     documentHeight: document.scrollingElement!.scrollHeight,
+    viewportHeight: innerHeight,
     contentBottom: main.getBoundingClientRect().bottom + window.scrollY,
   }));
-  expect(scrolling.innerOverflow).toBe('visible');
-  expect(scrolling.innerScroll).toBe(false);
+  expect(scrolling.innerOverflow).toBe('auto');
+  expect(scrolling.innerScroll).toBe(true);
   expect(scrolling.documentHeight).toBeLessThanOrEqual(
-    Math.ceil(scrolling.contentBottom),
+    scrolling.viewportHeight,
   );
   const lastChoice = page
     .getByTestId('private-choice-list')

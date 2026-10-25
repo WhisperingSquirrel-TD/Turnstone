@@ -5,6 +5,7 @@ export type LayoutFinding = {
   viewport: string;
   kind: string;
   selectors: string[];
+  boxes?: { x: number; y: number; width: number; height: number }[];
 };
 
 /** No text contents, private values or request bodies enter the report. */
@@ -54,6 +55,10 @@ export async function inspectVisibleLayout(
         viewport,
         kind,
         selectors: elements.map(selector),
+        boxes: elements.map((el) => {
+          const { x, y, width, height } = el.getBoundingClientRect();
+          return { x, y, width, height };
+        }),
       });
     const dialogs = Array.from(
       document.querySelectorAll('dialog[open], [aria-modal="true"]'),
@@ -110,12 +115,47 @@ export async function inspectVisibleLayout(
         if (rect.width && rect.height) boxes.push({ element, rect });
       }
     }
-    const inViewport = ({ rect }: { rect: DOMRect }) =>
+    // Scroll-edge clipping is painted by the browser, not an overlap with bars
+    // outside the scrollport. The full audit still scrolls and hit-tests each target.
+    const paintedRect = (element: Element, rect: DOMRect) => {
+      const box = {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+      };
+      for (
+        let node: Element | null = element;
+        node;
+        node = node.parentElement
+      ) {
+        const style = getComputedStyle(node);
+        if (node.matches('dialog:modal') || style.position === 'fixed') break;
+        if (node === element) continue;
+        const bounds = node.getBoundingClientRect();
+        if (['auto', 'scroll'].includes(style.overflowY)) {
+          box.top = Math.max(box.top, bounds.top);
+          box.bottom = Math.min(box.bottom, bounds.bottom);
+        }
+      }
+      return box;
+    };
+    const inViewport = ({
+      rect,
+    }: {
+      rect: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>;
+    }) =>
       rect.bottom > 0 &&
       rect.top < innerHeight &&
       rect.right > 0 &&
-      rect.left < innerWidth;
-    const visibleBoxes = boxes.filter(inViewport);
+      rect.left < innerWidth &&
+      rect.bottom > rect.top;
+    const visibleBoxes = boxes
+      .map(({ element, rect }) => ({
+        element,
+        rect: paintedRect(element, rect),
+      }))
+      .filter(inViewport);
     for (let index = 0; index < visibleBoxes.length; index++) {
       const first = visibleBoxes[index]!;
       if (first.rect.left < -0.5 || first.rect.right > innerWidth + 0.5)
@@ -173,6 +213,10 @@ export async function auditApplicationLayout(
         viewport,
         kind,
         selectors: els.map(selector),
+        boxes: els.map((el) => {
+          const { x, y, width, height } = el.getBoundingClientRect();
+          return { x, y, width, height };
+        }),
       });
     const visible = (el: Element) =>
       el.getClientRects().length > 0 &&
@@ -230,7 +274,10 @@ export async function auditApplicationLayout(
         visible(el) &&
         ['fixed', 'sticky'].includes(getComputedStyle(el).position),
     );
-    const intersects = (a: DOMRect, b: DOMRect) =>
+    const intersects = (
+      a: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>,
+      b: DOMRect,
+    ) =>
       Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 &&
       Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
     const independent = (a: Element, b: Element) =>
@@ -246,16 +293,55 @@ export async function auditApplicationLayout(
             add('fixed-bars-overlap', a, b);
         }
     };
+    const scrollers = [
+      ...new Set([
+        document.scrollingElement!,
+        ...Array.from(scope.querySelectorAll('*')).filter(
+          (el) =>
+            visible(el) &&
+            ['auto', 'scroll'].includes(getComputedStyle(el).overflowY),
+        ),
+      ]),
+    ];
+    const scrollAll = (edge: 'top' | 'bottom') => {
+      for (const el of scrollers)
+        el.scrollTo({
+          top: edge === 'top' ? 0 : el.scrollHeight,
+          behavior: 'instant',
+        });
+    };
+    const paintedRect = (element: Element) => {
+      const rect = element.getBoundingClientRect();
+      const box = {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+      };
+      for (
+        let node: Element | null = element;
+        node;
+        node = node.parentElement
+      ) {
+        const style = getComputedStyle(node);
+        if (node.matches('dialog:modal') || style.position === 'fixed') break;
+        if (node === element) continue;
+        if (['auto', 'scroll'].includes(style.overflowY)) {
+          const bounds = node.getBoundingClientRect();
+          box.top = Math.max(box.top, bounds.top);
+          box.bottom = Math.min(box.bottom, bounds.bottom);
+        }
+      }
+      return box;
+    };
     const atRest = (edge: 'top' | 'bottom') => {
-      window.scrollTo({
-        top: edge === 'top' ? 0 : document.documentElement.scrollHeight,
-        behavior: 'instant',
-      });
+      scrollAll(edge);
       barPairs();
       for (const el of targets) {
         if (!visible(el)) continue;
-        const r = el.getBoundingClientRect();
-        if (r.bottom <= 0 || r.top >= innerHeight) continue;
+        const r = paintedRect(el);
+        if (r.bottom <= 0 || r.top >= innerHeight || r.bottom <= r.top)
+          continue;
         for (const bar of bars)
           if (
             independent(el, bar) &&
@@ -281,9 +367,15 @@ export async function auditApplicationLayout(
         for (const delta of [-1, 0, 1])
           scrollStops.add(Math.max(0, boundary + delta));
     }
-    for (const top of scrollStops) {
-      window.scrollTo({ top, behavior: 'instant' });
-      barPairs();
+    for (const scroller of scrollers) {
+      for (let y = 0; y <= scroller.scrollHeight; y += 32) {
+        scroller.scrollTo({ top: y, behavior: 'instant' });
+        barPairs();
+      }
+      for (const top of scrollStops) {
+        scroller.scrollTo({ top, behavior: 'instant' });
+        barPairs();
+      }
     }
     atRest('top');
     atRest('bottom');
@@ -320,17 +412,19 @@ export async function auditApplicationLayout(
         ancestor;
         ancestor = ancestor.parentElement
       ) {
+        if (getComputedStyle(el).position === 'fixed') break;
         const style = getComputedStyle(ancestor),
           box = ancestor.getBoundingClientRect();
         if (
-          (['hidden', 'clip'].includes(style.overflowX) &&
+          (['hidden', 'clip', 'auto', 'scroll'].includes(style.overflowX) &&
             (r.left < box.left - 0.5 || r.right > box.right + 0.5)) ||
-          (['hidden', 'clip'].includes(style.overflowY) &&
+          (['hidden', 'clip', 'auto', 'scroll'].includes(style.overflowY) &&
             (r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5))
         )
           add('ancestor-clipping', el, ancestor);
         // A native top-layer modal escapes clipping by its document ancestors.
-        if (ancestor.matches('dialog:modal')) break;
+        if (ancestor.matches('dialog:modal') || style.position === 'fixed')
+          break;
       }
       if (el.matches(controls) && (r.width < 43.5 || r.height < 43.5))
         add('tap-target-under-44', el);
@@ -359,10 +453,9 @@ export async function auditApplicationLayout(
     }
     if (document.documentElement.scrollWidth > innerWidth + 0.5)
       add('horizontal-scroll', document.documentElement);
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
-      behavior: 'instant',
-    });
+    for (const el of scrollers)
+      if (el.scrollWidth > el.clientWidth + 0.5) add('horizontal-scroll', el);
+    scrollAll('bottom');
     const lastControl = [...targets]
       .filter(
         (el) =>
@@ -377,9 +470,16 @@ export async function auditApplicationLayout(
         .filter((r) => r.top > innerHeight / 2 && r.top < innerHeight);
       const limit = Math.min(innerHeight, ...bottomBars.map((r) => r.top));
       if (lastControl.getBoundingClientRect().bottom > limit - 15.5)
-        add('last-control-without-clear-space', lastControl);
+        add(
+          'last-control-without-clear-space',
+          lastControl,
+          ...(lastControl.closest('main')
+            ? [lastControl.closest('main')!]
+            : []),
+          ...bars,
+        );
     }
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    scrollAll('top');
     return findings;
   }, screen);
   const overlaps = await inspectVisibleLayout(page, screen);

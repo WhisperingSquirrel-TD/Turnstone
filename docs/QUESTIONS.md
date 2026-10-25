@@ -410,7 +410,7 @@ meaning, non-scrolling ancestor clipping, small targets, broken images and
 unexplained disabled primaries remain failures. The three named Create/Lobby
 regressions are included. No existing check is removed.
 
-## Audit viewport contract — owner decision (OPEN)
+## Audit viewport contract — owner decision (RESOLVED 25 October 2026)
 
 The complete local scan traverses 71 named UI states at four widths in both
 themes (568 state/viewport combinations). After the exposed defects were
@@ -419,7 +419,7 @@ long Vote and Night lists extend under the fixed bottom stack at scroll top.
 Every target can subsequently scroll fully clear; that does **not** satisfy
 the separate at-rest condition, so the audit continues to fail it.
 
-D89 explicitly requires whole-page scrolling and no inner scroll pane.
+The earlier Round 5 scrolling decision requires whole-page scrolling and no inner scroll pane.
 Meeting the new at-rest condition with a fixed dock is most directly achieved
 by one main content scroll area bounded above the dock, with no nested
 scrolling inside it. That changes the earlier scrolling contract.
@@ -428,3 +428,7 @@ scrolling inside it. That changes the earlier scrolling contract.
 of whole-page scrolling? All reachability, clipping, geometry, privacy and
 role-neutral checks would remain enforced; this is not a request to exempt
 unreachable controls or relax the at-rest requirement.
+
+**Owner answer:** “Use one main scroll area (recommended)”. Implement one bounded
+main scroll area above the fixed controls, not nested choice-list scrollers.
+This supersedes the earlier whole-page constraint. All strict audit checks remain.

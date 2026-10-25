@@ -33,7 +33,7 @@ async function nameAndPin(page: Page) {
   await capture(page, 'create-3-name-pin');
 }
 
-test('Create game is pointer reachable while the normal-flow credit crosses its band', async ({
+test('Create game stays pointer reachable outside the normal-flow credit scrollport', async ({
   page,
 }) => {
   for (const width of [320, 390, 1280]) {
@@ -48,13 +48,7 @@ test('Create game is pointer reachable while the normal-flow credit crosses its 
       const footer = document.querySelector<HTMLElement>(
         '[data-testid="brand-footer-entry"]',
       )!;
-      const box = button.getBoundingClientRect(),
-        credit = footer.getBoundingClientRect();
-      window.scrollTo({
-        top:
-          scrollY + credit.top + credit.height / 2 - box.top - box.height / 2,
-        behavior: 'instant',
-      });
+      footer.scrollIntoView({ block: 'end', behavior: 'instant' });
       const hits = () => {
         const r = button.getBoundingClientRect(),
           hit = document.elementFromPoint(
@@ -70,12 +64,16 @@ test('Create game is pointer reachable while the normal-flow credit crosses its 
         oldLayering,
         corrected: hits(),
         position: getComputedStyle(footer).position,
+        creditClear:
+          footer.getBoundingClientRect().bottom <=
+          button.getBoundingClientRect().top,
       };
     });
     expect(result).toEqual({
-      oldLayering: false,
+      oldLayering: true,
       corrected: true,
       position: 'static',
+      creditClear: true,
     });
   }
 });

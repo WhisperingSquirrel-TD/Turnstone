@@ -15,9 +15,14 @@ final vote/banishment, both public results and a settled error screen.
 
 The real UI uses controlled HTTP/socket fixtures, not claims about server
 behaviour. Existing real-server gates remain unchanged. Forms intentionally
-retain paper under both system schemes. The full scan currently fails strict
-at-rest body/dock overlap; see the open viewport-contract decision in QUESTIONS.
-Those findings are not waived or claimed green.
+retain paper under both system schemes. Following the owner's approval of a
+single bounded main scroll area, the full Pixel scan passes all 568 combinations.
+Other browser engines are checked separately; this is layout-fixture coverage,
+not a claim about real-device hardware or server behaviour.
+
+Replay: `bash scripts/browser-runtime.sh pnpm exec playwright test e2e/application-layout-audit.spec.ts --project=Pixel --workers=1`.
+Set `R7_AUDIT_CAPTURE=1` to regenerate this canonical gallery. Anonymous JSON
+findings and the state inventory are written under `generated-artifacts/layout-audit/`.
 
 ## Original focused captures (historical)
 

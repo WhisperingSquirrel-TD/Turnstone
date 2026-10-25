@@ -264,17 +264,18 @@ h2,
   min-height: 0 !important;
   max-width: 480px;
   margin-bottom: 0;
-  overflow: visible;
+  overflow: auto;
   padding-top: 1rem !important;
-  padding-bottom: calc(var(--game-bottom-stack-height) + 1rem) !important;
-  scroll-padding-bottom: calc(var(--game-bottom-stack-height) + 1rem);
+  padding-bottom: 1.25rem !important;
+  scroll-padding-block: 1rem;
+  overscroll-behavior: contain;
 }
 .game-shell .player-tile {
-  scroll-margin-block-end: calc(var(--game-bottom-stack-height) + 1rem);
+  scroll-margin-block-end: 1rem;
 }
 .game-shell-main.private-moment-main {
   display: block;
-  overflow: visible;
+  overflow: auto;
 }
 .game-shell-main:has(.game-fullscreen-overlay),
 .game-shell-main:has(.privacy-shield[open]),
@@ -283,10 +284,11 @@ h2,
 }
 .game-shell {
   position: relative;
-  height: auto;
+  height: 100dvh;
   min-height: 100dvh;
   padding-inline: max(16px, env(safe-area-inset-left));
-  padding-bottom: 0;
+  overflow: hidden;
+  padding-bottom: var(--game-bottom-stack-height, 0px);
   background: var(--game-page-background, var(--hearth));
 }
 .game-shell [data-testid='player-game'] {
@@ -328,6 +330,7 @@ h2,
 }
 
 .game-shell .player-shell-header {
+  flex-shrink: 0;
   display: block;
   width: 100%;
   max-width: 480px;
@@ -705,6 +708,7 @@ a[href='#main']:focus {
   margin-top: 0.75rem;
   border-top: 1px solid var(--game-line);
   color: var(--game-muted);
+  margin-bottom: 0.5rem;
 }
 
 .game-help-disclosure summary {
@@ -1157,7 +1161,7 @@ button.player-tile {
     > .game-help-disclosure {
     grid-row: 3;
     grid-column: 2;
-    margin-block: 0;
+    margin-block: 0 0.5rem;
   }
   .private-moment-shell
     [data-testid='player-game'][data-phase='DEAL']:has(

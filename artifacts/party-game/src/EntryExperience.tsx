@@ -1690,6 +1690,14 @@ export function EntryExperience({
             </button>
           </section>
         )}
+        {screen !== 'lobby' && (
+          <BrandFooter
+            context="game"
+            surface={gameTheme === 'night' ? 'dark' : 'light'}
+            className="game-brand-footer"
+            testId="brand-footer-entry"
+          />
+        )}
       </main>
 
       {screen === 'join-code' && (
@@ -1817,12 +1825,14 @@ export function EntryExperience({
           {primaryHint}
         </div>
       )}
-      <BrandFooter
-        context="game"
-        surface={gameTheme === 'night' ? 'dark' : 'light'}
-        className="game-brand-footer"
-        testId="brand-footer-entry"
-      />
+      {screen === 'lobby' && (
+        <BrandFooter
+          context="game"
+          surface={gameTheme === 'night' ? 'dark' : 'light'}
+          className="game-brand-footer"
+          testId="brand-footer-entry"
+        />
+      )}
     </div>
   );
 }

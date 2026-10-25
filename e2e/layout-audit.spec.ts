@@ -4,6 +4,21 @@ import {
   inspectVisibleLayout,
 } from './support/layout-audit';
 
+test('bounded main scroll area keeps every target clear at both edges', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 640 });
+  await page.setContent(`<meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>body{margin:0}main{height:540px;overflow:auto;padding:16px;box-sizing:border-box}
+    button{width:160px;height:56px}footer{position:fixed;inset:540px 0 0;background:white}</style>
+    <main><p>First explanation</p><div style="height:800px"></div><button id="last">Last action</button></main>
+    <footer><button>Dock action</button></footer>`);
+  expect(await auditApplicationLayout(page, 'bounded-content')).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(
+    640,
+  );
+});
+
 test('automatic layout audit distinguishes clipped live announcements from visible content', async ({
   page,
 }) => {

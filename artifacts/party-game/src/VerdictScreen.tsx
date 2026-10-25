@@ -80,7 +80,7 @@ export function VerdictScreen({
     <>
       {announcement?.kind === 'no_votes' && (
         <section
-          className="mb-6 border-l-2 border-gilt pl-5"
+          className="mt-2 mb-6 border-l-2 border-gilt pl-5"
           aria-live="polite"
           aria-atomic="true"
           data-testid="shared-announcement"
