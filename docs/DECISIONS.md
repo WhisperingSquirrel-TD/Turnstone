@@ -1669,3 +1669,38 @@ URL and environment configuration remain with the owner (see HOSTING).
 and browser tests across Pixel, iPhone, iPad and desktop. Browser host/config
 variants mock the served configuration module only; no production test hook,
 configuration endpoint or security projection field was added.
+
+## D108 — Invite-first organiser Lobby; pre-game removal is not a departure
+
+**Owner/reviewer direction, 25 October 2026:** show one Lobby heading, invitations
+(code, QR, Share), the ready count and one roster before organiser details.
+Takeover, presenter setup and public updates are closed disclosures in the Lobby;
+phase timing/progress belongs to play, not pre-game setup.
+
+**Why:** the previous composition rendered two rosters/headings and put the
+organiser console ahead of the invitation, making a simple Lobby several phone
+screens long. A failed background delegates read also displayed a misleading
+save-failure message; the audit fixture returned the wrong response schema.
+
+**Boundaries:** “Remove from lobby” uses the existing confirmed `MarkDeparted`
+command before the deal, which already removes a seat without revealing a role.
+After the game starts, existing departure controls/copy are unchanged. Background
+reads keep their existing bounded retry/back-off; only failed user saves show
+the save error. No engine, authentication, limits or secrecy changes.
+
+**Evidence:** component tests failed before implementation; phone layout audits
+retain all geometry/visibility checks and additionally assert invitation order,
+single heading/roster, no pre-game progress rows and collapsed controls.
+Browser tests cover cancel/confirm/removal with the server-shaped departed seat,
+fresh-load failure without a false save error, and a genuine failed save.
+The updated Lobby gallery uses `lobby-organiser-*` and `lobby-*` (player).
+Reviewing the refreshed organiser screenshot also exposed a fixed 208px QR SVG
+overflowing its padded container. A failing browser bounds assertion now guards
+the responsive SVG sizing; QR values and encoding are unchanged.
+`R7_AUDIT_CAPTURE=1 R7_AUDIT_STATES=lobby-organiser,lobby` limits screenshot writes
+only, never the states or assertions executed by the full application audit.
+The Lobby sample has two accepted seats out of six, retaining the visible
+“Waiting for 4 more players.” dock reason. The referenced `*-light.jpg` and
+`*-dark.jpg` aliases are refreshed from the same captures as `*-day.jpg` and
+`*-night.jpg`; they record phone colour scheme and retain the real phase-based
+Lobby theme rather than faking a different render.

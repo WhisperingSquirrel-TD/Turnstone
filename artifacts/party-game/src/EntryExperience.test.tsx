@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
+import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { MemoryRouter } from 'react-router-dom';
@@ -69,6 +70,7 @@ function renderEntry(
   errors: EntryExperienceErrors = {},
   inputOverrides: Partial<EntryExperienceInputs> = {},
   previewWarning?: string | null,
+  coordinatorPanel?: ReactNode,
 ) {
   return renderToStaticMarkup(
     <MemoryRouter>
@@ -103,6 +105,7 @@ function renderEntry(
         shareUrl=""
         qrCode={null}
         previewWarning={previewWarning}
+        coordinatorPanel={coordinatorPanel}
         players={[
           { id: 'seat-ada', name: 'Ada' },
           { id: 'seat-sam', name: 'Sam' },
@@ -123,6 +126,23 @@ function renderEntry(
     </MemoryRouter>,
   );
 }
+
+it('puts invitations before the organiser controls and renders only their single roster', () => {
+  const html = renderEntry(
+    'lobby',
+    'day',
+    {},
+    {},
+    null,
+    <section data-testid="coordinator-console">
+      <h2>Players</h2>
+    </section>,
+  );
+  expect(html.indexOf('text-lobby-code')).toBeLessThan(
+    html.indexOf('coordinator-console'),
+  );
+  expect(html).not.toContain('list-lobby-players');
+});
 
 describe('Stage 2A entry screens', () => {
   it('shows the room code and name together with one explained inline action until complete', () => {

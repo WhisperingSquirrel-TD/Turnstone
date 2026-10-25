@@ -110,6 +110,9 @@ export const en = {
       `${name} is locked out after too many PIN attempts, until ${time}.`,
     manageSeats: 'Manage seats',
     markDeparted: 'Mark as departed',
+    removeFromLobby: 'Remove from lobby',
+    confirmRemoveFromLobby: (name: string) =>
+      `Remove ${name} from the lobby? This removes their seat before the game starts.`,
     confirmDeparted: (name: string) =>
       `Mark ${name} as departed? They will no longer take part.`,
     seatStatus: (status: 'alive' | 'banished' | 'murdered' | 'departed') => {
@@ -433,7 +436,7 @@ export const en = {
     qrPreparing: 'Preparing the game QR code',
     defaultOrganiser: 'your organiser',
     lobbyPlayerCount: (joined: number, total: number) =>
-      `${joined} of ${total} player seats are ready.`,
+      `${joined} of ${total} seats ready`,
     minimumPlayers: (count: number) =>
       `Waiting for at least ${count} players before starting.`,
     createNameHeading: 'Name your game',

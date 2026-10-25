@@ -1413,7 +1413,6 @@ export function EntryExperience({
           </section>
         )}
 
-        {screen === 'lobby' && coordinatorPanel}
         {screen === 'lobby' && (
           <section className="entry-lobby enter" aria-labelledby="entry-title">
             <h1 id="entry-title" className="entry-heading">
@@ -1448,6 +1447,17 @@ export function EntryExperience({
                   {previewWarning}
                 </p>
               )}
+              {!lateJoinMode && (
+                <div className="entry-code-block">
+                  <p className="entry-code-caption">{copy.codeCaption}</p>
+                  <strong
+                    className="entry-lobby-code"
+                    data-testid="text-lobby-code"
+                  >
+                    {joinCode}
+                  </strong>
+                </div>
+              )}
               {qrCode && (
                 <div
                   className="entry-qr"
@@ -1459,17 +1469,6 @@ export function EntryExperience({
                 </div>
               )}
               <div className="entry-code-share">
-                {!lateJoinMode && (
-                  <>
-                    <p className="entry-code-caption">{copy.codeCaption}</p>
-                    <strong
-                      className="entry-lobby-code"
-                      data-testid="text-lobby-code"
-                    >
-                      {joinCode}
-                    </strong>
-                  </>
-                )}
                 <button
                   className="entry-secondary-action"
                   data-testid="button-share-game"
@@ -1504,25 +1503,31 @@ export function EntryExperience({
               {!lateJoinMode && players.length < 5 && (
                 <p className="entry-help">{copy.minimumPlayers(5)}</p>
               )}
-              <section aria-labelledby="entry-roster-heading">
-                <h2 id="entry-roster-heading" className="entry-section-heading">
-                  {copy.rosterHeading}
-                </h2>
-                <ul
-                  className="entry-player-list entry-player-rows"
-                  data-testid="list-lobby-players"
-                >
-                  {players.map((player) => (
-                    <li key={player.id}>
-                      <PlayerTile
-                        name={player.name}
-                        statusText="Joined"
-                        testId={`player-lobby-${player.id}`}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              {coordinatorPanel}
+              {!coordinatorPanel && (
+                <section aria-labelledby="entry-roster-heading">
+                  <h2
+                    id="entry-roster-heading"
+                    className="entry-section-heading"
+                  >
+                    {copy.rosterHeading}
+                  </h2>
+                  <ul
+                    className="entry-player-list entry-player-rows"
+                    data-testid="list-lobby-players"
+                  >
+                    {players.map((player) => (
+                      <li key={player.id}>
+                        <PlayerTile
+                          name={player.name}
+                          statusText="Joined"
+                          testId={`player-lobby-${player.id}`}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
               <section aria-labelledby="entry-pending-heading">
                 <h2
                   id="entry-pending-heading"

@@ -651,6 +651,35 @@
   object-fit: contain;
 }
 
+.entry-code-block,
+.entry-rosters > .coordinator-console,
+.entry-rosters > [data-testid='text-lobby-player-count'] {
+  grid-column: 1 / -1;
+}
+
+.entry-code-block {
+  text-align: center;
+}
+
+.entry-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.coordinator-lobby-fold {
+  display: block;
+}
+
+.coordinator-lobby-fold > summary {
+  min-height: 44px;
+  display: list-item;
+  align-content: center;
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 500;
+}
+
 .entry-code-caption {
   margin: 0 0 0.2rem;
   color: var(--entry-ash);

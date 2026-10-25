@@ -66,6 +66,10 @@ for (const width of widths)
         const path = new URL(route.request().url()).pathname;
         if (path.endsWith('/join-requests'))
           return route.fulfill({ json: { requests: [] } });
+        if (path.endsWith('/coordinator/delegates'))
+          return route.fulfill({ json: { limit: 1, seatIds: [] } });
+        if (path.endsWith('/coordinator/presence'))
+          return route.fulfill({ json: { status: 'online' } });
         if (path.endsWith('/invites'))
           return route.fulfill({
             json: {
@@ -104,15 +108,23 @@ for (const width of widths)
         findings.push(...(await auditApplicationLayout(page, name)));
         if (
           process.env.R7_AUDIT_CAPTURE === '1' &&
-          info.project.name === 'Pixel'
+          info.project.name === 'Pixel' &&
+          (!process.env.R7_AUDIT_STATES ||
+            process.env.R7_AUDIT_STATES.split(',').includes(name))
         ) {
           await mkdir('docs/screens/round-7-audit', { recursive: true });
-          await page.screenshot({
+          const image = await page.screenshot({
             path: `docs/screens/round-7-audit/${name}-${width}-${palette}.jpg`,
             type: 'jpeg',
             quality: 40,
             fullPage: true,
           });
+          if (name === 'lobby-organiser' || name === 'lobby') {
+            await writeFile(
+              `docs/screens/round-7-audit/${name}-${width}-${palette === 'day' ? 'light' : 'dark'}.jpg`,
+              image,
+            );
+          }
         }
       }
       async function go(path: string, heading?: string) {
@@ -259,11 +271,49 @@ for (const width of widths)
       view = {
         ...view,
         phase: 'LOBBY',
+        seats: createPublicView(gameId).seats.slice(0, 2),
         publicAnnouncement: null,
         winner: null,
       };
-      await go(`/coordinate/${gameId}?players=8`);
+      await go(`/coordinate/${gameId}?players=6`);
       await expect(page.getByTestId('text-lobby-code')).toBeVisible();
+      await expect(
+        page.getByText('Waiting for 4 more players.', { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Your game lobby', exact: true }),
+      ).toHaveCount(1);
+      await expect(page.getByTestId('coordinator-current-step')).toHaveCount(0);
+      await expect(page.getByTestId('coordinator-time-left')).toHaveCount(0);
+      await expect(page.getByTestId('coordinator-progress')).toHaveCount(0);
+      await expect(page.getByTestId('list-lobby-players')).toHaveCount(0);
+      await expect(
+        page.getByTestId('coordinator-console').locator('details[open]'),
+      ).toHaveCount(0);
+      await expect(
+        page.getByText(
+          'Co-coordinators could not be saved. Check the connection and try again.',
+          { exact: true },
+        ),
+      ).toHaveCount(0);
+      const invitationBottom = await page
+        .getByTestId('button-share-game')
+        .evaluate((el) => el.getBoundingClientRect().bottom);
+      const rosterTop = await page
+        .getByTestId('coordinator-seats')
+        .evaluate((el) => el.getBoundingClientRect().top);
+      expect(invitationBottom).toBeLessThan(rosterTop);
+      // The invite action must be reachable in less than two main-screen lengths.
+      expect(
+        await page.getByTestId('button-share-game').evaluate((el) => {
+          const main = el.closest('main')!;
+          return (
+            el.getBoundingClientRect().bottom -
+              main.getBoundingClientRect().top <
+            main.clientHeight * 2
+          );
+        }),
+      ).toBe(true);
       await audit('lobby-organiser');
 
       for (const phase of phases) {

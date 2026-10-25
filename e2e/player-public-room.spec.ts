@@ -1245,7 +1245,7 @@ test('organiser can start with five players while one planned seat has not joine
   );
   await page.goto(`/coordinate/${gameId}?players=6`);
   await expect(page.getByTestId('text-lobby-player-count')).toHaveText(
-    '5 of 6 player seats are ready.',
+    '5 of 6 seats ready',
   );
   await expect(page.getByTestId('button-start-game')).toBeEnabled();
 });
@@ -5123,7 +5123,7 @@ test('Round 7 Stage 2A Join and Lobby screenshot gallery', async ({ page }) => {
         .boundingBox();
       expect(startBounds?.height).toBeGreaterThanOrEqual(44);
       for (const button of await page
-        .locator('[data-testid^="button-mark-departed-"]')
+        .locator('[data-testid^="button-remove-lobby-"]')
         .all()) {
         const bounds = await button.boundingBox();
         expect(bounds?.height).toBeGreaterThanOrEqual(44);

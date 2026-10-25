@@ -1,5 +1,43 @@
 # Status for reviewer
 
+**Round 7 current batch — organiser Lobby review:** invitation-first layout and
+single heading/roster implemented; ready count retained; pre-game removal has a
+confirmation and uses the existing server action. Timing/progress rows are
+absent in the Lobby; takeover, presenter and updates start collapsed.
+The default delegates fixture is corrected, background load failures no longer
+claim a failed save, and user-action failures remain visible.
+Component regressions failed first. Validation: 747 unit tests, both TypeScript
+checks and targeted lint pass; all 16 full Pixel/iPhone day/night application-audit
+cases and 28 four-profile invitation/removal/error browser checks pass.
+The QR SVG overflow found during screenshot review also failed its bounds test
+before the responsive sizing fix. Regenerated organiser/player Lobby images at
+320/390/430, including the exact `*-light.jpg`/`*-dark.jpg` aliases referenced by
+the reviewer. The fixture has two ready seats out of six and retains “Waiting
+for 4 more players.” See D108 for scope and gallery naming.
+Local concurrent unit/browser runs hit the unchanged 5-second rename guard;
+it passed in isolation (350ms), and the complete 747-test suite passed with one
+worker without concurrent browser load. No timeout or assertion was altered.
+Baseline `6592ff5`, Verify #296 green; isolated Lobby push next. Amendment A
+remains after this UI batch, followed by the queued read-only missions review.
+
+**Prior verified public-share fix: `6592ff5`, Verify #296 GREEN.**
+
+**Next in the owner's queue:** amendment A (one paper-style game entry screen,
+`/play` redirect, join prefill and public-page/SEO boundaries), then the
+**read-only missions review** requested on 25 October. Do not start the missions
+review ahead of amendment A or change mission behaviour as part of that review.
+
+The missions review deliverable is `docs/MISSIONS-REVIEW.md`: trace the real
+organiser/player/Practice flow, distinguish functioning features from placeholder
+copy, check whether the supplied 37-row mission CSV is wired in, assess every
+mission for a 15-person indoor mixed-age Christmas game, and recommend the
+remaining end-to-end gaps. Include organiser/player mission screenshots at 390px
+in day/night in the existing audit gallery and confirm their audit coverage.
+The CSV is present at `attached_assets/missions-review_1792389710747.csv`; its
+contents and wiring have not yet been reviewed for this request. The review is
+documentation/screenshots only; no rules, SPEC section 3, limits or secrecy
+changes, and docs pushes only when no Verify run is active.
+
 **Round 7 public share-base fix — SSR correction included.**
 [Current Verify on main](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/workflows/verify.yml?query=branch%3Amain).
 The public URL formatter, preview warning and direct name entry are implemented.

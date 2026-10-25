@@ -1,4 +1,5 @@
 - [Nix browser verification](nix-browser-verification.md) — native-library installation and browser launch alone do not prove headless WebKit can render.
+- [Nix filesystem test contention](nix-filesystem-test-contention.md) — separate heavy browser batches from strict filesystem unit checks when diagnosing local timeouts.
 - [Public clip visibility](public-clip-visibility.md) — native privacy covers can hide playing media; verify actual hit targets without weakening the cover.
 - [Mobile HTML fixtures](mobile-html-fixtures.md) — bare phone fixtures need a viewport meta tag or layout measurements can silently use a desktop-width viewport.
 - [Nix font rendering](nix-font-rendering.md) — verify the actual browser font before converting webfont-based SVG lettering to paths.

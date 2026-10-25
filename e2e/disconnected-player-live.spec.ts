@@ -252,7 +252,7 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
       ).toHaveText('Live');
     }
     await expect(organiser.getByTestId('text-lobby-player-count')).toHaveText(
-      '6 of 6 player seats are ready.',
+      '6 of 6 seats ready',
     );
     const started = organiser.waitForResponse(
       (response) =>

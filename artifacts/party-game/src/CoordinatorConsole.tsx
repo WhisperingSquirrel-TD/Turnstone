@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { FullView } from '@workspace/api-client-react';
 import { en } from './locale/en-GB';
 import { PendingPlayerControls } from './PendingPlayerControls';
@@ -129,6 +129,38 @@ const nonActivePhases = new Set<FullView['phase']>([
   'ARCHIVED',
 ]);
 
+function CoordinatorSection({
+  lobby,
+  id,
+  title,
+  className,
+  children,
+}: {
+  lobby: boolean;
+  id: string;
+  title: string;
+  className: string;
+  children: ReactNode;
+}) {
+  return lobby ? (
+    <details className={`coordinator-lobby-fold ${className}`} data-testid={id}>
+      <summary id={`${id}-heading`}>{title}</summary>
+      {children}
+    </details>
+  ) : (
+    <section
+      className={className}
+      aria-labelledby={`${id}-heading`}
+      data-testid={id}
+    >
+      <h2 className="display text-2xl" id={`${id}-heading`}>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
 export function CoordinatorConsole({
   view,
   onCommand,
@@ -190,17 +222,12 @@ export function CoordinatorConsole({
   useEffect(() => {
     let mounted = true;
     async function refreshCoordinatorAccess() {
-      try {
-        await onHeartbeat();
-        const result = await onLoadCoordinatorDelegates();
-        if (!mounted) return;
-        setDelegateLimit(result.limit);
-        if (!delegateSelectionDirty) setSelectedDelegateIds(result.seatIds);
-        setDelegateError('');
-      } catch (error) {
-        if (mounted) setDelegateError(en.coordinator.coCoordinatorError);
-        throw error;
-      }
+      await onHeartbeat();
+      const result = await onLoadCoordinatorDelegates();
+      if (!mounted) return;
+      setDelegateLimit(result.limit);
+      if (!delegateSelectionDirty) setSelectedDelegateIds(result.seatIds);
+      setDelegateError('');
     }
     const poller = createAdaptivePoller(refreshCoordinatorAccess, {
       baseIntervalMs: 30_000,
@@ -303,29 +330,35 @@ export function CoordinatorConsole({
         {view.phase === 'LOBBY' ? 'Players' : en.coordinator.manageSeats}
       </h2>
       <ul className="divide-y divide-stone">
-        {view.seats.map((seat) => (
-          <li
-            key={seat.id}
-            className="coordinator-seat-row flex min-h-14 items-center justify-between gap-3 py-2"
-            data-testid={`coordinator-seat-row-${seat.id}`}
-          >
-            <span>{seat.name}</span>
-            <span className="text-sm text-ash">
-              {en.coordinator.seatStatus(seat.status)}
-            </span>
-            {seat.status === 'alive' && (
-              <button
-                className="entry-secondary-action"
-                data-testid={`button-mark-departed-${seat.id}`}
-                type="button"
-                disabled={busy}
-                onClick={() => setDepartingSeatId(seat.id)}
-              >
-                {en.coordinator.markDeparted}
-              </button>
-            )}
-          </li>
-        ))}
+        {view.seats
+          .filter(
+            (seat) => view.phase !== 'LOBBY' || seat.status !== 'departed',
+          )
+          .map((seat) => (
+            <li
+              key={seat.id}
+              className="coordinator-seat-row flex min-h-14 items-center justify-between gap-3 py-2"
+              data-testid={`coordinator-seat-row-${seat.id}`}
+            >
+              <span>{seat.name}</span>
+              <span className="text-sm text-ash">
+                {en.coordinator.seatStatus(seat.status)}
+              </span>
+              {seat.status === 'alive' && (
+                <button
+                  className="entry-secondary-action"
+                  data-testid={`button-${view.phase === 'LOBBY' ? 'remove-lobby' : 'mark-departed'}-${seat.id}`}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setDepartingSeatId(seat.id)}
+                >
+                  {view.phase === 'LOBBY'
+                    ? en.coordinator.removeFromLobby
+                    : en.coordinator.markDeparted}
+                </button>
+              )}
+            </li>
+          ))}
         {view.seats.length === 0 && (
           <li className="py-3 text-sm text-ash">{en.coordinator.noSeats}</li>
         )}
@@ -337,7 +370,9 @@ export function CoordinatorConsole({
           aria-labelledby="coordinator-departure-confirmation"
         >
           <p id="coordinator-departure-confirmation">
-            {en.coordinator.confirmDeparted(
+            {(view.phase === 'LOBBY'
+              ? en.coordinator.confirmRemoveFromLobby
+              : en.coordinator.confirmDeparted)(
               view.seats.find((seat) => seat.id === departingSeatId)?.name ??
                 '',
             )}
@@ -353,7 +388,11 @@ export function CoordinatorConsole({
             </button>
             <button
               className="entry-primary-action"
-              data-testid="button-confirm-departed"
+              data-testid={
+                view.phase === 'LOBBY'
+                  ? 'button-confirm-remove-lobby'
+                  : 'button-confirm-departed'
+              }
               type="button"
               disabled={busy}
               onClick={async () => {
@@ -367,7 +406,9 @@ export function CoordinatorConsole({
                   setDepartingSeatId(null);
               }}
             >
-              {en.coordinator.markDeparted}
+              {view.phase === 'LOBBY'
+                ? en.coordinator.removeFromLobby
+                : en.coordinator.markDeparted}
             </button>
           </div>
         </div>
@@ -378,24 +419,27 @@ export function CoordinatorConsole({
   return (
     <section
       className="entry-lobby enter coordinator-console"
-      aria-labelledby="coordinator-console-title"
+      aria-labelledby={
+        view.phase === 'LOBBY' ? undefined : 'coordinator-console-title'
+      }
+      aria-label={
+        view.phase === 'LOBBY' ? 'Lobby organiser controls' : undefined
+      }
       data-testid="coordinator-console"
       data-phase={view.phase}
     >
-      <h1 className="entry-heading" id="coordinator-console-title">
-        {view.phase === 'LOBBY'
-          ? en.entry.lobbyHeading
-          : en.coordinator.heading}
-      </h1>
+      {view.phase !== 'LOBBY' && (
+        <h1 className="entry-heading" id="coordinator-console-title">
+          {en.coordinator.heading}
+        </h1>
+      )}
       {view.phase === 'LOBBY' && seatManagement}
-      <section
+      <CoordinatorSection
+        lobby={view.phase === 'LOBBY'}
+        id="coordinator-delegates"
+        title={en.coordinator.coCoordinatorHeading}
         className="mt-6 grid gap-3 border-b border-stone pb-6"
-        aria-labelledby="coordinator-delegates-heading"
-        data-testid="coordinator-delegates"
       >
-        <h2 className="display text-2xl" id="coordinator-delegates-heading">
-          {en.coordinator.coCoordinatorHeading}
-        </h2>
         <p className="text-ash">
           {delegateLimit > 0
             ? en.coordinator.coCoordinatorDescription
@@ -461,41 +505,43 @@ export function CoordinatorConsole({
             {delegateError}
           </p>
         )}
-      </section>
-      <dl className="coordinator-console-summary">
-        <div className="flex justify-between border-b border-stone py-3">
-          <dt>{en.coordinator.currentStep}</dt>
-          <dd data-testid="coordinator-current-step">
-            {formatCoordinatorPhase(view.phase, view.revote)}
-          </dd>
-        </div>
-        <div className="flex justify-between border-b border-stone py-3">
-          <dt>{en.coordinator.timeLeft}</dt>
-          <dd data-testid="coordinator-time-left">{remaining}</dd>
-        </div>
-        <div className="flex justify-between border-b border-stone py-3">
-          <dt>{en.coordinator.privateProgress}</dt>
-          <dd data-testid="coordinator-progress">
-            {en.coordinator.progress(view.progress.done, view.progress.total)}
-          </dd>
-        </div>
-      </dl>
-      <PendingPlayerControls
-        pendingSeats={view.coordinatorPendingSeats ?? []}
-        skippedSeats={view.coordinatorSkippedSeats ?? []}
-        restorableSeats={view.coordinatorRestorableSeats ?? []}
-        busy={busy}
-        onCommand={run}
-      />
+      </CoordinatorSection>
+      {view.phase !== 'LOBBY' && (
+        <dl className="coordinator-console-summary">
+          <div className="flex justify-between border-b border-stone py-3">
+            <dt>{en.coordinator.currentStep}</dt>
+            <dd data-testid="coordinator-current-step">
+              {formatCoordinatorPhase(view.phase, view.revote)}
+            </dd>
+          </div>
+          <div className="flex justify-between border-b border-stone py-3">
+            <dt>{en.coordinator.timeLeft}</dt>
+            <dd data-testid="coordinator-time-left">{remaining}</dd>
+          </div>
+          <div className="flex justify-between border-b border-stone py-3">
+            <dt>{en.coordinator.privateProgress}</dt>
+            <dd data-testid="coordinator-progress">
+              {en.coordinator.progress(view.progress.done, view.progress.total)}
+            </dd>
+          </div>
+        </dl>
+      )}
+      {view.phase !== 'LOBBY' && (
+        <PendingPlayerControls
+          pendingSeats={view.coordinatorPendingSeats ?? []}
+          skippedSeats={view.coordinatorSkippedSeats ?? []}
+          restorableSeats={view.coordinatorRestorableSeats ?? []}
+          busy={busy}
+          onCommand={run}
+        />
+      )}
       {view.phase !== 'LOBBY' && seatManagement}
-      <section
+      <CoordinatorSection
+        lobby={view.phase === 'LOBBY'}
+        id="coordinator-public-log"
+        title={en.game.latestUpdates}
         className="mt-7"
-        aria-labelledby="coordinator-public-log-heading"
-        data-testid="coordinator-public-log"
       >
-        <h2 id="coordinator-public-log-heading" className="display text-2xl">
-          {en.game.latestUpdates}
-        </h2>
         <ul className="mt-2 divide-y divide-stone">
           {view.publicLog
             .slice()
@@ -510,7 +556,7 @@ export function CoordinatorConsole({
             <li className="py-3 text-sm text-ash">{en.game.noPublicUpdates}</li>
           )}
         </ul>
-      </section>
+      </CoordinatorSection>
       {view.coordinatorAlerts.length > 0 && (
         <section
           className="mt-7"
@@ -538,14 +584,12 @@ export function CoordinatorConsole({
           </ul>
         </section>
       )}
-      <section
+      <CoordinatorSection
+        lobby={view.phase === 'LOBBY'}
+        id="coordinator-presenter"
+        title={en.coordinator.presenterHeading}
         className="mt-7 grid gap-3"
-        aria-labelledby="coordinator-presenter-heading"
-        data-testid="coordinator-presenter"
       >
-        <h2 id="coordinator-presenter-heading" className="display text-2xl">
-          {en.coordinator.presenterHeading}
-        </h2>
         <p className="text-ash">{en.coordinator.presenterDescription}</p>
         {pairingError && (
           <p className="entry-error" role="alert">
@@ -594,7 +638,7 @@ export function CoordinatorConsole({
             </p>
           </div>
         )}
-      </section>
+      </CoordinatorSection>
       {error && (
         <p className="entry-error" role="alert">
           {error}

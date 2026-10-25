@@ -63,7 +63,11 @@ describe('CoordinatorConsole', () => {
   it('puts the player list ahead of organiser details in the lobby', () => {
     const html = renderToString(
       <CoordinatorConsole
-        view={{ ...view, phase: 'LOBBY' }}
+        view={{
+          ...view,
+          phase: 'LOBBY',
+          seats: [{ id: 'ada', name: 'Ada', status: 'alive' }],
+        }}
         presenterPath="/tv/test"
         onCreatePresenterPairing={async () => ({
           code: 'A'.repeat(43),
@@ -76,9 +80,14 @@ describe('CoordinatorConsole', () => {
       />,
     );
     expect(html).toContain('data-phase="LOBBY"');
-    expect(html).toContain(
-      `id="coordinator-console-title">${en.entry.lobbyHeading}</h1>`,
-    );
+    expect(html).not.toContain('coordinator-console-title');
+    expect(html).not.toContain('coordinator-current-step');
+    expect(html).not.toContain('coordinator-time-left');
+    expect(html).not.toContain('coordinator-progress');
+    expect(html).not.toContain('Mark as departed');
+    expect(html).toContain('Remove from lobby');
+    expect(html.match(/<details\b/g)).toHaveLength(3);
+    expect(html).not.toMatch(/<details[^>]*\bopen(?:[=\s>])/);
     expect(html.indexOf('data-testid="coordinator-seats"')).toBeLessThan(
       html.indexOf('data-testid="coordinator-delegates"'),
     );

@@ -31,7 +31,10 @@ async function shareConfiguration(
   });
 }
 
-async function lobby(page: Page) {
+async function lobby(
+  page: Page,
+  delegateFailure: 'none' | 'load' | 'save' = 'none',
+) {
   const gameId = 'public-share-room';
   const view = {
     ...createPublicView(gameId),
@@ -60,14 +63,103 @@ async function lobby(page: Page) {
     route.fulfill({ json: { requests: [] } }),
   );
   await page.route(`**/api/games/${gameId}/coordinator/delegates`, (route) =>
-    route.fulfill({ json: { limit: 1, seatIds: [] } }),
+    route.fulfill(
+      delegateFailure === 'load' ||
+        (delegateFailure === 'save' && route.request().method() !== 'GET')
+        ? { status: 503, json: { error: 'unavailable' } }
+        : { json: { limit: 1, seatIds: [] } },
+    ),
   );
   await page.route(`**/api/games/${gameId}/coordinator/presence`, (route) =>
     route.fulfill({ json: { status: 'online' } }),
   );
   await page.goto(`/coordinate/${gameId}`);
   await expect(page.getByTestId('text-lobby-code')).toHaveText('ABC234');
+  return view;
 }
+
+test('lobby removal requires confirmation, refreshes the roster and keeps organiser details folded', async ({
+  page,
+}) => {
+  const view = await lobby(page);
+  let removals = 0;
+  const target = view.seats[0]!;
+  await page.route('**/api/games/public-share-room/commands', async (route) => {
+    const command = route.request().postDataJSON();
+    expect(command.type).toBe('MarkDeparted');
+    expect(command.seatId).toBe(target.id);
+    removals++;
+    view.seats = view.seats.map((seat) =>
+      seat.id === target.id ? { ...seat, status: 'departed' as const } : seat,
+    );
+    view.version++;
+    return route.fulfill({
+      json: { view, version: view.version, serverNow: Date.now() },
+    });
+  });
+  await expect(
+    page.getByTestId('coordinator-console').locator('details'),
+  ).toHaveCount(3);
+  await expect(
+    page.getByTestId('coordinator-console').locator('details[open]'),
+  ).toHaveCount(0);
+  await page.getByTestId(`button-remove-lobby-${target.id}`).click();
+  const confirmation = page.getByRole('alertdialog');
+  await expect(confirmation).toContainText(
+    `Remove ${target.name} from the lobby?`,
+  );
+  expect(removals).toBe(0);
+  await confirmation
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click();
+  await expect(confirmation).toHaveCount(0);
+  expect(removals).toBe(0);
+  await page.getByTestId(`button-remove-lobby-${target.id}`).click();
+  await page.getByTestId('button-confirm-remove-lobby').click();
+  await expect(
+    page.getByTestId(`coordinator-seat-row-${target.id}`),
+  ).toHaveCount(0);
+  expect(removals).toBe(1);
+  await expect(page.getByTestId('coordinator-presenter')).not.toHaveAttribute(
+    'open',
+  );
+  await page.getByTestId('coordinator-presenter').locator('summary').click();
+  await expect(
+    page.getByTestId('button-create-presenter-pairing'),
+  ).toBeVisible();
+});
+
+test('a failed background delegate load does not claim an unsaved action', async ({
+  page,
+}) => {
+  const failedLoad = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/coordinator/delegates') &&
+      response.status() === 503,
+  );
+  await lobby(page, 'load');
+  await failedLoad;
+  await page.getByTestId('coordinator-delegates').locator('summary').click();
+  await expect(
+    page.getByText(
+      'Co-coordinators could not be saved. Check the connection and try again.',
+      { exact: true },
+    ),
+  ).toHaveCount(0);
+});
+
+test('a failed organiser save still shows its action error', async ({
+  page,
+}) => {
+  await lobby(page, 'save');
+  const delegates = page.getByTestId('coordinator-delegates');
+  await delegates.locator('summary').click();
+  await delegates.getByRole('checkbox').first().check();
+  await delegates.getByRole('button').click();
+  await expect(delegates.getByRole('alert')).toHaveText(
+    'Co-coordinators could not be saved. Check the connection and try again.',
+  );
+});
 
 test('configured public base drives the Lobby QR even on a simulated private preview', async ({
   page,
@@ -79,6 +171,19 @@ test('configured public base drives the Lobby QR even on a simulated private pre
     'https://public.example/game/join#code=ABC234',
   );
   await expect(page.getByTestId('preview-share-warning')).toHaveCount(0);
+  const qr = page.getByTestId('img-lobby-qr');
+  await expect(qr.locator('svg path').first()).toHaveCSS('stroke', 'none');
+  const qrFits = await qr.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const svg = element.querySelector('svg')!.getBoundingClientRect();
+    return (
+      svg.left >= box.left &&
+      svg.right <= box.right &&
+      svg.top >= box.top &&
+      svg.bottom <= box.bottom
+    );
+  });
+  expect(qrFits).toBe(true);
   const shared: string[] = [];
   await page.exposeFunction('recordShareUrl', (url: string) =>
     shared.push(url),
