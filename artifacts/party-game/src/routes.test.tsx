@@ -57,7 +57,7 @@ describe('routes', () => {
     expect(html).not.toContain('in the room');
     expect(html).not.toContain('Rejoin an existing seat');
     expect(html).not.toContain('not available yet');
-    expect(html).not.toContain('data-testid="brand-footer-entry"');
+    expect(html).toContain('data-testid="brand-footer-entry"');
   });
   it('uses clean, in-bounds stone geometry in the Oathstone SVG exports', () => {
     const darkEmblem = readFileSync(
@@ -109,7 +109,7 @@ describe('routes', () => {
     expect(html).not.toContain('Faithful');
     expect(html).not.toContain('Traitor');
   });
-  it('keeps the Stackstone mark off entry and player screens', async () => {
+  it('keeps headers Oathstone-only and restores the Stackstone footer on entry and player screens', async () => {
     const entryHtml = await render('/play');
     const entryHeader =
       entryHtml.match(/<header class="entry-brand"[\s\S]*?<\/header>/)?.[0] ??
@@ -119,7 +119,8 @@ describe('routes', () => {
 
     expect(entryHeader).not.toContain('stackstoneconsulting.co.uk');
     expect(entryHeader).not.toContain('stackstone-icon-dark-outlined.svg');
-    expect(entryFooter).toBe('');
+    expect(entryFooter).toContain('made by Stackstone Consulting');
+    expect(entryFooter).toContain('href="https://stackstoneconsulting.co.uk/"');
 
     const playerHtml = await render('/game/rehearsal-id');
     const playerHeader =
@@ -130,10 +131,8 @@ describe('routes', () => {
       playerHtml.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? '';
     expect(playerHeader).not.toContain('stackstoneconsulting.co.uk');
     expect(playerHeader).not.toContain('stackstone-icon-dark-outlined.svg');
-    expect(playerFooter).toBe('');
-    expect(playerHtml).not.toContain(
-      'href="https://stackstoneconsulting.co.uk/"',
-    );
+    expect(playerFooter).toContain('made by Stackstone Consulting');
+    expect(playerHtml).toContain('href="https://stackstoneconsulting.co.uk/"');
   });
   it('links the Stackstone mark externally, opening a new tab only in the player app', async () => {
     const publicHtml = await render('/');
@@ -146,7 +145,8 @@ describe('routes', () => {
       'href="https://stackstoneconsulting.co.uk/"',
     );
     expect(publicFooter).not.toContain('target="_blank"');
-    expect(playerFooter).toBe('');
+    expect(playerFooter).toContain('target="_blank"');
+    expect(playerFooter).toContain('rel="noopener noreferrer"');
   });
   it('keeps public headers Oathstone-only and links to Stackstone in the footer', async () => {
     const publicHtml = await render('/');
@@ -179,7 +179,7 @@ describe('routes', () => {
     expect(staticFooter).toContain('/brand/stackstone-icon.svg');
     expect(staticFooter).toContain('alt="Stackstone Consulting"');
   });
-  it('shows the Stackstone credit on the home page only', async () => {
+  it('shows the Stackstone credit on every app screen', async () => {
     const homeHtml = await render('/');
     expect(homeHtml).toContain('made by Stackstone Consulting');
     expect(homeHtml).toContain('data-testid="brand-footer-shell"');
@@ -194,9 +194,7 @@ describe('routes', () => {
       '/nope',
     ]) {
       const pageHtml = await render(path);
-      expect(pageHtml).not.toMatch(
-        /data-testid="brand-footer-(?:shell|entry)"/,
-      );
+      expect(pageHtml).toMatch(/data-testid="brand-footer-(?:shell|entry)"/);
     }
     for (const staticPage of [
       renderPublicAboutHtml(),

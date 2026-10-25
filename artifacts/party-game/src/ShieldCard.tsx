@@ -1,6 +1,7 @@
 import { forwardRef, type ReactNode } from 'react';
 import { en } from '@/locale/en-GB';
 import { PendingCommandNotice } from './PendingCommandNotice';
+import { BrandFooter } from './BrandFooter';
 
 type ShieldCardProps = {
   countdown: number;
@@ -89,6 +90,11 @@ export const ShieldCard = forwardRef<HTMLDialogElement, ShieldCardProps>(
           </div>
         </div>
         {footer}
+        <BrandFooter
+          context="game"
+          className="game-brand-footer"
+          testId="brand-footer-shield"
+        />
       </dialog>
     );
   },

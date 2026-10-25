@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { en } from '@/locale/en-GB';
+import { BrandFooter } from './BrandFooter';
 import './VotingCircleScreen.css';
 
 type VoteSeat = { id: string; name: string };
@@ -299,6 +300,10 @@ export function VotingCircleScreen({
               {en.game.voteCircleOrientationHint}
             </p>
           </div>
+          <BrandFooter
+            context="game"
+            className="vote-circle-presenter__credit"
+          />
         </div>
       )}
     </section>

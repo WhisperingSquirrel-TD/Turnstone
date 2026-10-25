@@ -14,6 +14,7 @@ import { config } from './config';
 import { EntryActionError } from './entry-action-error';
 import { GameStatusBar, PlayerTile, WhatIsHappeningCard } from './GameChrome';
 import { en } from './locale/en-GB';
+import { BrandFooter } from './BrandFooter';
 import './EntryExperience.css';
 
 export type EntryScreen =
@@ -300,18 +301,42 @@ export function EntryExperience({
   useEffect(() => {
     const root = document.querySelector<HTMLElement>('.entry-experience');
     const viewport = window.visualViewport;
-    if (!root || !viewport) return;
+    if (!root) return;
     const syncViewport = () => {
-      root.style.setProperty('--entry-visual-height', `${viewport.height}px`);
-      root.style.setProperty('--entry-visual-top', `${viewport.offsetTop}px`);
+      root.style.setProperty(
+        '--entry-visual-height',
+        `${viewport?.height ?? window.innerHeight}px`,
+      );
+      root.style.setProperty(
+        '--entry-visual-top',
+        `${viewport?.offsetTop ?? 0}px`,
+      );
+      const dock = root.querySelector('.entry-action-dock');
+      const footer = root.querySelector('.game-brand-footer');
+      const dockHeight = dock?.getBoundingClientRect().height ?? 0;
+      const footerHeight = footer?.getBoundingClientRect().height ?? 0;
+      root.style.setProperty('--entry-measured-dock-height', `${dockHeight}px`);
+      root.style.setProperty('--entry-footer-height', `${footerHeight}px`);
     };
-    syncViewport();
-    viewport.addEventListener('resize', syncViewport);
-    viewport.addEventListener('scroll', syncViewport);
+    const resize = new ResizeObserver(syncViewport);
+    const watch = () => {
+      resize.disconnect();
+      root
+        .querySelectorAll('.entry-action-dock, .game-brand-footer')
+        .forEach((element) => resize.observe(element));
+      syncViewport();
+    };
+    const mutations = new MutationObserver(watch);
+    mutations.observe(root, { childList: true, subtree: true });
+    watch();
+    viewport?.addEventListener('resize', syncViewport);
+    viewport?.addEventListener('scroll', syncViewport);
     window.addEventListener('resize', syncViewport);
     return () => {
-      viewport.removeEventListener('resize', syncViewport);
-      viewport.removeEventListener('scroll', syncViewport);
+      mutations.disconnect();
+      resize.disconnect();
+      viewport?.removeEventListener('resize', syncViewport);
+      viewport?.removeEventListener('scroll', syncViewport);
       window.removeEventListener('resize', syncViewport);
     };
   }, []);
@@ -1684,6 +1709,12 @@ export function EntryExperience({
           </button>
         </div>
       )}
+      <BrandFooter
+        context="game"
+        surface={gameTheme === 'night' ? 'dark' : 'light'}
+        className="game-brand-footer"
+        testId="brand-footer-entry"
+      />
     </div>
   );
 }

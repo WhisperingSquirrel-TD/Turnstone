@@ -77,15 +77,15 @@ function renderPublicHeader(
 }
 
 function renderStackstoneFooterLink(basePath: string): string {
-  return `<a class="brand-credit-link inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.stackstoneIcons.onLight}`)}" alt="Stackstone Consulting" width="24" height="24"></a>`;
+  return `<a class="brand-credit-link inline-flex min-h-11 min-w-11 items-center justify-center" href="${escapeHtml(config.organisation.url)}" aria-label="${escapeHtml(en.app.brandLink)}"><small>${escapeHtml(config.byline)}</small><img class="brand-mark-small" src="${escapeHtml(`${basePath}${config.stackstoneIcons.onLight}`)}" alt="Stackstone Consulting" width="24" height="24"></a>`;
 }
 
-function renderPublicFooter(basePath: string, extra = ''): string {
-  return `<footer class="public-home-footer" data-testid="brand-footer-static"><span>${escapeHtml(config.byline)}</span><p class="public-independence">${escapeHtml(en.publicSite.independenceStatement)}</p>${renderStackstoneFooterLink(basePath)}${extra}</footer>`;
-}
-
-function renderPublicIndependenceNote(): string {
-  return `<p class="public-independence-note">${escapeHtml(en.publicSite.independenceStatement)}</p>`;
+function renderPublicFooter(
+  basePath: string,
+  extra = '',
+  includeIndependence = true,
+): string {
+  return `<footer class="public-home-footer" data-testid="brand-footer-static">${renderStackstoneFooterLink(basePath)}${includeIndependence ? `<p class="public-independence">${escapeHtml(en.publicSite.independenceStatement)}</p>` : ''}${extra}</footer>`;
 }
 
 function renderFaqDetails(
@@ -614,10 +614,12 @@ export function renderPublicPageDocument({
     'coming-soon': renderPublicComingSoonHtml(basePath, mode),
   }[page];
   const contentWithIndependence =
-    page === 'home' ||
-    content.includes(escapeHtml(en.publicSite.independenceStatement))
+    page === 'home'
       ? content
-      : content.replace('</main>', `${renderPublicIndependenceNote()}</main>`);
+      : content.replace(
+          '</main>',
+          `${renderPublicFooter(basePath, '', !content.includes(escapeHtml(en.publicSite.independenceStatement)))}</main>`,
+        );
 
   return renderPublicStaticDocument({
     content: contentWithIndependence,

@@ -66,6 +66,27 @@ describe('official Stackstone footer marks', () => {
     }
   });
 
+  it('makes the byline and logo one accessible link to the company site', () => {
+    const url = 'https://stackstoneconsulting.co.uk/';
+    for (const context of ['public', 'game'] as const) {
+      const markup = renderToStaticMarkup(<BrandFooter context={context} />);
+      expect(markup.match(/<a[\s>]/g)).toHaveLength(1);
+      const anchor = markup.match(/<a\b[\s\S]*?<\/a>/)![0];
+      expect(anchor).toContain(`href="${url}"`);
+      expect(anchor).toContain('<small');
+      expect(anchor).toContain('<img');
+      expect(anchor).toContain('alt="Stackstone Consulting"');
+      expect(anchor).toContain('data-testid="brand-footer-link"');
+      if (context === 'game') {
+        expect(anchor).toContain('target="_blank"');
+        expect(anchor).toContain('rel="noopener noreferrer"');
+      } else {
+        expect(anchor).not.toContain('target=');
+        expect(anchor).not.toContain('rel=');
+      }
+    }
+  });
+
   it('does not recolour or tint official marks in CSS', () => {
     for (const stylesheet of ['./theme.css', './public-home.css']) {
       const css = readFileSync(new URL(stylesheet, import.meta.url), 'utf8');

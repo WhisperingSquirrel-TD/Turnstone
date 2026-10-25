@@ -28,6 +28,98 @@ async function browserStorageText(page: Page): Promise<string> {
   });
 }
 
+test('roster names retain their width and public statuses are separated', async ({
+  page,
+}) => {
+  const gameId = 'readable-player-roster';
+  const view = createPublicView(gameId);
+  const ownSeat = view.seats.find((seat) => seat.id === view.viewerSeatId)!;
+  ownSeat.name = 'Thom';
+  ownSeat.connected = true;
+  view.seats[1]!.name = 'Alexandria 🙂 McKenzie';
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  for (const width of [320, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 640 });
+    await page.goto(`/game/${gameId}`);
+    await page.getByRole('tab', { name: 'Players', exact: true }).click();
+    const tile = page.getByTestId(`player-tile-${ownSeat.id}`);
+    const name = tile.locator('.player-tile__name');
+    const geometry = await name.evaluate((element) => ({
+      height: element.getBoundingClientRect().height,
+      width: element.clientWidth,
+      contentWidth: element.scrollWidth,
+    }));
+    expect(geometry.height, `short name at ${width}`).toBeLessThan(32);
+    expect(geometry.contentWidth).toBeLessThanOrEqual(geometry.width);
+    await expect(tile).toContainText('Playing · Connected · You');
+    expect(
+      await page
+        .getByTestId('players-roster-list')
+        .locator('.player-tile__name')
+        .evaluateAll((names) =>
+          names.every((element) => element.scrollWidth <= element.clientWidth),
+        ),
+    ).toBe(true);
+    const credit = page.getByTestId('brand-footer-shell');
+    await expect(credit).toBeVisible();
+    await expect(credit.getByRole('link')).toHaveAttribute(
+      'href',
+      'https://stackstoneconsulting.co.uk/',
+    );
+    if (width === 390 && process.env.R7_IMPROVEMENTS_CAPTURE_SCREENS === '1') {
+      await page.screenshot({
+        path: 'docs/screens/round-7-improvements/readable-roster-390.jpg',
+      });
+    }
+  }
+});
+
+test('practice Back and primary action clear the linked footer at phone sizes', async ({
+  page,
+}) => {
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  for (const width of [320, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 640 });
+    await page.goto('/play?entry=rehearsal');
+    await page.getByTestId('input-rehearsal-name').fill('Thom');
+    const dock = page.getByTestId('entry-action-dock');
+    const footer = page.getByTestId('brand-footer-entry');
+    await expect(footer).toBeVisible();
+    await expect(footer.getByRole('link')).toHaveAttribute(
+      'href',
+      'https://stackstoneconsulting.co.uk/',
+    );
+    await page.evaluate(() =>
+      window.scrollTo(0, document.documentElement.scrollHeight),
+    );
+    const back = await page
+      .getByRole('button', { name: 'Back', exact: true })
+      .boundingBox();
+    const action = await dock.boundingBox();
+    const credit = await footer.boundingBox();
+    expect(
+      back!.y + back!.height,
+      `Back clear at ${width}`,
+    ).toBeLessThanOrEqual(action!.y + 1);
+    expect(action!.y + action!.height).toBeLessThanOrEqual(credit!.y + 1);
+    expect(credit!.y + credit!.height).toBeLessThanOrEqual(641);
+    if (width === 390 && process.env.R7_IMPROVEMENTS_CAPTURE_SCREENS === '1') {
+      await page.screenshot({
+        path: 'docs/screens/round-7-improvements/practice-footer-clearance-390.jpg',
+      });
+    }
+  }
+});
+
 async function installLiveSocketViewFixture(
   page: Page,
   getView: () => { serverNow: number; version: number; view: FullView },
@@ -916,7 +1008,7 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
           });
         }
         if (held) await page.mouse.up();
-        await expect(page.getByTestId('brand-footer-shell')).toHaveCount(0);
+        await expect(page.locator('.brand-credit:visible')).toHaveCount(1);
         if (!shielded && !held) {
           const last = page
             .locator(
@@ -927,6 +1019,28 @@ test('Round 5 screen matrix keeps headers and the bottom stack clear at every wi
             await page.evaluate(() =>
               window.scrollTo(0, document.documentElement.scrollHeight),
             );
+            // A private Notes dialog has its own permitted scroll area.
+            // The restored credit reduces its height, not its reachability.
+            if (
+              await last.evaluate((element) =>
+                Boolean(element.closest('.game-notes-sheet')),
+              )
+            ) {
+              await last.scrollIntoViewIfNeeded();
+              expect(
+                await last.evaluate((element) => {
+                  const rect = element.getBoundingClientRect();
+                  const hit = document.elementFromPoint(
+                    rect.x + rect.width / 2,
+                    rect.y + rect.height / 2,
+                  );
+                  return (
+                    hit === element || (hit !== null && element.contains(hit))
+                  );
+                }),
+                'Notes last action is a real hit target above the bottom stack',
+              ).toBe(true);
+            }
             const box = await last.boundingBox();
             const action = page.locator(
               '.game-action-bar:visible, .game-action-dock:visible, .game-notes-dock-button:visible',
@@ -2030,7 +2144,7 @@ test('mobile voting tiles scroll clear of the fixed dock and stay tappable', asy
     expect(
       Math.abs(
         Number.parseFloat(clearance.mainPaddingBottom) -
-          clearance.requiredPadding,
+          (clearance.requiredPadding + parseFloat(clearance.footerHeight)),
       ),
       `Content padding must include the measured dock and tab bar at ${width}x640`,
     ).toBeLessThanOrEqual(1);
@@ -2521,8 +2635,8 @@ test('banishment re-vote lists tied seats and reports vote failures accurately',
     element.scrollIntoView({ block: 'center' }),
   );
   const lastChoiceBounds = await lastChoice.boundingBox();
-  const footer = page.getByTestId('brand-footer-shell');
-  await expect(footer).toHaveCount(0);
+  const footer = page.locator('.brand-credit:visible');
+  await expect(footer).toHaveCount(1);
   expect(lastChoiceBounds!.y).toBeGreaterThanOrEqual(0);
   expect(lastChoiceBounds!.y + lastChoiceBounds!.height).toBeLessThanOrEqual(
     page.viewportSize()?.height ?? 720,
@@ -4540,6 +4654,30 @@ test('held role text stays above the seal in compact phone viewports', async ({
       sealBox!.y + sealBox!.height / 2,
     );
     const scrollYBeforeHold = await page.evaluate(() => window.scrollY);
+    const sealHit = await seal.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        box.x + box.width / 2,
+        box.y + box.height / 2,
+      );
+      return {
+        reachable: hit === element || (hit !== null && element.contains(hit)),
+        top: box.top,
+        bottom: box.bottom,
+        hitTag: hit?.tagName,
+        hitTestId: hit?.getAttribute('data-testid'),
+        ancestors: [
+          element.parentElement,
+          element.parentElement?.parentElement,
+          element.parentElement?.parentElement?.parentElement,
+        ].map((parent) => ({
+          className: parent?.className,
+          top: parent?.getBoundingClientRect().top,
+          height: parent?.getBoundingClientRect().height,
+        })),
+      };
+    });
+    expect(sealHit.reachable, JSON.stringify(sealHit)).toBe(true);
     await page.mouse.down();
     const roleContent = page.getByTestId('private-role-content');
     await expect(roleContent).toContainText('Faithful');

@@ -245,7 +245,9 @@ h2,
 .game-fullscreen-overlay {
   padding-top: max(1rem, env(safe-area-inset-top));
   padding-right: max(24px, env(safe-area-inset-right));
-  padding-bottom: 0;
+  padding-bottom: calc(
+    var(--game-footer-dock-height) + var(--game-bottom-bar-height) + 1rem
+  );
   padding-left: max(24px, env(safe-area-inset-left));
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -292,11 +294,25 @@ h2,
   bottom: 0;
   width: 100%;
   max-width: none;
-  min-height: var(--game-footer-dock-height);
+  min-height: 44px;
   margin: 0;
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  padding: 0.125rem 1rem max(0.125rem, env(safe-area-inset-bottom));
   transform: translateX(-50%);
   background: var(--game-page-background, var(--hearth));
+}
+
+.game-shell:has(
+    .privacy-shield[open],
+    .game-fullscreen-overlay,
+    .vote-circle-presenter
+  )
+  > .game-brand-footer {
+  visibility: hidden;
+}
+
+.vote-circle-presenter__credit {
+  flex: 0 0 auto;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .game-action-bar {
   bottom: calc(var(--game-footer-dock-height) + var(--game-bottom-bar-height));
@@ -593,7 +609,8 @@ h2,
   right: 0;
   top: calc(
     var(--entry-visual-top, 0px) + var(--entry-visual-height, 100dvh) -
-      var(--entry-action-dock-height, 80px)
+      var(--entry-measured-dock-height, var(--entry-action-dock-height, 80px)) -
+      var(--entry-footer-height, 0px)
   );
   bottom: auto;
   left: 0;
@@ -620,7 +637,21 @@ h2,
 .entry-screen-lobby,
 .entry-screen-rehearsal-setup {
   flex-direction: column;
-  padding-bottom: calc(10rem + env(safe-area-inset-bottom));
+}
+
+.entry-experience .entry-main {
+  padding-bottom: calc(
+    var(--entry-measured-dock-height, 80px) + var(--entry-footer-height, 0px) +
+      1rem
+  );
+}
+
+.entry-experience > .game-brand-footer {
+  top: calc(
+    var(--entry-visual-top, 0px) + var(--entry-visual-height, 100dvh) -
+      var(--entry-footer-height, 0px)
+  );
+  bottom: auto;
 }
 
 .entry-experience {
@@ -949,6 +980,32 @@ button.player-tile {
   gap: 0.5rem;
 }
 
+.game-roster-grid .player-tile {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.game-roster-grid .player-tile__end {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.game-roster-grid .player-tile__status {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.brand-credit-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
 .game-notes-sheet {
   position: fixed;
   z-index: 40;
@@ -960,8 +1017,8 @@ button.player-tile {
   left: 0;
   width: min(100%, 480px);
   max-height: calc(
-    100dvh - max(1rem, env(safe-area-inset-top)) -
-      var(--game-bottom-stack-height) - 0.5rem
+    100dvh - max(1rem, env(safe-area-inset-top)) - 52px -
+      var(--game-bottom-stack-height) - 1rem
   );
   margin-inline: auto;
   overflow-y: auto;
@@ -1064,6 +1121,46 @@ button.player-tile {
   max-width: 100%;
   padding-inline: 0.5rem;
 }
+
+@media (max-height: 650px) {
+  .private-moment-shell [data-testid='player-game'][data-phase='DEAL'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.5rem;
+  }
+
+  .private-moment-shell [data-testid='player-game'][data-phase='DEAL'] > * {
+    grid-column: 1 / -1;
+  }
+
+  .private-moment-shell
+    [data-testid='player-game'][data-phase='DEAL']
+    > .phase-progress-row {
+    grid-row: 3;
+    grid-column: 1;
+    align-self: center;
+    margin-bottom: 0;
+  }
+
+  .private-moment-shell
+    [data-testid='player-game'][data-phase='DEAL']
+    > .game-help-disclosure {
+    grid-row: 3;
+    grid-column: 2;
+    margin-block: 0;
+  }
+
+  .private-moment-shell .private-moment-panel {
+    gap: 0.375rem;
+  }
+
+  .private-moment-shell .hold-seal {
+    width: 112px;
+    min-width: 112px;
+    min-height: 112px;
+  }
+}
+
 html:has(.private-moment-shell--held),
 body:has(.private-moment-shell--held),
 html:has(.game-fullscreen-overlay),

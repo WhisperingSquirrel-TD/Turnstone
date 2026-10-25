@@ -81,11 +81,7 @@ it('builds public pages and an app fallback without scripts or game assets', asy
     expect(html).toContain('<html lang="en-GB">');
     expect(html).toContain('independent game made by Stackstone Consulting');
     expect(html).not.toMatch(/<script[^>]+(?:src=|type="module")/i);
-    if (page === 'index.html') {
-      expect(html).toContain('data-testid="brand-footer-static"');
-    } else {
-      expect(html).not.toContain('data-testid="brand-footer-static"');
-    }
+    expect(html).toContain('data-testid="brand-footer-static"');
   }
 
   const publicPageHtml = await Promise.all(

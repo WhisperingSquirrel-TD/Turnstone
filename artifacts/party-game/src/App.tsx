@@ -275,8 +275,6 @@ function Shell({
   privateMode = false,
   privateRevealActive = false,
   connectionStatus = null,
-  hideGameFooter = true,
-  showBrandFooter = false,
   phase,
   cycle = 1,
   remaining = 0,
@@ -294,8 +292,6 @@ function Shell({
   privateMode?: boolean;
   privateRevealActive?: boolean;
   connectionStatus?: GameConnectionState | null;
-  hideGameFooter?: boolean;
-  showBrandFooter?: boolean;
   phase?: string;
   cycle?: number;
   remaining?: number;
@@ -304,6 +300,7 @@ function Shell({
   onOpenNotes?: () => void;
 }) {
   const navigate = useNavigate();
+  const shellLocation = useLocation();
   const [displayPreference, setDisplayPreference] = useState<DisplayPreference>(
     () => {
       try {
@@ -368,8 +365,12 @@ function Shell({
     const root = document.querySelector<HTMLElement>('.game-shell');
     if (!root) return;
     const measure = () => {
-      const footer = root.querySelector<HTMLElement>('.game-brand-footer');
-      const bottomBar = root.querySelector<HTMLElement>('.game-bottom-bar');
+      const footer = root.querySelector<HTMLElement>(
+        ':scope > .game-brand-footer',
+      );
+      const bottomBar = [
+        ...root.querySelectorAll<HTMLElement>('.game-bottom-bar'),
+      ].find((bar) => bar.getBoundingClientRect().height > 0);
       const actions = [
         ...root.querySelectorAll<HTMLElement>(
           '.game-action-bar, .game-action-dock, .game-notes-dock-button',
@@ -424,7 +425,7 @@ function Shell({
   return (
     <div
       data-game-theme={isPlayer ? theme : undefined}
-      className={`safe-page flex min-h-[100dvh] flex-col${isPlayer ? ` game-shell${hideGameFooter ? '' : ' game-shell--footer-visible'}` : ''}${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
+      className={`safe-page flex min-h-[100dvh] flex-col${isPlayer ? ' game-shell game-shell--footer-visible' : ''}${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
     >
       <a
         href="#main"
@@ -545,14 +546,18 @@ function Shell({
       {isPlayer && onPlayerTabChange && !hidePlayerBottomBar && (
         <GameBottomBar active={activePlayerTab} onSelect={onPlayerTabChange} />
       )}
-      {!isPlayer && showBrandFooter && (
-        <BrandFooter
-          context="public"
-          surface="light"
-          className="mx-auto mt-8 w-full max-w-5xl py-3"
-          testId="brand-footer-shell"
-        />
-      )}
+      <BrandFooter
+        context={
+          isPlayer || shellLocation.pathname.startsWith(config.routes.game)
+            ? 'game'
+            : 'public'
+        }
+        surface={isPlayer && theme === 'night' ? 'dark' : 'light'}
+        className={
+          isPlayer ? 'game-brand-footer' : 'mx-auto mt-8 w-full max-w-5xl py-3'
+        }
+        testId="brand-footer-shell"
+      />
     </div>
   );
 }
@@ -565,7 +570,7 @@ function Home() {
   );
 
   return (
-    <Shell showBrandFooter>
+    <Shell>
       <div className="public-home-content">
         <section
           className="public-home-hero"
@@ -2733,32 +2738,26 @@ function PlayerGame() {
               <PlayerTile
                 name={seat.name}
                 state={isAlive ? 'available' : 'out'}
-                statusText={
-                  <>
-                    {isAlive && full.phase !== 'FINISHED' && (
-                      <span>{en.game.playerPlaying}</span>
-                    )}
-                    <span>
-                      {seat.connected === undefined
-                        ? en.game.playerConnectionUnknown
-                        : seat.connected
-                          ? en.game.playerConnected
-                          : en.game.playerOffline}
-                    </span>
-                    {seat.id === full.viewerSeatId && (
-                      <span>{en.game.playerYou}</span>
-                    )}
-                    {publicRole && (
-                      <span>
-                        {full.phase === 'FINISHED' && !isAlive
-                          ? en.game.playerOutRole(publicRole)
-                          : publicRole === 'traitor'
-                            ? en.game.roleTraitor
-                            : en.game.roleFaithful}
-                      </span>
-                    )}
-                  </>
-                }
+                statusText={[
+                  isAlive && full.phase !== 'FINISHED'
+                    ? en.game.playerPlaying
+                    : null,
+                  seat.connected === undefined
+                    ? en.game.playerConnectionUnknown
+                    : seat.connected
+                      ? en.game.playerConnected
+                      : en.game.playerOffline,
+                  seat.id === full.viewerSeatId ? en.game.playerYou : null,
+                  publicRole
+                    ? full.phase === 'FINISHED' && !isAlive
+                      ? en.game.playerOutRole(publicRole)
+                      : publicRole === 'traitor'
+                        ? en.game.roleTraitor
+                        : en.game.roleFaithful
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
                 testId={`player-tile-${seat.id}`}
               />
             </li>
@@ -2952,7 +2951,7 @@ function PlayerGame() {
             {((!isBanishmentPhase &&
               ['DEAL', 'FINAL_VOTE'].includes(full.phase)) ||
               full.paused) && (
-              <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+              <div className="phase-progress-row mb-4 flex flex-wrap items-start justify-between gap-2">
                 {!isBanishmentPhase && (
                   <PhaseProgressStatus
                     phase={full.phase}

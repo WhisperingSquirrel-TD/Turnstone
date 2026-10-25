@@ -28,7 +28,6 @@ export function BrandFooter({
 
   return (
     <footer className={classes} data-testid={testId}>
-      <small>{config.byline}</small>
       <a
         className="brand-credit-link"
         href={config.organisation.url}
@@ -37,6 +36,7 @@ export function BrandFooter({
         aria-label={en.app.brandLink}
         data-testid="brand-footer-link"
       >
+        <small>{config.byline}</small>
         <img
           className="brand-mark-small"
           src={`${import.meta.env.BASE_URL}${iconPath}`}

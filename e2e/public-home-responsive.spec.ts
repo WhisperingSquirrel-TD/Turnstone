@@ -193,7 +193,7 @@ test('the public home page uses the shared paper surface and stays mobile-first'
   await expect(demo).toContainText('Hold to reveal');
 });
 
-test('entry pages share the paper shell and keep the brand footer on home only', async ({
+test('entry pages share the paper shell and linked brand footer', async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -288,9 +288,7 @@ test('entry pages share the paper shell and keep the brand footer on home only',
         '[data-testid="brand-footer-static"], [data-testid="brand-footer-entry"], [data-testid="brand-footer-shell"]',
       )
       .count();
-    expect(brandFooterCount, `${screen.path} footer visibility`).toBe(
-      screen.hasBrandFooter ? 1 : 0,
-    );
+    expect(brandFooterCount, `${screen.path} footer visibility`).toBe(1);
 
     const brokenImages = await page.locator('img').evaluateAll(async (images) =>
       (

@@ -141,7 +141,7 @@ describe('Stage 2A entry screens', () => {
     expect(html).toContain('Selected');
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('data-testid="input-rehearsal-name"');
-    expect(html).not.toContain('data-testid="brand-footer-entry"');
+    expect(html).toContain('data-testid="brand-footer-entry"');
   });
 
   it('places practice name errors beside the labelled field', () => {

@@ -1,5 +1,7 @@
 # Stackstone brand assets
 
+Owner instruction, 25 October 2026: show the linked “made by Stackstone Consulting” credit and official logo on every screen, including game, private, entry, loading and error views. The whole credit links to <https://stackstoneconsulting.co.uk/>; game-context links open safely in a new tab. This replaces the earlier redesign instruction to hide the footer during play. Fixed controls must reserve its measured height rather than cover screen content.
+
 Use only the official Stackstone SVGs below. The files are copied byte-for-byte
 from Stackstone Consulting's brand directory; do not redraw, recolour, filter,
 tint, or apply CSS fills to them.
