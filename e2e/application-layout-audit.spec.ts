@@ -271,12 +271,16 @@ for (const width of widths)
       view = {
         ...view,
         phase: 'LOBBY',
-        seats: createPublicView(gameId).seats.slice(0, 2),
+        seats: createPublicView(gameId)
+          .seats.filter((seat) => seat.status === 'alive')
+          .slice(0, 1),
+        publicLog: [],
         publicAnnouncement: null,
         winner: null,
       };
-      await go(`/coordinate/${gameId}?players=6`);
+      await go(`/coordinate/${gameId}`);
       await expect(page.getByTestId('text-lobby-code')).toBeVisible();
+      await expect(page.getByText('1 joined', { exact: true })).toBeVisible();
       await expect(
         page.getByText('Waiting for 4 more players.', { exact: true }),
       ).toBeVisible();

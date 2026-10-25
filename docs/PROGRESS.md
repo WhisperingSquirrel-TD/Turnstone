@@ -12,13 +12,20 @@ cases and 28 four-profile invitation/removal/error browser checks pass.
 The QR SVG overflow found during screenshot review also failed its bounds test
 before the responsive sizing fix. Regenerated organiser/player Lobby images at
 320/390/430, including the exact `*-light.jpg`/`*-dark.jpg` aliases referenced by
-the reviewer. The fixture has two ready seats out of six and retains “Waiting
+the reviewer. The fresh fixture has one ready seat out of five and retains “Waiting
 for 4 more players.” See D108 for scope and gallery naming.
 Local concurrent unit/browser runs hit the unchanged 5-second rename guard;
 it passed in isolation (350ms), and the complete 747-test suite passed with one
 worker without concurrent browser load. No timeout or assertion was altered.
-Baseline `6592ff5`, Verify #296 green; isolated Lobby push next. Amendment A
-remains after this UI batch, followed by the queued read-only missions review.
+**Implementation pushed:** `b42c2f1`, Verify #297 **GREEN**
+([run](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/40202954497))
+— every job passed, including four browsers, rehearsal-live, unit and audit.
+Screenshot review caught a fixture detail: the shared gameplay fixture included
+a departed seat. The final gallery sample now uses one living joined seat with
+an empty pre-game log; a “1 joined” assertion guards this fresh default state.
+All six requested Pixel capture/audit cases pass, with typecheck and lint green.
+The final fixture/gallery-only follow-up is next; product rules are unchanged.
+Amendment A remains after this UI batch, followed by the read-only missions review.
 
 **Prior verified public-share fix: `6592ff5`, Verify #296 GREEN.**
 

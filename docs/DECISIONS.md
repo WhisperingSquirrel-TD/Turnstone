@@ -1699,7 +1699,8 @@ overflowing its padded container. A failing browser bounds assertion now guards
 the responsive SVG sizing; QR values and encoding are unchanged.
 `R7_AUDIT_CAPTURE=1 R7_AUDIT_STATES=lobby-organiser,lobby` limits screenshot writes
 only, never the states or assertions executed by the full application audit.
-The Lobby sample has two accepted seats out of six, retaining the visible
+The fresh Lobby sample has one living joined seat against the default five-seat
+start requirement, retaining the visible
 “Waiting for 4 more players.” dock reason. The referenced `*-light.jpg` and
 `*-dark.jpg` aliases are refreshed from the same captures as `*-day.jpg` and
 `*-night.jpg`; they record phone colour scheme and retain the real phase-based
