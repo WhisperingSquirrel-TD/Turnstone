@@ -1556,7 +1556,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
             /You voted for .+\. Show your vote card full screen/,
           );
           await expect(revealButton).toBeVisible();
-          await expect(brandFooter).toHaveCount(0);
+          await expect(brandFooter).toHaveCount(1);
 
           const originalViewport = page.viewportSize();
           const voteCardLabel = voteCard.locator('span').first();
@@ -1576,7 +1576,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
               await expect(voteCard).toBeVisible();
               await revealButton.scrollIntoViewIfNeeded();
               await expect(revealButton).toBeVisible();
-              await expect(brandFooter).toHaveCount(0);
+              await expect(brandFooter).toHaveCount(1);
               const actionBox = await revealButton.boundingBox();
               expect(actionBox).not.toBeNull();
               if (actionBox) {

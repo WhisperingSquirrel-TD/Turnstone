@@ -1,5 +1,9 @@
 # Status for reviewer
 
+**Current Round 7 UI fixes:** Main is `0c3334b`; Verify #287 passed all four browser profiles and every non-rehearsal gate. Rehearsal found two further obsolete no-credit assertions in the vote-card journey. Those now require the visible credit; the complete real-server Pixel Practice journey passes locally (2.3 minutes), including its existing fullscreen, rotation, privacy and clip checks. The final two-assertion follow-up is ready to push; no product behaviour or test tolerance changed. No owner decision is pending.
+
+**Previous-run diagnosis retained for the audit:**
+
 **Round 7 owner screenshot fixes — follow-up ready:** Main is `3a5e9b5`; Verify #286 failed in browsers/rehearsal, while unit, static, audit and the other gates passed. The real logs showed two causes: viewport-wide credits widened the public grid's automatic minimum at 320px, and smoke/rehearsal tests still expected no play credit. The grid is now explicitly shrinkable; only obsolete footer-absence expectations changed. Twelve focused desktop/Pixel/iPhone browser regressions pass with all geometry assertions intact. A further red-first check caught missing credits on full-screen practice guides; guides and organiser confirmation now own their linked credit, and both phone guide journeys pass. The short-name, Practice clearance and complete day/night game matrix checks already pass; screenshots are under `docs/screens/round-7-improvements/`. All 726 local unit assertions pass in two batches (the unchanged 5s rename guard passes in isolation and also passed in GitHub #286). Typechecks, lint and formatting pass. No rules, rate limits, secrecy behaviour or official SVG bytes changed. Next: push this follow-up after confirming no Verify is active, then wait for its result. Entry amendment A remains last.
 
 ### Round 7 — Verify repair evidence
