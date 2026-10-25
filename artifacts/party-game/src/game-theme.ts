@@ -13,27 +13,14 @@ export function readDisplayPreference(
   }
 }
 
-const dayPhases = new Set([
-  'DEAL',
-  'MISSION',
-  'DEBATE',
-  'VOTE',
-  'VERDICT',
-  'DAWN',
-  'ENDGAME',
-  'FINAL_VOTE',
-  'FINAL_BANISH',
-  'FINISHED',
-  'ARCHIVED',
-]);
-
 /** Only the shared public phase and this device's display preference matter. */
 export function gameThemeForPhase(
   phase?: string,
   preference: DisplayPreference = 'system',
   phoneDark = false,
 ): GameTheme {
+  if (phase === 'SHADOW' || phase === 'NIGHT') return 'night';
   if (preference === 'light') return 'day';
   if (preference === 'dark' || phoneDark) return 'night';
-  return phase && dayPhases.has(phase) ? 'day' : 'night';
+  return 'day';
 }

@@ -15,6 +15,7 @@ import { EntryActionError } from './entry-action-error';
 import { GameStatusBar, PlayerTile, WhatIsHappeningCard } from './GameChrome';
 import { en } from './locale/en-GB';
 import { BrandFooter } from './BrandFooter';
+import { useDisplayTheme } from './use-display-theme';
 import './EntryExperience.css';
 
 export type EntryScreen =
@@ -252,7 +253,7 @@ const VALID_CODE = /^[A-HJ-NP-Z2-9]{6}$/;
 
 export function EntryExperience({
   copy,
-  gameTheme = 'day',
+  gameTheme: suppliedGameTheme,
   screen: controlledScreen,
   inviteMode = false,
   lateJoinMode = false,
@@ -285,6 +286,8 @@ export function EntryExperience({
   onClearSensitiveValues,
   onScreenChange,
 }: EntryExperienceProps) {
+  const { theme: deviceTheme } = useDisplayTheme();
+  const gameTheme = suppliedGameTheme ?? deviceTheme;
   const [internalScreen, setInternalScreen] = useState<EntryScreen>('welcome');
   const [localError, setLocalError] = useState('');
   const [optionsOpen, setOptionsOpen] = useState(false);

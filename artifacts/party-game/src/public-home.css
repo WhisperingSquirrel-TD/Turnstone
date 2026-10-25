@@ -55,6 +55,18 @@
   line-height: 1.15;
 }
 
+.safe-page:not(.game-shell)[data-game-theme='night'] {
+  color-scheme: dark;
+  --game-bg: var(--game-night-bg);
+  --game-surface: var(--game-night-surface);
+  --game-line: var(--game-night-line);
+  --game-text: var(--game-night-text);
+  --game-muted: var(--game-night-muted);
+  --game-accent: var(--game-night-accent);
+  --game-on-accent: var(--game-night-on-accent);
+  --game-alert: var(--game-night-alert);
+}
+
 .public-skip-link {
   position: fixed;
   z-index: 20;

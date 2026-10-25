@@ -7,10 +7,11 @@ import {
 } from './game-theme';
 
 describe('shared game-clock theme', () => {
-  it('keeps entry and lobby dark, changes every day step to light and night to dark', () => {
-    for (const phase of [undefined, 'DRAFT', 'LOBBY', 'SHADOW']) {
-      expect(gameThemeForPhase(phase)).toBe('night');
+  it('uses the phone by day, including entry and lobby, and forces public night dark', () => {
+    for (const phase of [undefined, 'DRAFT', 'LOBBY']) {
+      expect(gameThemeForPhase(phase)).toBe('day');
     }
+    expect(gameThemeForPhase('SHADOW')).toBe('night');
     for (const phase of [
       'DEAL',
       'MISSION',
@@ -29,11 +30,18 @@ describe('shared game-clock theme', () => {
     }
   });
 
-  it('keeps explicit Light and Dark independent of phase and phone setting', () => {
-    for (const phase of ['DEAL', 'VOTE', 'SHADOW', 'DAWN']) {
+  it('keeps day choices explicit but never lets Light override the night', () => {
+    for (const phase of [undefined, 'LOBBY', 'DEAL', 'VOTE', 'DAWN']) {
       for (const phoneDark of [true, false]) {
         expect(gameThemeForPhase(phase, 'light', phoneDark)).toBe('day');
         expect(gameThemeForPhase(phase, 'dark', phoneDark)).toBe('night');
+      }
+    }
+    for (const preference of ['system', 'light', 'dark'] as const) {
+      for (const phoneDark of [true, false]) {
+        expect(gameThemeForPhase('SHADOW', preference, phoneDark)).toBe(
+          'night',
+        );
       }
     }
   });

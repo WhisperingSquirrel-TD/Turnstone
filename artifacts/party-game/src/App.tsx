@@ -3,12 +3,7 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from '@tanstack/react-query';
-import {
-  gameThemeForPhase,
-  readDisplayPreference,
-  displayPreferenceKey,
-  type DisplayPreference,
-} from './game-theme';
+import { useDisplayTheme } from './use-display-theme';
 import { DisplayPreferences } from './DisplayPreferences';
 import {
   createContext,
@@ -303,36 +298,8 @@ function Shell({
 }) {
   const navigate = useNavigate();
   const shellLocation = useLocation();
-  const [displayPreference, setDisplayPreference] = useState<DisplayPreference>(
-    () => {
-      try {
-        return readDisplayPreference(window.localStorage);
-      } catch {
-        return 'system';
-      }
-    },
-  );
-  const [phoneDark, setPhoneDark] = useState(
-    () =>
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches,
-  );
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-color-scheme: dark)');
-    const update = () => setPhoneDark(query.matches);
-    update();
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, []);
-  const chooseDisplayPreference = (value: DisplayPreference) => {
-    setDisplayPreference(value);
-    try {
-      window.localStorage.setItem(displayPreferenceKey, value);
-    } catch {
-      // The current screen still responds when device storage is unavailable.
-    }
-  };
-  const theme = gameThemeForPhase(phase, displayPreference, phoneDark);
+  const { displayPreference, chooseDisplayPreference, theme } =
+    useDisplayTheme(phase);
   const previousPhase = useRef<string | undefined>(undefined);
   const [themeMessage, setThemeMessage] = useState<string | null>(null);
   const [browserOnline, setBrowserOnline] = useState(true);
@@ -426,7 +393,7 @@ function Shell({
   }, []);
   return (
     <div
-      data-game-theme={isPlayer ? theme : undefined}
+      data-game-theme={theme}
       className={`safe-page flex min-h-[100dvh] flex-col${isPlayer ? ' game-shell game-shell--footer-visible' : ''}${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
     >
       <a

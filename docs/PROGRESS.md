@@ -1,5 +1,11 @@
 # Status for reviewer
 
+**Round 7 real-phone findings — item 1 ready for Verify.** Public night phases
+override Light without changing the saved Display choice. Day and setup pages,
+including the static home, follow that choice/phone setting. Six Pixel/iPhone
+regressions passed at 320/390/430. Remaining: scrollbar/focus/header audit and
+the empty private-screen recovery path. Baseline Verify #300 is green.
+
 **Round 7 Lobby first-view follow-up — local checks passed.** QR is 200px square,
 with its encoded quiet zone unchanged. Mobile spacing is tightened without
 hiding content or changing the dock. The audit now requires code, QR and Share

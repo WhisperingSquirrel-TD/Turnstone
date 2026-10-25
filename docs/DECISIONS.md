@@ -1716,3 +1716,12 @@ Keep all existing content and the measured fixed-bar reservation. The audit
 checks the code, QR and Share rectangles at scroll position zero with 8px clear
 space above the scroll viewport's bottom, alongside the existing overlap,
 scroll-reachability and touch-target checks.
+
+### Owner night-theme ruling — 25 October 2026
+
+Public SHADOW/night screens are always dark, independent of role or device
+Display choice. The stored choice governs day screens and entry/setup pages;
+system mode follows the phone by day. DAWN remains a day screen, as before.
+Night never rewrites the saved preference. Entry, game and static home share
+the same pure theme policy; the public bootstrap does not import React or game
+state. Static-home branding selects the unmodified official light/dark icon.
