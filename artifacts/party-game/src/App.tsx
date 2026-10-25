@@ -31,6 +31,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  useNavigationType,
   useParams,
 } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -64,6 +65,7 @@ import {
   type GameViewTab,
 } from './GameChrome';
 import { PhaseClipOverlay } from './PhaseClipOverlay';
+import { isFreshGameStartNavigation } from './phase-clips';
 import { NotesScreen } from './NotesScreen';
 import { BanishmentVoteScreen } from './BanishmentVoteScreen';
 import { PrivateChoiceControls } from './PrivateChoiceControls';
@@ -953,6 +955,10 @@ function storeAwayCursor(gameId: string, snapshot: AwaySnapshot) {
 function PlayerGame() {
   const { id = '' } = useParams();
   const location = useLocation();
+  const navigationType = useNavigationType();
+  const [freshClipGameId] = useState(() =>
+    isFreshGameStartNavigation(id, navigationType, location.state) ? id : null,
+  );
   const navigate = useNavigate();
   const showRehearsalStartGuide =
     (location.state as { showRehearsalStartGuide?: boolean } | null)
@@ -2779,6 +2785,7 @@ function PlayerGame() {
       playersContent={playersContent}
       persistentContent={
         <PhaseClipOverlay
+          freshGameStart={freshClipGameId === id}
           enabled={Boolean(
             !isResuming && (activeGame || full?.phase === 'FINISHED'),
           )}

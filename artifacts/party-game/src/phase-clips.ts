@@ -17,6 +17,7 @@ export type PhaseClipEligibilityInput = {
   phaseStartedAt: number | null | undefined;
   serverNow: number;
   phaseChangedWhileVisible: boolean;
+  freshGameStart?: boolean;
   documentVisible: boolean;
   prefersReducedMotion: boolean;
   saveData: boolean;
@@ -30,6 +31,24 @@ export type PhaseClipSource = {
   src: string;
   type: 'video/webm' | 'video/mp4';
 };
+
+export function gameStartNavigationState(gameId: string) {
+  return { phaseClipStartGameId: gameId };
+}
+
+export function isFreshGameStartNavigation(
+  gameId: string,
+  navigationType: string,
+  state: unknown,
+): boolean {
+  return (
+    navigationType === 'PUSH' &&
+    state !== null &&
+    typeof state === 'object' &&
+    'phaseClipStartGameId' in state &&
+    state.phaseClipStartGameId === gameId
+  );
+}
 
 export function publicPhaseClipFor(
   phase: string,
@@ -52,6 +71,18 @@ export function phaseClipMarkerKey(
 ): string {
   if (phase === 'DEAL') return `${gameId}:game-start`;
   return `${gameId}:${cycle}:${phase}`;
+}
+
+export function publicPhaseClipEventKey(
+  gameId: string,
+  cycle: number,
+  phase: string,
+  winner?: string | null,
+  publicVerdict = false,
+): string {
+  return `${phaseClipMarkerKey(gameId, cycle, phase)}:${
+    publicPhaseClipFor(phase, winner, publicVerdict) ?? 'none'
+  }`;
 }
 
 export function completePhaseClipFade(
@@ -96,7 +127,14 @@ export function isPhaseClipEligible(input: PhaseClipEligibilityInput): boolean {
     return false;
 
   const phaseAge = input.serverNow - (input.phaseStartedAt ?? Number.NaN);
-  if (clip === 'game-start') return input.phaseChangedWhileVisible;
+  if (clip === 'game-start')
+    return (
+      input.phaseChangedWhileVisible ||
+      (input.freshGameStart === true &&
+        Number.isFinite(phaseAge) &&
+        phaseAge >= 0 &&
+        phaseAge <= 60_000)
+    );
   return (
     input.phaseChangedWhileVisible ||
     (Number.isFinite(phaseAge) && phaseAge >= 0 && phaseAge <= 60_000)

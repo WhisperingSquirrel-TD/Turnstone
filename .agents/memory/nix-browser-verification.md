@@ -8,3 +8,9 @@ Do not equate a successful native package installation, loader preflight or brow
 **Why:** Loader preflight alone cleared library errors but rendering still failed without a supported EGL platform. Mesa's EGL vendor, software drivers and surfaceless platform enabled actual iPhone WebKit rendering and reproduced a footer interception that Chromium did not.
 
 **How to apply:** Use the project's browser-runtime wrapper and verify actual rendering, not just launch. Keep failed profiles visibly failed; never substitute Chromium or skip assertions. Nix library outputs and Mesa's EGL vendor/driver discovery must all reach the browser process; installing system packages alone is insufficient.
+
+Rendering also does not prove video decoding works.
+
+**Why:** Local WebKit rendered the game but returned empty `canPlayType` results for MP4, H.264 and VP9; real-video tests consequently could not start playback.
+
+**How to apply:** Check codec capability separately for media work. Keep strict playback assertions and distinguish local codec limitations from results in the supported CI browser container.

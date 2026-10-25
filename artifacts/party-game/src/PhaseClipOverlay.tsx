@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   completePhaseClipFade,
   isPhaseClipEligible,
   phaseClipMarkerKey,
   phaseClipSources,
   publicPhaseClipFor,
+  publicPhaseClipEventKey,
   shouldPrefetchPhaseClips,
   shouldShowPhaseClipPoster,
   type PhaseClipName,
@@ -24,6 +26,7 @@ type ClipProps = {
   serverNow?: number;
   winner?: string | null;
   publicVerdict?: boolean;
+  freshGameStart?: boolean;
 };
 
 type Attempt = {
@@ -111,6 +114,7 @@ export function PhaseClipOverlay({
   serverNow,
   winner,
   publicVerdict = false,
+  freshGameStart = false,
 }: ClipProps) {
   const [environmentVersion, setEnvironmentVersion] = useState(0);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
@@ -119,6 +123,9 @@ export function PhaseClipOverlay({
   const activeAttemptKey = useRef<string | null>(null);
   activeAttemptKey.current = attempt?.key ?? null;
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const overlayHost = useRef<{ key: string; element: HTMLElement } | null>(
+    null,
+  );
   const previousPhase = useRef<{ gameId: string; identity: string } | null>(
     null,
   );
@@ -243,7 +250,13 @@ export function PhaseClipOverlay({
       previousPhase.current = null;
       return;
     }
-    const identity = phaseClipMarkerKey(gameId, cycle, phase);
+    const identity = publicPhaseClipEventKey(
+      gameId,
+      cycle,
+      phase,
+      winner,
+      publicVerdict,
+    );
     const previous = previousPhase.current;
     if (
       previous &&
@@ -286,6 +299,7 @@ export function PhaseClipOverlay({
         phaseStartedAt,
         serverNow: serverNow ?? Number.NaN,
         phaseChangedWhileVisible,
+        freshGameStart,
         documentVisible: document.visibilityState === 'visible',
         ...preferences,
         ...(posterOnly
@@ -328,6 +342,7 @@ export function PhaseClipOverlay({
     winner,
     publicVerdict,
     environmentVersion,
+    freshGameStart,
   ]);
 
   useEffect(() => {
@@ -411,10 +426,22 @@ export function PhaseClipOverlay({
     };
   }, [attempt]);
 
-  if (!attempt) return null;
+  if (!attempt) {
+    overlayHost.current = null;
+    return null;
+  }
+  if (overlayHost.current?.key !== attempt.key) {
+    overlayHost.current = {
+      key: attempt.key,
+      element:
+        document.querySelector<HTMLDialogElement>(
+          'dialog.privacy-shield[open]',
+        ) ?? document.body,
+    };
+  }
   const files = phaseClipSources(attempt.clip, attempt.supportsVp9);
 
-  return (
+  return createPortal(
     <div
       aria-hidden="true"
       data-clip-name={attempt.clip}
@@ -471,6 +498,7 @@ export function PhaseClipOverlay({
           ))}
         </video>
       )}
-    </div>
+    </div>,
+    overlayHost.current.element,
   );
 }

@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   completePhaseClipFade,
+  gameStartNavigationState,
+  isFreshGameStartNavigation,
   isPhaseClipEligible,
   phaseClipMarkerKey,
   phaseClipSources,
   publicPhaseClipFor,
+  publicPhaseClipEventKey,
   shouldShowPhaseClipPoster,
   shouldPrefetchPhaseClips,
 } from './phase-clips';
@@ -26,6 +29,44 @@ const eligibleInput = {
 };
 
 describe('public phase clips', () => {
+  it('identifies the deliberate public verdict reveal as a new event within the same phase', () => {
+    expect(
+      publicPhaseClipEventKey('game-a', 2, 'VERDICT', null, false),
+    ).not.toBe(publicPhaseClipEventKey('game-a', 2, 'VERDICT', null, true));
+    expect(publicPhaseClipEventKey('game-a', 2, 'SHADOW')).toBe(
+      publicPhaseClipEventKey('game-a', 2, 'SHADOW', null, false),
+    );
+  });
+  it('accepts only a matching fresh PUSH, never reload, history return or another game', () => {
+    const state = gameStartNavigationState('game-a');
+    expect(isFreshGameStartNavigation('game-a', 'PUSH', state)).toBe(true);
+    expect(isFreshGameStartNavigation('game-a', 'POP', state)).toBe(false);
+    expect(isFreshGameStartNavigation('game-a', 'REPLACE', state)).toBe(false);
+    expect(isFreshGameStartNavigation('game-b', 'PUSH', state)).toBe(false);
+    expect(isFreshGameStartNavigation('game-a', 'PUSH', null)).toBe(false);
+  });
+  it('plays the opening on a fresh start handoff, but not an ordinary initial load', () => {
+    const opening = { ...eligibleInput, phase: 'DEAL' };
+    expect(isPhaseClipEligible(opening)).toBe(false);
+    expect(isPhaseClipEligible({ ...opening, freshGameStart: true })).toBe(
+      true,
+    );
+    expect(
+      isPhaseClipEligible({
+        ...opening,
+        freshGameStart: true,
+        serverNow: 151_000,
+      }),
+    ).toBe(false);
+    expect(
+      isPhaseClipEligible({
+        ...opening,
+        freshGameStart: true,
+        alreadyPlayed: true,
+      }),
+    ).toBe(false);
+  });
+
   it('does not let an old fade timeout close a replacement phase clip', () => {
     const closeCurrentAttempt = vi.fn();
 

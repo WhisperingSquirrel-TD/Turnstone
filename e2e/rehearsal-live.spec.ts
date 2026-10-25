@@ -79,7 +79,7 @@ async function installPhaseClipFixtures(page: Page): Promise<void> {
 
 async function playAndSkipPhaseClip(
   page: Page,
-  name: 'nightfall' | 'dawn',
+  name: 'nightfall' | 'dawn' | 'game-start',
   options: { tapToSkip?: boolean } = {},
 ): Promise<void> {
   const overlay = page.getByTestId('phase-clip-overlay');
@@ -1294,6 +1294,7 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
     if (!activeGameId) throw new Error('The rehearsal game id is missing.');
     gameId = activeGameId;
 
+    await playAndSkipPhaseClip(page, 'game-start', { tapToSkip: true });
     await expect(page.getByTestId('rehearsal-explanation-copy')).toHaveText(
       'A practice game with computer players. Try each step at your own pace.',
     );

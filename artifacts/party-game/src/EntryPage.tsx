@@ -1,3 +1,4 @@
+import { gameStartNavigationState } from './phase-clips';
 import {
   lazy,
   Suspense,
@@ -852,7 +853,9 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         gameViewResponseSchema,
         csrfToken,
       );
-      navigate(webPath(`/game/${encodeURIComponent(coordinatorGameId)}`));
+      navigate(webPath(`/game/${encodeURIComponent(coordinatorGameId)}`), {
+        state: gameStartNavigationState(coordinatorGameId),
+      });
     } catch {
       setErrors((current) => ({
         ...current,
@@ -886,7 +889,10 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       if (!isFullView(result.view))
         throw new Error('rehearsal-view-unavailable');
       navigate(webPath(`/game/${encodeURIComponent(result.view.id)}`), {
-        state: { showRehearsalStartGuide: true },
+        state: {
+          showRehearsalStartGuide: true,
+          ...gameStartNavigationState(result.view.id),
+        },
       });
     } catch (error) {
       setErrors((current) => ({
