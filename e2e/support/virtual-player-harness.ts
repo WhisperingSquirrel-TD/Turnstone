@@ -70,6 +70,30 @@ export function observeAdvanceGate(
   return observeOrganiserAdvance(expectedStep, currentStep, enabled);
 }
 
+export async function readAdvanceGate(
+  expectedPhase: string,
+  currentPhase: string | null,
+  expectedStep: string,
+  currentStep: string | null,
+  readEnabled: () => Promise<boolean>,
+): Promise<ReturnType<typeof observeAdvanceGate>> {
+  const transition = observeAdvanceGate(
+    expectedPhase,
+    currentPhase,
+    expectedStep,
+    currentStep,
+    false,
+  );
+  if (transition !== 'waiting' || currentPhase === null) return transition;
+  return observeAdvanceGate(
+    expectedPhase,
+    currentPhase,
+    expectedStep,
+    currentStep,
+    await readEnabled(),
+  );
+}
+
 export function allPlayersOnStep(
   expectedStep: string,
   observedSteps: readonly (string | null)[],

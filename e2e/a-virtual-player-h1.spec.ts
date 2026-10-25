@@ -15,6 +15,7 @@ import {
   playerScreenFingerprint,
   readPlayerStepIdentity,
   observeAdvanceGate,
+  readAdvanceGate,
   sharedActivePlayerStep,
   waitForPlayerScreenChange,
   type VirtualPlayer,
@@ -583,12 +584,12 @@ async function advanceAsOrganiser(
             await visibleCoordinatorPhase(coordinatorPage);
           const states = await readPlayerStepStates(playerPages);
           const referenceStep = states.find(({ active }) => active)?.step;
-          return observeAdvanceGate(
+          return readAdvanceGate(
             phase,
             coordinatorPhase,
             expectedStep,
             referenceStep ?? null,
-            await moveOn.isEnabled(),
+            () => moveOn.isEnabled(),
           );
         },
         { timeout: 20_000 },
@@ -624,12 +625,12 @@ async function advanceAsOrganiser(
               await visibleCoordinatorPhase(coordinatorPage);
             const states = await readPlayerStepStates(playerPages);
             const referenceStep = states.find(({ active }) => active)?.step;
-            outcome = observeAdvanceGate(
+            outcome = await readAdvanceGate(
               phase,
               coordinatorPhase,
               expectedStep,
               referenceStep ?? null,
-              await moveOn.isEnabled(),
+              () => moveOn.isEnabled(),
             );
             return outcome;
           },

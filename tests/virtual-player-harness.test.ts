@@ -7,6 +7,7 @@ import {
   getVirtualPlayerPage,
   sharedActivePlayerStep,
   observeAdvanceGate,
+  readAdvanceGate,
   nextUntriedPlayerChoice,
   playerStepIdentity,
   observeOrganiserAdvance,
@@ -16,6 +17,43 @@ import {
 import { createTestOnlyRandom } from '../artifacts/api-server/src/test-only-random';
 
 describe('virtual-player harness helpers', () => {
+  it('does not wait for a removed advance control after the game finishes', async () => {
+    let controlReads = 0;
+    const readControl = async () => {
+      controlReads += 1;
+      throw new Error('The terminal screen has no advance control');
+    };
+    expect(
+      await readAdvanceGate(
+        'FINAL_VOTE',
+        'FINISHED',
+        'previous-step',
+        'finished-step',
+        readControl,
+      ),
+    ).toBe('phase-changed');
+    expect(controlReads).toBe(0);
+  });
+
+  it('still checks the real enabled state while the same step is pending', async () => {
+    for (const enabled of [false, true]) {
+      let controlReads = 0;
+      expect(
+        await readAdvanceGate(
+          'SHADOW',
+          'SHADOW',
+          'same-step',
+          'same-step',
+          async () => {
+            controlReads += 1;
+            return enabled;
+          },
+        ),
+      ).toBe(enabled ? 'enabled' : 'waiting');
+      expect(controlReads).toBe(1);
+    }
+  });
+
   it('returns to player actions when a pending shadow round or slot changes', () => {
     const expected = playerStepIdentity({
       phase: 'SHADOW',
