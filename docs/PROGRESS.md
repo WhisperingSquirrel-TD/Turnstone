@@ -1,5 +1,18 @@
 # Status for reviewer
 
+**Round 7 organiser Lobby review — COMPLETE.** Verified application:
+`857d492`, [Verify #298 GREEN](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/40204037677).
+Implementation `b42c2f1` also passed Verify #297.
+Invitation first; one heading/roster; confirmed **Remove from lobby**; extras
+collapsed; no pre-game timing/progress rows or false save error. QR overflow fixed.
+747 unit tests, phone audits and all four browser profiles passed. Gallery:
+`docs/screens/round-7-audit/lobby{,-organiser}-{320,390,430}-*.jpg`.
+Next: amendment A, then the read-only missions review. No owner question pending.
+
+[Current main Verify](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/workflows/verify.yml?query=branch%3Amain).
+
+## Round 7 Lobby evidence
+
 **Round 7 current batch — organiser Lobby review:** invitation-first layout and
 single heading/roster implemented; ready count retained; pre-game removal has a
 confirmation and uses the existing server action. Timing/progress rows are
@@ -17,6 +30,9 @@ for 4 more players.” See D108 for scope and gallery naming.
 Local concurrent unit/browser runs hit the unchanged 5-second rename guard;
 it passed in isolation (350ms), and the complete 747-test suite passed with one
 worker without concurrent browser load. No timeout or assertion was altered.
+The final status-only local check hit the same unchanged five-second filesystem
+deadline again; the guard passed in both Verify #297 and #298. This documentation
+update is left to the unchanged CI guard rather than altering its threshold.
 **Implementation pushed:** `b42c2f1`, Verify #297 **GREEN**
 ([run](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/40202954497))
 — every job passed, including four browsers, rehearsal-live, unit and audit.
@@ -24,7 +40,7 @@ Screenshot review caught a fixture detail: the shared gameplay fixture included
 a departed seat. The final gallery sample now uses one living joined seat with
 an empty pre-game log; a “1 joined” assertion guards this fresh default state.
 All six requested Pixel capture/audit cases pass, with typecheck and lint green.
-The final fixture/gallery-only follow-up is next; product rules are unchanged.
+Final fixture/gallery follow-up `857d492` passed Verify #298; product rules are unchanged.
 Amendment A remains after this UI batch, followed by the read-only missions review.
 
 **Prior verified public-share fix: `6592ff5`, Verify #296 GREEN.**
