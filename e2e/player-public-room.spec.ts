@@ -3615,6 +3615,33 @@ for (const phase of ['DEAL', 'VOTE', 'SHADOW'] as const) {
   }) => {
     await page.clock.install();
     const gameId = `return-notice-${phase.toLowerCase()}`;
+    const recoveryNetwork: {
+      endpoint: string;
+      status: number;
+      command?: string;
+    }[] = [];
+    page.on('response', (response) => {
+      const endpoint = new URL(response.url()).pathname.split('/').pop() ?? '';
+      if (!['csrf', 'commands', 'view', 'private-view'].includes(endpoint))
+        return;
+      let command: string | undefined;
+      if (endpoint === 'commands') {
+        const type = response.request().postDataJSON()?.type;
+        command = [
+          'AcknowledgePrivate',
+          'SubmitShadowChoice',
+          'SubmitVote',
+        ].includes(type)
+          ? type
+          : 'other';
+      }
+      recoveryNetwork.push({
+        endpoint,
+        status: response.status(),
+        ...(command ? { command } : {}),
+      });
+      if (recoveryNetwork.length > 12) recoveryNetwork.shift();
+    });
     let view: FullView = {
       ...createPublicView(gameId),
       phase: phase === 'SHADOW' ? 'SHADOW' : 'DEBATE',
@@ -3677,7 +3704,30 @@ for (const phase of ['DEAL', 'VOTE', 'SHADOW'] as const) {
       ).toBeVisible();
       await page.clock.fastForward(3_000);
       await page.getByRole('button', { name: 'I’m shielded' }).click();
-      await expect(page.getByTestId('private-choice-list')).toBeVisible();
+      try {
+        await expect(page.getByTestId('private-choice-list')).toBeVisible();
+      } catch (error) {
+        const publicStep = await page
+          .getByTestId('player-game')
+          .evaluateAll((nodes) =>
+            nodes.map((node) => ({
+              phase: node.getAttribute('data-phase'),
+              round: node.getAttribute('data-shadow-round'),
+              slot: node.getAttribute('data-shadow-slot'),
+            })),
+          );
+        console.error('SHADOW return public diagnostics', {
+          publicStep,
+          recoveryVisible: await page
+            .getByTestId('private-screen-recovery')
+            .isVisible(),
+          shieldVisible: await page
+            .getByRole('dialog', { name: 'Shield your screen' })
+            .isVisible(),
+          network: recoveryNetwork,
+        });
+        throw error;
+      }
     } else {
       await expect(page.getByTestId('player-game')).toBeVisible();
     }
