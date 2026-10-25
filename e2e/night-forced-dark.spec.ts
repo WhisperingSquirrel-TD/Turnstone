@@ -61,7 +61,7 @@ for (const width of [320, 390, 430]) {
       'night',
     );
     await page.goto('/?testDisplay=dark');
-    await expect(page.locator('.safe-page').first()).toHaveAttribute(
+    await expect(page.locator('.entry-experience')).toHaveAttribute(
       'data-game-theme',
       'night',
     );

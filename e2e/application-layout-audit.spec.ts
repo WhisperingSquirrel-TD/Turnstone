@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+import { expect, test, type TestInfo } from '@playwright/test';
 import { createPublicView } from './support/public-view';
 import { installLiveSocketViewFixture } from './support/live-socket-view';
 import {
@@ -25,12 +25,58 @@ const phases = [
   'FINISHED',
 ] as const;
 
+type AuditDiagnostics = {
+  completed: { scene: string; stage: string; durationMs: number }[];
+  active: { scene: string; stage: string; startedAtMs: number } | null;
+};
+
+const auditDiagnostics = new WeakMap<TestInfo, AuditDiagnostics>();
+
+test.afterEach(async ({ browserName }, info) => {
+  const diagnostics = auditDiagnostics.get(info);
+  auditDiagnostics.delete(info);
+  if (info.status === info.expectedStatus) return;
+  if (!diagnostics) return;
+  const completedStageCounts = diagnostics.completed.reduce<
+    Record<string, number>
+  >((counts, entry) => {
+    counts[entry.stage] = (counts[entry.stage] ?? 0) + 1;
+    return counts;
+  }, {});
+  const summary = {
+    browser: browserName,
+    lastCompleted: diagnostics.completed.at(-1) ?? null,
+    active: diagnostics.active
+      ? {
+          scene: diagnostics.active.scene,
+          stage: diagnostics.active.stage,
+          elapsedMs: Date.now() - diagnostics.active.startedAtMs,
+        }
+      : null,
+    completedStageCounts,
+  };
+  console.log(`layout-audit-failure ${JSON.stringify(summary)}`);
+  await info.attach('layout-audit-timing.json', {
+    contentType: 'application/json',
+    body: JSON.stringify(
+      {
+        completed: diagnostics.completed,
+        ...summary,
+      },
+      null,
+      2,
+    ),
+  });
+});
+
 for (const width of widths)
   for (const palette of ['day', 'night'] as const) {
     test(`full application layout audit ${width} ${palette}`, async ({
       page,
     }, info) => {
       test.setTimeout(120_000);
+      const diagnostics: AuditDiagnostics = { completed: [], active: null };
+      auditDiagnostics.set(info, diagnostics);
       await page.setViewportSize({
         width,
         height: width === 320 ? 640 : width === 360 ? 740 : 844,
@@ -114,7 +160,19 @@ for (const width of widths)
             'owner regression: every night state is dark',
           ).toHaveAttribute('data-game-theme', 'night');
         coverage.push(name);
+        diagnostics.active = {
+          scene: name,
+          stage: 'layout',
+          startedAtMs: Date.now(),
+        };
+        const layoutStartedAt = Date.now();
         findings.push(...(await auditApplicationLayout(page, name)));
+        diagnostics.completed.push({
+          scene: name,
+          stage: 'layout',
+          durationMs: Date.now() - layoutStartedAt,
+        });
+        diagnostics.active = null;
         if (
           process.env.R7_AUDIT_CAPTURE === '1' &&
           info.project.name === 'Pixel' &&
@@ -135,7 +193,19 @@ for (const width of widths)
             );
           }
         }
+        diagnostics.active = {
+          scene: name,
+          stage: 'focus-and-borders',
+          startedAtMs: Date.now(),
+        };
+        const focusStartedAt = Date.now();
         findings.push(...(await auditFocusAndBorders(page, name)));
+        diagnostics.completed.push({
+          scene: name,
+          stage: 'focus-and-borders',
+          durationMs: Date.now() - focusStartedAt,
+        });
+        diagnostics.active = null;
       }
       async function go(path: string, heading?: string) {
         await page.goto(path);

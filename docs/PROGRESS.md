@@ -1,6 +1,14 @@
 # Status for reviewer
 
-**Round 7 Amendment A — pushed `fa3a17bf`; Verify #307 FAILED.**
+**Round 7 Amendment A — fix pushed `b04ae94c`; Verify #308 FAILED (browsers only).**
+Unit, integration, rehearsal-live, Lighthouse, audit and the other gates passed.
+One cold 320/day layout case timed out at its unchanged 120 seconds; the other
+seven audit cases passed. The remaining night tests used the removed static
+entry wrapper; the locator now checks the real hydrated entry. A matched
+two-CPU local run passed both the night regression and the full 320/day audit
+(14.1s and 28.2s). No timeout increased. Failure-only public scene/stage timings
+will identify the wait if CI reproduces it; no page text or private data is logged.
+Previous `fa3a17bf` / Verify #307 failed and the following fixes are now pushed.
 Logs read: stale marketing-title and `/play` shell assertions in unit/integration;
 H1 still sought a Join link instead of the hydrated entry button; the strict
 layout audit caught touching entry heading/descriptor boxes at short height.
