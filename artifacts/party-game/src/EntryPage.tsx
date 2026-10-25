@@ -1014,7 +1014,11 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       joinCode={lateJoinMode ? '' : joinCode}
       shareUrl={visibleShareUrl}
       qrCode={qrCode}
-      previewWarning={previewShareWarning(window.location.origin)}
+      previewWarning={
+        typeof window === 'undefined'
+          ? null
+          : previewShareWarning(window.location.origin)
+      }
       players={playerList}
       requiredPlayerCount={
         Number(new URLSearchParams(location.search).get('players')) ||

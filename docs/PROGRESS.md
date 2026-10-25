@@ -1,5 +1,18 @@
 # Status for reviewer
 
+**Round 7 public share-base fix — SSR correction included.**
+[Current Verify on main](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/workflows/verify.yml?query=branch%3Amain).
+The public URL formatter, preview warning and direct name entry are implemented.
+Verify #295 on `d17306f` passed browsers, the full layout audit and real-server
+rehearsal; only unit failed because the warning read `window` during server
+rendering. That failure was reproduced locally and corrected with a browser
+guard. All 35 route/helper/component tests now pass. The complete local unit run
+passed 745 checks; the existing rename guard hit its unchanged 5s limit under
+parallel load and passed in isolation (437ms total run). No assertion, threshold,
+game rule or production setting changed.
+
+## Earlier verification evidence
+
 **Round 7 UI bug batch — public share-base fix:** implemented HTTPS-validated
 `PUBLIC_BASE_URL` for room/invitation links and all QR/share/copy surfaces.
 Unconfigured private previews retain the room code and show the owner's exact
