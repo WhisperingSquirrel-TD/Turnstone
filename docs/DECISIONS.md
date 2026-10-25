@@ -1705,3 +1705,14 @@ start requirement, retaining the visible
 `*-dark.jpg` aliases are refreshed from the same captures as `*-day.jpg` and
 `*-night.jpg`; they record phone colour scheme and retain the real phase-based
 Lobby theme rather than faking a different render.
+
+### Lobby first-view follow-up — 25 October 2026
+
+The invitation must fit without scrolling at 360×740 and 390×844. Use a 200px
+mobile QR and remove redundant vertical spacing around the existing status,
+commentary, code and Share action. Keep the SVG's built-in quiet zone and
+foreground/background colours unchanged; remove only the extra outer padding.
+Keep all existing content and the measured fixed-bar reservation. The audit
+checks the code, QR and Share rectangles at scroll position zero with 8px clear
+space above the scroll viewport's bottom, alongside the existing overlap,
+scroll-reachability and touch-target checks.

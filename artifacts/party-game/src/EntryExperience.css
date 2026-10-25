@@ -858,6 +858,46 @@
   .entry-start-game {
     margin-top: 1.25rem;
   }
+
+  /* Keep the fresh Lobby invitation above the dock on short phones.
+     The SVG already includes its own four-module quiet zone. */
+  .entry-screen-lobby .entry-main {
+    padding-top: 4px;
+  }
+
+  .entry-screen-lobby .entry-stage-chrome {
+    margin-bottom: 0;
+  }
+
+  .entry-experience.entry-screen-lobby .game-status-bar {
+    min-height: 44px;
+  }
+
+  .entry-screen-lobby .game-happening-card {
+    padding-block: 3px;
+  }
+
+  .entry-screen-lobby .entry-lobby-logistics {
+    gap: 4px;
+    margin-top: 4px;
+    padding-top: 0;
+  }
+
+  .entry-screen-lobby .entry-qr {
+    width: 200px;
+    padding: 0;
+  }
+
+  .entry-screen-lobby .entry-lobby-code {
+    font-size: 32px;
+    line-height: 1.2;
+  }
+
+  .entry-screen-lobby .entry-code-share .entry-secondary-action {
+    margin-top: 0;
+    min-height: 44px;
+    padding-block: 0.5rem;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

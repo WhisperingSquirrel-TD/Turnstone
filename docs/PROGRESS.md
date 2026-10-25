@@ -1,5 +1,17 @@
 # Status for reviewer
 
+**Round 7 Lobby first-view follow-up — local checks passed.** QR is 200px square,
+with its encoded quiet zone unchanged. Mobile spacing is tightened without
+hiding content or changing the dock. The audit now requires code, QR and Share
+to fit at scroll position zero at 360×740 and 390×844, with 8px clearance.
+Baseline main `2aefc7b` passed Verify #299. All 16 full-state Pixel/iPhone audit
+cases passed (320/360/390/430, day/night), including the new first-view checks;
+TypeScript, lint and whitespace checks passed. Organiser captures and aliases
+are refreshed at all four widths. No rule or secrecy change. Current result:
+[main Verify](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/workflows/verify.yml?query=branch%3Amain).
+
+## Previous completed Lobby batch
+
 **Round 7 organiser Lobby review — COMPLETE.** Verified application:
 `857d492`, [Verify #298 GREEN](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/40204037677).
 Implementation `b42c2f1` also passed Verify #297.

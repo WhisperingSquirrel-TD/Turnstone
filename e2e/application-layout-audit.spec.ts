@@ -318,6 +318,43 @@ for (const width of widths)
           );
         }),
       ).toBe(true);
+      if (width === 360 || width === 390) {
+        const firstView = await page.evaluate(() => {
+          const main = document.querySelector('#entry-main')!;
+          const viewport = main.getBoundingClientRect();
+          return {
+            scrollTop: main.scrollTop,
+            viewport: { top: viewport.top, bottom: viewport.bottom },
+            items: ['text-lobby-code', 'img-lobby-qr', 'button-share-game'].map(
+              (id) => {
+                const box = document
+                  .querySelector(`[data-testid="${id}"]`)!
+                  .getBoundingClientRect();
+                return {
+                  id,
+                  top: box.top,
+                  bottom: box.bottom,
+                  width: box.width,
+                  height: box.height,
+                };
+              },
+            ),
+          };
+        });
+        expect(firstView.scrollTop).toBe(0);
+        for (const item of firstView.items) {
+          expect(item.top, JSON.stringify(firstView)).toBeGreaterThanOrEqual(
+            firstView.viewport.top,
+          );
+          expect(item.bottom, JSON.stringify(firstView)).toBeLessThanOrEqual(
+            firstView.viewport.bottom - 8,
+          );
+        }
+        const qr = firstView.items.find((item) => item.id === 'img-lobby-qr')!;
+        expect(qr.width).toBeGreaterThanOrEqual(200);
+        expect(qr.width).toBeLessThanOrEqual(220);
+        expect(qr.height).toBe(qr.width);
+      }
       await audit('lobby-organiser');
 
       for (const phase of phases) {
