@@ -368,9 +368,9 @@ stores that reveal order. This batch intentionally changes no engine behaviour.
 Align the order and its remaining instructions only under the later
 voting-circle brief; do not infer approval to alter it from this copy fix.
 
-## Automatic layout audit — normal scroll boundaries (OPEN)
+## Automatic layout audit — normal scroll boundaries (RESOLVED, 25 October 2026)
 
-**Owner clarification required before the complete audit gate is implemented.**
+**Historical question, superseded by the owner ruling below.**
 The requested “no visible text or control clipped by the viewport” at every
 scroll position conflicts with normal whole-page scrolling: a perfectly
 reachable control necessarily crosses the viewport edge. A deterministic
@@ -399,4 +399,32 @@ gate and is NOT claimed complete. The initial 72-image gallery covers the
 missing Create, organiser Lobby, Join and Practice views at the four requested
 widths in both system colour schemes. Form screens currently deliberately use
 paper in both schemes. The remaining game/overlay inventory and its gallery
-await this policy clarification.
+awaited this policy clarification.
+
+**Owner ruling:** Ordinary scroll-edge clipping is exempt only when every
+control, link, text block and image can scroll fully clear of every fixed bar,
+is fully visible and passes the centre hit-test. At document top and bottom,
+fixed bars must not overlap controls/text; the last control needs clear space.
+Fixed/sticky bars must never overlap each other. Horizontal overflow, hidden
+meaning, non-scrolling ancestor clipping, small targets, broken images and
+unexplained disabled primaries remain failures. The three named Create/Lobby
+regressions are included. No existing check is removed.
+
+## Audit viewport contract — owner decision (OPEN)
+
+The complete local scan traverses 71 named UI states at four widths in both
+themes (568 state/viewport combinations). After the exposed defects were
+fixed, remaining findings are at-rest body/fixed-bar overlaps: for example,
+long Vote and Night lists extend under the fixed bottom stack at scroll top.
+Every target can subsequently scroll fully clear; that does **not** satisfy
+the separate at-rest condition, so the audit continues to fail it.
+
+D89 explicitly requires whole-page scrolling and no inner scroll pane.
+Meeting the new at-rest condition with a fixed dock is most directly achieved
+by one main content scroll area bounded above the dock, with no nested
+scrolling inside it. That changes the earlier scrolling contract.
+
+**Question:** May the game use that single bounded main scroll area instead
+of whole-page scrolling? All reachability, clipping, geometry, privacy and
+role-neutral checks would remain enforced; this is not a request to exempt
+unreachable controls or relax the at-rest requirement.

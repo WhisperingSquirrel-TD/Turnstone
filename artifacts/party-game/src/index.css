@@ -168,8 +168,13 @@ h2,
   cursor: pointer;
 }
 .primary-action {
+  min-height: 56px;
   color: var(--hearth);
   background: var(--gilt);
+}
+.game-shell .primary-action,
+.game-shell .entry-primary-action {
+  min-height: 56px;
 }
 .quiet-action {
   color: var(--candle);
@@ -345,6 +350,12 @@ h2,
 .public-skip-link {
   height: 44px !important;
   min-height: 44px !important;
+}
+a[href='#main']:focus {
+  position: relative;
+  inset: auto;
+  transform: none;
+  align-self: flex-start;
 }
 
 .game-status-bar {
@@ -733,11 +744,10 @@ h2,
 .night-status-card__line {
   min-width: 0;
   margin: 0;
-  overflow: hidden;
   font-size: 13px;
   line-height: 1.5rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .entry-experience .entry-heading {
@@ -1148,6 +1158,19 @@ button.player-tile {
     grid-row: 3;
     grid-column: 2;
     margin-block: 0;
+  }
+  .private-moment-shell
+    [data-testid='player-game'][data-phase='DEAL']:has(
+      > .game-help-disclosure[open]
+    )
+    > .phase-progress-row {
+    grid-column: 1 / -1;
+  }
+  .private-moment-shell
+    [data-testid='player-game'][data-phase='DEAL']
+    > .game-help-disclosure[open] {
+    grid-column: 1 / -1;
+    grid-row: 4;
   }
 
   .private-moment-shell .private-moment-panel {

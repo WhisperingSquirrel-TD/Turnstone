@@ -182,9 +182,19 @@ export function PrivateChoiceControls({
       )}
       {!selected && !choiceSubmitted && (
         <div className="game-action-dock" data-testid="game-action-dock">
-          <button className="primary-action w-full" type="button" disabled>
+          <button
+            className="primary-action w-full"
+            type="button"
+            disabled
+            aria-describedby="private-choice-reason"
+          >
             {choices.length ? en.game.choosePlayer : en.game.noChoiceAvailable}
           </button>
+          <p id="private-choice-reason" className="game-action-helper">
+            {choices.length
+              ? en.game.choiceSelectionHint
+              : en.game.noChoiceAvailable}
+          </p>
         </div>
       )}
       {commandMessage && !waitingToSend && (

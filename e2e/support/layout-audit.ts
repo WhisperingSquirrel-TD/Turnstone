@@ -19,6 +19,9 @@ export async function inspectVisibleLayout(
       if (element.id) return `#${CSS.escape(element.id)}`;
       const testId = element.getAttribute('data-testid');
       if (testId) return `[data-testid="${CSS.escape(testId)}"]`;
+      const auditId = element.getAttribute('data-layout-audit-node');
+      if (auditId)
+        return `${element.tagName.toLowerCase()}[data-layout-audit-node="${auditId}"]`;
       const parent = element.parentElement;
       return parent
         ? `${selector(parent)} > ${element.tagName.toLowerCase()}:nth-child(${Array.from(parent.children).indexOf(element) + 1})`
@@ -26,6 +29,22 @@ export async function inspectVisibleLayout(
     };
     const visible = (element: Element) =>
       element.getClientRects().length > 0 &&
+      !(
+        element.matches('[role="status"]') &&
+        getComputedStyle(element).clip.replace(/[\s,]/g, '') ===
+          'rect(0px0px0px0px)'
+      ) &&
+      element.checkVisibility?.({
+        checkOpacity: true,
+        checkVisibilityCSS: true,
+      }) !== false &&
+      !element.matches('a[href="#main"]:not(:focus)') &&
+      !Array.from(document.querySelectorAll('details:not([open])')).some(
+        (details) =>
+          details !== element &&
+          details.contains(element) &&
+          !details.querySelector(':scope > summary')?.contains(element),
+      ) &&
       getComputedStyle(element).visibility !== 'hidden' &&
       getComputedStyle(element).display !== 'none' &&
       !element.closest('[hidden], [inert], [aria-hidden="true"]');
@@ -39,7 +58,12 @@ export async function inspectVisibleLayout(
     const dialogs = Array.from(
       document.querySelectorAll('dialog[open], [aria-modal="true"]'),
     ).filter(visible);
-    const scope = dialogs.at(-1) ?? document.body;
+    const menus = Array.from(
+      document.querySelectorAll(
+        'details[open].game-status-menu,details[open].public-home-menu',
+      ),
+    ).filter(visible);
+    const scope = dialogs.at(-1) ?? menus.at(-1) ?? document.body;
     const boxes: { element: Element; rect: DOMRect }[] = [];
     const controls = Array.from(
       scope.querySelectorAll(
@@ -94,13 +118,8 @@ export async function inspectVisibleLayout(
     const visibleBoxes = boxes.filter(inViewport);
     for (let index = 0; index < visibleBoxes.length; index++) {
       const first = visibleBoxes[index]!;
-      if (
-        first.rect.left < -0.5 ||
-        first.rect.right > innerWidth + 0.5 ||
-        first.rect.top < -0.5 ||
-        first.rect.bottom > innerHeight + 0.5
-      )
-        add('viewport-clipping', first.element);
+      if (first.rect.left < -0.5 || first.rect.right > innerWidth + 0.5)
+        add('horizontal-clipping', first.element);
       for (const second of visibleBoxes.slice(index + 1)) {
         if (
           first.element.contains(second.element) ||
@@ -131,4 +150,244 @@ export async function inspectVisibleLayout(
       add('horizontal-scroll', document.documentElement);
     return findings;
   }, screen);
+}
+
+/** Audit all painted content, not only the first viewport. No clicks or values are recorded. */
+export async function auditApplicationLayout(
+  page: Page,
+  screen: string,
+): Promise<LayoutFinding[]> {
+  await page.evaluate(() => document.fonts.ready);
+  const reached = await page.evaluate((name) => {
+    const findings: LayoutFinding[] = [];
+    const viewport = `${innerWidth}x${innerHeight}`;
+    const selector = (el: Element) =>
+      el.id
+        ? `#${CSS.escape(el.id)}`
+        : el.getAttribute('data-testid')
+          ? `[data-testid="${CSS.escape(el.getAttribute('data-testid')!)}"]`
+          : `${el.tagName.toLowerCase()}[data-layout-audit-node="${el.getAttribute('data-layout-audit-node')}"]`;
+    const add = (kind: string, ...els: Element[]) =>
+      findings.push({
+        screen: name,
+        viewport,
+        kind,
+        selectors: els.map(selector),
+      });
+    const visible = (el: Element) =>
+      el.getClientRects().length > 0 &&
+      !(
+        el.matches('[role="status"]') &&
+        getComputedStyle(el).clip.replace(/[\s,]/g, '') === 'rect(0px0px0px0px)'
+      ) &&
+      el.checkVisibility?.({ checkOpacity: true, checkVisibilityCSS: true }) !==
+        false &&
+      !el.matches('a[href="#main"]:not(:focus)') &&
+      !Array.from(document.querySelectorAll('details:not([open])')).some(
+        (details) =>
+          details !== el &&
+          details.contains(el) &&
+          !details.querySelector(':scope > summary')?.contains(el),
+      ) &&
+      getComputedStyle(el).visibility !== 'hidden' &&
+      getComputedStyle(el).display !== 'none' &&
+      !el.closest(
+        '[hidden], [inert], [aria-hidden="true"], .sr-only, .game-connection-label--visually-hidden',
+      );
+    const dialogs = Array.from(
+      document.querySelectorAll('dialog[open], [aria-modal="true"]'),
+    ).filter(visible);
+    const menus = Array.from(
+      document.querySelectorAll(
+        'details[open].game-status-menu, details[open].public-home-menu',
+      ),
+    ).filter(visible);
+    const scope = dialogs.at(-1) ?? menus.at(-1) ?? document.body;
+    const controls =
+      'button, a[href], input:not([type=hidden]), select, textarea, summary, [role=tab], [role=button]';
+    const targets = new Set<Element>(
+      Array.from(scope.querySelectorAll(`${controls}, img, [role=img]`)).filter(
+        visible,
+      ),
+    );
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const parent = walker.currentNode.parentElement;
+      if (
+        !parent ||
+        !walker.currentNode.textContent?.trim() ||
+        !visible(parent) ||
+        parent.closest('script,style')
+      )
+        continue;
+      targets.add(parent.closest('p,h1,h2,h3,h4,li,label,legend') ?? parent);
+    }
+    Array.from(document.querySelectorAll('*')).forEach((el, index) =>
+      el.setAttribute('data-layout-audit-node', String(index)),
+    );
+    const bars = Array.from(scope.querySelectorAll('*')).filter(
+      (el) =>
+        visible(el) &&
+        ['fixed', 'sticky'].includes(getComputedStyle(el).position),
+    );
+    const intersects = (a: DOMRect, b: DOMRect) =>
+      Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 &&
+      Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+    const independent = (a: Element, b: Element) =>
+      !a.contains(b) && !b.contains(a);
+    const barPairs = () => {
+      for (let i = 0; i < bars.length; i++)
+        for (const b of bars.slice(i + 1)) {
+          const a = bars[i]!;
+          if (
+            independent(a, b) &&
+            intersects(a.getBoundingClientRect(), b.getBoundingClientRect())
+          )
+            add('fixed-bars-overlap', a, b);
+        }
+    };
+    const atRest = (edge: 'top' | 'bottom') => {
+      window.scrollTo({
+        top: edge === 'top' ? 0 : document.documentElement.scrollHeight,
+        behavior: 'instant',
+      });
+      barPairs();
+      for (const el of targets) {
+        if (!visible(el)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.bottom <= 0 || r.top >= innerHeight) continue;
+        for (const bar of bars)
+          if (
+            independent(el, bar) &&
+            intersects(r, bar.getBoundingClientRect())
+          )
+            add(`fixed-bar-overlap-at-${edge}`, el, bar);
+      }
+    };
+    // Exercise the stack throughout the document, including sticky transition boundaries.
+    const scrollStops = new Set([0, document.documentElement.scrollHeight]);
+    for (let y = 0; y < document.documentElement.scrollHeight; y += 32)
+      scrollStops.add(y);
+    for (const bar of bars) {
+      const rect = bar.getBoundingClientRect(),
+        top = Number.parseFloat(getComputedStyle(bar).top) || 0;
+      for (const boundary of [
+        rect.top + scrollY - top,
+        (bar.parentElement?.getBoundingClientRect().bottom ?? rect.bottom) +
+          scrollY -
+          rect.height -
+          top,
+      ])
+        for (const delta of [-1, 0, 1])
+          scrollStops.add(Math.max(0, boundary + delta));
+    }
+    for (const top of scrollStops) {
+      window.scrollTo({ top, behavior: 'instant' });
+      barPairs();
+    }
+    atRest('top');
+    atRest('bottom');
+    for (const el of targets) {
+      if (!visible(el)) continue;
+      el.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: 'instant',
+      });
+      barPairs();
+      const r = el.getBoundingClientRect();
+      if (r.left < -0.5 || r.right > innerWidth + 0.5)
+        add('horizontal-clipping', el);
+      if (r.top < -0.5 || r.bottom > innerHeight + 0.5)
+        add('not-fully-reachable', el);
+      for (const bar of bars)
+        if (independent(el, bar) && intersects(r, bar.getBoundingClientRect()))
+          add('covered-after-scroll', el, bar);
+      const hit = document.elementFromPoint(
+        r.x + r.width / 2,
+        r.y + r.height / 2,
+      );
+      if (!hit || !(hit === el || el.contains(hit)))
+        add('centre-not-hittable', el, ...(hit ? [hit] : []));
+      const css = getComputedStyle(el);
+      if (
+        css.textOverflow === 'ellipsis' &&
+        el.scrollWidth > el.clientWidth + 0.5
+      )
+        add('meaning-hidden-by-ellipsis', el);
+      for (
+        let ancestor = el.parentElement;
+        ancestor;
+        ancestor = ancestor.parentElement
+      ) {
+        const style = getComputedStyle(ancestor),
+          box = ancestor.getBoundingClientRect();
+        if (
+          (['hidden', 'clip'].includes(style.overflowX) &&
+            (r.left < box.left - 0.5 || r.right > box.right + 0.5)) ||
+          (['hidden', 'clip'].includes(style.overflowY) &&
+            (r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5))
+        )
+          add('ancestor-clipping', el, ancestor);
+        // A native top-layer modal escapes clipping by its document ancestors.
+        if (ancestor.matches('dialog:modal')) break;
+      }
+      if (el.matches(controls) && (r.width < 43.5 || r.height < 43.5))
+        add('tap-target-under-44', el);
+      if (
+        el.matches('.primary-action,.entry-primary-action') &&
+        r.height < 55.5
+      )
+        add('primary-under-56', el);
+      if (
+        el.matches(
+          'button:disabled.primary-action,button:disabled.entry-primary-action',
+        )
+      ) {
+        const reasons = (el.getAttribute('aria-describedby') ?? '')
+          .split(/\s+/)
+          .map((id) => document.getElementById(id));
+        if (
+          !reasons.some(
+            (reason) => reason && visible(reason) && reason.textContent?.trim(),
+          )
+        )
+          add('disabled-primary-without-reason', el);
+      }
+      if (el instanceof HTMLImageElement && (!el.complete || !el.naturalWidth))
+        add('broken-image', el);
+    }
+    if (document.documentElement.scrollWidth > innerWidth + 0.5)
+      add('horizontal-scroll', document.documentElement);
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: 'instant',
+    });
+    const lastControl = [...targets]
+      .filter(
+        (el) =>
+          el.matches(controls) &&
+          visible(el) &&
+          !bars.some((bar) => bar === el || bar.contains(el)),
+      )
+      .at(-1);
+    if (lastControl) {
+      const bottomBars = bars
+        .map((bar) => bar.getBoundingClientRect())
+        .filter((r) => r.top > innerHeight / 2 && r.top < innerHeight);
+      const limit = Math.min(innerHeight, ...bottomBars.map((r) => r.top));
+      if (lastControl.getBoundingClientRect().bottom > limit - 15.5)
+        add('last-control-without-clear-space', lastControl);
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    return findings;
+  }, screen);
+  const overlaps = await inspectVisibleLayout(page, screen);
+  const unique = new Map(
+    [...reached, ...overlaps].map((finding) => [
+      JSON.stringify(finding),
+      finding,
+    ]),
+  );
+  return [...unique.values()];
 }

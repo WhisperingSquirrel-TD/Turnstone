@@ -43,7 +43,9 @@ export function NotesScreen({
           : '\u00a0'}
       </div>
       <label className="mt-4 block text-sm text-ash">
-        <span>{en.game.notesLabel}</span>
+        <span id="notes-draft-instruction">
+          {!notesDraft.trim() ? en.game.notesDraftHint : en.game.notesLabel}
+        </span>
         <textarea
           className="mt-2 min-h-24 w-full resize-y border border-stone bg-hearth p-3 text-base text-candle"
           aria-label={en.game.notesLabel}
@@ -56,13 +58,24 @@ export function NotesScreen({
         className="primary-action mt-4 w-full"
         type="button"
         disabled={!notesDraft.trim() || saving}
+        aria-describedby={
+          !notesDraft.trim()
+            ? 'notes-draft-instruction'
+            : notesStatus || saving
+              ? 'notes-action-status'
+              : undefined
+        }
         onClick={onSave}
       >
         {privateView.role === 'traitor' ? en.game.notesSend : en.game.notesSave}
       </button>
-      {notesStatus && (
-        <p role="status" className="mt-3 text-sm text-ash">
-          {notesStatus}
+      {(notesStatus || saving) && (
+        <p
+          id="notes-action-status"
+          role="status"
+          className="mt-3 text-sm text-ash"
+        >
+          {notesStatus || en.game.recording}
         </p>
       )}
     </div>

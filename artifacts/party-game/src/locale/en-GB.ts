@@ -851,6 +851,8 @@ export const en = {
     roleFaithful: 'Faithful',
     roleUnknown: 'Your role',
     choosePlayer: 'Choose a player',
+    choiceSelectionHint: 'Select a name above to continue.',
+    notesDraftHint: 'Write a note to continue.',
     votePrompt: 'Who do you vote to banish?',
     tieRevotePrompt: (names: string[]) => {
       const tiedNames =

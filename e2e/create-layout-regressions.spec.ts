@@ -33,6 +33,53 @@ async function nameAndPin(page: Page) {
   await capture(page, 'create-3-name-pin');
 }
 
+test('Create game is pointer reachable while the normal-flow credit crosses its band', async ({
+  page,
+}) => {
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 640 });
+    await nameAndPin(page);
+    await page.getByTestId('input-organiser-name').fill('Morgan');
+    await page.getByTestId('input-organiser-pin').fill('1234');
+    const result = await page.evaluate(() => {
+      const button = document.querySelector(
+        '[data-testid="button-create-submit"]',
+      )!;
+      const footer = document.querySelector<HTMLElement>(
+        '[data-testid="brand-footer-entry"]',
+      )!;
+      const box = button.getBoundingClientRect(),
+        credit = footer.getBoundingClientRect();
+      window.scrollTo({
+        top:
+          scrollY + credit.top + credit.height / 2 - box.top - box.height / 2,
+        behavior: 'instant',
+      });
+      const hits = () => {
+        const r = button.getBoundingClientRect(),
+          hit = document.elementFromPoint(
+            r.x + r.width / 2,
+            r.y + r.height / 2,
+          );
+        return hit === button || (!!hit && button.contains(hit));
+      };
+      footer.style.zIndex = '500';
+      const oldLayering = hits();
+      footer.style.removeProperty('z-index');
+      return {
+        oldLayering,
+        corrected: hits(),
+        position: getComputedStyle(footer).position,
+      };
+    });
+    expect(result).toEqual({
+      oldLayering: false,
+      corrected: true,
+      position: 'static',
+    });
+  }
+});
+
 test('Create presenter rows keep the checkbox clear of both text lines and support keyboard focus', async ({
   page,
 }) => {

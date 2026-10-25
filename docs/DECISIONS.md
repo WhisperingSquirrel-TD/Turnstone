@@ -1564,13 +1564,48 @@ share control is tested clear of its dock. Every linked official credit stays.
 still holds a shuffled reveal order; the mismatch is recorded in QUESTIONS for
 the later voting-circle brief, not silently changed here.
 
-**Audit scope is explicit:** The initial checker and controlled regressions do
-not constitute the requested complete screen inventory. Literal viewport-edge
-clipping during normal scrolling needs the policy answer recorded in QUESTIONS
-before a full gate can be claimed. No tolerance or existing check was weakened.
+**Initial audit scope:** The initial checker and controlled regressions did
+not constitute the complete screen inventory. The subsequent owner clarification
+and full-state audit are recorded in D105. No tolerance or existing check was weakened.
 The first gallery contains 72 JPEGs in docs/screens/round-7-audit; Create's name,
 count, empty name/PIN, checked/unchecked presenter and completed voting settings,
 plus organiser Lobby, Join and Practice are included. The application has three
 Create route states: name/PIN and voting share the third, so both are captured
 without inventing an extra wizard step. These entry forms intentionally remain
 paper under both operating-system colour schemes.
+
+## D105 — Full-state audit findings and the scrolling contract (25 October 2026)
+
+**Owner ruling:** Ordinary scroll-edge clipping is permitted only with full
+per-element visibility and centre-hit reachability after scrolling. At-rest
+and fixed-against-fixed overlap checks remain strict. Hidden meaning,
+horizontal clipping, small targets, broken images and unexplained disabled
+primaries are never exempt.
+
+**Implementation/evidence:** The real application UI is driven with controlled
+HTTP/socket fixtures through 71 named states, four widths and two themes.
+The full inventory test is prepared for all browser projects; the canonical
+gallery is captured on Pixel. Existing real-server journeys remain separate,
+unchanged gates. Native top-layer dialogs and open menus are audited as active
+foreground surfaces, not against their deliberately covered background.
+Explicitly clipped screen-reader status announcements are not visible copy.
+There is no general exemption for CSS-hidden meaning.
+
+**Defects fixed:** A static footer is still a flex item, so its retained
+z-index could paint over the fixed Create action. Clear that stacking order.
+The Practice expectation now asserts the approved normal-flow credit above
+the dock, preserving both clearance assertions. Compact Deal's open Help must
+span the grid rather than squeezing progress into a narrow overlapping column.
+Primary controls are at least 56px; night status lines wrap rather than
+ellipsis; empty choices/notes and pending join checks have associated visible
+explanations. The three named owner regressions stay asserted.
+
+**Remaining decision:** The full audit still fails at-rest body/dock overlap.
+It does not excuse this merely because every element can eventually scroll
+clear. D89's whole-document scrolling conflicts with a bounded content pane;
+QUESTIONS requests approval for one main scroll area above the fixed stack.
+No existing assertion, timer, threshold, game rule or limit is relaxed.
+
+**Rename guard:** Both complete local runs hit its unchanged 5s timeout;
+the same test passes alone in 279ms. The other 729 assertions pass. This is
+reported rather than raising the guard's timeout or claiming a clean full run.

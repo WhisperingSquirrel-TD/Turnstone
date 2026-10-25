@@ -50,7 +50,9 @@ export const ShieldCard = forwardRef<HTMLDialogElement, ShieldCardProps>(
             >
               {en.game.shieldHeading}
             </h1>
-            <p className="mt-4 text-ash">{en.game.shieldDetail}</p>
+            <p id="privacy-shield-detail" className="mt-4 text-ash">
+              {en.game.shieldDetail}
+            </p>
             {waitingToSend ? (
               <PendingCommandNotice
                 disabled={pending}
@@ -64,6 +66,7 @@ export const ShieldCard = forwardRef<HTMLDialogElement, ShieldCardProps>(
                 type="button"
                 disabled={!hasToken || pending || countdown > 0}
                 aria-disabled={!hasToken || pending || countdown > 0}
+                aria-describedby="privacy-shield-detail"
                 onClick={onAcknowledge}
               >
                 {pending

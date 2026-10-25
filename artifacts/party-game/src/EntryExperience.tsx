@@ -1014,7 +1014,9 @@ export function EntryExperience({
             <h1 id="entry-title" className="entry-heading">
               {pageTitle}
             </h1>
-            <p className="entry-help">{copy.waitingBody}</p>
+            <p id="join-wait-reason" className="entry-help">
+              {copy.waitingBody}
+            </p>
             <p
               className="entry-live-status"
               data-testid="status-join-wait"
@@ -1025,6 +1027,7 @@ export function EntryExperience({
             <button
               className="entry-primary-action"
               data-testid="button-check-join-status"
+              aria-describedby="join-wait-reason"
               type="button"
               disabled={busy.join}
               onClick={() => {

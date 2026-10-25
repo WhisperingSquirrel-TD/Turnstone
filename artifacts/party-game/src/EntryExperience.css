@@ -181,6 +181,7 @@
 }
 
 .entry-primary-action {
+  min-height: 56px;
   color: var(--game-on-accent, #fff) !important;
   background: var(--game-accent, var(--entry-gilt));
 }
@@ -540,6 +541,7 @@
 
 .entry-experience--flow-footer > .game-brand-footer {
   position: static;
+  z-index: auto;
   inset: auto;
   transform: none;
   margin-top: 1rem;

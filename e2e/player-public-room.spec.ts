@@ -110,8 +110,8 @@ test('practice Back and primary action clear the linked footer at phone sizes', 
       back!.y + back!.height,
       `Back clear at ${width}`,
     ).toBeLessThanOrEqual(action!.y + 1);
-    expect(action!.y + action!.height).toBeLessThanOrEqual(credit!.y + 1);
-    expect(credit!.y + credit!.height).toBeLessThanOrEqual(641);
+    expect(credit!.y + credit!.height).toBeLessThanOrEqual(action!.y + 1);
+    expect(action!.y + action!.height).toBeLessThanOrEqual(641);
     if (width === 390 && process.env.R7_IMPROVEMENTS_CAPTURE_SCREENS === '1') {
       await page.screenshot({
         path: 'docs/screens/round-7-improvements/practice-footer-clearance-390.jpg',
@@ -120,88 +120,7 @@ test('practice Back and primary action clear the linked footer at phone sizes', 
   }
 });
 
-async function installLiveSocketViewFixture(
-  page: Page,
-  getView: () => { serverNow: number; version: number; view: FullView },
-): Promise<void> {
-  let sequence = 0;
-  const pendingPolls = new Map<string, (packet: string) => void>();
-  const queuedPackets = new Map<string, string[]>();
-  const replyToPoll = (sid: string, packet: string) => {
-    const waiting = pendingPolls.get(sid);
-    if (waiting) {
-      pendingPolls.delete(sid);
-      waiting(packet);
-      return;
-    }
-    queuedPackets.set(sid, [...(queuedPackets.get(sid) ?? []), packet]);
-  };
-
-  page.on('close', () => {
-    for (const resolve of pendingPolls.values()) resolve('6');
-    pendingPolls.clear();
-  });
-
-  await page.route('**/socket.io**', async (route) => {
-    const request = route.request();
-    const url = new URL(request.url());
-    const sid = url.searchParams.get('sid');
-    if (request.method() === 'GET' && !sid) {
-      for (const resolve of pendingPolls.values()) resolve('6');
-      pendingPolls.clear();
-      const nextSid = `round-7-live-${++sequence}`;
-      queuedPackets.set(nextSid, []);
-      await route.fulfill({
-        contentType: 'text/plain; charset=UTF-8',
-        body: `0${JSON.stringify({
-          sid: nextSid,
-          upgrades: [],
-          pingInterval: 600_000,
-          pingTimeout: 60_000,
-          maxPayload: 1_000_000,
-        })}`,
-      });
-      return;
-    }
-    if (!sid) {
-      await route.fulfill({ status: 400, body: 'Missing session.' });
-      return;
-    }
-    if (request.method() === 'GET') {
-      const packet = queuedPackets.get(sid)?.shift();
-      if (packet) {
-        await route.fulfill({
-          contentType: 'text/plain; charset=UTF-8',
-          body: packet,
-        });
-        return;
-      }
-      const nextPacket = await new Promise<string>((resolve) => {
-        pendingPolls.set(sid, resolve);
-      });
-      await route
-        .fulfill({
-          contentType: 'text/plain; charset=UTF-8',
-          body: nextPacket,
-        })
-        .catch(() => {});
-      return;
-    }
-
-    const body = (request.postData() ?? '').replace(/^\d+:/, '');
-    if (body.startsWith('40')) {
-      replyToPoll(sid, `40${JSON.stringify({ sid: `${sid}-namespace` })}`);
-    } else if (body.startsWith('42')) {
-      const [eventName] = JSON.parse(body.slice(2)) as [string, unknown];
-      if (eventName === 'game:watch')
-        replyToPoll(sid, `42${JSON.stringify(['game:view', getView()])}`);
-    }
-    await route.fulfill({
-      contentType: 'text/plain; charset=UTF-8',
-      body: 'ok',
-    });
-  });
-}
+import { installLiveSocketViewFixture } from './support/live-socket-view';
 
 async function expectOnlyCurrentChoiceIdStored(
   page: Page,
