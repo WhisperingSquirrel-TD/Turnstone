@@ -16,24 +16,30 @@ export function WhileAwayCard({
   return (
     <aside
       aria-labelledby="while-away-heading"
-      className="mb-6 border border-stone bg-black/10 p-4"
+      className="game-return-notice mb-4 border border-stone p-3"
       data-testid="while-away-card"
     >
-      <h2 id="while-away-heading" className="display text-xl">
-        {title}
-      </h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 id="while-away-heading" className="min-w-0 break-words text-base">
+          {title}
+        </h2>
+        <button
+          className="quiet-action min-h-[44px] shrink-0 px-3 py-1 text-sm"
+          type="button"
+          onClick={onDismiss}
+        >
+          {returnLabel}
+        </button>
+      </div>
       {updates.length ? (
-        <ul className="mt-2 space-y-2 text-sm text-ash">
+        <ul className="space-y-1 break-words text-sm text-ash">
           {updates.map((update, index) => (
             <li key={`${index}-${update}`}>{update}</li>
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-sm text-ash">{noUpdates}</p>
+        <p className="break-words text-sm text-ash">{noUpdates}</p>
       )}
-      <button className="quiet-action mt-4" type="button" onClick={onDismiss}>
-        {returnLabel}
-      </button>
     </aside>
   );
 }

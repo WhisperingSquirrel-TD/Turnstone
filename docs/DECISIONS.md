@@ -1496,3 +1496,15 @@ wording or timing by role.
 **Choice:** At FINISHED only, omit “Playing” and render result roles already supplied by the public projection, with the existing “Out, …” wording for eliminated seats. During play, retain the banished-only role filter. A role omitted by the public projection stays omitted, including disconnected removals.
 
 **Consequence:** No rule, projection, timer or private-data behaviour changes. The new browser regression fails on the old roster, checks before/after visibility, and includes a departed seat with no public role.
+
+## D100 — Returning players keep their current step beneath a compact notice
+
+**Priority:** The owner reversed the amendment order to C (return notice), B (Display menu), then A (entry screen), to finish the in-game experience first.
+
+**Evidence:** A regression returning from SHADOW slot 1 into slot 2 reproduced an indefinite “Opening your private screen…” state when the acknowledgement returned an older slot snapshot. The automatic opener returned without either a private view or a recovery control.
+
+**Choice:** Confirm the successful acknowledgement, but never use its stale snapshot to open private data. If the current window is unchanged and the snapshot is unusable, keep the screen covered and offer the existing private-screen retry. Responses for a window that has genuinely moved on still do nothing. Uncertain commands retain their original key and payload; only a successful response clears the acknowledgement.
+
+**Presentation:** The public-update notice is compact and dismissible, with all updates retained. It does not gate the current step or its action. Returning Deal screens still require shielding and hold-to-reveal, and private Night screens still require a deliberate reopen.
+
+**Tests:** Deal, Vote and Night return journeys exercise their current controls without first dismissing the notice. The Night fixture replays the stale response for its original key, proving recovery does not loop on an already-confirmed acknowledgement. Pixel and iPhone also retain the previous late-response slot-2 regressions for both roles.

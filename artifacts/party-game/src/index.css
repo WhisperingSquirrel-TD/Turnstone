@@ -823,6 +823,17 @@ h2,
   line-height: 1.25;
 }
 
+.game-return-notice {
+  border-radius: 14px;
+  background: var(--game-surface);
+}
+
+.game-shell .game-return-notice h2 {
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
 .game-shell .text-xs,
 .game-shell .text-\[10px\],
 .game-shell .text-\[11px\],

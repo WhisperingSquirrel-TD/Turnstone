@@ -1487,17 +1487,23 @@ function PlayerGame() {
                 const acknowledgedView = acknowledgementResponse.view;
                 if (
                   currentShadowPrivateViewKeyRef.current !==
-                    shadowPrivateViewKey ||
-                  !isFullView(acknowledgedView) ||
-                  acknowledgedView.phase !== 'SHADOW' ||
-                  `${id}:${acknowledgedView.cycle}:${acknowledgedView.shadowRound}:${acknowledgedView.shadowSlot}` !==
-                    shadowPrivateViewKey
+                  shadowPrivateViewKey
                 )
                   return;
                 pendingCommands.confirm(
                   'private-phase-acknowledgement',
                   commandStepKey,
                 );
+                if (
+                  !isFullView(acknowledgedView) ||
+                  acknowledgedView.phase !== 'SHADOW' ||
+                  `${id}:${acknowledgedView.cycle}:${acknowledgedView.shadowRound}:${acknowledgedView.shadowSlot}` !==
+                    shadowPrivateViewKey
+                ) {
+                  setHoldMessage(en.game.privateUnavailable);
+                  setPrivateCovered(true);
+                  return;
+                }
                 acknowledgedShadowPrivateViewKey.current = shadowPrivateViewKey;
                 acknowledged = true;
                 break;
@@ -1520,12 +1526,13 @@ function PlayerGame() {
               return;
             const response =
               await revealAcknowledgedShadowWindow(shadowPrivateViewKey);
-            if (
-              !response ||
-              currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey ||
-              response.version < privateVersionRef.current
-            )
+            if (currentShadowPrivateViewKeyRef.current !== shadowPrivateViewKey)
               return;
+            if (!response || response.version < privateVersionRef.current) {
+              setHoldMessage(en.game.privateUnavailable);
+              setPrivateCovered(true);
+              return;
+            }
             const nextPrivateView = isFullView(response.view)
               ? response.view.private
               : null;

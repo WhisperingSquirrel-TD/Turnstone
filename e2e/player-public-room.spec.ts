@@ -3462,6 +3462,156 @@ test('Notes have the same geometry and colours for Traitor and Faithful', async 
   }
 });
 
+for (const phase of ['DEAL', 'VOTE', 'SHADOW'] as const) {
+  test(`return notice leaves the current ${phase} step usable without dismissal`, async ({
+    page,
+  }) => {
+    await page.clock.install();
+    const gameId = `return-notice-${phase.toLowerCase()}`;
+    let view: FullView = {
+      ...createPublicView(gameId),
+      phase: phase === 'SHADOW' ? 'SHADOW' : 'DEBATE',
+      shadowSlot: phase === 'SHADOW' ? 1 : 0,
+      murderSlots: 2,
+      deadline: Date.now() + 86_400_000,
+    };
+    let staleAcknowledgement = false;
+    let staleAcknowledgementKey: string | null = null;
+    const envelope = () => ({
+      serverNow: Date.now(),
+      version: view.version,
+      view,
+    });
+    await installLiveSocketViewFixture(page, envelope);
+    await page.route('**/api/csrf', (route) =>
+      route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+    );
+    await page.route(`**/api/games/${gameId}/view`, (route) =>
+      route.fulfill({ json: envelope() }),
+    );
+    await page.route(`**/api/games/${gameId}/commands`, (route) => {
+      const key = route.request().postDataJSON().idempotencyKey as string;
+      if (staleAcknowledgement || key === staleAcknowledgementKey) {
+        staleAcknowledgement = false;
+        staleAcknowledgementKey = key;
+        return route.fulfill({
+          json: {
+            ...envelope(),
+            view: { ...view, shadowSlot: 1 },
+          },
+        });
+      }
+      return route.fulfill({ json: envelope() });
+    });
+    await page.route(`**/api/games/${gameId}/private-view`, (route) =>
+      route.fulfill({
+        json: {
+          ...envelope(),
+          view: {
+            ...view,
+            private: {
+              role: 'faithful',
+              team: [],
+              options: [{ id: 'seat-jamie', name: 'Jamie' }],
+              choices: {},
+              choiceSlots: [],
+              chat: [],
+              task: null,
+              minimumDurationMs: 0,
+            },
+          },
+        },
+      }),
+    );
+    await page.goto(`/game/${gameId}`);
+    if (phase === 'SHADOW') {
+      await expect(
+        page.getByRole('dialog', { name: 'Shield your screen' }),
+      ).toBeVisible();
+      await page.clock.fastForward(3_000);
+      await page.getByRole('button', { name: 'I’m shielded' }).click();
+      await expect(page.getByTestId('private-choice-list')).toBeVisible();
+    } else {
+      await expect(page.getByTestId('player-game')).toBeVisible();
+    }
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: 'hidden',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    view = {
+      ...view,
+      version: view.version + 1,
+      phase,
+      shadowSlot: phase === 'SHADOW' ? 2 : 0,
+    };
+    staleAcknowledgement = phase === 'SHADOW';
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(page.getByTestId('away-resync-overlay')).toHaveCount(0);
+    if (phase === 'DEAL') {
+      await expect(
+        page.getByRole('dialog', { name: 'Shield your screen' }),
+      ).toBeVisible();
+      await page.clock.fastForward(5_000);
+      await page.getByRole('button', { name: 'I’m shielded' }).click();
+    }
+    const notice = page.getByTestId('while-away-card');
+    await expect(notice).toBeVisible();
+    await expect(notice.getByRole('heading')).toHaveCSS('font-size', '15px');
+    if (phase === 'SHADOW') {
+      const restore = page.getByRole('button', {
+        name: 'Tap to see your private screen again',
+      });
+      await expect(restore).toBeVisible();
+      await restore.click();
+    }
+    if (phase === 'DEAL') {
+      await expect(page.getByTestId('button-hold-reveal')).toBeVisible();
+      await expect(page.getByTestId('private-role-card')).toHaveCount(0);
+    } else {
+      const choice = page
+        .getByTestId('private-choice-list')
+        .getByRole('button', { name: 'Jamie', exact: true });
+      await expect(choice).toBeVisible();
+      await choice.click();
+      await expect(
+        page.getByRole('button', { name: 'Review this choice', exact: true }),
+      ).toBeEnabled();
+    }
+    await expect(notice).toBeVisible();
+    if (process.env.R7_IMPROVEMENTS_CAPTURE_SCREENS === '1') {
+      const directory = 'docs/screens/round-7-improvements';
+      await mkdir(directory, { recursive: true });
+      for (const width of [320, 390, 430]) {
+        await page.setViewportSize({ width, height: 844 });
+        for (const palette of ['day', 'night']) {
+          await page.locator('.game-shell').evaluate((element, theme) => {
+            (element as HTMLElement).dataset.gameTheme = theme;
+          }, palette);
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await expect(page.getByTestId('game-connection-state')).toHaveText(
+            'Live',
+          );
+          await page.screenshot({
+            path: `${directory}/return-${phase.toLowerCase()}-${palette}-${width}.jpg`,
+            fullPage: true,
+          });
+        }
+      }
+    }
+    await notice.getByRole('button', { name: 'Back to the game' }).click();
+    await expect(notice).toHaveCount(0);
+  });
+}
+
 test('mobile players retain an unfinished private night choice after backgrounding', async ({
   page,
 }, testInfo) => {
