@@ -1508,3 +1508,11 @@ wording or timing by role.
 **Presentation:** The public-update notice is compact and dismissible, with all updates retained. It does not gate the current step or its action. Returning Deal screens still require shielding and hold-to-reveal, and private Night screens still require a deliberate reopen.
 
 **Tests:** Deal, Vote and Night return journeys exercise their current controls without first dismissing the notice. The Night fixture replays the stale response for its original key, proving recovery does not loop on an already-confirmed acknowledgement. Pixel and iPhone also retain the previous late-response slot-2 regressions for both roles.
+
+## D101 — One device display preference, independent of game state
+
+**Choice:** Replace the in-game Always-dark checkbox with one fieldset of shared 56px tiles: Match my phone, Light and Dark. Persist only `system`, `light` or `dark` under the harmless device preference key; invalid or inaccessible storage defaults to system and must not prevent a visible change.
+
+**Precedence:** Light and Dark are explicit overrides. Match my phone uses the public phase's existing day/night palette, with the phone's dark preference also selecting dark during public daytime. Changing the phone setting updates system mode live. Selecting Match my phone clears an earlier explicit Dark by replacing the stored value, rather than retaining a second hidden flag.
+
+**Layout and tests:** One menu panel contains the choices, bounded by 16px viewport gutters. The existing PlayerTile supplies the selected ring, radio and Selected word; unselected options have no extra status label. Unit tests cover all phase/phone/explicit combinations and invalid or unavailable storage. Pixel and iPhone check selection, reload persistence, clearing Dark, live phone preference changes, touch heights and non-overlapping geometry at 320/390/430. No role, choice, deadline, server or rate-limit behaviour changes.

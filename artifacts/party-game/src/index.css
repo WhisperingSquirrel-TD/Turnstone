@@ -432,7 +432,8 @@ h2,
   top: calc(100% + 0.4rem);
   right: 0;
   display: grid;
-  min-width: 12rem;
+  width: min(22rem, calc(100vw - 2rem));
+  min-width: 0;
   gap: 0.5rem;
   border: 1px solid var(--game-line);
   border-radius: 12px;
@@ -446,9 +447,18 @@ h2,
   text-align: left;
 }
 
-.game-status-menu__content .game-display-settings summary {
-  min-height: 44px;
-  cursor: pointer;
+.game-display-settings {
+  display: grid;
+  min-width: 0;
+  gap: 0.5rem;
+}
+
+.game-display-settings legend {
+  margin-bottom: 0.5rem;
+}
+
+.game-display-settings .player-tile {
+  min-height: 56px;
 }
 
 .game-shell .game-status-bar .game-status-notes {

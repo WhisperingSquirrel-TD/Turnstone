@@ -150,7 +150,7 @@ async function expectOnlyCurrentChoiceIdStored(
   );
 }
 
-test('game-clock colours and Always dark keep text accessible in both palettes', async ({
+test('game-clock colours and display choices keep text accessible in both palettes', async ({
   page,
 }) => {
   const gameId = 'theme-clock';
@@ -169,16 +169,16 @@ test('game-clock colours and Always dark keep text accessible in both palettes',
   await expect(shell).toHaveAttribute('data-game-theme', 'day');
   const gameMenu = page.getByTestId('game-status-menu');
   await gameMenu.locator('summary').click();
-  const alwaysDark = gameMenu.getByRole('checkbox', { name: 'Always dark' });
-  await expect(alwaysDark).not.toBeChecked();
-  await alwaysDark.check();
+  const darkChoice = gameMenu.getByRole('button', { name: /^Dark/ });
+  await expect(darkChoice).toHaveAttribute('aria-pressed', 'false');
+  await darkChoice.click();
   await expect(shell).toHaveAttribute('data-game-theme', 'night');
   expect(
     await page
       .getByTestId('game-status-phase')
       .evaluate((element) => getComputedStyle(element).color),
   ).toBe('rgb(243, 238, 228)');
-  await alwaysDark.uncheck();
+  await gameMenu.getByRole('button', { name: /^Match my phone/ }).click();
   await expect(shell).toHaveAttribute('data-game-theme', 'day');
   await gameMenu.locator('summary').click();
   const statusBar = page.getByTestId('game-status-bar');
@@ -334,8 +334,105 @@ test('a public player can open Display from Menu without organiser controls', as
   await expect(menu).toBeVisible();
   await menu.locator('summary').click();
   await expect(menu).toContainText('Display');
-  await expect(menu).toContainText('Always dark');
+  await expect(menu).toContainText('Match my phone');
   await expect(menu).not.toContainText('Organiser controls');
+});
+
+test('display menu choices persist, clear Dark and stay within the phone viewport', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  const gameId = 'display-preferences';
+  const view = createPublicView(gameId);
+  const envelope = () => ({
+    serverNow: Date.now(),
+    version: view.version,
+    view,
+  });
+  await installLiveSocketViewFixture(page, envelope);
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/view`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  const shell = page.locator('.game-shell');
+  const menu = page.getByTestId('game-status-menu');
+  const choices = page.getByTestId('display-preferences');
+  const choose = (name: string) =>
+    choices.getByRole('button', { name: new RegExp(`^${name}`) });
+
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(`/game/${gameId}`);
+    await menu.locator('summary').click();
+    await expect(choices.getByRole('button')).toHaveCount(3);
+    await expect(menu.getByRole('checkbox')).toHaveCount(0);
+    await choose('Dark').click();
+    await expect(shell).toHaveAttribute('data-game-theme', 'night');
+    await page.reload();
+    await expect(shell).toHaveAttribute('data-game-theme', 'night');
+    await menu.locator('summary').click();
+    await expect(choose('Dark')).toHaveAttribute('aria-pressed', 'true');
+    await expect(choose('Dark')).toContainText('Selected');
+
+    for (const [label, palette] of [
+      ['Dark', 'night'],
+      ['Light', 'day'],
+    ] as const) {
+      await choose(label).click();
+      await expect(shell).toHaveAttribute('data-game-theme', palette);
+      const geometry = await menu.evaluate((element) => {
+        const panel = element.querySelector('.game-status-menu__content')!;
+        const rect = panel.getBoundingClientRect();
+        const tiles = Array.from(
+          panel.querySelectorAll('[data-testid="display-preferences"] button'),
+        ).map((tile) => {
+          const box = tile.getBoundingClientRect();
+          return { top: box.top, bottom: box.bottom, height: box.height };
+        });
+        return {
+          left: rect.left,
+          right: rect.right,
+          viewport: document.documentElement.clientWidth,
+          pageWidth: document.documentElement.scrollWidth,
+          tiles,
+        };
+      });
+      expect(geometry.left).toBeGreaterThanOrEqual(16);
+      expect(geometry.right).toBeLessThanOrEqual(geometry.viewport - 16);
+      expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewport);
+      for (const [index, tile] of geometry.tiles.entries()) {
+        expect(tile.height).toBeGreaterThanOrEqual(56);
+        if (index > 0)
+          expect(tile.top).toBeGreaterThanOrEqual(
+            geometry.tiles[index - 1]!.bottom,
+          );
+      }
+      if (process.env.R7_IMPROVEMENTS_CAPTURE_SCREENS === '1') {
+        const directory = 'docs/screens/round-7-improvements';
+        await mkdir(directory, { recursive: true });
+        await page.screenshot({
+          path: `${directory}/display-menu-${palette}-${width}.jpg`,
+          fullPage: true,
+        });
+      }
+    }
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(shell).toHaveAttribute('data-game-theme', 'day');
+    await choose('Match my phone').click();
+    await expect(shell).toHaveAttribute('data-game-theme', 'night');
+    await page.emulateMedia({ colorScheme: 'light' });
+    await expect(shell).toHaveAttribute('data-game-theme', 'day');
+    await page.reload();
+    await expect(shell).toHaveAttribute('data-game-theme', 'day');
+    await menu.locator('summary').click();
+    await expect(choose('Match my phone')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(choose('Dark')).not.toContainText('Selected');
+  }
 });
 
 test('night status card has identical four-row geometry for both roles in both themes', async ({
@@ -1454,20 +1551,20 @@ test('phone room shows public game state without a presenter', async ({
   await expect(gameMenu).toBeVisible();
   await gameMenu.locator('summary').click();
   await expect(gameMenu).toContainText('Display');
-  await expect(gameMenu).toContainText('Always dark');
+  await expect(gameMenu).toContainText('Match my phone');
   await expect(
     gameMenu.getByRole('link', { name: 'Organiser controls' }),
   ).toBeVisible();
-  const darkMode = gameMenu.getByRole('checkbox', { name: 'Always dark' });
+  const darkMode = gameMenu.getByRole('button', { name: /^Dark/ });
   const originalTheme = await page
     .locator('.game-shell')
     .getAttribute('data-game-theme');
-  await darkMode.check();
+  await darkMode.click();
   await expect(page.locator('.game-shell')).toHaveAttribute(
     'data-game-theme',
     'night',
   );
-  await darkMode.uncheck();
+  await gameMenu.getByRole('button', { name: /^Match my phone/ }).click();
   if (originalTheme) {
     await expect(page.locator('.game-shell')).toHaveAttribute(
       'data-game-theme',

@@ -3,7 +3,13 @@ import {
   QueryClientProvider,
   useQueryClient,
 } from '@tanstack/react-query';
-import { gameThemeForPhase } from './game-theme';
+import {
+  gameThemeForPhase,
+  readDisplayPreference,
+  displayPreferenceKey,
+  type DisplayPreference,
+} from './game-theme';
+import { DisplayPreferences } from './DisplayPreferences';
 import {
   createContext,
   lazy,
@@ -298,8 +304,36 @@ function Shell({
   onOpenNotes?: () => void;
 }) {
   const navigate = useNavigate();
-  const [alwaysDark, setAlwaysDark] = useState(false);
-  const theme = gameThemeForPhase(phase, alwaysDark);
+  const [displayPreference, setDisplayPreference] = useState<DisplayPreference>(
+    () => {
+      try {
+        return readDisplayPreference(window.localStorage);
+      } catch {
+        return 'system';
+      }
+    },
+  );
+  const [phoneDark, setPhoneDark] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches,
+  );
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-color-scheme: dark)');
+    const update = () => setPhoneDark(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  const chooseDisplayPreference = (value: DisplayPreference) => {
+    setDisplayPreference(value);
+    try {
+      window.localStorage.setItem(displayPreferenceKey, value);
+    } catch {
+      // The current screen still responds when device storage is unavailable.
+    }
+  };
+  const theme = gameThemeForPhase(phase, displayPreference, phoneDark);
   const previousPhase = useRef<string | undefined>(undefined);
   const [themeMessage, setThemeMessage] = useState<string | null>(null);
   const [browserOnline, setBrowserOnline] = useState(true);
@@ -309,7 +343,7 @@ function Shell({
     previousPhase.current = phase;
     if (
       !previous ||
-      alwaysDark ||
+      displayPreference !== 'system' ||
       (previous === 'SHADOW') === (phase === 'SHADOW')
     ) {
       setThemeMessage(null);
@@ -318,7 +352,7 @@ function Shell({
     setThemeMessage(theme === 'night' ? en.app.nightFalls : en.app.morning);
     const timer = setTimeout(() => setThemeMessage(null), 800);
     return () => clearTimeout(timer);
-  }, [phase, theme, alwaysDark]);
+  }, [phase, theme, displayPreference]);
   useEffect(() => {
     const update = () => setBrowserOnline(navigator.onLine);
     update();
@@ -414,17 +448,10 @@ function Shell({
             menuContent={
               <>
                 {organiserControlsVisible && organiserTools}
-                <div className="game-display-settings">
-                  <p>{en.app.display}</p>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={alwaysDark}
-                      onChange={(event) => setAlwaysDark(event.target.checked)}
-                    />
-                    {en.app.alwaysDark}
-                  </label>
-                </div>
+                <DisplayPreferences
+                  value={displayPreference}
+                  onChange={chooseDisplayPreference}
+                />
                 {organiserControlsVisible && standalone && (
                   <>
                     <button

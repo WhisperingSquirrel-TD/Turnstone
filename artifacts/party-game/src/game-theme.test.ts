@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { gameThemeForPhase } from './game-theme';
+import {
+  gameThemeForPhase,
+  readDisplayPreference,
+  displayPreferenceKey,
+} from './game-theme';
 
 describe('shared game-clock theme', () => {
   it('keeps entry and lobby dark, changes every day step to light and night to dark', () => {
@@ -21,8 +25,43 @@ describe('shared game-clock theme', () => {
       'ARCHIVED',
     ]) {
       expect(gameThemeForPhase(phase)).toBe('day');
-      expect(gameThemeForPhase(phase, true)).toBe('night');
+      expect(gameThemeForPhase(phase, 'dark')).toBe('night');
     }
+  });
+
+  it('keeps explicit Light and Dark independent of phase and phone setting', () => {
+    for (const phase of ['DEAL', 'VOTE', 'SHADOW', 'DAWN']) {
+      for (const phoneDark of [true, false]) {
+        expect(gameThemeForPhase(phase, 'light', phoneDark)).toBe('day');
+        expect(gameThemeForPhase(phase, 'dark', phoneDark)).toBe('night');
+      }
+    }
+  });
+
+  it('matches the public night phase or the phone dark setting in system mode', () => {
+    expect(gameThemeForPhase('SHADOW', 'system', false)).toBe('night');
+    expect(gameThemeForPhase('DEBATE', 'system', false)).toBe('day');
+    expect(gameThemeForPhase('DEBATE', 'system', true)).toBe('night');
+    expect(gameThemeForPhase('DAWN', 'system', false)).toBe('day');
+  });
+
+  it('loads only valid preferences and safely defaults when storage is unavailable', () => {
+    for (const value of ['system', 'light', 'dark'] as const) {
+      expect(
+        readDisplayPreference({
+          getItem: (key) => (key === displayPreferenceKey ? value : null),
+        }),
+      ).toBe(value);
+    }
+    expect(readDisplayPreference({ getItem: () => 'invalid' })).toBe('system');
+    expect(readDisplayPreference({ getItem: () => null })).toBe('system');
+    expect(
+      readDisplayPreference({
+        getItem: () => {
+          throw new Error('Storage unavailable');
+        },
+      }),
+    ).toBe('system');
   });
 
   it('uses the same palette for every role, with AA text on both page and panel surfaces', () => {
