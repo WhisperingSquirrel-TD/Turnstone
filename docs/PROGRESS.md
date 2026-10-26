@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Skip-link 44px focus shift fixed — pushed to main; Verify pending.** Cause: `a[href='#main']:focus
+**Skip-link 44px focus shift fixed — main `b2ffa58`, Verify #327 red on rehearsal-live only.** Cause: `a[href='#main']:focus
 { position: relative }` in `index.css` put the 44px skip link into the shell's
 flex flow, so leaving it moved every control up 44px (a radio tap landed on
 its fieldset). The focused link now stays absolute and takes the header's
@@ -15,7 +15,17 @@ skip link, round-table shield, coordinator console, shell routes); lint,
 format, types, 154 unit tests green. WebKit could not run here (missing host
 libraries), so iPhone and iPad need CI.
 Rebased onto `3380c0a` (audit focus-pass fix) and re-run locally.
-Next: Verify on this push.
+Verify #327: every browser profile green, including iPhone and iPad (WebKit)
+and the full layout audits. Only rehearsal-live failed: H1 seed h1-seed-6001
+stalled at the second SHADOW step ("Waiting for 5 players"; pending seat showed
+Review, not Confirm). This is the separate H1 SHADOW advancement finding
+recorded under Verify #229, not this change: the H1 harness never uses the
+keyboard, and both parts of the fix act only while the skip link has focus.
+On `b2ffa58` against local PostgreSQL 16 the same seed passes (1/1) and the
+full rehearsal config passes in CI order (4/4). Re-running the failed job is
+refused (HTTP 403), so this status push is the next full check.
+Next: Verify on this push; if H1 SHADOW stalls again, root-cause it (why a
+diligent player's Confirm does not appear after Review on the second step).
 
 **Layout-audit stall root cause fixed — Verify pending.** #324 was cancelled
 (Pixel/desktop browser jobs hit the 10-minute job limit) and #325 failed: 7 of
