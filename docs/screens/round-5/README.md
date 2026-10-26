@@ -2,7 +2,7 @@
 
 The gallery uses the app's real shared components with deterministic HTTP fixtures. The separate real-server rehearsal test proves eight-seat play, no presenter, no refresh, watch mode and phase-driven colour changes.
 
-Each scene has day and night versions at widths **320, 375, 390, 430 and 1280 px**. The gallery forces palettes only inside the test so the same scene can be compared; the running game uses its public clock, with an optional **Always dark** display setting.
+Each scene has day and night versions at widths **320, 360, 375, 390, 430 and 1280 px** (regenerated 26 October 2026 after the rename). The gallery forces palettes only inside the test so the same scene can be compared; the running game uses its public clock, with an optional **Always dark** display setting.
 
 Scenes: lobby, shield before the role, held Faithful role, held Traitor role, mission, conversation, Notes, vote, verdict, shield before night, Faithful night, Traitor night, dawn, endgame, end/continue decision, final banishment and results.
 
