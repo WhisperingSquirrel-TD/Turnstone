@@ -1,5 +1,55 @@
 # Delivery pipeline and launch gate — not launch-ready
 
+## October beta launch runbook (owner actions, in order)
+
+Prepared 26 October 2026. Nothing below has been performed; every step is the
+owner's, after his own device test. Values marked _(Replit shows this)_ come
+from the Replit panels; never paste secrets into chat, documents or Git.
+
+1. **Pick the commit.** Use the latest `main` commit whose GitHub **Verify** is
+   green (see the top of `docs/PROGRESS.md`). Record its SHA and run number in
+   `docs/RELEASES.md`.
+2. **Run the solo device test** in `docs/MANUAL_TESTS.md` ("Beta solo
+   play-through") on the Replit preview. Fix anything blocking first.
+3. **Deployment type.** In Replit Publishing choose **Reserved VM** (not
+   Autoscale; live games need one long-lived server for WebSockets and the
+   scheduler). Pilot size: 0.5 vCPU / 2 GiB (about $15/month) or 1 vCPU /
+   4 GiB (about $35/month); Replit shows the exact charge.
+4. **Production database.** Create the production PostgreSQL database in
+   Replit; its connection string becomes the deployment's `DATABASE_URL`
+   _(Replit shows this)_.
+5. **Production secrets** (Publishing → Secrets, production only; generate
+   each random value in the Replit shell with `openssl rand -hex 32`):
+   - `DATABASE_URL`: production database (step 4).
+   - `SESSION_SECRET`: new random value, at least 32 characters.
+   - `PIN_PEPPER`: new random value, at least 32 characters; never the
+     development value. `PIN_PEPPER_VERSION` = `1`.
+   - `APP_BASE_URL`: `https://` plus the public game address.
+   - `PUBLIC_BASE_URL`: the same public game address; it is baked into
+     invite links and QR codes at **build** time, so set it before building.
+   - `MAX_ACTIVE_GAMES`: `10` for the beta (new games are refused above 80%).
+   - Leave `PRE_LAUNCH_NOINDEX` and `COMING_SOON_MODE` unset: game routes stay
+     out of search engines.
+6. **Commands.** Build: `pnpm run build:oathstone`. Run:
+   `pnpm run start:oathstone` (Replit supplies `PORT`).
+7. **Create the database tables, once per release** (forward-only and safe
+   to re-run), from the Replit shell with the production connection string:
+   `OATHSTONE_CONFIRM_PRODUCTION_MIGRATION=apply DATABASE_URL=<production URL> pnpm run db:migrate:production`.
+   It prints "Production migrations are up to date." and never prints the URL.
+   Never run `db:migrate:dev` against production.
+8. **Spending.** Set the account usage cap and a separate Reserved VM budget
+   (the usage cap does not limit the VM's fixed charge).
+9. **Publish**, then check: `https://<host>/healthz` and `/readyz` return 200;
+   on a phone the entry shows "Beta"; create a game, join from a second
+   device, start, give the round-table shield, and play to the end.
+10. **Domain (optional, separate approval).** To use
+    `oathstone.stackstoneconsulting.co.uk`, add it in Replit and copy the A
+    and TXT records Replit shows into 123-reg. Players can use the Replit
+    address until then.
+11. **Rollback.** If something is wrong, republish the previous green commit
+    from `docs/RELEASES.md`. Games in progress survive a restart (events are
+    in PostgreSQL).
+
 ## Owner's one-off repository and hosting steps
 
 1. The source of truth is [the GitHub repository](https://github.com/WhisperingSquirrel-TD/Turnstone), branch `main`. Push verified commits through the owner-authorised Replit flow; never put credentials in the repository, a commit, or a log.
