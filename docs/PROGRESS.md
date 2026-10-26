@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Skip-link 44px focus shift fixed — main `b2ffa58`, Verify #327 red on rehearsal-live only.** Cause: `a[href='#main']:focus
+**Skip-link 44px focus shift COMPLETE — main `b2ffa58`; Verify #328 (`92b55ed`) GREEN.** #327 was red on rehearsal-live only (see below). Cause: `a[href='#main']:focus
 { position: relative }` in `index.css` put the 44px skip link into the shell's
 flex flow, so leaving it moved every control up 44px (a radio tap landed on
 its fieldset). The focused link now stays absolute and takes the header's
@@ -24,8 +24,9 @@ keyboard, and both parts of the fix act only while the skip link has focus.
 On `b2ffa58` against local PostgreSQL 16 the same seed passes (1/1) and the
 full rehearsal config passes in CI order (4/4). Re-running the failed job is
 refused (HTTP 403), so this status push is the next full check.
-Next: Verify on this push; if H1 SHADOW stalls again, root-cause it (why a
-diligent player's Confirm does not appear after Review on the second step).
+Verify #328 passed every job, rehearsal-live included.
+Next: if H1 SHADOW stalls again, root-cause it (why a diligent player's
+Confirm does not appear after Review on the second step); otherwise none.
 
 **Layout-audit stall root cause fixed — Verify pending.** #324 was cancelled
 (Pixel/desktop browser jobs hit the 10-minute job limit) and #325 failed: 7 of
