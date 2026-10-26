@@ -55,6 +55,16 @@ export type PublicLogEntry = {
   seq: number;
   /** @minimum 0 */
   at: number;
+  action: 'shield_given';
+  seats: {
+  id: string;
+  name: string;
+}[];
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
   action: 'seat_left_disconnected';
   reason: 'disconnected';
   seat: {

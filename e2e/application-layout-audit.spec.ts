@@ -583,6 +583,26 @@ for (const width of widths)
       await audit('revote');
       await page.getByTestId('game-help-disclosure').locator('summary').click();
       await audit('revote-help');
+      // D109 round-table shield: organiser choice, selection and public holder.
+      await room('DEBATE', { shieldsPublic: true });
+      await expect(page.getByTestId('round-table-shield')).toBeVisible();
+      await audit('debate-shield-choice');
+      const shieldChoice = page
+        .getByTestId('round-table-shield')
+        .getByRole('radio', { name: 'Jamie' });
+      // Scroll like a person would: the row starts partly behind the fixed
+      // organiser bar, which D105 permits when it is reachable after scrolling.
+      await shieldChoice.evaluate((element) =>
+        element.scrollIntoView({ block: 'center' }),
+      );
+      await shieldChoice.check();
+      await audit('debate-shield-selected');
+      await room('DEBATE', {
+        shieldsPublic: true,
+        shieldHolderIds: ['seat-jamie'],
+      });
+      await expect(page.getByTestId('shield-holder')).toBeVisible();
+      await audit('debate-shield-holder');
       await room('VERDICT', {
         publicAnnouncement: { kind: 'no_votes', cycle: 2 },
       });

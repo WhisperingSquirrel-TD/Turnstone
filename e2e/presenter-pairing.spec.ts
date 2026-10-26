@@ -24,6 +24,8 @@ function presenterView(): FullView {
     murderSlots: 1,
     endRule: 'unanimous',
     missionsEnabled: false,
+    shieldsPublic: false,
+    shieldHolderIds: [],
     rehearsal: false,
     pot: 0,
     unit: 'points',

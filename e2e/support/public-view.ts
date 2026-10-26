@@ -21,6 +21,8 @@ export function createPublicView(gameId: string): FullView {
     murderSlots: 1,
     endRule: 'unanimous',
     missionsEnabled: true,
+    shieldsPublic: false,
+    shieldHolderIds: [],
     rehearsal: false,
     pot: 18,
     unit: 'points',

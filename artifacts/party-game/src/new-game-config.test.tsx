@@ -68,4 +68,16 @@ describe('buildNewGameConfig', () => {
 
     expect(config.missions.enabled).toBe(false);
   });
+
+  it('lets the organiser record the round-table shield publicly', () => {
+    const config = buildNewGameConfig({
+      gameName: 'Friday game',
+      playerCount: 8,
+      coCoordinatorCount: 0,
+      presenterEnabled: false,
+    });
+
+    expect(config.missions.shields).toBe('public');
+    expect(config.missions.allocation).toBe('coordinator');
+  });
 });

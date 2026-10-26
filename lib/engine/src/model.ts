@@ -149,6 +149,12 @@ export type State = {
     | {
         seq: number;
         at: number;
+        action: 'shield_given';
+        seatIds: string[];
+      }
+    | {
+        seq: number;
+        at: number;
         action: 'seat_departed';
         seatId: string;
       }

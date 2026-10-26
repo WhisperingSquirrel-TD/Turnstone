@@ -638,6 +638,17 @@ export function evolve(previous: State | null, input: unknown): State {
       break;
     case 'ShieldsAllocated':
       state.shields = event.holders;
+      // Only a public (round-table) shield is announced; a secret one never is.
+      if (state.config.missions.shields === 'public')
+        state.publicLog = [
+          ...state.publicLog,
+          {
+            seq: event.seq,
+            at: event.at,
+            action: 'shield_given',
+            seatIds: [...event.holders],
+          },
+        ];
       break;
     case 'DawnResolved':
       state.protected = event.protected;

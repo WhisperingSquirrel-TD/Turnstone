@@ -358,6 +358,16 @@ export type PublicLogEntry = {
   seq: number;
   /** @minimum 0 */
   at: number;
+  action: 'shield_given';
+  seats: {
+  id: string;
+  name: string;
+}[];
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
   action: 'seat_left_disconnected';
   reason: 'disconnected';
   seat: {
@@ -682,6 +692,8 @@ export interface FullView {
   murderSlots: number;
   endRule: FullViewEndRule;
   missionsEnabled: boolean;
+  shieldsPublic: boolean;
+  shieldHolderIds: string[];
   rehearsal: boolean;
   /** @minimum 0 */
   pot: number;

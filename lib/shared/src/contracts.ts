@@ -330,6 +330,14 @@ const publicLogEntrySchema = z.discriminatedUnion('action', [
     .object({
       seq: z.number().int().positive(),
       at: z.number().int().nonnegative(),
+      action: z.literal('shield_given'),
+      seats: z.array(z.object({ id, name: z.string() }).strict()),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
       action: z.literal('seat_departed'),
       seat: z.object({ id, name: z.string() }).strict(),
     })
@@ -435,6 +443,8 @@ export const fullViewSchema = z
     murderSlots: z.number().int().min(0).max(2),
     endRule: z.enum(['unanimous', 'majority']),
     missionsEnabled: z.boolean(),
+    shieldsPublic: z.boolean().default(false),
+    shieldHolderIds: z.array(id).default([]),
     rehearsal: z.boolean(),
     pot: z.number().nonnegative(),
     unit: z.string(),

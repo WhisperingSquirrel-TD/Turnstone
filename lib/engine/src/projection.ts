@@ -41,6 +41,8 @@ export const VIEW_ALLOW_LIST = [
   'murderSlots',
   'endRule',
   'missionsEnabled',
+  'shieldsPublic',
+  'shieldHolderIds',
   'rehearsal',
   'pot',
   'unit',
@@ -328,6 +330,10 @@ export function viewFor(
     murderSlots: Math.min(2, state.config.traitors.murders),
     endRule: state.config.endgame.endRule,
     missionsEnabled: state.config.missions.enabled,
+    shieldsPublic: state.config.missions.shields === 'public',
+    // A secret shield holder is never projected to any viewer.
+    shieldHolderIds:
+      state.config.missions.shields === 'public' ? [...state.shields] : [],
     rehearsal: state.config.rehearsal.enabled,
     pot: state.pot,
     unit: state.config.missions.potUnit,
@@ -453,6 +459,16 @@ export function viewFor(
           seq: entry.seq,
           at: entry.at,
           action: entry.action,
+        };
+      if (entry.action === 'shield_given')
+        return {
+          seq: entry.seq,
+          at: entry.at,
+          action: entry.action,
+          seats: entry.seatIds.map((id) => ({
+            id,
+            name: state.seats.find((seat) => seat.id === id)?.name ?? '',
+          })),
         };
       if (entry.action === 'banishment')
         return {

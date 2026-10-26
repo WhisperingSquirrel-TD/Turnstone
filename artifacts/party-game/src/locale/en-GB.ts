@@ -643,6 +643,16 @@ export const en = {
     prizePot: (pot: number, unit: string) => `${pot} ${unit}`,
     playersHeading: 'Players',
     whatIsHappening: 'What is happening',
+    shield: {
+      title: 'The shield',
+      prompt:
+        'Agree as a group who holds the shield tonight, then record the choice.',
+      choose: 'Choose who the room agreed',
+      give: (name: string) => `Give the shield to ${name}`,
+      failed: 'The shield could not be recorded. Try again.',
+      holder: (names: string[]) =>
+        `${names.join(' and ')} ${names.length > 1 ? 'hold' : 'holds'} the shield until dawn.`,
+    },
     missionsComing: {
       title: 'Missions are coming soon',
       body: 'This version plays the round table and the night. Group missions arrive in a later update.',
@@ -681,6 +691,8 @@ export const en = {
         ? victims.map((name) => `${name} was taken in the night.`).join(' ')
         : 'No one was taken.',
     publicLogBanishment: (name: string) => `${name} was banished.`,
+    publicLogShieldGiven: (names: string[]) =>
+      `The round table gave the shield to ${names.join(' and ')}.`,
     publicLogSeatDeparted: (name: string) => `${name} was marked as departed.`,
     publicLogDisconnectedSeatLeft: (name: string) =>
       `${name} left the game after a disconnection. Nobody knows their role.`,

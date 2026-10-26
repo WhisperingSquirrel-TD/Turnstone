@@ -57,6 +57,8 @@ import {
   GameBottomBar,
   GameHelpDisclosure,
   MissionsComingNotice,
+  RoundTableShield,
+  ShieldHolderLine,
   PlayerTile,
   GameStatusBar,
   WhatIsHappeningCard,
@@ -723,6 +725,8 @@ function publicLogMessage(entry: FullView['publicLog'][number]): string {
   if (entry.action === 'no_votes') return en.game.noVotesAnnouncement;
   if (entry.action === 'banishment')
     return en.game.publicLogBanishment(entry.seat.name);
+  if (entry.action === 'shield_given')
+    return en.game.publicLogShieldGiven(entry.seats.map((seat) => seat.name));
   if (entry.action === 'seat_departed')
     return en.game.publicLogSeatDeparted(entry.seat.name);
   if (entry.action === 'seat_left_disconnected')
@@ -839,6 +843,7 @@ function PlayerGame() {
   const [confirmChoice, setConfirmChoice] = useState(false);
   const [actionDone, setActionDone] = useState(false);
   const [commandMessage, setCommandMessage] = useState('');
+  const [shieldMessage, setShieldMessage] = useState('');
   const [advanceLocalNow, setAdvanceLocalNow] = useState(() => Date.now());
   const [installMessage, setInstallMessage] = useState('');
   const [wakeLockFallback, setWakeLockFallback] = useState(false);
@@ -2243,6 +2248,27 @@ function PlayerGame() {
     }
   }
 
+  async function giveShield(seatId: string) {
+    if (!token || !full || command.isPending) return;
+    setShieldMessage('');
+    try {
+      await command.mutateAsync({
+        id,
+        data: {
+          type: 'AllocatePower',
+          holders: [seatId],
+          expectedVersion: full.version,
+          idempotencyKey: idempotencyKey(),
+        },
+      });
+      command.reset();
+      void gameQuery.refetch();
+    } catch {
+      command.reset();
+      setShieldMessage(en.game.shield.failed);
+    }
+  }
+
   async function revealVote() {
     if (!token || command.isPending) return;
     setCommandMessage('');
@@ -3461,6 +3487,29 @@ function PlayerGame() {
                 {!full.missionsEnabled &&
                   !full.rehearsal &&
                   !phaseIsPrivate && <MissionsComingNotice />}
+                {full.shieldsPublic && !phaseIsPrivate && (
+                  <ShieldHolderLine
+                    names={full.shieldHolderIds.map(
+                      (holderId) =>
+                        full.seats.find((seat) => seat.id === holderId)?.name ??
+                        '',
+                    )}
+                  />
+                )}
+                {full.shieldsPublic &&
+                  full.canAdvancePhase &&
+                  !full.rehearsal &&
+                  full.shieldHolderIds.length === 0 &&
+                  (full.phase === 'DEBATE' || full.phase === 'VERDICT') && (
+                    <RoundTableShield
+                      seats={full.seats.filter(
+                        (seat) => seat.status === 'alive',
+                      )}
+                      pending={command.isPending}
+                      message={shieldMessage}
+                      onGive={(seatId) => void giveShield(seatId)}
+                    />
+                  )}
                 {full.missionsEnabled && (
                   <section
                     className="mt-5 border-y border-stone py-4"

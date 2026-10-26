@@ -1072,6 +1072,8 @@ components:
         - murderSlots
         - endRule
         - missionsEnabled
+        - shieldsPublic
+        - shieldHolderIds
         - rehearsal
         - pot
         - unit
@@ -1152,6 +1154,11 @@ components:
           enum: [unanimous, majority]
         missionsEnabled:
           type: boolean
+        shieldsPublic:
+          type: boolean
+        shieldHolderIds:
+          type: array
+          items: { type: string }
         rehearsal:
           type: boolean
         pot:
@@ -1492,6 +1499,22 @@ components:
               properties:
                 id: { type: string }
                 name: { type: string }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action, seats]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: shield_given }
+            seats:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [id, name]
+                properties:
+                  id: { type: string }
+                  name: { type: string }
         - type: object
           additionalProperties: false
           required: [seq, at, action, seat, reason]

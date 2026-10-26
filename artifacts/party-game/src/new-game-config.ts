@@ -21,6 +21,7 @@ export function buildNewGameConfig(input: NewGameConfigInput) {
       revealStyle: input.revealStyle ?? 'speaker-circle',
     },
     // Missions have no content yet; games show a notice instead (MISSIONS-REVIEW).
-    missions: { enabled: false },
+    // The round table agrees the shield holder and the organiser records it (D109).
+    missions: { enabled: false, shields: 'public', allocation: 'coordinator' },
   });
 }

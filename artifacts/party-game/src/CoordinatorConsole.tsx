@@ -47,6 +47,8 @@ function formatPublicUpdate(entry: FullView['publicLog'][number]): string {
   if (entry.action === 'no_votes') return en.game.noVotesAnnouncement;
   if (entry.action === 'banishment')
     return en.game.publicLogBanishment(entry.seat.name);
+  if (entry.action === 'shield_given')
+    return en.game.publicLogShieldGiven(entry.seats.map((seat) => seat.name));
   if (entry.action === 'seat_departed')
     return en.game.publicLogSeatDeparted(entry.seat.name);
   if (entry.action === 'seat_left_disconnected')

@@ -159,6 +159,74 @@ export function MissionsComingNotice() {
   );
 }
 
+/** Public line naming the round-table shield holder (D109). */
+export function ShieldHolderLine({ names }: { names: string[] }) {
+  if (!names.length) return null;
+  return (
+    <p className="game-shield-holder" data-testid="shield-holder">
+      {en.game.shield.holder(names)}
+    </p>
+  );
+}
+
+/** Organiser records the shield holder the round table agreed (D109). */
+export function RoundTableShield({
+  seats,
+  pending,
+  message,
+  onGive,
+}: {
+  seats: { id: string; name: string }[];
+  pending: boolean;
+  message: string;
+  onGive: (seatId: string) => void;
+}) {
+  const [selected, setSelected] = useState('');
+  const chosen = seats.find((seat) => seat.id === selected);
+  return (
+    <section
+      className="game-happening-card"
+      data-testid="round-table-shield"
+      aria-labelledby="round-table-shield-title"
+    >
+      <p id="round-table-shield-title" className="game-screen-label">
+        {en.game.shield.title}
+      </p>
+      <p className="game-happening-copy">{en.game.shield.prompt}</p>
+      <fieldset className="game-shield-options">
+        <legend className="sr-only">{en.game.shield.choose}</legend>
+        {seats.map((seat) => (
+          <label key={seat.id} className="game-shield-option">
+            <input
+              type="radio"
+              name="round-table-shield"
+              value={seat.id}
+              checked={selected === seat.id}
+              onChange={() => setSelected(seat.id)}
+            />
+            <span>{seat.name}</span>
+          </label>
+        ))}
+      </fieldset>
+      {chosen && (
+        <button
+          className="primary-action w-full"
+          type="button"
+          disabled={pending}
+          onClick={() => onGive(chosen.id)}
+        >
+          {en.game.shield.give(chosen.name)}
+        </button>
+      )}
+      {message && (
+        <p role="status" className="game-happening-copy">
+          {message}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export function GameHelpDisclosure({
   children,
   screenLockNotice,

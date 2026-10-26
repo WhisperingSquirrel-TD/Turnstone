@@ -75,6 +75,8 @@ export interface FullView {
   murderSlots: number;
   endRule: FullViewEndRule;
   missionsEnabled: boolean;
+  shieldsPublic: boolean;
+  shieldHolderIds: string[];
   rehearsal: boolean;
   /** @minimum 0 */
   pot: number;
