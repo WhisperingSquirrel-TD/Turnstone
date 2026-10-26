@@ -1831,3 +1831,14 @@ reveal the holder.
 **Scope:** This is an owner-directed game-rule change recorded here, not a
 SPEC §3 edit. The 37-row mission CSV stays unimported until the Christmas
 mission design.
+
+## D110 — Beta release marker (owner, 26 October 2026)
+
+**Owner direction:** Launch the October release as a beta. A small "Beta" tag
+sits beside the Oathstone wordmark on the entry screen and on full-screen
+overlays, and in the top bar of every game screen (game screens have no
+wordmark). The entry screen adds: "Thanks for trying Oathstone early. Tell
+your organiser if anything looks wrong." The static first paint shows the
+same tag and line so it does not flash a different layout. Public information
+pages are unchanged. The tag is plain text in the wordmark colour, not a
+logo, so the single-wordmark branding rule is unchanged.

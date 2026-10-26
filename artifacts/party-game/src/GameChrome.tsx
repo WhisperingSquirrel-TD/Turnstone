@@ -33,6 +33,15 @@ export function gameStatusLabel(phase: string, cycle: number): string {
   return `${period} ${cycle} · ${phaseName}`;
 }
 
+/** Beta release marker shown beside the wordmark and in the game bar. */
+export function BetaTag() {
+  return (
+    <span className="beta-tag" data-testid="beta-tag">
+      {en.app.beta}
+    </span>
+  );
+}
+
 export function GameStatusBar({
   phase,
   cycle,
@@ -63,6 +72,7 @@ export function GameStatusBar({
           {gameStatusLabel(phase, cycle)}
         </span>
       </span>
+      <BetaTag />
       <div className="game-status-right">
         {showRemaining && (
           <span

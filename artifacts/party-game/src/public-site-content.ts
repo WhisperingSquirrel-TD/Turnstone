@@ -90,6 +90,7 @@ export function renderGameEntryHtml(basePath = '/'): string {
         <a href="${escapeHtml(`${base}?entry=rehearsal`)}">${escapeHtml(en.entry.practiseAlone)}</a>
       </nav>
       <a class="game-entry-about" href="${escapeHtml(config.companyPageUrl)}">About Oathstone</a>
+      <p class="game-entry-beta"><span class="beta-tag" data-testid="beta-tag">${escapeHtml(en.app.beta)}</span> ${escapeHtml(en.entry.betaNote)}</p>
     </main>
     ${renderStackstoneFooterLink(base)}`;
 }

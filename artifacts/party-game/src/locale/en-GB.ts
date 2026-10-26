@@ -15,6 +15,7 @@ export const en = {
   skip: 'Skip to main content',
   nav: { label: 'Main', home: 'Home', play: 'Play', menu: 'Menu' },
   app: {
+    beta: 'Beta',
     securityUnavailable:
       'The secure connection could not be established. Check your connection, then try again.',
     tryAgain: 'Try again',
@@ -391,6 +392,8 @@ export const en = {
     headlineSecond: '',
     subtitle: 'A game of traitors and faithful.',
     welcomeDescription: 'Everyone plays. Even the host.',
+    betaNote:
+      'Thanks for trying Oathstone early. Tell your organiser if anything looks wrong.',
     createGame: 'Create a new game',
     joinGame: 'Join a game',
     practiseAlone: 'Practise alone',

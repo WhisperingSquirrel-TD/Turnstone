@@ -693,3 +693,34 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Keeps the wordmark and its beta tag as one header grid item. */
+.entry-brand-title {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Beta release marker (D110): inherits the wordmark colour for contrast. */
+.beta-tag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.entry-beta-note,
+.game-entry-beta {
+  margin: 1rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  text-align: center;
+}

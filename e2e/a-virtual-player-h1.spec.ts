@@ -1194,6 +1194,21 @@ test('virtual players complete a real game across desktop and phone contexts @vi
           'Could not identify a living player step before actions.',
         );
       await waitForPlayersOnStep(pages, expectedStep);
+      if (process.env.BETA_WALKTHROUGH === '1') {
+        const directory = 'docs/screens/beta-walkthrough';
+        await mkdir(directory, { recursive: true });
+        const label = `${String(step).padStart(2, '0')}-${phase.toLowerCase()}`;
+        for (const [role, page] of [
+          ['organiser', organiserPage],
+          ['player', pages[1]!],
+        ] as const)
+          await page.screenshot({
+            path: `${directory}/${label}-${role}.jpg`,
+            type: 'jpeg',
+            quality: 50,
+            fullPage: true,
+          });
+      }
       if (!phaseTrail.includes(phase)) phaseTrail.push(phase);
       const phaseObservedAt = Date.now();
       if (phase === 'FINISHED' || phase === 'ARCHIVED') break;
@@ -1524,6 +1539,38 @@ test('virtual players complete a real game across desktop and phone contexts @vi
         phase === 'DAWN' ||
         phase === 'ENDGAME'
       ) {
+        if (phase === 'DEBATE') {
+          // D109: the round table agrees the shield; the organiser records it
+          // on their own phone and every player sees who holds it.
+          activePlayer = organiser;
+          activePage = organiserPage;
+          const shieldPanel = organiserPage.getByTestId('round-table-shield');
+          await expect(
+            shieldPanel,
+            'The organiser can record the round-table shield during the talk.',
+          ).toBeVisible({ timeout: 20_000 });
+          const choice = shieldPanel.getByRole('radio').first();
+          const holderName = (
+            await shieldPanel.locator('.game-shield-option').first().innerText()
+          ).trim();
+          await pauseForHumanTiming(organiserPage, scenario.stage);
+          await organiserPage.evaluate(() =>
+            (document.activeElement as HTMLElement | null)?.blur(),
+          );
+          await choice.evaluate((element) =>
+            element.scrollIntoView({ block: 'center' }),
+          );
+          await choice.check();
+          await shieldPanel
+            .getByRole('button', { name: `Give the shield to ${holderName}` })
+            .click();
+          for (const page of pages)
+            await expect(page.getByTestId('shield-holder')).toHaveText(
+              `${holderName} holds the shield until dawn.`,
+              { timeout: 20_000 },
+            );
+          actionTrace.push(`DEBATE:shield:${holderName}`);
+        }
         activePlayer = organiser;
         activePage = coordinatorScreen;
         await advanceAsOrganiser(

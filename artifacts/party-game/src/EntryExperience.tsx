@@ -12,7 +12,12 @@ import { Link } from 'react-router-dom';
 import { recommended } from '@workspace/shared';
 import { config } from './config';
 import { EntryActionError } from './entry-action-error';
-import { GameStatusBar, PlayerTile, WhatIsHappeningCard } from './GameChrome';
+import {
+  BetaTag,
+  GameStatusBar,
+  PlayerTile,
+  WhatIsHappeningCard,
+} from './GameChrome';
 import { en } from './locale/en-GB';
 import { BrandFooter } from './BrandFooter';
 import { useDisplayTheme } from './use-display-theme';
@@ -658,9 +663,12 @@ export function EntryExperience({
       className={`entry-experience game-shell${screen !== 'lobby' ? ' entry-experience--flow-footer' : ''}${options.largeText ? ' entry-large-text' : ''}`}
     >
       <header className="entry-brand" aria-label={copy.brandDescriptor}>
-        <span className="entry-wordmark" data-testid="text-entry-brand">
-          <span>{copy.brand.slice(0, -copy.brandGoldSuffix.length)}</span>
-          <span className="entry-gilt">{copy.brandGoldSuffix}</span>
+        <span className="entry-brand-title">
+          <span className="entry-wordmark" data-testid="text-entry-brand">
+            <span>{copy.brand.slice(0, -copy.brandGoldSuffix.length)}</span>
+            <span className="entry-gilt">{copy.brandGoldSuffix}</span>
+          </span>
+          <BetaTag />
         </span>
         <details className="public-home-menu entry-brand-menu">
           <summary>{en.nav.menu}</summary>
@@ -740,6 +748,9 @@ export function EntryExperience({
             >
               About Oathstone
             </a>
+            <p className="entry-beta-note" data-testid="entry-beta-note">
+              {en.entry.betaNote}
+            </p>
           </section>
         )}
 

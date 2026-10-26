@@ -195,7 +195,8 @@ export function buildVirtualPlayerScenario(
   const rehearsalProfile = process.env.REHEARSAL_PROFILE ?? 'Pixel';
   const random = createSeededRandom(normalizedSeed);
   const profiles: VirtualPlayerProfile[] = [
-    'desktop',
+    // The beta walkthrough captures the organiser on a phone, as in real play.
+    process.env.BETA_WALKTHROUGH === '1' ? 'pixel' : 'desktop',
     'pixel',
     ...Array.from({ length: playerCount - 2 }, () =>
       random() < 0.5 ? 'desktop' : 'pixel',

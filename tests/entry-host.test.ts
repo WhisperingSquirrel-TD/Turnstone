@@ -37,3 +37,11 @@ it('prerenders one usable paper entry, not the former marketing home', () => {
   expect(html).not.toContain('public-home-hero');
   expect(html).not.toContain('How it works');
 });
+
+it('marks the static first-paint entry as a beta release', () => {
+  const html = renderGameEntryHtml('/');
+  expect(html).toContain('data-testid="beta-tag"');
+  expect(html).toContain(
+    'Thanks for trying Oathstone early. Tell your organiser if anything looks wrong.',
+  );
+});

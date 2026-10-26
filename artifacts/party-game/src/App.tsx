@@ -55,6 +55,7 @@ import { RouteMetadata } from './RouteMetadata';
 import { BrandFooter, BrandSurfaceContext } from './BrandFooter';
 import {
   GameBottomBar,
+  BetaTag,
   GameHelpDisclosure,
   MissionsComingNotice,
   RoundTableShield,
@@ -665,17 +666,20 @@ function OathstonePlayerHeader() {
       aria-label={config.appName}
       data-testid="player-brand-header"
     >
-      <Link
-        to={config.routes.home}
-        className="oathstone-wordmark"
-        aria-label={config.appName}
-        data-testid="text-entry-brand"
-      >
-        <span>
-          {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
-        </span>
-        <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
-      </Link>
+      <span className="entry-brand-title">
+        <Link
+          to={config.routes.home}
+          className="oathstone-wordmark"
+          aria-label={config.appName}
+          data-testid="text-entry-brand"
+        >
+          <span>
+            {config.appName.slice(0, -config.wordmarkAccentSuffix.length)}
+          </span>
+          <span className="text-gilt">{config.wordmarkAccentSuffix}</span>
+        </Link>
+        <BetaTag />
+      </span>
     </header>
   );
 }
