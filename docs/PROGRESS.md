@@ -1,6 +1,7 @@
 # Status for reviewer
 
-**Task 1 (Verify #311 fix) — in progress; Claude Code now builds (see CLAUDE.md).**
+**Task 1 (Verify #311 fix) COMPLETE — main `ae48c1f`, Verify #317 GREEN.**
+Claude Code now builds (see CLAUDE.md).
 #311 (`82cc902`) failed on iPhone WebKit only: the hydrated entry puts the
 shared credit inside `main` at 14px (its `<small>` text rendered at 11.2px).
 The width test raced the static first paint against hydration, and its
@@ -25,7 +26,7 @@ passes after. Types, lint, format and 152 client unit tests pass. No assertion
 removed or relaxed; no timeout raised. Locally
 `private-loading-recovery.spec.ts:76` fails intermittently on the untouched
 `82cc902` too; CI passes it, so it is recorded, not changed.
-Next: wait for this push's Verify; once green, Task 2 (shared footer credit).
+Next: Task 2, the shared footer credit component and its audit assertion.
 
 **Round 7 Amendment A — pushed `e04669ea`; Verify #310 FAILED (WebKit only).**
 Desktop, Pixel and every non-browser gate passed. WebKit's existing minimum
