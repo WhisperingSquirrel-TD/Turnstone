@@ -590,8 +590,13 @@ for (const width of widths)
       const shieldChoice = page
         .getByTestId('round-table-shield')
         .getByRole('radio', { name: 'Jamie' });
-      // Scroll like a person would: the row starts partly behind the fixed
-      // organiser bar, which D105 permits when it is reachable after scrolling.
+      // Act as the organiser's phone would: no keyboard focus is left on the
+      // skip link from the audit's focus pass (moving focus off it shifts the
+      // page by 44px mid-tap), and scroll the row clear of the fixed organiser
+      // bar, which D105 permits when it is reachable after scrolling.
+      await page.evaluate(() =>
+        (document.activeElement as HTMLElement | null)?.blur(),
+      );
       await shieldChoice.evaluate((element) =>
         element.scrollIntoView({ block: 'center' }),
       );

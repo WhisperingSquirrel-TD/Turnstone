@@ -1,6 +1,14 @@
 # Status for reviewer
 
-**Round-table shields (D109) — commit `02df63b`; Verify pending.**
+**Round-table shields (D109) — Verify #321 red (my audit step); fix pushed.**
+#321: rehearsal-live and every other job green (so #320's rehearsal failures
+did not recur); only the new layout-audit shield step failed on all four
+profiles. The audit's keyboard pass left focus on the skip link; pressing the
+radio moved focus off it, the page shifted 44px between press and release,
+and the click landed on the fieldset. The audit now releases focus first, as
+a phone would (52/52 locally: audits, shield and notice tests on four
+profiles). The 44px shift on leaving the skip link is a separate
+accessibility follow-up. Earlier detail:
 Missions off (`ab6be53`/`beb27b8`) went red on Verify #320 in three unrelated
 places: iPhone game-start clip opacity, H1 "Move everyone on disabled without
 an explanatory wait state" at night, and the disconnected-player log on an
