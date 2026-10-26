@@ -611,10 +611,11 @@ for (const width of widths)
       const shieldChoice = page
         .getByTestId('round-table-shield')
         .getByRole('radio', { name: 'Jamie' });
-      // Act as the organiser's phone would: no keyboard focus is left on the
-      // skip link from the audit's focus pass (moving focus off it shifts the
-      // page by 44px mid-tap), and scroll the row clear of the fixed organiser
-      // bar, which D105 permits when it is reachable after scrolling.
+      // Act as the organiser's phone would: no keyboard focus is left over
+      // from the audit's focus pass (leaving the skip link once shifted the
+      // page by 44px mid-tap; e2e/skip-link-focus.spec.ts now guards that),
+      // and scroll the row clear of the fixed organiser bar, which D105
+      // permits when it is reachable after scrolling.
       await page.evaluate(() =>
         (document.activeElement as HTMLElement | null)?.blur(),
       );

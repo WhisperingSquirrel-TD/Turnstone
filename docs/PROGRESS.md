@@ -1,5 +1,22 @@
 # Status for reviewer
 
+**Skip-link 44px focus shift fixed — pushed to main; Verify pending.** Cause: `a[href='#main']:focus
+{ position: relative }` in `index.css` put the 44px skip link into the shell's
+flex flow, so leaving it moved every control up 44px (a radio tap landed on
+its fieldset). The focused link now stays absolute and takes the header's
+place: the header goes transparent while the link has focus (still laid out,
+announced and next in the Tab order). A pointer press elsewhere puts the link
+away, even on the hold seal, which cancels pointerdown. The layout audit is
+unchanged; the old in-flow rule existed only to pass its overlap check.
+Tests first: `e2e/skip-link-focus.spec.ts` (game control position unchanged
+across focus and blur; pointer dismissal), red at 44px before the fix.
+Locally on Pixel and desktop: 66/66 (full layout audits, layout-audit unit,
+skip link, round-table shield, coordinator console, shell routes); lint,
+format, types, 154 unit tests green. WebKit could not run here (missing host
+libraries), so iPhone and iPad need CI.
+Rebased onto `3380c0a` (audit focus-pass fix) and re-run locally.
+Next: Verify on this push.
+
 **Layout-audit stall root cause fixed — Verify pending.** #324 was cancelled
 (Pixel/desktop browser jobs hit the 10-minute job limit) and #325 failed: 7 of
 8 audit cases stalled after `deal-released` behind a re-armed DEAL shield. The

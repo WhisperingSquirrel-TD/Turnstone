@@ -385,6 +385,23 @@ function Shell({
       resize.disconnect();
     };
   }, [isPlayer]);
+  // The skip link is a keyboard affordance. A press elsewhere puts it away
+  // even when that control cancels pointerdown (the hold seal does), so it
+  // never covers the header while a pointer is in use.
+  const skipLinkRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    const dismiss = (event: globalThis.PointerEvent) => {
+      const link = skipLinkRef.current;
+      if (
+        link &&
+        document.activeElement === link &&
+        !link.contains(event.target as Node)
+      )
+        link.blur();
+    };
+    document.addEventListener('pointerdown', dismiss, true);
+    return () => document.removeEventListener('pointerdown', dismiss, true);
+  }, []);
   const [standalone, setStandalone] = useState(false);
   useEffect(() => {
     const displayMode = window.matchMedia('(display-mode: standalone)');
@@ -402,6 +419,7 @@ function Shell({
       className={`safe-page flex min-h-[100dvh] flex-col${isPlayer ? ' game-shell game-shell--footer-visible' : ''}${privateMode ? ' private-moment-shell' : ''}${privateMode && privateRevealActive ? ' private-moment-shell--held' : ''}`}
     >
       <a
+        ref={skipLinkRef}
         href="#main"
         className="absolute left-3 top-3 z-10 -translate-y-20 rounded-sm bg-candle px-3 py-2 font-medium text-charcoal focus:translate-y-0"
       >

@@ -359,11 +359,17 @@ h2,
   height: 44px !important;
   min-height: 44px !important;
 }
+/* Stays out of flow when focused: an in-flow skip link reserved 44px and
+   moved the page when focus left it. It takes the header's place instead of
+   covering it; the header keeps its layout and stays focusable, so the next
+   Tab reaches it and brings it back. */
 a[href='#main']:focus {
-  position: relative;
-  inset: auto;
+  position: absolute;
+  z-index: 30;
   transform: none;
-  align-self: flex-start;
+}
+.safe-page:has(> a[href='#main']:focus) > header {
+  opacity: 0;
 }
 
 .game-status-bar {

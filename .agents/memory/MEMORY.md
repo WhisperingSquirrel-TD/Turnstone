@@ -31,3 +31,4 @@
 - [Night theme precedence](night-theme-precedence.md) — owner requires dark night screens; saved Display choices apply to day/setup and must survive night unchanged.
 - [Entry hosting boundary](entry-hosting-boundary.md) — company page remains the findable home; entry changes do not authorise hosting or company-site changes.
 - [Entry prerender readiness](prerender-readiness.md) — wait for the intended hydrated screen; styled fallback HTML is not application-state readiness.
+- [Skip link focus](skip-link-focus.md) — the focused skip link stays out of flow and takes the header's place; never reserve space for it or exempt it from the audit.
