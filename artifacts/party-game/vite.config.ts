@@ -365,6 +365,7 @@ export default defineConfig({
     include: [
       '@tanstack/react-query',
       'qrcode.react',
+      'react-dom/client',
       'react-router-dom',
       'socket.io-client',
       '@workspace/shared > zod',

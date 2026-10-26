@@ -8,3 +8,12 @@ When a statically rendered marketing shell and lazily loaded game route share a 
 **Why:** GitHub CI reported that a bare transitive dependency include could not be resolved, leaving the reload unfixed even though the local cold-cache run passed. Referencing the dependency through its linked workspace package made the cold-cache browser smoke pass.
 
 **How to apply:** Add direct lazy-route dependencies to Vite `optimizeDeps.include`; for a transitive dependency of a linked workspace package, use the nested `workspace-package > dependency` form. Keep a cold-cache Playwright regression that opens the route while the home page remains open.
+
+**Recurrence (Verify #313):** the single-entry `main.tsx` lazily imports
+`react-dom/client`. On a cold CI cache Vite optimised it mid-run and reloaded
+the page during the layout audit, which hung on a click until the unchanged
+120s timeout (desktop 320 day, Pixel 360 day; also likely #308). Fixed by
+including it; `tests/vite-dev-optimizer.test.ts` now requires every bare
+dynamic import in `main.tsx` to be pre-bundled. Check with an empty
+`node_modules/.vite` and `DEBUG=pw:webserver` for "optimized dependencies
+changed. reloading".
