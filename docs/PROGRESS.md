@@ -1,14 +1,24 @@
 # Status for reviewer
 
-**Missions off for October (D109) — pushed `ab6be53`; Verify pending.**
-New games start without missions; real games show a "Missions are coming
-soon" notice on public screens that players can hide per device (never in
-practice or on private screens). Tests first: config unit test and
-`e2e/missions-notice.spec.ts` (8/8 across four profiles). Local: full browser
-suite 500 passed, 0 failed, 72 skipped (all four profiles); 153 client unit
-tests, types, lint and format clean.
-Next: round-table shields (D109) — organiser records the agreed holder,
-public until dawn; secret shields never reveal the holder.
+**Round-table shields (D109) — commit `02df63b`; Verify pending.**
+Missions off (`ab6be53`/`beb27b8`) went red on Verify #320 in three unrelated
+places: iPhone game-start clip opacity, H1 "Move everyone on disabled without
+an explanatory wait state" at night, and the disconnected-player log on an
+observer. All four real-server rehearsal tests and the clip test pass locally
+on that commit against a local PostgreSQL 16 (4/4, CI order); the full browser
+suite on that change was 500 passed, 0 failed. Re-running the failed jobs is
+not permitted for this integration (HTTP 403), so this push is the next full
+check. A likely H1 mechanism is recorded: the coordinator's Move-on is also
+disabled, without a reason, while its own previous command is in flight; if
+it recurs, give that state an explanation rather than relax the harness.
+Shields: new games use public shields allocated by the organiser. During Talk
+or Verdict the organiser picks the living player the room agreed and taps
+"Give the shield to <name>"; everyone sees "<name> holds the shield until
+dawn" and the log records it. Night protection is unchanged. A secret holder
+is never projected or logged (unit test). OpenAPI spec and generated clients
+updated; three layout-audit states added (74 in total). Tests first: engine
+(2), config (1), browser (3 x 4 profiles).
+Next: Verify on this push; then an owner-ready play-through before Halloween.
 
 **Missions review (Task 3, read-only) — `docs/MISSIONS-REVIEW.md`.**
 Missions do not exist in play yet: new games keep the MISSION phase on (20
