@@ -1,5 +1,18 @@
 # Status for reviewer
 
+**Missions review (Task 3, read-only) — `docs/MISSIONS-REVIEW.md`.**
+Missions do not exist in play yet: new games keep the MISSION phase on (20
+minutes per round by default) but it has no content, no result recording, no
+pot changes and no reachable shields; practice mode switches it off. The
+owner's 37-row CSV is not wired in. The review grades every row (about 12
+strong keeps for an indoor mixed-age group, 13 drops) and recommends Option A
+for the Halloween launch: missions off for new games plus a "Missions are
+coming" notice players can hide. 390 px player/organiser captures are in
+`docs/screens/missions-review/`. No mission behaviour changed.
+Task 2 (shared credit) is parked by the owner; its unfinished assertions are
+kept in a local git stash, not on main.
+Next: owner decision on Option A, then implement it test-first.
+
 **Task 1 (Verify #311 fix) COMPLETE — main `ae48c1f`, Verify #317 GREEN.**
 Claude Code now builds (see CLAUDE.md).
 #311 (`82cc902`) failed on iPhone WebKit only: the hydrated entry puts the
