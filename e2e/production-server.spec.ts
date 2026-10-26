@@ -99,11 +99,23 @@ test.describe('built client through the real Node server', () => {
           'background-color',
           'rgb(46, 43, 41)',
         );
-        await expect(plain.getByTestId('text-entry-brand')).toBeVisible();
-        await expect(plain.getByTestId('text-entry-brand')).toHaveCSS(
-          'font-family',
-          /Playfair Display/,
-        );
+        if (path === '/') {
+          const paperHeading = plain.locator('.game-entry-static > h1');
+          await expect(paperHeading).toHaveText('Oathstone');
+          await expect(paperHeading).toHaveCSS(
+            'font-family',
+            /Playfair Display/,
+          );
+        } else {
+          const joinWordmark = plain
+            .getByRole('banner')
+            .getByRole('link', { name: 'Oathstone', exact: true });
+          await expect(joinWordmark).toBeVisible();
+          await expect(joinWordmark).toHaveCSS(
+            'font-family',
+            /Playfair Display/,
+          );
+        }
         if (path === '/join')
           expect(await response!.text()).not.toContain(
             'Frequently asked questions',

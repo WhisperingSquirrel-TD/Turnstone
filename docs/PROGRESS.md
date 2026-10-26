@@ -1,6 +1,14 @@
 # Status for reviewer
 
-**Round 7 Amendment A — fix pushed `b04ae94c`; Verify #308 FAILED (browsers only).**
+**Round 7 Amendment A — pushed `3b531bcf`; Verify #309 FAILED (browsers only).**
+The cold layout audit and forced-night checks passed. Three later checks still
+expected the old root footer/private fallback; their selectors now distinguish
+the paper entry from the private shell and use the actual shared credit.
+All 12 focused checks pass across desktop, Pixel, iPhone and iPad (eight smoke/
+geometry checks plus four production/no-JS checks). No assertion was removed.
+Next: push this test-only correction, wait for green, then the owner's shared
+credit consistency defect, then missions review. No credit changes mixed in.
+Previous Verify #308 on `b04ae94c` failed in browsers only.
 Unit, integration, rehearsal-live, Lighthouse, audit and the other gates passed.
 One cold 320/day layout case timed out at its unchanged 120 seconds; the other
 seven audit cases passed. The remaining night tests used the removed static

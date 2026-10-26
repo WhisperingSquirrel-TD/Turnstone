@@ -11,8 +11,11 @@ test('the root entry and public information pages are accessible and responsive'
     PRE_LAUNCH_NOINDEX ? 'noindex, nofollow' : undefined,
   );
   await expect(page.getByRole('main')).toBeVisible();
-  await expect(page.getByRole('contentinfo')).toContainText(
-    'made by Stackstone Consulting',
+  const rootCreditLink = page.getByTestId('brand-footer-link');
+  await expect(rootCreditLink).toContainText('made by Stackstone Consulting');
+  await expect(rootCreditLink).toHaveAttribute(
+    'href',
+    'https://stackstoneconsulting.co.uk/',
   );
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   expect(
@@ -945,15 +948,15 @@ test('game status bar stays visible and active-play actions stay unobstructed', 
   ).toBeLessThanOrEqual(900);
 
   await page.goto('/');
-  const publicFooterBounds = await page
-    .getByTestId('brand-footer-static')
+  const entryCreditBounds = await page
+    .getByTestId('brand-footer-entry')
     .boundingBox();
-  if (!publicFooterBounds) {
-    throw new Error('The public-site footer has no bounds.');
+  if (!entryCreditBounds) {
+    throw new Error('The root entry credit has no bounds.');
   }
-  expect(publicFooterBounds.x).toBeGreaterThanOrEqual(0);
-  expect(publicFooterBounds.width).toBeGreaterThan(0);
-  expect(publicFooterBounds.x + publicFooterBounds.width).toBeLessThanOrEqual(
+  expect(entryCreditBounds.x).toBeGreaterThanOrEqual(0);
+  expect(entryCreditBounds.width).toBeGreaterThan(0);
+  expect(entryCreditBounds.x + entryCreditBounds.width).toBeLessThanOrEqual(
     1440,
   );
 });
