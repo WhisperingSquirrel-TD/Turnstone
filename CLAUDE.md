@@ -1,4 +1,4 @@
-# CLAUDE.md: Oathstone (repo WhisperingSquirrel-TD/Turnstone, branch main)
+# CLAUDE.md: Oathstone (repo https://github.com/WhisperingSquirrel-TD/Turnstone, branch main)
 
 Oathstone is a free browser-based hidden-traitor party game by Stackstone Consulting. Claude Code now builds it. The Replit Agent is dormant and must be able to resume from the same files.
 
