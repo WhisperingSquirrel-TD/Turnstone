@@ -3614,6 +3614,13 @@ for (const phase of ['DEAL', 'VOTE', 'SHADOW'] as const) {
     page,
   }) => {
     await page.clock.install();
+    // The fixture server's clock advances with the page clock, as a real
+    // server's would; otherwise a refreshed view resets the shield countdown.
+    let clockAdvanceMs = 0;
+    const fastForward = async (ms: number) => {
+      clockAdvanceMs += ms;
+      await page.clock.fastForward(ms);
+    };
     const gameId = `return-notice-${phase.toLowerCase()}`;
     const recoveryNetwork: {
       endpoint: string;
@@ -3652,7 +3659,7 @@ for (const phase of ['DEAL', 'VOTE', 'SHADOW'] as const) {
     let staleAcknowledgement = false;
     let staleAcknowledgementKey: string | null = null;
     const envelope = () => ({
-      serverNow: Date.now(),
+      serverNow: Date.now() + clockAdvanceMs,
       version: view.version,
       view,
     });
@@ -3702,7 +3709,7 @@ for (const phase of ['DEAL', 'VOTE', 'SHADOW'] as const) {
       await expect(
         page.getByRole('dialog', { name: 'Shield your screen' }),
       ).toBeVisible();
-      await page.clock.fastForward(3_000);
+      await fastForward(3_000);
       await page.getByRole('button', { name: 'I’m shielded' }).click();
       try {
         await expect(page.getByTestId('private-choice-list')).toBeVisible();
@@ -3757,7 +3764,7 @@ for (const phase of ['DEAL', 'VOTE', 'SHADOW'] as const) {
       await expect(
         page.getByRole('dialog', { name: 'Shield your screen' }),
       ).toBeVisible();
-      await page.clock.fastForward(5_000);
+      await fastForward(5_000);
       await page.getByRole('button', { name: 'I’m shielded' }).click();
     }
     const notice = page.getByTestId('while-away-card');

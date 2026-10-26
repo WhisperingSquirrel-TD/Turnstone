@@ -138,12 +138,19 @@ for (const width of widths)
         colorScheme: palette === 'night' ? 'dark' : 'light',
       });
       await page.clock.install();
+      // The fixture server's clock advances with the page clock, as a real
+      // server's would; otherwise every view resets the client clock offset.
+      let clockAdvanceMs = 0;
+      const fastForward = async (ms: number) => {
+        clockAdvanceMs += ms;
+        await page.clock.fastForward(ms);
+      };
       const gameId = 'layout-audit-room';
       let role: 'faithful' | 'traitor' = 'faithful';
       let privateAvailable = true;
       let view = createPublicView(gameId);
       const envelope = () => ({
-        serverNow: Date.now(),
+        serverNow: Date.now() + clockAdvanceMs,
         version: view.version,
         view,
       });
@@ -276,7 +283,7 @@ for (const width of widths)
       async function dismissShield() {
         const shield = page.getByRole('dialog', { name: 'Shield your screen' });
         if (await shield.isVisible()) {
-          await page.clock.fastForward(6_000);
+          await fastForward(6_000);
           await shield.getByRole('button', { name: 'I’m shielded' }).click();
         }
       }
@@ -518,7 +525,7 @@ for (const width of widths)
               box!.y + box!.height / 2,
             );
             await page.mouse.down();
-            await page.clock.fastForward(1_200);
+            await fastForward(1_200);
             await audit('deal-held');
             await page.mouse.up();
             await audit('deal-released');
@@ -611,7 +618,7 @@ for (const width of widths)
       );
       await page.goto('/game/audit-missing?clips=off');
       await missingResponse;
-      await page.clock.fastForward(300);
+      await fastForward(300);
       await expect(page.locator('main')).toContainText(
         /could|can[’']t|cannot|unavailable|not found|problem|check|error/i,
       );

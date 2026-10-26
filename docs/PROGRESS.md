@@ -7,19 +7,23 @@ The width test raced the static first paint against hydration, and its
 `footer .brand-credit` selector matched nothing. Fixed in `232a4af`: the test
 waits for the hydrated entry and measures the credit and its text; the credit
 text is 15px. #312 (`2af56ea`, CLAUDE.md) also failed the rename guard; the
-repository is now named by URL (`c024b4a`). #313: WebKit and unit green, but
-the layout audit hung after `deal-released` until its unchanged 120s timeout
-(desktop 320 day, Pixel 360 day). A cold Vite cache reloaded pages mid-test
-when it optimised the entry's lazy `react-dom/client`; pre-bundled with a unit
-guard (`5ba1e60`). #314: every job green except desktop 320 night, again hung
-after `deal-released`. It does not reproduce locally (24/24 on two CPUs), so
-this push adds failure-only page-state diagnostics (open dialogs, what covers
-the next click targets; test IDs and classes only, never page text). No
-assertion removed or relaxed; no timeout raised. Locally
-`private-loading-recovery.spec.ts:76` fails intermittently on the untouched
-`82cc902` too; CI passes it, so it is recorded, not changed.
-Next: read the diagnostic if the hang recurs and fix its cause; once Verify is
-green, Task 2 (shared footer credit).
+repository is now named by URL (`c024b4a`). #313 and #314: the layout audit
+hung after `deal-released` until its unchanged 120s timeout. A cold Vite cache
+reloaded pages when it optimised the entry's lazy `react-dom/client`;
+pre-bundled with a unit guard (`5ba1e60`). #315 (`01227d7`, failure-only
+page-state diagnostics): layout audit green on all four profiles, but iPad's
+SHADOW return-notice test pressed "I'm shielded" and the shield stayed open
+with no acknowledgement sent. Cause: the shield countdown uses the
+server-corrected clock (DECISIONS), while fixtures reported real time as
+`serverNow` after fast-forwarding the page clock, so a view refresh before the
+click reset the countdown. The same fixture pattern is the likely cause of the
+audit hangs. This push advances the fixture server clock with the page clock
+in both tests (test code only; app, assertions and timeouts unchanged).
+Locally: audit and return-notice tests 44/44 across four profiles; types, lint
+and format clean. Locally `private-loading-recovery.spec.ts:76` fails
+intermittently on the untouched `82cc902` too; CI passes it, so it is
+recorded, not changed.
+Next: wait for this push's Verify; once green, Task 2 (shared footer credit).
 
 **Round 7 Amendment A — pushed `e04669ea`; Verify #310 FAILED (WebKit only).**
 Desktop, Pixel and every non-browser gate passed. WebKit's existing minimum
