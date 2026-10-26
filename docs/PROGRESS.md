@@ -1,5 +1,24 @@
 # Status for reviewer
 
+**Beta release (D110) and organiser-console fix — pushed; Verify pending.**
+A real-server walkthrough with six simulated players found that the
+round-table shield existed only on the organiser's player screen, which real
+games do not give organiser powers; it now lives in the organiser console,
+which mid-game leads with its controls instead of the lobby chrome. Beta tag
+beside the wordmark (entry, overlays) and in the game top bar from 360px;
+below that it moves into Menu. Simulated full games now give the shield every
+round and check every player sees it. 36 phone captures (organiser, console,
+player at each step) are in `docs/screens/beta-walkthrough/`; the solo
+multi-device script is in `docs/MANUAL_TESTS.md`.
+Local: browser suite 527 passed, 1 failed, 72 skipped; rehearsal 3 of 4. Both
+failures (Round 5 matrix bounding box race; disconnected-player observer log)
+pass when rerun alone; the latter also failed on #320 before this work. Likely
+mechanism: opening another test page blurs the observer, the app records an
+away state and hides the game until focus returns, which a test page never
+gets. Recorded as a follow-up rather than changed here.
+Next: Verify on this push; owner reviews the walkthrough and runs the solo
+script; then launch steps 1-6 on approval.
+
 **October missions-off and round-table shields COMPLETE — main `19f1b4f`,
 Verify #322 GREEN.** New games start without missions and show a hideable
 "Missions are coming soon" notice; the organiser records the round table's
