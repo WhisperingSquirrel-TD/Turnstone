@@ -150,6 +150,11 @@ test('all public pages fit the requested widths in portrait and landscape', asyn
   for (const route of PUBLIC_MARKETING_ROUTE_PATHS) {
     const response = await page.goto(route);
     expect(response?.status(), route).toBe(200);
+    if (route === '/') {
+      // Measure the hydrated entry, not the static first paint it replaces.
+      await expect(page.locator('.entry-experience')).toBeVisible();
+      await expect(page.getByTestId('button-create-game')).toBeVisible();
+    }
     for (const width of widths) {
       for (const height of [
         Math.max(900, width + 100),
@@ -179,7 +184,7 @@ test('all public pages fit the requested widths in portrait and landscape', asyn
             });
           const copySizes = Array.from(
             document.querySelectorAll(
-              'main p, main li, main summary, main dt, main dd, main blockquote, main label, main a, footer .brand-credit',
+              'main p, main li, main summary, main dt, main dd, main blockquote, main label, main a, .brand-credit, .brand-credit small',
             ),
           )
             .filter(visible)

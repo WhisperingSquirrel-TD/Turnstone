@@ -239,8 +239,13 @@
   min-height: 3.5rem;
   border-top: 1px solid var(--stone);
   color: var(--ash);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.25rem;
+}
+
+/* The credit is readable copy; keep the UA <small> step from shrinking it. */
+.brand-credit small {
+  font-size: inherit;
 }
 
 .public-home-footer .brand-credit {
