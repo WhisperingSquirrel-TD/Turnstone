@@ -10,19 +10,21 @@ text is 15px. #312 (`2af56ea`, CLAUDE.md) also failed the rename guard; the
 repository is now named by URL (`c024b4a`). #313 and #314: the layout audit
 hung after `deal-released` until its unchanged 120s timeout. A cold Vite cache
 reloaded pages when it optimised the entry's lazy `react-dom/client`;
-pre-bundled with a unit guard (`5ba1e60`). #315 (`01227d7`, failure-only
-page-state diagnostics): layout audit green on all four profiles, but iPad's
-SHADOW return-notice test pressed "I'm shielded" and the shield stayed open
-with no acknowledgement sent. Cause: the shield countdown uses the
-server-corrected clock (DECISIONS), while fixtures reported real time as
-`serverNow` after fast-forwarding the page clock, so a view refresh before the
-click reset the countdown. The same fixture pattern is the likely cause of the
-audit hangs. This push advances the fixture server clock with the page clock
-in both tests (test code only; app, assertions and timeouts unchanged).
-Locally: audit and return-notice tests 44/44 across four profiles; types, lint
-and format clean. Locally `private-loading-recovery.spec.ts:76` fails
-intermittently on the untouched `82cc902` too; CI passes it, so it is
-recorded, not changed.
+pre-bundled with a unit guard (`5ba1e60`). #315 (`01227d7`, failure-only page-state diagnostics): iPad's SHADOW
+return-notice test pressed "I'm shielded" and nothing was sent; fixtures
+reported real time as `serverNow` after fast-forwarding the page clock, so a
+refresh could reset the server-corrected shield countdown. Fixture server
+clocks now advance with the page clock (`d4362c7`, test code only). #316: the
+diagnostics showed the real cause of the audit hangs, an app bug. A window
+blur during DEAL (e.g. a phone notification shade) re-arms the shield while
+the resume cover hides it; on focus the card remounted but `showModal` was
+never called, leaving a closed dialog displayed over the game. The open/close
+effect now follows the exact mount condition (`5176ea2`); new regression
+`e2e/shield-refocus.spec.ts` failed on all four profiles before the fix and
+passes after. Types, lint, format and 152 client unit tests pass. No assertion
+removed or relaxed; no timeout raised. Locally
+`private-loading-recovery.spec.ts:76` fails intermittently on the untouched
+`82cc902` too; CI passes it, so it is recorded, not changed.
 Next: wait for this push's Verify; once green, Task 2 (shared footer credit).
 
 **Round 7 Amendment A — pushed `e04669ea`; Verify #310 FAILED (WebKit only).**
