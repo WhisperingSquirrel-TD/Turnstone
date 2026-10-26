@@ -32,11 +32,62 @@ type AuditDiagnostics = {
 
 const auditDiagnostics = new WeakMap<TestInfo, AuditDiagnostics>();
 
-test.afterEach(async ({ browserName }, info) => {
+test.afterEach(async ({ browserName, page }, info) => {
   const diagnostics = auditDiagnostics.get(info);
   auditDiagnostics.delete(info);
   if (info.status === info.expectedStatus) return;
   if (!diagnostics) return;
+  // Identify what blocks the next interaction by test IDs and classes only;
+  // never log page text, which can include a held role.
+  const pageState = await page
+    .evaluate(() => {
+      const describe = (element: Element | null) =>
+        element
+          ? [
+              element.tagName.toLowerCase(),
+              element.getAttribute('data-testid'),
+              element.getAttribute('role'),
+              element.className && typeof element.className === 'string'
+                ? element.className.split(/\s+/).slice(0, 3).join('.')
+                : null,
+            ]
+              .filter(Boolean)
+              .join('|')
+          : null;
+      const topAt = (selector: string) => {
+        const target = document.querySelector(selector);
+        if (!target) return { selector, present: false };
+        const box = target.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          box.left + box.width / 2,
+          box.top + box.height / 2,
+        );
+        return {
+          selector,
+          present: true,
+          box: [box.left, box.top, box.width, box.height].map(Math.round),
+          hit: describe(hit),
+          covered: hit !== null && hit !== target && !target.contains(hit),
+        };
+      };
+      return {
+        path: location.pathname,
+        phase:
+          document
+            .querySelector('[data-testid="player-game"]')
+            ?.getAttribute('data-phase') ?? null,
+        openDialogs: Array.from(
+          document.querySelectorAll('dialog[open], [role="dialog"]'),
+        ).map(describe),
+        activeElement: describe(document.activeElement),
+        targets: [
+          '[data-testid="game-help-disclosure"] summary',
+          '[role="tab"]',
+          '[data-testid="button-hold-reveal"]',
+        ].map(topAt),
+      };
+    })
+    .catch((error: unknown) => ({ unavailable: String(error) }));
   const completedStageCounts = diagnostics.completed.reduce<
     Record<string, number>
   >((counts, entry) => {
@@ -54,6 +105,7 @@ test.afterEach(async ({ browserName }, info) => {
         }
       : null,
     completedStageCounts,
+    pageState,
   };
   console.log(`layout-audit-failure ${JSON.stringify(summary)}`);
   await info.attach('layout-audit-timing.json', {
