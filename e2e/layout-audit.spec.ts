@@ -33,6 +33,29 @@ test('night completion checks the submitted round, not a new round’s dock cont
   ).toBeVisible();
 });
 
+test('the focus pass never tabs out of the page and blurs the window', async ({
+  page,
+}) => {
+  // A window blur re-arms the DEAL privacy shield; tabbing off the last
+  // control blurred the audited page and stalled the CI layout audit.
+  await page.setContent(
+    '<button>first</button><button id="last">last</button>',
+  );
+  await page.evaluate(() => {
+    const events: string[] = [];
+    (window as unknown as { auditEvents: string[] }).auditEvents = events;
+    window.addEventListener('blur', () => events.push('blur'));
+  });
+  await page.focus('#last');
+  await auditFocusAndBorders(page, 'last-control-focused');
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { auditEvents: string[] }).auditEvents,
+    ),
+  ).toEqual([]);
+  await expect(page.locator(':focus')).toHaveCount(1);
+});
+
 test('owner regression: clipped focus ring is detected and an inset ring stays visible', async ({
   page,
 }) => {

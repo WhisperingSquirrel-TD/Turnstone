@@ -550,16 +550,6 @@ for (const width of widths)
             await audit('deal-held');
             await page.mouse.up();
             await audit('deal-released');
-            // A window blur during DEAL legitimately re-arms the shield
-            // (privacy); dismiss it as a player would and record that it did.
-            if (
-              await page
-                .getByRole('dialog', { name: 'Shield your screen' })
-                .isVisible()
-            ) {
-              console.log('layout-audit: shield re-armed after deal-released');
-              await dismissShield();
-            }
           }
         }
         const help = page.getByTestId('game-help-disclosure');

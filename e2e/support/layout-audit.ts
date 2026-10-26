@@ -13,7 +13,21 @@ export async function auditFocusAndBorders(
   page: Page,
   screen: string,
 ): Promise<LayoutFinding[]> {
-  await page.keyboard.press('Tab');
+  // Tabbing off the last control leaves the page and blurs the window, which
+  // the game treats as the player stepping away (it re-arms the DEAL shield).
+  // From the last control, step backwards instead so focus stays in the page.
+  const position = await page.evaluate(() => {
+    const scope = document.querySelector('dialog[open]:modal') ?? document;
+    const tabbable = Array.from(
+      scope.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.getClientRects().length > 0);
+    if (document.activeElement !== tabbable.at(-1)) return 'other';
+    return tabbable.length > 1 ? 'last' : 'only';
+  });
+  if (position === 'other') await page.keyboard.press('Tab');
+  else if (position === 'last') await page.keyboard.press('Shift+Tab');
   return page.evaluate((name) => {
     const findings: LayoutFinding[] = [];
     const selector = (el: Element) =>

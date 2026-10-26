@@ -1,5 +1,18 @@
 # Status for reviewer
 
+**Layout-audit stall root cause fixed — Verify pending.** #324 was cancelled
+(Pixel/desktop browser jobs hit the 10-minute job limit) and #325 failed: 7 of
+8 audit cases stalled after `deal-released` behind a re-armed DEAL shield. The
+new window-event diagnostics showed a blur/focus pair about 7.7s in. Cause:
+the audit's focus pass presses Tab, and from the last focusable control Tab
+leaves the page, blurring the window; the game correctly treats a blur in
+DEAL as the player stepping away and re-arms the shield. This also explains
+the intermittent stalls since #308. The focus pass now steps back with
+Shift+Tab from the last control (regression test first in
+`e2e/layout-audit.spec.ts`); the earlier dismiss-the-shield tolerance is
+removed. Local: auditor tests 56/56, full application audit 32/32 on four
+profiles. Old screenshots showing the former name were replaced (`ad1c79c`).
+
 **Beta release (D110) and organiser-console fix — pushed; Verify pending.**
 A real-server walkthrough with six simulated players found that the
 round-table shield existed only on the organiser's player screen, which real
