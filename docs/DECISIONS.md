@@ -1853,3 +1853,21 @@ the round-table shield and Move-on sat several screens down. Mid-game the
 console now leads with its own "Game controls" heading, current step, time,
 the shield and the controls; inviting a late player follows as a section. The
 pre-game lobby is unchanged.
+
+## D111 — A window blur does not blank public screens (26 October 2026)
+
+**Defect:** a window `blur` (another window focused, a phone notification
+shade, a test opening another page) recorded an "away" state and replaced the
+whole game with the resume overlay until focus returned; every `focus` also
+ran the full resume flow, briefly blanking the screen. Public screens could
+stay blank on laptops and presenter displays, and this caused intermittent
+real-server and recovery test failures.
+
+**Choice:** a blur alone still covers private moments (role reveal, night,
+private votes, Notes) and re-arms the DEAL shield exactly as before, but
+leaves public screens visible. Hiding the page, page hide and going offline
+still mark the player away and show the "while you were away" flow. A plain
+refocus quietly refreshes the view; only a real absence runs the resume
+flow. Regression: `e2e/public-blur.spec.ts` (fails before, passes after on
+all four profiles); `e2e/shield-refocus.spec.ts` keeps the DEAL re-arm. No
+privacy or secrecy check changed.

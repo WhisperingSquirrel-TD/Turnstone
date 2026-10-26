@@ -1749,9 +1749,19 @@ function PlayerGame() {
       resync();
     };
     const onOnline = () => resync();
-    const onFocus = () => resync();
+    // Only a real absence needs the resume flow; a plain refocus quietly
+    // refreshes so public screens never blank (D111).
+    const onFocus = () => {
+      if (awaySnapshot.current) resync();
+      else void gameQuery.refetch();
+    };
     const onOffline = () => markAwayAndCover(true);
-    const onBlur = () => markAwayAndCover(false);
+    // A blur alone covers private moments (and re-arms the DEAL shield) but
+    // leaves public screens visible; hiding, page hide and offline still
+    // mark the player away (D111).
+    const onBlur = () => {
+      if (returnState.current.inPrivateMoment) markAwayAndCover(false);
+    };
     const onPageHide = () => {
       pageIsHiding.current = true;
       markAwayAndCover(false, true);
