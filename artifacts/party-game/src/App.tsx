@@ -1530,12 +1530,15 @@ function PlayerGame() {
       });
   }, [notesOpen, phaseIsPrivate, id, reveal.mutateAsync, reveal.reset]);
 
+  // Follow the exact mount condition: a card remounted after a resume cover
+  // must open as a modal, not stay a closed dialog over the game.
+  const shieldCardMounted = !isResuming && showShieldCard;
   useEffect(() => {
     const dialog = shieldDialog.current;
     if (!dialog) return;
-    if (showShieldCard && !dialog.open) dialog.showModal();
-    if (!showShieldCard && dialog.open) dialog.close();
-  }, [showShieldCard]);
+    if (shieldCardMounted && !dialog.open) dialog.showModal();
+    if (!shieldCardMounted && dialog.open) dialog.close();
+  }, [shieldCardMounted]);
 
   useEffect(() => {
     if (!held) return;
@@ -3657,7 +3660,7 @@ function PlayerGame() {
             />
           </div>
         )}
-        {!isResuming && showShieldCard && (
+        {shieldCardMounted && (
           <ShieldCard
             ref={shieldDialog}
             countdown={shieldCountdown}
