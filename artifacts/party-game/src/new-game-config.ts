@@ -20,5 +20,7 @@ export function buildNewGameConfig(input: NewGameConfigInput) {
     roundTable: {
       revealStyle: input.revealStyle ?? 'speaker-circle',
     },
+    // Missions have no content yet; games show a notice instead (MISSIONS-REVIEW).
+    missions: { enabled: false },
   });
 }

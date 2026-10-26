@@ -56,6 +56,7 @@ import { BrandFooter, BrandSurfaceContext } from './BrandFooter';
 import {
   GameBottomBar,
   GameHelpDisclosure,
+  MissionsComingNotice,
   PlayerTile,
   GameStatusBar,
   WhatIsHappeningCard,
@@ -3457,6 +3458,9 @@ function PlayerGame() {
                     )}
                   </section>
                 )}
+                {!full.missionsEnabled &&
+                  !full.rehearsal &&
+                  !phaseIsPrivate && <MissionsComingNotice />}
                 {full.missionsEnabled && (
                   <section
                     className="mt-5 border-y border-stone py-4"

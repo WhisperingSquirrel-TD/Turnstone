@@ -57,4 +57,15 @@ describe('buildNewGameConfig', () => {
 
     expect(config.roundTable.revealStyle).toBe('one-by-one');
   });
+
+  it('starts new games without missions until mission content exists', () => {
+    const config = buildNewGameConfig({
+      gameName: 'Friday game',
+      playerCount: 8,
+      coCoordinatorCount: 0,
+      presenterEnabled: false,
+    });
+
+    expect(config.missions.enabled).toBe(false);
+  });
 });

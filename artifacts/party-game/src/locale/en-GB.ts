@@ -643,6 +643,11 @@ export const en = {
     prizePot: (pot: number, unit: string) => `${pot} ${unit}`,
     playersHeading: 'Players',
     whatIsHappening: 'What is happening',
+    missionsComing: {
+      title: 'Missions are coming soon',
+      body: 'This version plays the round table and the night. Group missions arrive in a later update.',
+      hide: 'Hide',
+    },
     tabGame: 'Game',
     tabPlayers: 'Players',
     tileSelected: 'Selected',

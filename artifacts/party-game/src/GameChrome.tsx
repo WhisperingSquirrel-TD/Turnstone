@@ -117,6 +117,48 @@ export function WhatIsHappeningCard({
   );
 }
 
+const missionsNoticeHiddenKey = 'oathstone.missionsNoticeHidden';
+
+function readMissionsNoticeHidden(): boolean {
+  try {
+    return window.localStorage.getItem(missionsNoticeHiddenKey) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Per-device notice while missions are switched off; holds no game data. */
+export function MissionsComingNotice() {
+  const [hidden, setHidden] = useState(readMissionsNoticeHidden);
+  if (hidden) return null;
+  return (
+    <section
+      className="game-happening-card"
+      data-testid="missions-coming-notice"
+      aria-labelledby="missions-coming-title"
+    >
+      <p id="missions-coming-title" className="game-screen-label">
+        {en.game.missionsComing.title}
+      </p>
+      <p className="game-happening-copy">{en.game.missionsComing.body}</p>
+      <button
+        className="quiet-action"
+        type="button"
+        onClick={() => {
+          try {
+            window.localStorage.setItem(missionsNoticeHiddenKey, '1');
+          } catch {
+            // Storage can be unavailable; hiding still applies to this view.
+          }
+          setHidden(true);
+        }}
+      >
+        {en.game.missionsComing.hide}
+      </button>
+    </section>
+  );
+}
+
 export function GameHelpDisclosure({
   children,
   screenLockNotice,
