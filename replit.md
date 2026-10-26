@@ -20,7 +20,7 @@ Existing pnpm workspace retained: `artifacts/api-server` = requested apps/server
 
 `npm run verify` checks types, lint, formatting, unit/property/database integration tests, four-device Playwright/axe smoke, Lighthouse and high/critical dependency audit. Do not bypass a failing stage. Managed workflows must be running for browser checks.
 
-`npm run verify:full` is honestly unavailable until Milestone 2. `npm run db:migrate:dev` explicitly applies committed development migrations; never run it in production. No production startup DDL.
+`npm run verify:full` is honestly unavailable until Milestone 2. `npm run db:migrate:dev` explicitly applies committed development migrations; never run it in production. No production startup DDL. For production, the owner runs `pnpm run db:migrate:production` once per release with `OATHSTONE_CONFIRM_PRODUCTION_MIGRATION=apply` and the production `DATABASE_URL`; it is forward-only, safe to re-run, and never a startup or build hook (see `docs/LAUNCH.md`).
 
 Run services with their artifact-managed workflows. Node 24 LTS. Database and session secrets remain in workspace Secrets, never read out or stored in files.
 

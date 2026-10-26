@@ -24,7 +24,8 @@
     "audit": "tsx scripts/src/audit.mjs",
     "verify": "pnpm run typecheck && pnpm run typecheck:tests && pnpm run lint && pnpm run format:check && pnpm run test:build && pnpm run test:unit && pnpm run test:property && pnpm run test:server-coverage && pnpm run test:scenario-workers && pnpm run test:scenarios && pnpm run test:smoke && pnpm run test:accessibility && pnpm run audit",
     "verify:full": "pnpm run verify && pnpm --filter @workspace/scripts run scenarios:full",
-    "db:migrate:dev": "pnpm --filter @workspace/db exec tsx src/migrate-dev.ts"
+    "db:migrate:dev": "pnpm --filter @workspace/db exec tsx src/migrate-dev.ts",
+    "db:migrate:production": "pnpm --filter @workspace/db exec tsx src/migrate-production.ts"
   },
   "private": true,
   "dependencies": {
