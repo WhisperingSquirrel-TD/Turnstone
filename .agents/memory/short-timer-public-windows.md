@@ -1,6 +1,6 @@
 ---
 name: Short test timers and public-screen assertions
-description: Rehearsal servers give every timed phase 15 seconds; hold the phase with Pause before slow public-screen checks.
+description: Rehearsal servers give every timed phase 15 seconds; extend before a deliberate move-on and pause before slow public-screen checks.
 ---
 
 The rehearsal web server runs with `--test-only-short-timers`, so every timed
@@ -16,3 +16,11 @@ have the organiser press "Pause game" (`button-coordinator-pause`) first and
 timer or raise a timeout to cover it. First seen in
 `e2e/disconnected-player-live.spec.ts` (observer log missing; page already in
 VOTE).
+
+Second trap: a test that spends minutes in a phase leaves its 15-second
+deadline long overdue. The moment the last pending player acts, the deadline
+scheduler advances the phase itself, and a test click on "Move everyone on"
+then lands on the next phase (with a fresh version, so `STALE_VERSION` does
+not catch it) and skips it. Before the final action, press an extend button
+(`button-extend-15`) and wait for the version to change, so the organiser's
+move is the one that ends the phase.

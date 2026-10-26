@@ -497,6 +497,15 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
       total: 6,
     });
     await expect(connectedRow.locator('button')).toHaveCount(0);
+    // Short test timers left DEAL's deadline long overdue, so the scheduler
+    // would advance the moment the last player is done and the click below
+    // would then move DEBATE on to VOTE. Extend first so the organiser's move
+    // is the one that ends DEAL.
+    const dealVersion = (await readView(coordinator, gameId)).version;
+    await coordinator.getByTestId('button-extend-15').click();
+    await expect
+      .poll(async () => (await readView(coordinator, gameId)).version)
+      .toBeGreaterThan(dealVersion);
     await acknowledgeRole(pages[4]!);
     await expect(coordinator.getByTestId('coordinator-progress')).toHaveText(
       '6 of 6 done',

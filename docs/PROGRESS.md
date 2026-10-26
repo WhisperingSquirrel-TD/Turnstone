@@ -1,5 +1,40 @@
 # Status for reviewer
 
+**Overnight ship-readiness (Claude Code) — main pushed; Verify pending on this push.**
+Pushed on `e5c0e3a`: D111 (a window blur no longer hides public screens; only
+private moments re-cover), the guarded production migration command
+(`pnpm run db:migrate:production`, needs
+`OATHSTONE_CONFIRM_PRODUCTION_MIGRATION=apply`), the October beta runbook in
+`docs/LAUNCH.md`, and a first fix for `disconnected-player-live`.
+Verify #330 (`e5c0e3a`): every job green except rehearsal-live, where
+`disconnected-player-live` found the observer already in VOTE. Root cause (test
+timing, not game logic): the test server gives each phase 15 seconds, so DEAL's
+deadline was long overdue; when the last player acknowledged, the deadline
+scheduler advanced to DEBATE and the test's "Move everyone on" click then
+moved DEBATE on to VOTE (fresh version, so `STALE_VERSION` correctly did not
+apply). With missions off (D109) there is no MISSION phase to absorb it. Fix:
+the organiser extends DEAL by 15 minutes before the last acknowledgement and
+pauses DEBATE for the four observer-log checks, then resumes. No timer,
+timeout or assertion was weakened. Locally against PostgreSQL 16: the test 3/3
+with `--repeat-each=3`, full rehearsal config 4/4; earlier on the same code
+unit and integration 883/883, browser specs touched by D111 and the skip-link
+fix 172/172, full browser suite 548 passed / 0 failed. Lesson saved in
+`.agents/memory/short-timer-public-windows.md`.
+Local production smoke (no deploy): `db:migrate:production` on a fresh
+database (twice, idempotent); `build:oathstone` refuses a non-HTTPS
+`PUBLIC_BASE_URL` and builds with a placeholder `https://oathstone.example`;
+`start:oathstone` with production env answers `/healthz` 200, `/readyz`
+`{"status":"ready"}`, entry, game route and `/api/csrf` 200, with CSP, HSTS,
+`X-Frame-Options: DENY` and `X-Robots-Tag: noindex` present.
+Organiser-flow note: in a real game an organiser tapping "Move everyone on" in
+the same instant a timer expires could also skip the next step. Real steps
+last minutes and the console shows the step change, so this is low risk for
+the beta; recorded as an open item rather than changed tonight.
+Next: Verify on this push. Then Tom: solo device test
+(`docs/MANUAL_TESTS.md`, "Beta solo play-through"), then the runbook in
+`docs/LAUNCH.md`. Open items: H1 SHADOW second-step stall (seen once on #327,
+passed on #328); Q6; Task 2 credit audit parked; move-on/timer race above.
+
 **Skip-link 44px focus shift COMPLETE — main `b2ffa58`; Verify #328 (`92b55ed`) GREEN.** #327 was red on rehearsal-live only (see below). Cause: `a[href='#main']:focus
 { position: relative }` in `index.css` put the 44px skip link into the shell's
 flex flow, so leaving it moved every control up 44px (a radio tap landed on
