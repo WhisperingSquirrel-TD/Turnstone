@@ -515,6 +515,11 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
     // DEAL deliberately shields the player UI for the entire private phase.
     // The observer's public projection was checked at each action above; once
     // that phase ends, retain all four public player-screen log assertions.
+    // Short test timers give the next public phase 15 seconds, so hold it as
+    // a real organiser would rather than racing the deadline into VOTE.
+    const pause = coordinator.getByTestId('button-coordinator-pause');
+    await pause.click();
+    await expect(pause).toHaveText('Resume game');
     await expect(observer.getByTestId('list-public-log')).toContainText(
       'Faye’s pending action was skipped after a disconnection.',
     );
@@ -527,6 +532,8 @@ test('disconnected player can be skipped, undone, removed, reinstated and return
     await expect(observer.getByTestId('list-public-log')).toContainText(
       'Faye returned to the game.',
     );
+    await pause.click();
+    await expect(pause).toHaveText('Pause game');
     const completedSummaryPath = testInfo.outputPath(
       'q6-real-server-summary.json',
     );
