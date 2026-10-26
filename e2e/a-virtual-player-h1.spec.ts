@@ -1200,14 +1200,22 @@ test('virtual players complete a real game across desktop and phone contexts @vi
         const label = `${String(step).padStart(2, '0')}-${phase.toLowerCase()}`;
         for (const [role, page] of [
           ['organiser', organiserPage],
+          ['console', coordinatorScreen],
           ['player', pages[1]!],
-        ] as const)
+        ] as const) {
+          // Capture each screen from its top, as a person first sees it.
+          await page.evaluate(() => {
+            window.scrollTo(0, 0);
+            for (const element of Array.from(document.querySelectorAll('*')))
+              if (element.scrollTop > 0) element.scrollTop = 0;
+          });
           await page.screenshot({
             path: `${directory}/${label}-${role}.jpg`,
             type: 'jpeg',
             quality: 50,
             fullPage: true,
           });
+        }
       }
       if (!phaseTrail.includes(phase)) phaseTrail.push(phase);
       const phaseObservedAt = Date.now();
@@ -1541,10 +1549,11 @@ test('virtual players complete a real game across desktop and phone contexts @vi
       ) {
         if (phase === 'DEBATE') {
           // D109: the round table agrees the shield; the organiser records it
-          // on their own phone and every player sees who holds it.
+          // in the organiser console and every player sees who holds it.
           activePlayer = organiser;
-          activePage = organiserPage;
-          const shieldPanel = organiserPage.getByTestId('round-table-shield');
+          activePage = coordinatorScreen;
+          const shieldPanel =
+            coordinatorScreen.getByTestId('round-table-shield');
           await expect(
             shieldPanel,
             'The organiser can record the round-table shield during the talk.',
@@ -1553,8 +1562,8 @@ test('virtual players complete a real game across desktop and phone contexts @vi
           const holderName = (
             await shieldPanel.locator('.game-shield-option').first().innerText()
           ).trim();
-          await pauseForHumanTiming(organiserPage, scenario.stage);
-          await organiserPage.evaluate(() =>
+          await pauseForHumanTiming(coordinatorScreen, scenario.stage);
+          await coordinatorScreen.evaluate(() =>
             (document.activeElement as HTMLElement | null)?.blur(),
           );
           await choice.evaluate((element) =>

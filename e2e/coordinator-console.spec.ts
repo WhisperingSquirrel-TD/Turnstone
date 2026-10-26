@@ -732,3 +732,73 @@ test('the server-selected player automatically receives blind organiser controls
   await expect(controls.getByText('Traitor', { exact: true })).toHaveCount(0);
   await expect(controls.getByText('Faithful', { exact: true })).toHaveCount(0);
 });
+
+test('the organiser console records the round table’s shield choice (D109)', async ({
+  page,
+}) => {
+  const gameId = 'coordinator-console-test';
+  let view: FullView = {
+    ...createView(),
+    phase: 'DEBATE',
+    shieldsPublic: true,
+    coordinatorUndo: null,
+    coordinatorSkippedSeats: [],
+  };
+  const commands: Array<Record<string, unknown>> = [];
+  await page.route('**/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/delegates`, (route) =>
+    route.fulfill({ json: { limit: 1, seatIds: [] } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/presence`, (route) =>
+    route.fulfill({ json: { status: 'online' } }),
+  );
+  await page.route(`**/games/${gameId}/commands`, async (route) => {
+    const command = route.request().postDataJSON() as Record<string, unknown>;
+    commands.push(command);
+    if (command.type === 'AllocatePower')
+      view = {
+        ...view,
+        version: view.version + 1,
+        shieldHolderIds: command.holders as string[],
+      };
+    await route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    });
+  });
+
+  await page.goto(`/coordinate/${gameId}`);
+  const panel = page.getByTestId('round-table-shield');
+  await expect(panel).toBeVisible();
+  // Mid-game the console leads with the organiser's controls, not the lobby.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'Game controls',
+  );
+  await expect(page.getByTestId('beta-tag')).toHaveCount(1);
+  await expect(page.getByTestId('game-status-phase')).toHaveCount(0);
+  const stepTop = await page
+    .getByTestId('coordinator-current-step')
+    .evaluate((element) => element.getBoundingClientRect().top);
+  const inviteTop = await page
+    .getByRole('heading', { name: 'Invite a late player' })
+    .evaluate((element) => element.getBoundingClientRect().top);
+  expect(stepTop).toBeLessThan(inviteTop);
+  await panel.getByRole('radio', { name: 'Jamie' }).check();
+  await panel.getByRole('button', { name: 'Give the shield to Jamie' }).click();
+  await expect
+    .poll(() => commands.find((command) => command.type === 'AllocatePower'))
+    .toMatchObject({ holders: ['seat-jamie'] });
+  await expect(page.getByTestId('shield-holder')).toHaveText(
+    'Jamie holds the shield until dawn.',
+  );
+  await expect(panel).toHaveCount(0);
+});

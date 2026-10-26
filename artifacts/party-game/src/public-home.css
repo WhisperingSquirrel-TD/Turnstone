@@ -724,3 +724,23 @@
   line-height: 1.4;
   text-align: center;
 }
+
+/* D110: below 360px the game top bar has no room for the tag; Menu shows it. */
+.game-menu-beta {
+  display: none;
+}
+
+@media (max-width: 359px) {
+  .game-status-bar > .beta-tag {
+    display: none;
+  }
+
+  .game-menu-beta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+}

@@ -51,6 +51,7 @@ export function GameStatusBar({
   joinedLabel,
   onOpenNotes,
   menuContent,
+  showBeta = true,
 }: {
   phase: string;
   cycle: number;
@@ -60,6 +61,8 @@ export function GameStatusBar({
   joinedLabel?: string;
   onOpenNotes?: () => void;
   menuContent?: ReactNode;
+  /** Off where the screen header already shows the beta tag. */
+  showBeta?: boolean;
 }) {
   return (
     <div
@@ -72,7 +75,7 @@ export function GameStatusBar({
           {gameStatusLabel(phase, cycle)}
         </span>
       </span>
-      <BetaTag />
+      {showBeta && <BetaTag />}
       <div className="game-status-right">
         {showRemaining && (
           <span
@@ -100,7 +103,15 @@ export function GameStatusBar({
         {menuContent && (
           <details className="game-status-menu" data-testid="game-status-menu">
             <summary>{en.nav.menu}</summary>
-            <div className="game-status-menu__content">{menuContent}</div>
+            <div className="game-status-menu__content">
+              {showBeta && (
+                <p className="game-menu-beta" data-testid="menu-beta-note">
+                  <BetaTag />
+                  <span>{en.app.betaMenuNote}</span>
+                </p>
+              )}
+              {menuContent}
+            </div>
           </details>
         )}
       </div>

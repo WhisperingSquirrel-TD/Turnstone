@@ -72,6 +72,11 @@ test.afterEach(async ({ browserName, page }, info) => {
       };
       return {
         path: location.pathname,
+        // Window focus/visibility events re-arm the DEAL shield; record them.
+        windowEvents: (
+          (window as unknown as { __auditWindowEvents?: string[] })
+            .__auditWindowEvents ?? []
+        ).slice(-12),
         phase:
           document
             .querySelector('[data-testid="player-game"]')
@@ -138,6 +143,22 @@ for (const width of widths)
         colorScheme: palette === 'night' ? 'dark' : 'light',
       });
       await page.clock.install();
+      await page.addInitScript(() => {
+        const events: string[] = [];
+        (
+          window as unknown as { __auditWindowEvents?: string[] }
+        ).__auditWindowEvents = events;
+        const started = performance.now();
+        for (const type of ['blur', 'focus', 'pagehide', 'pageshow'])
+          window.addEventListener(type, () =>
+            events.push(`${type}@${Math.round(performance.now() - started)}`),
+          );
+        document.addEventListener('visibilitychange', () =>
+          events.push(
+            `visibility:${document.visibilityState}@${Math.round(performance.now() - started)}`,
+          ),
+        );
+      });
       // The fixture server's clock advances with the page clock, as a real
       // server's would; otherwise every view resets the client clock offset.
       let clockAdvanceMs = 0;
@@ -529,6 +550,16 @@ for (const width of widths)
             await audit('deal-held');
             await page.mouse.up();
             await audit('deal-released');
+            // A window blur during DEAL legitimately re-arms the shield
+            // (privacy); dismiss it as a player would and record that it did.
+            if (
+              await page
+                .getByRole('dialog', { name: 'Shield your screen' })
+                .isVisible()
+            ) {
+              console.log('layout-audit: shield re-armed after deal-released');
+              await dismissShield();
+            }
           }
         }
         const help = page.getByTestId('game-help-disclosure');

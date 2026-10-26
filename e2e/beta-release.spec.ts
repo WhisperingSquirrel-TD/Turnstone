@@ -35,6 +35,34 @@ test('every game screen shows the beta tag in its top bar', async ({
   );
   await page.goto(`/game/${gameId}?clips=off`);
   await expect(
-    page.getByTestId('game-status-bar').getByTestId('beta-tag'),
+    page.locator('[data-testid="game-status-bar"] > [data-testid="beta-tag"]'),
   ).toHaveText('Beta');
+});
+
+test('on 320px phones the beta tag moves from the top bar into Menu', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const gameId = 'beta-narrow';
+  const view: FullView = { ...createPublicView(gameId), phase: 'DEBATE' };
+  const envelope = () => ({
+    serverNow: Date.now(),
+    version: view.version,
+    view,
+  });
+  await installLiveSocketViewFixture(page, envelope);
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/**`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.goto(`/game/${gameId}?clips=off`);
+  await expect(
+    page.locator('[data-testid="game-status-bar"] > [data-testid="beta-tag"]'),
+  ).toBeHidden();
+  await page.getByTestId('game-status-menu').locator('summary').click();
+  await expect(
+    page.getByTestId('game-status-menu').getByTestId('menu-beta-note'),
+  ).toBeVisible();
 });

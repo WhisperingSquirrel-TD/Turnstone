@@ -16,6 +16,8 @@ export const en = {
   nav: { label: 'Main', home: 'Home', play: 'Play', menu: 'Menu' },
   app: {
     beta: 'Beta',
+    betaMenuNote:
+      'Oathstone is in beta. Tell your organiser if anything looks wrong.',
     securityUnavailable:
       'The secure connection could not be established. Check your connection, then try again.',
     tryAgain: 'Try again',

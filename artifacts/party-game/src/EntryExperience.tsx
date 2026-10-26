@@ -689,9 +689,10 @@ export function EntryExperience({
         key={screen}
       >
         {((screen.startsWith('join-') && screen !== 'join-wait') ||
-          screen === 'lobby') && (
+          (screen === 'lobby' && !lateJoinMode)) && (
           <div className="entry-stage-chrome">
             <GameStatusBar
+              showBeta={false}
               phase={screen === 'lobby' ? 'LOBBY' : 'JOIN'}
               cycle={1}
               remaining={screen === 'lobby' ? players.length : 0}
@@ -1435,12 +1436,26 @@ export function EntryExperience({
         )}
 
         {screen === 'lobby' && (
-          <section className="entry-lobby enter" aria-labelledby="entry-title">
-            <h1 id="entry-title" className="entry-heading">
-              {lateJoinMode ? copy.lateInviteHeading : copy.lobbyHeading}
-            </h1>
+          <section
+            className="entry-lobby enter"
+            aria-labelledby={
+              lateJoinMode ? 'coordinator-console-title' : 'entry-title'
+            }
+          >
+            {/* Mid-game the console supplies the page heading and the
+                organiser's controls come first; inviting a late player is a
+                secondary task further down. */}
+            {!lateJoinMode && (
+              <h1 id="entry-title" className="entry-heading">
+                {copy.lobbyHeading}
+              </h1>
+            )}
+            {lateJoinMode && coordinatorPanel}
             {lateJoinMode && (
               <>
+                <h2 className="entry-section-heading">
+                  {copy.lateInviteHeading}
+                </h2>
                 <p className="entry-help">{copy.lateInviteBody}</p>
                 <button
                   className="entry-secondary-action"
@@ -1524,7 +1539,7 @@ export function EntryExperience({
               {!lateJoinMode && players.length < 5 && (
                 <p className="entry-help">{copy.minimumPlayers(5)}</p>
               )}
-              {coordinatorPanel}
+              {!lateJoinMode && coordinatorPanel}
               {!coordinatorPanel && (
                 <section aria-labelledby="entry-roster-heading">
                   <h2

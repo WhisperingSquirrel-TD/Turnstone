@@ -1842,3 +1842,14 @@ your organiser if anything looks wrong." The static first paint shows the
 same tag and line so it does not flash a different layout. Public information
 pages are unchanged. The tag is plain text in the wordmark colour, not a
 logo, so the single-wordmark branding rule is unchanged.
+
+**Narrow phones (owner, 26 October 2026):** below 360px the game top bar has
+no room for the tag beside the game clock, so it moves into the Menu ("Oathstone
+is in beta…"); entry and overlay screens keep it at every width.
+
+**Organiser console mid-game:** the beta walkthrough showed the console led
+with the lobby chrome and "Invite a late player" while play was underway, so
+the round-table shield and Move-on sat several screens down. Mid-game the
+console now leads with its own "Game controls" heading, current step, time,
+the shield and the controls; inviting a late player follows as a section. The
+pre-game lobby is unchanged.

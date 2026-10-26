@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { FullView } from '@workspace/api-client-react';
 import { en } from './locale/en-GB';
 import { PendingPlayerControls } from './PendingPlayerControls';
+import { RoundTableShield, ShieldHolderLine } from './GameChrome';
 import { getAdvanceControlState, isAdvanceConflict } from './advance-control';
 import { secondsUntilServerDeadline, serverClockOffset } from './server-clock';
 import { createAdaptivePoller } from './polling-backoff';
@@ -17,7 +18,8 @@ export type CoordinatorCommand =
   | { type: 'RemoveDisconnectedSeat'; seatId: string }
   | { type: 'ReinstateDisconnectedSeat'; seatId: string }
   | { type: 'EndGameEarly' }
-  | { type: 'UndoCoordinatorAction' };
+  | { type: 'UndoCoordinatorAction' }
+  | { type: 'AllocatePower'; holders: string[] };
 
 export interface CoordinatorConsoleView {
   phase: FullView['phase'];
@@ -32,6 +34,8 @@ export interface CoordinatorConsoleView {
   coordinatorSkippedSeats?: FullView['coordinatorSkippedSeats'];
   coordinatorRestorableSeats?: FullView['coordinatorRestorableSeats'];
   seats: FullView['seats'];
+  shieldsPublic?: boolean;
+  shieldHolderIds?: string[];
   publicLog: FullView['publicLog'];
   coordinatorAlerts: FullView['coordinatorAlerts'];
   coordinatorUndo: FullView['coordinatorUndo'];
@@ -527,6 +531,27 @@ export function CoordinatorConsole({
             </dd>
           </div>
         </dl>
+      )}
+      {active && view.shieldsPublic && (
+        <>
+          <ShieldHolderLine
+            names={(view.shieldHolderIds ?? []).map(
+              (holderId) =>
+                view.seats.find((seat) => seat.id === holderId)?.name ?? '',
+            )}
+          />
+          {(view.shieldHolderIds ?? []).length === 0 &&
+            (view.phase === 'DEBATE' || view.phase === 'VERDICT') && (
+              <RoundTableShield
+                seats={view.seats.filter((seat) => seat.status === 'alive')}
+                pending={busy}
+                message=""
+                onGive={(seatId) =>
+                  void run({ type: 'AllocatePower', holders: [seatId] })
+                }
+              />
+            )}
+        </>
       )}
       {view.phase !== 'LOBBY' && (
         <PendingPlayerControls
