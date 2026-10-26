@@ -1810,3 +1810,24 @@ Keep error gallery captures on the same `day`/`night` filename convention as
 the full state audit. Replace the newly generated duplicate `light`/`dark`
 error aliases with their identical canonical captures; do not remove or alter
 user-supplied assets.
+
+## D109 — Missions off for the October release; round-table shields (owner, 26 October 2026)
+
+**Owner direction:** Approve Option A from `docs/MISSIONS-REVIEW.md`: new
+games start with missions switched off, and real games show a "Missions are
+coming soon" notice on public screens that each player can hide on their own
+device (practice games and private screens never show it). The pot, when
+missions return, is a real prize or bragging rights only.
+
+**Shields:** Keep shields in the October release and at Christmas. In
+October the round table decides who holds the shield by talking it out (a
+show of hands if needed); the organiser records the agreed name and everyone
+can see the holder until dawn. The owner chose this over a secret phone
+ballot to protect the Halloween date. Existing protection is unchanged: a
+shielded target is not murdered, dawn says no one was taken, and the Traitors
+are told privately that their target was protected. Secret shields must never
+reveal the holder.
+
+**Scope:** This is an owner-directed game-rule change recorded here, not a
+SPEC §3 edit. The 37-row mission CSV stays unimported until the Christmas
+mission design.

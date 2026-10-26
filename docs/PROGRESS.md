@@ -1,5 +1,15 @@
 # Status for reviewer
 
+**Missions off for October (D109) — pushed `ab6be53`; Verify pending.**
+New games start without missions; real games show a "Missions are coming
+soon" notice on public screens that players can hide per device (never in
+practice or on private screens). Tests first: config unit test and
+`e2e/missions-notice.spec.ts` (8/8 across four profiles). Local: full browser
+suite 500 passed, 0 failed, 72 skipped (all four profiles); 153 client unit
+tests, types, lint and format clean.
+Next: round-table shields (D109) — organiser records the agreed holder,
+public until dawn; secret shields never reveal the holder.
+
 **Missions review (Task 3, read-only) — `docs/MISSIONS-REVIEW.md`.**
 Missions do not exist in play yet: new games keep the MISSION phase on (20
 minutes per round by default) but it has no content, no result recording, no
