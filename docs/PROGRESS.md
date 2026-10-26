@@ -1,5 +1,14 @@
 # Status for reviewer
 
+**October missions-off and round-table shields COMPLETE — main `19f1b4f`,
+Verify #322 GREEN.** New games start without missions and show a hideable
+"Missions are coming soon" notice; the organiser records the round table's
+shield choice and everyone sees the holder until dawn (D109).
+Next: owner play-through on a phone as organiser; then launch steps 1-6
+(Reserved VM, production secrets, PUBLIC_BASE_URL, spend caps, DNS) on
+Tom's approval. Parked: Task 2 credit assertions (local stash only) and the
+skip-link 44px focus shift (suggested follow-up task).
+
 **Round-table shields (D109) — Verify #321 red (my audit step); fix pushed.**
 #321: rehearsal-live and every other job green (so #320's rehearsal failures
 did not recur); only the new layout-audit shield step failed on all four
