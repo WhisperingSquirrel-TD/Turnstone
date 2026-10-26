@@ -1,6 +1,14 @@
 # Status for reviewer
 
-**Round 7 Amendment A — pushed `3b531bcf`; Verify #309 FAILED (browsers only).**
+**Round 7 Amendment A — pushed `e04669ea`; Verify #310 FAILED (WebKit only).**
+Desktop, Pixel and every non-browser gate passed. WebKit's existing minimum
+body-copy test caught the new About link at 14px after hydration (the static
+fallback masked it in faster runs). Fixed to 15px, not a test relaxation:
+the full public-page portrait/landscape test now passes all four profiles.
+Next correction push is this one CSS change plus status/memory; the shared
+credit defect remains separate and follows A's green result, before missions.
+
+Previous Verify #309 on `3b531bcf` failed in browsers only.
 The cold layout audit and forced-night checks passed. Three later checks still
 expected the old root footer/private fallback; their selectors now distinguish
 the paper entry from the private shell and use the actual shared credit.

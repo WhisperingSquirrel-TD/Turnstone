@@ -9,6 +9,16 @@ When unauthenticated GitHub REST calls hit shared-IP rate limits or direct job-l
 
 **How to apply:** After each push, use the GitHub connection to inspect run status, job conclusions and annotations. Use it for job logs if direct public downloads are denied.
 
+Status reads through the connection can be stale, including returning queued
+after an earlier in-progress response. Use a fresh query parameter and
+`Cache-Control: no-cache` for mutable run/latest-run reads; confirm the head and
+completed job conclusions before declaring green or pushing again.
+
+**Why:** A cached queued response concealed an already completed failed run.
+
+**How to apply:** Cache-bust each status check, not just the first one. Completed
+job logs are immutable and do not need repeated downloads.
+
 For cancelled browser jobs, inspect setup timestamps and check-run annotations
 before treating cancellation as a product failure.
 
