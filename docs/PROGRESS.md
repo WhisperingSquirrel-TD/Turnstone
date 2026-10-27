@@ -1,6 +1,16 @@
 # Status for reviewer
 
-**Overnight ship-readiness (Claude Code) — main pushed; Verify pending on this push.**
+**SHIP-READY FOR TOM'S TESTS — main `e38ca59`; Verify #332 GREEN (every job).**
+Morning checklist for Tom (nothing has been deployed or published):
+1. Solo device test: `docs/MANUAL_TESTS.md`, "Beta solo play-through".
+2. If happy, follow the October beta runbook in `docs/LAUNCH.md` (Replit
+   Reserved VM, production database, production secrets, build and start
+   commands, then `db:migrate:production` once).
+3. Open items, none blocking the beta: H1 SHADOW second-step stall (seen once
+   on #327); organiser move-on at the instant a timer expires can skip the
+   next step (low risk with real timers); Q6; Task 2 credit audit parked.
+
+Overnight detail (Claude Code):
 Verify #331 (`0a024cf`): rehearsal-live and every browser and scenario job
 green; static-checks red on `typecheck:tests` (a closure lost `gameId`
 narrowing in my test edit; I had run `typecheck` but not `typecheck:tests`).
