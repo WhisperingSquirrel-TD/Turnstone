@@ -2867,7 +2867,7 @@ test('Round 7 Stage 2B Vote, Revote and Verdict screenshots', async ({
   }
 });
 
-test('Notes requests during SHADOW retain their purpose without acknowledging the night', async ({
+test('a departed seat during SHADOW is offered no Notes and acknowledges nothing', async ({
   page,
 }) => {
   const gameId = 'shadow-notes-purpose';
@@ -2911,14 +2911,12 @@ test('Notes requests during SHADOW retain their purpose without acknowledging th
     });
   });
   await page.goto(`/game/${gameId}`);
-  const rejectedNotes = page.waitForResponse(
-    (response) =>
-      response.url().endsWith(`/api/games/${gameId}/private-view`) &&
-      response.status() === 409,
-  );
-  await page.getByTestId('button-open-notes').click();
-  await rejectedNotes;
-  expect(notesRequests).toBe(1);
+  // Notes is offered only to living seats (owner phone test, 27 October
+  // 2026), so a departed seat cannot even ask; nothing private is requested.
+  await expect(page.locator('[data-phase="SHADOW"]')).toBeAttached();
+  await expect(page.getByTestId('game-status-bar')).toBeVisible();
+  await expect(page.getByTestId('button-open-notes')).toHaveCount(0);
+  expect(notesRequests).toBe(0);
   expect(commands).toEqual([]);
   await expect(page.getByTestId('private-choice-content')).toBeHidden();
   await expect(

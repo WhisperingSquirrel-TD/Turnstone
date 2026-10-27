@@ -1,5 +1,20 @@
 # Status for reviewer
 
+**Owner phone-test fixes (27 October) — pushed; Verify pending.**
+From Tom's practice game on Replit: Notes was offered to players who were out
+of the game, but the server refuses them private screens, so the sheet sat on
+"Opening your private screen…" (Notes is now offered only to living seats);
+the beta tag sat below the wordmark on overlay cards; the revealed votes had
+no visible heading; "What's this?" had no disclosure marker. Tests first in
+`e2e/help-disclosure.spec.ts`, `e2e/beta-release.spec.ts` and
+`VerdictScreen.test.tsx`. The departed-seat SHADOW Notes test now asserts no
+button, no private-view request and no command (stronger than the old 409
+path). Local: static checks, 884 unit tests, rehearsal 4/4, browser suite
+564 passed with only that test and rehearsal-only specs (run outside their
+config) failing; the updated files then 172/172. Known trade-off: a player
+who is out cannot reopen their notes (needs a server change; after the beta).
+Next: "Report an issue" mailto link in the footer for every player.
+
 **SHIP-READY FOR TOM'S TESTS — main `e38ca59`; Verify #332 GREEN (every job).**
 Morning checklist for Tom (nothing has been deployed or published):
 
