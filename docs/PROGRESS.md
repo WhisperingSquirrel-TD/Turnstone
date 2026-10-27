@@ -1,6 +1,14 @@
 # Status for reviewer
 
-**Report an issue link (D113) — pushed; Verify pending.** Phone-test fixes:
+**Welcome footer at the foot of the page — pushed; Verify pending.** Owner
+screenshot: the "made by Stackstone Consulting" credit sat mid-page on the
+welcome screen. Flow-footer entry screens now lay out the main area as a
+column with the credit pushed to the bottom; the footer pads its bottom so
+links keep 16px clear of the screen edge (the layout audit caught 2px).
+Test first: `e2e/entry-footer-position.spec.ts`. Local: static checks,
+browser suite (CI command) 588 passed / 0 failed, rehearsal 4/4.
+
+**Report an issue link (D113) — Verify #337 GREEN.** Phone-test fixes:
 Verify #336 GREEN on `bfc7af8`. The mailto link sits in the welcome footer,
 the entry header Menu and the game Menu (D113); a first footer-only version
 failed the layout audit locally (two-line fixed footers on phones) and was
