@@ -1908,3 +1908,22 @@ since organisers had no way to pass feedback on.
 
 **Consequence:** The Stackstone credit and mark are unchanged. Tests:
 `BrandFooter.test.tsx`, `tests/entry-host.test.ts`, `e2e/beta-release.spec.ts`.
+
+## D114 — Release URL strategy (owner, 27 October 2026)
+
+**Decision:** The game is served from
+`https://oathstone.stackstoneconsulting.co.uk` (one Replit Reserved VM, as
+already chosen). `https://stackstoneconsulting.co.uk/oathstone` stays the
+findable home and is **not** redirected to the game; instead it is updated for
+launch with one-tap deep links into the game (Join, Create, Practise), beta
+copy that matches the game (missions off), and the updates sign-up kept.
+Stackstone Builder 301-redirects any other capitalisation of `/oathstone` (for
+example `/Oathstone`, which returned 404) to `/oathstone`. Invite links and QR
+codes go straight to the game's join screen. This supersedes the "never edit
+the company page" rule in Amendment A of `docs/HOSTING.md` for these changes
+only; the company page is still never redirected away.
+
+**Consequence:** Release steps, order and guard rails are in
+`docs/LAUNCH.md`, "October beta release plan". Tom will run them in a new
+session with browser, Replit and 123-reg access; this session prepared the
+plan only.

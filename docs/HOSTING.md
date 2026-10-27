@@ -11,6 +11,11 @@ This updates entry presentation only, not deployment approval, DNS, domains,
 production settings or the older proposed hosting origin. See the wording
 reconciliation in QUESTIONS. Nothing has been published.
 
+**Update (D114, 27 October 2026):** the company page is still never
+redirected, but it may now be updated for launch with deep links into the
+game, beta copy and a 301 from other capitalisations of `/oathstone`. The
+release steps are in `docs/LAUNCH.md`, "October beta release plan".
+
 ## Public invitation URLs — owner step (25 October 2026)
 
 `PUBLIC_BASE_URL` is the single, non-secret base for player share links, Lobby

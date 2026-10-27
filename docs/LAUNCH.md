@@ -1,54 +1,136 @@
 # Delivery pipeline and launch gate — not launch-ready
 
-## October beta launch runbook (owner actions, in order)
+## October beta release plan (owner-approved direction, 27 October 2026)
 
-Prepared 26 October 2026. Nothing below has been performed; every step is the
-owner's, after his own device test. Values marked _(Replit shows this)_ come
-from the Replit panels; never paste secrets into chat, documents or Git.
+Planned 27 October 2026 for a new Claude session that Tom will run with
+browser, Replit and 123-reg access. Tom authorises that session, for this
+release only, to act in Replit (OathstoneGame and Stackstone Builder) and at
+123-reg, with the guard rails below. This planning session performed none of
+it. See D114 for the URL strategy.
 
-1. **Pick the commit.** Use the latest `main` commit whose GitHub **Verify** is
-   green (see the top of `docs/PROGRESS.md`). Record its SHA and run number in
-   `docs/RELEASES.md`.
-2. **Run the solo device test** in `docs/MANUAL_TESTS.md` ("Beta solo
-   play-through") on the Replit preview. Fix anything blocking first.
-3. **Deployment type.** In Replit Publishing choose **Reserved VM** (not
-   Autoscale; live games need one long-lived server for WebSockets and the
-   scheduler). Pilot size: 0.5 vCPU / 2 GiB (about $15/month) or 1 vCPU /
-   4 GiB (about $35/month); Replit shows the exact charge.
-4. **Production database.** Create the production PostgreSQL database in
-   Replit; its connection string becomes the deployment's `DATABASE_URL`
-   _(Replit shows this)_.
-5. **Production secrets** (Publishing → Secrets, production only; generate
-   each random value in the Replit shell with `openssl rand -hex 32`):
-   - `DATABASE_URL`: production database (step 4).
-   - `SESSION_SECRET`: new random value, at least 32 characters.
-   - `PIN_PEPPER`: new random value, at least 32 characters; never the
-     development value. `PIN_PEPPER_VERSION` = `1`.
-   - `APP_BASE_URL`: `https://` plus the public game address.
-   - `PUBLIC_BASE_URL`: the same public game address; it is baked into
-     invite links and QR codes at **build** time, so set it before building.
-   - `MAX_ACTIVE_GAMES`: `10` for the beta (new games are refused above 80%).
-   - Leave `PRE_LAUNCH_NOINDEX` and `COMING_SOON_MODE` unset: game routes stay
-     out of search engines.
-6. **Commands.** Build: `pnpm run build:oathstone`. Run:
-   `pnpm run start:oathstone` (Replit supplies `PORT`).
-7. **Create the database tables, once per release** (forward-only and safe
-   to re-run), from the Replit shell with the production connection string:
+### 1. URL strategy
+
+| Address                                                                                           | Role                                               | Serves                                                                       |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `https://oathstone.stackstoneconsulting.co.uk`                                                    | The game (play surface)                            | OathstoneGame on one Replit Reserved VM: entry, app, API, sockets, scheduler |
+| `https://stackstoneconsulting.co.uk/oathstone`                                                    | Findable home (marketing, search, updates sign-up) | Stackstone Builder (already live)                                            |
+| Any capitalisation of `/oathstone` (`/Oathstone`, `/OATHSTONE`, with or without a trailing slash) | Typing mistakes                                    | Stackstone Builder: permanent (301) redirect to `/oathstone`                 |
+
+Clicks to a game, by route in:
+
+- **Invite link or QR from an organiser:** opens the join screen for that
+  game directly. No extra clicks.
+- **From the company page:** one tap. Its buttons deep-link into the game:
+  "Join a game" to `https://oathstone.stackstoneconsulting.co.uk/join`,
+  "Create a new game" to
+  `https://oathstone.stackstoneconsulting.co.uk/?entry=create`, "Practise
+  alone" to `https://oathstone.stackstoneconsulting.co.uk/?entry=rehearsal`.
+  Same tab (no `target="_blank"`), so the phone's back button returns.
+- **Typing the game address:** lands on the entry screen with the same three
+  buttons.
+
+The game's canonical stays the company page and app routes stay noindex; the
+game's "About Oathstone" link returns to the company page. The company page is
+**not** redirected to the game: it keeps search ranking and the updates
+sign-up.
+
+### 2. Guard rails for the executing session
+
+- Release only an exact `main` commit with a green GitHub Verify (top of
+  `docs/PROGRESS.md`); at the time of writing that is `dc5381c` (Verify #338).
+- DNS values come **only** from what Replit displays for this domain. Never
+  invent or reuse values. Before any 123-reg change, record (screenshot) the
+  existing DNS records; change nothing for the root domain, `www`, email (MX,
+  SPF, DKIM, DMARC) or any other existing record. Add only the `oathstone`
+  A record and Replit's TXT verification record.
+- Secrets are generated in the Replit shell (`openssl rand -hex 32`) and
+  pasted straight into Publishing → Secrets. Never show, log, screenshot or
+  commit them, and never reuse development values.
+- Confirm the Reserved VM charge shown by Replit with Tom before paying.
+- Never touch HubSpot or the company page's updates sign-up wiring.
+- OathstoneGame's Replit Agent changes no code; code changes go through this
+  repository and Verify. Stackstone Builder changes go through its own agent.
+
+### 3. OathstoneGame deploy (Replit, Reserved VM)
+
+1. **Sync.** In the OathstoneGame workspace: `git fetch origin main`,
+   `git checkout main`, `git reset --hard origin/main`. Confirm
+   `git log -1` is the released commit and `git status` is clean.
+2. **Device test.** Tom's solo run in `docs/MANUAL_TESTS.md` ("Beta solo
+   play-through") on the preview, if not already done on this commit.
+3. **Production database.** Create it in Replit; its connection string is
+   the deployment's `DATABASE_URL` _(Replit shows this)_.
+4. **Create the tables** from the Replit shell with the production
+   connection string:
    `OATHSTONE_CONFIRM_PRODUCTION_MIGRATION=apply DATABASE_URL=<production URL> pnpm run db:migrate:production`.
-   It prints "Production migrations are up to date." and never prints the URL.
-   Never run `db:migrate:dev` against production.
-8. **Spending.** Set the account usage cap and a separate Reserved VM budget
-   (the usage cap does not limit the VM's fixed charge).
-9. **Publish**, then check: `https://<host>/healthz` and `/readyz` return 200;
-   on a phone the entry shows "Beta"; create a game, join from a second
-   device, start, give the round-table shield, and play to the end.
-10. **Domain (optional, separate approval).** To use
-    `oathstone.stackstoneconsulting.co.uk`, add it in Replit and copy the A
-    and TXT records Replit shows into 123-reg. Players can use the Replit
-    address until then.
-11. **Rollback.** If something is wrong, republish the previous green commit
-    from `docs/RELEASES.md`. Games in progress survive a restart (events are
-    in PostgreSQL).
+   Expect "Production migrations are up to date." Never run
+   `db:migrate:dev` against production.
+5. **Deployment settings.** Publishing → **Reserved VM** (not Autoscale or
+   Static). Recommended size for Halloween week: 1 vCPU / 4 GiB (Replit shows
+   the price; 0.5 vCPU / 2 GiB is the cheaper pilot). Build:
+   `pnpm run build:oathstone`. Run: `pnpm run start:oathstone`.
+6. **Production secrets, first publish** (Publishing → Secrets):
+   `DATABASE_URL`; `SESSION_SECRET` and `PIN_PEPPER` (new random values);
+   `PIN_PEPPER_VERSION` = `1`; `MAX_ACTIVE_GAMES` = `10`;
+   `APP_BASE_URL` and `PUBLIC_BASE_URL` = the deployment's own
+   `https://….replit.app` address _(Replit shows this)_. The game accepts
+   requests only from `APP_BASE_URL`, and invite links use
+   `PUBLIC_BASE_URL`, fixed at build time; so the first publish uses the
+   replit.app address and is switched in step 11. Leave
+   `PRE_LAUNCH_NOINDEX` and `COMING_SOON_MODE` unset.
+7. **Spending.** Account usage cap plus a separate VM budget (the cap does not
+   limit the VM's fixed charge).
+8. **Publish** (Tom confirms the displayed charge first).
+9. **Smoke test on the replit.app address:** `/healthz` and `/readyz` return
+   200; entry shows "Beta" and "Report an issue"; on two devices create a
+   game, join, start, give the round-table shield and play to a result.
+
+### 4. Domain (Replit, then 123-reg)
+
+10. In the OathstoneGame deployment, add the custom domain
+    `oathstone.stackstoneconsulting.co.uk`. Replit shows an A record and a TXT
+    record. At 123-reg (DNS for `stackstoneconsulting.co.uk`), after recording
+    the existing records, add exactly those two records for the `oathstone`
+    host. Wait until Replit shows the domain verified with HTTPS (minutes to a
+    few hours). Keep the TXT record for certificate renewals.
+11. **Switch the game to its domain.** Set `APP_BASE_URL` and
+    `PUBLIC_BASE_URL` to `https://oathstone.stackstoneconsulting.co.uk` and
+    republish (this rebuilds, so invite links and QR codes use the domain).
+    Games created on the replit.app address in step 9 were tests; do not
+    share them.
+12. **Smoke test on the domain:** repeat step 9; check the Lobby share link
+    and QR show `https://oathstone.stackstoneconsulting.co.uk/join/…`.
+
+### 5. Stackstone Builder (company site)
+
+13. **Redirect** (independent; can ship any time): any path that matches
+    `/oathstone` case-insensitively, with or without a trailing slash, and is
+    not exactly `/oathstone`, returns a 301 to `/oathstone`, keeping any query
+    string. Sub-pages (`/oathstone/updates`, `/oathstone/privacy`) get the
+    same treatment. Test `/Oathstone`, `/OATHSTONE`, `/oathstone/` and
+    `/Oathstone?x=1`.
+14. **Launch the page** (only after step 12 passes):
+    - Replace "Coming soon" with a "Beta" marker and "Play now — free, in
+      your phone's browser".
+    - Above the fold, three buttons: "Join a game" (primary), "Create a new
+      game", "Practise alone", deep-linking as in section 1.
+    - Copy must match the beta: missions are off ("Missions are coming
+      soon"), so remove "Complete missions, build the prize pot" and similar
+      claims; the round-table shield is decided by conversation; feedback via
+      "Report an issue" (assistant@stackstoneconsulting.co.uk).
+    - Keep the updates sign-up, FAQ, privacy page, canonical and the
+      official Stackstone brand files exactly as they are.
+15. Tom republishes Stackstone Builder; check the buttons land on the right
+    game screens on a phone, and the redirects from step 13.
+
+### 6. After release
+
+16. Record the release in `docs/RELEASES.md` (commit, Verify run, date) and a
+    status block in `docs/PROGRESS.md`.
+17. **Rollback.** Game: republish the previous green commit from
+    `docs/RELEASES.md`; games in progress survive a restart (events are in
+    PostgreSQL). Company page: Replit checkpoint rollback, then republish.
+    DNS: remove only the two `oathstone` records added in step 10.
 
 ## Owner's one-off repository and hosting steps
 
