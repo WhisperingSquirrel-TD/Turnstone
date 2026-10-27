@@ -6,7 +6,7 @@
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "build:oathstone": "PORT=${PORT:-5000} BASE_PATH=/ pnpm --filter @workspace/party-game run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/api-server run build:client",
-    "start:oathstone": "NODE_ENV=production pnpm --filter @workspace/api-server run start",
+    "start:oathstone": "NODE_ENV=production PORT=${PORT:-5000} pnpm --filter @workspace/api-server run start",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --filter @workspace/engine --filter @workspace/shared --filter @workspace/security --if-present run typecheck",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",

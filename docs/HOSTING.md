@@ -98,7 +98,9 @@ Production mode serves `artifacts/party-game/dist/public` from the existing Node
 
 Build with `pnpm run build:oathstone`: frontend, server, then offline client preparation. The last step extracts critical CSS and creates compression sidecars; do not omit it. The build wrapper supplies a build-only `PORT` default and `BASE_PATH=/`.
 
-The eventual run command is `pnpm run start:oathstone`; it uses production mode, the platform's `PORT` and the existing documented thread-pool default. These commands are instructions only, not an enabled deployment.
+The run command is `pnpm run start:oathstone`; it uses production mode, the platform's `PORT` (5000 if unset) and the existing documented thread-pool default. `.replit` declares both commands for the Reserved VM (`deploymentTarget = "gce"`, D115). The artifact manifests define development services only, so production runs one process and never the party-game `serve` process.
+
+**First publish failed (27 October 2026).** `.replit` then had `router = "application"`, so Replit discovered the three artifact manifests and ran each artifact's own production build and run: the API (`api-server` build only, port 8080) and a separate party-game `serve` process (port 22814). Neither ran `build:oathstone`, whose last step creates the compressed client files, so the server's `assertClientBuild` check stopped it on every start (`ENOENT … index.html.br`). D115 removed the router and the manifests' production services.
 
 Evidence: `tests/production-client.test.ts`, `tests/client-build.test.ts` and `e2e/production-server.spec.ts` cover the built output, cache/encoding/security policy, real Pixel/iPhone hydration and JavaScript-disabled first paint. The existing complete 5-/40-seat HTTP/socket fault tests now also check static shell/health availability across a running-game restart and still compare the resulting game to its recorded trace.
 
@@ -122,7 +124,7 @@ The `browsers`, `rehearsal-live` and `lighthouse` jobs use Microsoft's official 
 
 #### Replit configuration: confirmed and unconfirmed
 
-- The current `.replit` is **not** set up for Phase A: it has `deploymentTarget = "autoscale"`, the existing application router and a `postBuild` store-prune command. It has no static build command, `staticDir` or `[[deployment.responseHeaders]]` entries.
+- The current `.replit` targets the Reserved VM (`deploymentTarget = "gce"`, D115), not Phase A Static Deployment. It has no static build command, `staticDir` or `[[deployment.responseHeaders]]` entries.
 - `.replit` already contains `[[deployment.rewrites]]` entries mapping app/game routes to `/app-shell.html`. Replit documents rewrites for Static Deployments, but these entries have not been exercised under a static target; confirm them in a preview after the owner changes the target to `static`.
 - The Node server currently sets hashed-asset caching to `public, max-age=31536000, immutable` and unversioned documents to `no-cache`. It also supplies its own security headers. Static Deployment will not run that Node middleware. Replit documents `[[deployment.responseHeaders]]`, but no static header rules are configured in `.replit`; map and verify the required cache/security headers in the static preview before publishing. Their live behavior is unconfirmed.
 

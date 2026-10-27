@@ -1,14 +1,18 @@
 modules = ["nodejs-24", "postgresql-16", "python-base-3.13"]
 
+# One Reserved VM process serves entry, app shell, API, Socket.IO and the
+# scheduler (D115). Do not add `router`: it makes Replit deploy each artifact's
+# own production service instead of these commands.
 [deployment]
-router = "application"
-deploymentTarget = "autoscale"
+deploymentTarget = "gce"
+build = ["pnpm", "run", "build:oathstone"]
+run = ["pnpm", "run", "start:oathstone"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
-# Used only if the owner later selects Replit Static Deployment; this does not change the current Autoscale target.
+# Used only by a Replit Static Deployment; ignored by the Reserved VM target.
 [[deployment.rewrites]]
 from = "/play"
 to = "/app-shell.html"

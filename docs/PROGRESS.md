@@ -1,5 +1,18 @@
 # Status for reviewer
 
+**Reserved VM deployment configuration fixed (D115) — pushed; Verify pending.**
+The first OathstoneGame publish (`ec2a883`) failed: it crash-looped with
+`ENOENT … index.html.br`. `.replit` used the artifact application router, so
+Replit ran each artifact's production service (API build only, plus a
+party-game `serve` process) and never ran `build:oathstone`, which creates the
+compressed client files. Now `.replit` deploys one Reserved VM process with
+`pnpm run build:oathstone` and `pnpm run start:oathstone`; the manifests are
+development-only. Test first: `tests/deployment-config.test.ts` (4 of 5 failed
+before). Local: clean build, then one process served health, readiness, entry,
+app, API and Socket.IO on 5000. Next: owner re-syncs OathstoneGame, confirms
+the Publishing pane shows the two commands, then republishes (`docs/LAUNCH.md`
+section 3).
+
 **Welcome footer at the foot of the page — pushed; Verify pending.** Owner
 screenshot: the "made by Stackstone Consulting" credit sat mid-page on the
 welcome screen. Flow-footer entry screens now lay out the main area as a

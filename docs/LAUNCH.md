@@ -67,7 +67,9 @@ sign-up.
 
 1. **Sync.** In the OathstoneGame workspace: `git fetch origin main`,
    `git checkout main`, `git reset --hard origin/main`. Confirm
-   `git log -1` is the released commit and `git status` is clean.
+   `git log -1` is the released commit and `git status` is clean. The
+   release must include D115 (the Reserved VM deployment configuration); the
+   first publish, on `ec2a883`, crash-looped without it.
 2. **Device test.** Tom's solo run in `docs/MANUAL_TESTS.md` ("Beta solo
    play-through") on the preview, if not already done on this commit.
 3. **Production database.** Create it in Replit; its connection string is
@@ -79,8 +81,14 @@ sign-up.
    `db:migrate:dev` against production.
 5. **Deployment settings.** Publishing → **Reserved VM** (not Autoscale or
    Static). Recommended size for Halloween week: 1 vCPU / 4 GiB (Replit shows
-   the price; 0.5 vCPU / 2 GiB is the cheaper pilot). Build:
-   `pnpm run build:oathstone`. Run: `pnpm run start:oathstone`.
+   the price; 0.5 vCPU / 2 GiB is the cheaper pilot). The committed `.replit`
+   sets `deploymentTarget = "gce"`, build `pnpm run build:oathstone` and run
+   `pnpm run start:oathstone`; confirm the Publishing pane shows exactly
+   these two commands and a single web server. If it lists the artifacts
+   ("Oathstone", "Oathstone API") or their own commands instead, stop: that is
+   the configuration that failed (D115). Do not set a deployment `PORT`: the
+   server uses the platform's `PORT` if set, otherwise 5000. `/healthz` and
+   `/readyz` are the health paths.
 6. **Production secrets, first publish** (Publishing → Secrets):
    `DATABASE_URL`; `SESSION_SECRET` and `PIN_PEPPER` (new random values);
    `PIN_PEPPER_VERSION` = `1`; `MAX_ACTIVE_GAMES` = `10`;

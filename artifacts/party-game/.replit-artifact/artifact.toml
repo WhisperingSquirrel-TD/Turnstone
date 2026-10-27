@@ -14,10 +14,8 @@ localPort = 22814
 [services.development]
 run = "pnpm --filter @workspace/party-game run dev"
 
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/party-game", "run", "build" ]
-run = [ "pnpm", "--filter", "@workspace/party-game", "run", "serve" ]
-
+# No production service: the api-server process serves the built client
+# (D115). These settings drive the development preview only.
 
 [services.env]
 PORT = "22814"

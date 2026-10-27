@@ -1931,3 +1931,30 @@ only; the company page is still never redirected away.
 `docs/LAUNCH.md`, "October beta release plan". Tom will run them in a new
 session with browser, Replit and 123-reg access; this session prepared the
 plan only.
+
+## D115 — Reserved VM deploys one process from .replit (27 October 2026)
+
+**Context:** The first publish of OathstoneGame (`ec2a883`) built but
+crash-looped: `ENOENT … artifacts/party-game/dist/public/index.html.br` from
+`assertClientBuild`. `.replit` had `[deployment] router = "application"`, so
+Replit ran the artifact manifests (API on 8080 with only the api-server build;
+party-game `serve` on 22814) instead of the plan's commands. Neither ran
+`build:oathstone`, whose last step writes the compressed client files.
+
+**Decision:** `.replit` `[deployment]` has no `router`, sets
+`deploymentTarget = "gce"` (Reserved VM), `build = pnpm run build:oathstone`
+and `run = pnpm run start:oathstone`. The artifact manifests keep only their
+development services; neither defines a production service. `start:oathstone`
+uses the platform `PORT`, defaulting to 5000. The `assertClientBuild` check,
+security headers, CSP and origin rules are unchanged.
+
+**Evidence and limits:** Replit's public docs describe `[deployment]` build,
+run, `deploymentTarget` and port detection, but not the artifact manifest
+format or the `router` key; the link between `router = "application"` and
+manifest deployment is taken from the failed deployment log ("artifact
+manifest discovery completed … manifests=3", "starting artifact processes
+count=2"). Before publishing, the owner confirms the Publishing pane shows the
+two commands above and one web server. Test: `tests/deployment-config.test.ts`.
+Local proof: fresh build with no `PORT`, then one Node process served
+`/healthz`, `/readyz`, `/`, app routes, `/api/csrf` and Socket.IO on 5000;
+`PORT=6123` was honoured.
