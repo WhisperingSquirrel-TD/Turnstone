@@ -33,3 +33,4 @@
 - [Entry prerender readiness](prerender-readiness.md) — wait for the intended hydrated screen; styled fallback HTML is not application-state readiness.
 - [Skip link focus](skip-link-focus.md) — the focused skip link stays out of flow and takes the header's place; never reserve space for it or exempt it from the audit.
 - [Short-timer public windows](short-timer-public-windows.md) — rehearsal phases last 15 s; extend before a deliberate move-on and pause before slow public-screen checks; never raise timers or timeouts.
+- [Static checks before push](static-checks-before-push.md) — run all five static-checks steps, including typecheck:tests for e2e and tests, before every push.

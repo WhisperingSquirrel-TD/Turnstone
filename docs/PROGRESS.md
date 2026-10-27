@@ -1,6 +1,11 @@
 # Status for reviewer
 
 **Overnight ship-readiness (Claude Code) — main pushed; Verify pending on this push.**
+Verify #331 (`0a024cf`): rehearsal-live and every browser and scenario job
+green; static-checks red on `typecheck:tests` (a closure lost `gameId`
+narrowing in my test edit; I had run `typecheck` but not `typecheck:tests`).
+Fixed by capturing the id in a `const`; all five static-checks steps now pass
+locally. Rule saved in `.agents/memory/static-checks-before-push.md`.
 Pushed on `e5c0e3a`: D111 (a window blur no longer hides public screens; only
 private moments re-cover), the guarded production migration command
 (`pnpm run db:migrate:production`, needs
