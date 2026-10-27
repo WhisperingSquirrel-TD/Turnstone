@@ -1871,3 +1871,20 @@ refocus quietly refreshes the view; only a real absence runs the resume
 flow. Regression: `e2e/public-blur.spec.ts` (fails before, passes after on
 all four profiles); `e2e/shield-refocus.spec.ts` keeps the DEAL re-arm. No
 privacy or secrecy check changed.
+
+## D112 — Q6 confirmations: reinstatement, log wording, zero living players (owner, 27 October 2026)
+
+**Decision:** The owner confirmed the shipped Q6 behaviour without change:
+
+1. A player removed after a disconnection can be let back in until the next
+   phase starts, and may then complete the action they missed.
+2. The shipped public log wording stands: "[name]’s pending action was skipped
+   after a disconnection.", "[name]’s pending action was restored.", "[name]
+   left the game after a disconnection. Nobody knows their role." and "[name]
+   returned to the game." None reveals a role or side.
+3. Zero living players keeps the existing result. The win check runs after
+   every removal and departure, so a game normally ends first (no living
+   Traitor: Faithful win; no living Faithful: Traitor win, D92). No "no
+   winner" result is added.
+
+**Consequence:** Q6 is closed. No code, test or SPEC §3 change.

@@ -194,8 +194,10 @@ later experiment, limited to one game-server instance.
 
 ## Q6 — Living players who miss a phase action
 
-**Status:** Owner-directed proposal awaiting reviewer confirmation of final
-wording. Documentation only: no implementation or SPEC §3 change.
+**Status:** Resolved (owner, 27 October 2026). Implemented in Round 6; the
+owner confirmed reinstatement until the next phase starts, the shipped log
+wording and the unchanged zero-living-player result. See D112. The proposal
+below is kept for history.
 
 **Current behaviour (verified):** A live phase can advance by organiser action
 or at its scheduled deadline. The organiser's advance is subject to the

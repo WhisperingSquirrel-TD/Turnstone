@@ -9,7 +9,8 @@ Morning checklist for Tom (nothing has been deployed or published):
    commands, then `db:migrate:production` once).
 3. Open items, none blocking the beta: H1 SHADOW second-step stall (seen once
    on #327); organiser move-on at the instant a timer expires can skip the
-   next step (low risk with real timers); Q6; Task 2 credit audit parked.
+   next step (low risk with real timers); Task 2 credit audit parked. Q6
+   closed by the owner on 27 October (D112).
 
 Overnight detail (Claude Code):
 Verify #331 (`0a024cf`): rehearsal-live and every browser and scenario job
