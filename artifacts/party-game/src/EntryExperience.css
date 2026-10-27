@@ -1103,6 +1103,8 @@
   .entry-main
   > .game-brand-footer {
   margin-top: auto;
+  /* Clear the screen edge and gesture bar below the last link. */
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
 .entry-experience.entry-experience--flow-footer:has(> .entry-screen-welcome),
