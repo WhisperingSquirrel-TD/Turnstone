@@ -16,8 +16,8 @@ export const en = {
   nav: { label: 'Main', home: 'Home', play: 'Play', menu: 'Menu' },
   app: {
     beta: 'Beta',
-    betaMenuNote:
-      'Oathstone is in beta. Tell your organiser if anything looks wrong.',
+    betaMenuNote: 'Oathstone is in beta. Spotted a problem?',
+    reportIssue: 'Report an issue',
     securityUnavailable:
       'The secure connection could not be established. Check your connection, then try again.',
     tryAgain: 'Try again',
@@ -395,7 +395,7 @@ export const en = {
     subtitle: 'A game of traitors and faithful.',
     welcomeDescription: 'Everyone plays. Even the host.',
     betaNote:
-      'Thanks for trying Oathstone early. Tell your organiser if anything looks wrong.',
+      'Thanks for trying Oathstone early. Spotted a problem? Tap Report an issue.',
     createGame: 'Create a new game',
     joinGame: 'Join a game',
     practiseAlone: 'Practise alone',

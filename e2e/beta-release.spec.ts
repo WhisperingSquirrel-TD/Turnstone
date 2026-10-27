@@ -4,7 +4,9 @@ import { createPublicView } from './support/public-view';
 import { installLiveSocketViewFixture } from './support/live-socket-view';
 
 const betaNote =
-  'Thanks for trying Oathstone early. Tell your organiser if anything looks wrong.';
+  'Thanks for trying Oathstone early. Spotted a problem? Tap Report an issue.';
+const reportHref =
+  'mailto:assistant@stackstoneconsulting.co.uk?subject=Oathstone%20feedback';
 
 test('the entry marks the beta beside the wordmark with a thank-you line', async ({
   page,
@@ -103,4 +105,41 @@ test('the beta tag lines up with the wordmark on the privacy screen', async ({
   expect(text && tag).toBeTruthy();
   const middle = (box: { y: number; height: number }) => box.y + box.height / 2;
   expect(Math.abs(middle(text!) - middle(tag!))).toBeLessThanOrEqual(2);
+});
+
+// Owner request (27 October 2026): "Tell your organiser" gave players no way
+// to send feedback, so everyone gets a Report an issue email link.
+test('the entry footer offers Report an issue to everyone', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('button-create-game')).toBeVisible();
+  const report = page.getByTestId('report-issue-link');
+  await expect(report).toHaveText('Report an issue');
+  await expect(report).toHaveAttribute('href', reportHref);
+  const box = await report.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+});
+
+test('during play, Report an issue is in the game Menu', async ({ page }) => {
+  const gameId = 'beta-report';
+  const view: FullView = { ...createPublicView(gameId), phase: 'DEBATE' };
+  const envelope = () => ({
+    serverNow: Date.now(),
+    version: view.version,
+    view,
+  });
+  await installLiveSocketViewFixture(page, envelope);
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/**`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.goto(`/game/${gameId}?clips=off`);
+  const menu = page.getByTestId('game-status-menu');
+  await menu.locator('summary').click();
+  const report = menu.getByTestId('menu-report-issue');
+  await expect(report).toBeVisible();
+  await expect(report).toHaveAttribute('href', reportHref);
 });

@@ -38,6 +38,9 @@ export const config = {
     url: 'https://stackstoneconsulting.co.uk/',
     location: { locality: 'Abingdon', region: 'Oxfordshire' },
   },
+  /** Opens the player's own mail app; the game itself sends nothing. */
+  feedbackMailto:
+    'mailto:assistant@stackstoneconsulting.co.uk?subject=Oathstone%20feedback',
   routes: {
     ...APP_ROUTE_PATHS,
     rehearsal: `${APP_ROUTE_PATHS.play}?entry=rehearsal`,

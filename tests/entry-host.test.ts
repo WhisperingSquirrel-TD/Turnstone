@@ -42,6 +42,9 @@ it('marks the static first-paint entry as a beta release', () => {
   const html = renderGameEntryHtml('/');
   expect(html).toContain('data-testid="beta-tag"');
   expect(html).toContain(
-    'Thanks for trying Oathstone early. Tell your organiser if anything looks wrong.',
+    'href="mailto:assistant@stackstoneconsulting.co.uk?subject=Oathstone%20feedback" data-testid="report-issue-link">Report an issue</a>',
+  );
+  expect(html).toContain(
+    'Thanks for trying Oathstone early. Spotted a problem? Tap Report an issue.',
   );
 });

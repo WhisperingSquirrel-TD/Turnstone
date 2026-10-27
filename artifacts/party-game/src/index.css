@@ -487,6 +487,15 @@ a[href='#main']:focus {
   text-align: left;
 }
 
+/* Report an issue (owner, 27 October 2026): a plain email link. */
+.game-status-menu__content > .game-menu-report {
+  display: flex;
+  align-items: center;
+  color: var(--game-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .game-display-settings {
   display: grid;
   min-width: 0;
@@ -1090,6 +1099,15 @@ button.player-tile {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+}
+
+.brand-report-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .game-notes-sheet {

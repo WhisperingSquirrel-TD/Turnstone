@@ -1748,6 +1748,7 @@ export function EntryExperience({
             surface={gameTheme === 'night' ? 'dark' : 'light'}
             className="game-brand-footer"
             testId="brand-footer-entry"
+            reportLink
           />
         )}
       </main>
@@ -1883,6 +1884,7 @@ export function EntryExperience({
           surface={gameTheme === 'night' ? 'dark' : 'light'}
           className="game-brand-footer"
           testId="brand-footer-entry"
+          reportLink
         />
       )}
     </div>

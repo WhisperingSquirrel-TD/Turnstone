@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
+import { config } from '@/config';
 import { en } from '@/locale/en-GB';
 import type { GameConnectionState } from './game-socket';
 import { GameConnectionStatus } from './GameConnectionStatus';
@@ -110,6 +111,13 @@ export function GameStatusBar({
                   <span>{en.app.betaMenuNote}</span>
                 </p>
               )}
+              <a
+                className="game-menu-report"
+                href={config.feedbackMailto}
+                data-testid="menu-report-issue"
+              >
+                {en.app.reportIssue}
+              </a>
               {menuContent}
             </div>
           </details>

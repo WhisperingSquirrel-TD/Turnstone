@@ -1888,3 +1888,19 @@ privacy or secrecy check changed.
    winner" result is added.
 
 **Consequence:** Q6 is closed. No code, test or SPEC §3 change.
+
+## D113 — Report an issue email link (owner, 27 October 2026)
+
+**Decision:** Every player can send feedback. A "Report an issue" link opens
+the player's own email app at
+`mailto:assistant@stackstoneconsulting.co.uk?subject=Oathstone%20feedback`
+(`config.feedbackMailto`). The game sends nothing itself and adds no game
+data, names or roles to the email. It appears in the footer beside the
+Stackstone credit on the entry and lobby screens (including the static first
+paint), and in the game Menu during play, where the fixed footer would
+otherwise grow to two lines on phones. The presenter (TV) screen has no link.
+The beta note now reads "Spotted a problem? Tap Report an issue." instead of
+"Tell your organiser", since organisers had no way to pass feedback on.
+
+**Consequence:** The Stackstone credit and mark are unchanged. Tests:
+`BrandFooter.test.tsx`, `tests/entry-host.test.ts`, `e2e/beta-release.spec.ts`.
