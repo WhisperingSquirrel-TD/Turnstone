@@ -1,6 +1,14 @@
 # Status for reviewer
 
-**Owner phone-test fixes (27 October) — pushed; Verify pending.**
+**Report an issue link (D113) — pushed; Verify pending.** Phone-test fixes:
+Verify #336 GREEN on `bfc7af8`. The mailto link sits in the welcome footer,
+the entry header Menu and the game Menu (D113); a first footer-only version
+failed the layout audit locally (two-line fixed footers on phones) and was
+moved before pushing. Local on `b0e9d0a`: static checks, 885 unit tests,
+browser suite 580 passed with only rehearsal-tagged specs failing outside
+their config (CI excludes them), rehearsal config 4/4.
+
+**Owner phone-test fixes (27 October) — Verify #336 GREEN.**
 From Tom's practice game on Replit: Notes was offered to players who were out
 of the game, but the server refuses them private screens, so the sheet sat on
 "Opening your private screen…" (Notes is now offered only to living seats);
