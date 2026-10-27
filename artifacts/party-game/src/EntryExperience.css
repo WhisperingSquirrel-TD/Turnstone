@@ -1085,3 +1085,27 @@
 .entry-choice-list .entry-text-action {
   min-height: 56px;
 }
+
+/* The credit belongs at the foot of the page, not straight after short
+   content (owner phone screenshot, 27 October 2026). The main area scrolls,
+   so its children keep their natural height instead of shrinking. */
+.entry-experience.entry-experience--flow-footer .entry-main {
+  display: flex;
+  flex-direction: column;
+  row-gap: 1rem;
+}
+
+.entry-experience.entry-experience--flow-footer .entry-main > * {
+  flex: 0 0 auto;
+}
+
+.entry-experience.entry-experience--flow-footer
+  .entry-main
+  > .game-brand-footer {
+  margin-top: auto;
+}
+
+.entry-experience.entry-experience--flow-footer:has(> .entry-screen-welcome),
+.entry-experience.entry-experience--flow-footer > .entry-screen-welcome {
+  padding-bottom: 0;
+}
