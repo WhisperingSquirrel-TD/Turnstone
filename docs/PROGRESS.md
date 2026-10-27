@@ -2,6 +2,7 @@
 
 **SHIP-READY FOR TOM'S TESTS — main `e38ca59`; Verify #332 GREEN (every job).**
 Morning checklist for Tom (nothing has been deployed or published):
+
 1. Solo device test: `docs/MANUAL_TESTS.md`, "Beta solo play-through".
 2. If happy, follow the October beta runbook in `docs/LAUNCH.md` (Replit
    Reserved VM, production database, production secrets, build and start
