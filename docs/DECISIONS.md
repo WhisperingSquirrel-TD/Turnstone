@@ -1958,3 +1958,25 @@ two commands above and one web server. Test: `tests/deployment-config.test.ts`.
 Local proof: fresh build with no `PORT`, then one Node process served
 `/healthz`, `/readyz`, `/`, app routes, `/api/csrf` and Socket.IO on 5000;
 `PORT=6123` was honoured.
+
+## D116 — One Lobby, one code (owner, 27 October 2026)
+
+**Context:** In the owner's phone test the Lobby QR seemed to change after a
+player used it. Each load of the organiser's Lobby (reload, returning to the
+tab, re-opening the controls, a second device) requested an invitation, and
+every request replaced the game's code and link, so anything already shared
+stopped working.
+
+**Decision:** A game's Lobby keeps one code for the whole Lobby. `POST
+/api/games/:id/invites` reuses the open Lobby code instead of creating a new
+one; it still issues a fresh link token, so the response shape is unchanged.
+The organiser's Share button now shares the same code link as the QR
+(`/join#code=…`), so every player uses the same code, QR or link, any number of
+times. As with the QR and typed code, joiners by Share now wait for the
+organiser's approval (previously a Share link joined directly). Late-join
+invitations (D76) keep their own link and rotation. The code still closes when
+the Lobby closes or the game ends.
+
+**Tests:** `tests/database.integration.test.ts` ("keeps the same Lobby code
+across repeated invite requests") and `e2e/public-share-url.spec.ts` (Share
+equals the QR link, also after a reload) failed before the change.

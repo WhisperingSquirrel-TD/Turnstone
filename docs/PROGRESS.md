@@ -1,5 +1,12 @@
 # Status for reviewer
 
+**One Lobby, one code (D116) — pushed; Verify pending.** Owner phone test:
+the Lobby code and QR changed whenever the organiser's Lobby reloaded, so a
+shared code or QR stopped working. The server now keeps the open Lobby code,
+and Share uses the same code link as the QR. Share joiners now need the
+organiser's approval, like QR and code joiners. Tests first (integration and
+browser). Next: re-sync OathstoneGame to this commit before (re)publishing.
+
 **Reserved VM deployment configuration fixed (D115) — pushed; Verify pending.**
 The first OathstoneGame publish (`ec2a883`) failed: it crash-looped with
 `ENOENT … index.html.br`. `.replit` used the artifact application router, so

@@ -4219,6 +4219,73 @@ it('creates a private invite and gives a joining guest a seat session', async ()
   }
 });
 
+// Owner phone test (27 October 2026): every load of the organiser's Lobby
+// asked for an invite, and each request replaced the game code, so a code or
+// QR already shared stopped working. One Lobby keeps one code.
+it('keeps the same Lobby code across repeated invite requests', async () => {
+  const gameId = randomUUID();
+  const now = Date.now();
+  try {
+    await createGameWithEvent({
+      event: eventSchema.parse({
+        seq: 1,
+        at: now,
+        schemaVersion: 1,
+        type: 'GameCreated',
+        id: gameId,
+        config: gameConfigSchema.parse({}),
+      }),
+      actorId: 'coordinator:test',
+      idempotencyKey: 'stable-code-create',
+      requestHash: 'stable-code-create',
+    });
+    await appendGameEvents({
+      gameId,
+      expectedVersion: 1,
+      actorId: 'coordinator:test',
+      idempotencyKey: 'stable-code-lobby',
+      requestHash: 'stable-code-lobby',
+      events: [
+        eventSchema.parse({
+          seq: 2,
+          at: now + 1,
+          schemaVersion: 1,
+          type: 'PhaseChanged',
+          phase: 'LOBBY',
+          deadline: null,
+          shadowEndAt: null,
+          cycle: 0,
+        }),
+      ],
+    });
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      rateLimitSecret: 'integration-test-rate-limit-secret',
+      publicBaseUrl: 'https://oathstone.test',
+      consumeRateLimit: async () => true,
+    });
+    const first = await request(app)
+      .post(`/api/games/${gameId}/invites`)
+      .expect(201);
+    const second = await request(app)
+      .post(`/api/games/${gameId}/invites`)
+      .expect(201);
+
+    expect(second.body.shortCode).toBe(first.body.shortCode);
+    await request(app)
+      .post('/api/join/name-check')
+      .send({ shortCode: first.body.shortCode, name: 'Guest One' })
+      .expect(200, { status: 'available' });
+    const secondToken = new URL(second.body.joinUrl).hash.slice(1);
+    await request(app)
+      .post('/api/join/name-check')
+      .send({ gameId, inviteToken: secondToken, name: 'Guest One' })
+      .expect(200, { status: 'available' });
+  } finally {
+    await db.execute(sql`delete from games where id = ${gameId}`);
+  }
+});
+
 it('holds short-code joins for coordinator approval and returns a seat cookie after approval', async () => {
   const gameId = randomUUID();
   const now = Date.now();

@@ -118,8 +118,9 @@ sign-up.
     republish (this rebuilds, so invite links and QR codes use the domain).
     Games created on the replit.app address in step 9 were tests; do not
     share them.
-12. **Smoke test on the domain:** repeat step 9; check the Lobby share link
-    and QR show `https://oathstone.stackstoneconsulting.co.uk/join/…`.
+12. **Smoke test on the domain:** repeat step 9; check the Lobby Share link
+    and QR are the same `https://oathstone.stackstoneconsulting.co.uk/join#code=…`
+    link, and that reloading the organiser's Lobby keeps the same code (D116).
 
 ### 5. Stackstone Builder (company site)
 

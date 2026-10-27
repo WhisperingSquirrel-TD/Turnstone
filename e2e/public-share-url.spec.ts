@@ -206,11 +206,49 @@ test('configured public base drives the Lobby QR even on a simulated private pre
     });
   });
   await page.getByTestId('button-share-game').click();
+  // Share sends the same Lobby code link as the QR (owner, 27 October 2026).
   await expect
     .poll(() => shared[0])
-    .toBe(
-      `https://public.example/game/join/public-share-room#${'i'.repeat(43)}`,
-    );
+    .toBe('https://public.example/game/join#code=ABC234');
+});
+
+// Owner phone test (27 October 2026): reloading the organiser's Lobby made a
+// new invitation, so a link already shared stopped working. Share and QR now
+// carry the one Lobby code, which the server keeps for the whole Lobby.
+test('after a Lobby reload, Share and QR still carry the same code link', async ({
+  page,
+}) => {
+  await shareConfiguration(page, 'https://public.example/game/');
+  await lobby(page);
+  await page.reload();
+  await expect(page.getByTestId('text-lobby-code')).toHaveText('ABC234');
+  const qrUrl = await page
+    .getByTestId('lobby-join-qr')
+    .getAttribute('data-join-url');
+  expect(qrUrl).toBe('https://public.example/game/join#code=ABC234');
+  const shared: string[] = [];
+  await page.exposeFunction('recordReloadShareUrl', (url: string) =>
+    shared.push(url),
+  );
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (url: string) =>
+          (
+            window as unknown as {
+              recordReloadShareUrl: (url: string) => Promise<void>;
+            }
+          ).recordReloadShareUrl(url),
+      },
+    });
+  });
+  await page.getByTestId('button-share-game').click();
+  await expect.poll(() => shared[0]).toBe(qrUrl);
 });
 
 test('unconfigured preview keeps its code and warns rather than sharing a private QR', async ({

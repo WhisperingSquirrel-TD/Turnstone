@@ -948,8 +948,13 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         code: joinCode,
       })
     : '';
-  const visibleShareUrl =
-    lateJoinMode && invitationKind !== 'late' ? '' : shareUrl;
+  // The Lobby shares its one code everywhere (QR, Share, typed code); only a
+  // late-join invitation uses its own link (owner, 27 October 2026).
+  const visibleShareUrl = lateJoinMode
+    ? invitationKind === 'late'
+      ? shareUrl
+      : ''
+    : lobbyCodeUrl;
   const coordinatorPanel =
     mode === 'coordinate' &&
     coordinatorGameId &&

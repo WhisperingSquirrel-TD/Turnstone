@@ -1139,16 +1139,20 @@ export function createApp(
         sendError(response, 503, 'Service unavailable');
         return;
       }
-      const { createGameInvite } =
+      const { createGameInvite, getOpenGameInviteCode } =
         await import('@workspace/db/seat-access-store');
       const inviteToken = randomBytes(32).toString('base64url');
       const linkTokenHash = createHash('sha256')
         .update(inviteToken)
         .digest('hex');
       const now = Date.now();
+      // One Lobby keeps one code: reloading the organiser's Lobby must not
+      // invalidate a code or QR already shared (owner, 27 October 2026).
+      const openCode = await getOpenGameInviteCode(gameId, now);
       let shortCode: string | null = null;
       for (let attempt = 0; attempt < 5; attempt++) {
-        const candidate = createJoinCode();
+        const candidate =
+          attempt === 0 && openCode ? openCode : createJoinCode();
         try {
           await createGameInvite({
             gameId,
