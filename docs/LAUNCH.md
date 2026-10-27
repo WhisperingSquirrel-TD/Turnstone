@@ -15,6 +15,15 @@ it. See D114 for the URL strategy.
 | `https://oathstone.stackstoneconsulting.co.uk`                                                    | The game (play surface)                            | OathstoneGame on one Replit Reserved VM: entry, app, API, sockets, scheduler |
 | `https://stackstoneconsulting.co.uk/oathstone`                                                    | Findable home (marketing, search, updates sign-up) | Stackstone Builder (already live)                                            |
 | Any capitalisation of `/oathstone` (`/Oathstone`, `/OATHSTONE`, with or without a trailing slash) | Typing mistakes                                    | Stackstone Builder: permanent (301) redirect to `/oathstone`                 |
+| `https://stackstoneconsulting.co.uk/oathstone/play` (any capitalisation)                          | Zero-tap shortcut for posters and QR codes         | Stackstone Builder: temporary (302) redirect to the game's entry screen      |
+
+**What Tom shares publicly stays `stackstoneconsulting.co.uk/oathstone`** (the
+front door). The `oathstone.` subdomain only hosts the game; nobody needs to
+type it. Hosting the game itself under the company domain's `/oathstone` path
+was considered and deferred (27 October 2026): Stackstone Builder would have to
+proxy every API request and live socket, making the company site part of every
+game, and the game assumes it is served from the root of its own origin. Revisit
+for Christmas if wanted.
 
 Clicks to a game, by route in:
 
@@ -26,6 +35,9 @@ Clicks to a game, by route in:
   `https://oathstone.stackstoneconsulting.co.uk/?entry=create`, "Practise
   alone" to `https://oathstone.stackstoneconsulting.co.uk/?entry=rehearsal`.
   Same tab (no `target="_blank"`), so the phone's back button returns.
+- **The `/oathstone/play` shortcut (posters, QR codes):** lands straight on
+  the game's entry screen. It is a 302, not a 301, so it can point elsewhere
+  later without browsers caching it.
 - **Typing the game address:** lands on the entry screen with the same three
   buttons.
 
@@ -37,7 +49,7 @@ sign-up.
 ### 2. Guard rails for the executing session
 
 - Release only an exact `main` commit with a green GitHub Verify (top of
-  `docs/PROGRESS.md`); at the time of writing that is `dc5381c` (Verify #338).
+  `docs/PROGRESS.md`); at the time of writing that is `ec2a883` (Verify #339; code identical to `dc5381c`).
 - DNS values come **only** from what Replit displays for this domain. Never
   invent or reuse values. Before any 123-reg change, record (screenshot) the
   existing DNS records; change nothing for the root domain, `www`, email (MX,
@@ -109,6 +121,11 @@ sign-up.
     string. Sub-pages (`/oathstone/updates`, `/oathstone/privacy`) get the
     same treatment. Test `/Oathstone`, `/OATHSTONE`, `/oathstone/` and
     `/Oathstone?x=1`.
+    13a. **Play shortcut** (only after step 12 passes): `/oathstone/play`, matched
+    case-insensitively with or without a trailing slash, returns a 302 to
+    `https://oathstone.stackstoneconsulting.co.uk/`. It must take precedence
+    over the case redirect in step 13. Test `/oathstone/play` and
+    `/Oathstone/Play/` on a phone.
 14. **Launch the page** (only after step 12 passes):
     - Replace "Coming soon" with a "Beta" marker and "Play now — free, in
       your phone's browser".

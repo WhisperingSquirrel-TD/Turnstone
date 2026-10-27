@@ -1918,8 +1918,12 @@ findable home and is **not** redirected to the game; instead it is updated for
 launch with one-tap deep links into the game (Join, Create, Practise), beta
 copy that matches the game (missions off), and the updates sign-up kept.
 Stackstone Builder 301-redirects any other capitalisation of `/oathstone` (for
-example `/Oathstone`, which returned 404) to `/oathstone`. Invite links and QR
-codes go straight to the game's join screen. This supersedes the "never edit
+example `/Oathstone`, which returned 404) to `/oathstone`, and
+`/oathstone/play` 302-redirects to the game's entry screen for posters and QR
+codes. The publicly shared address stays `stackstoneconsulting.co.uk/oathstone`;
+serving the game itself under that path (proxying through Stackstone Builder)
+was deferred as too risky this week. Invite links and QR codes go straight to
+the game's join screen. This supersedes the "never edit
 the company page" rule in Amendment A of `docs/HOSTING.md` for these changes
 only; the company page is still never redirected away.
 
