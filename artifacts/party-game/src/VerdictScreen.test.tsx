@@ -31,4 +31,23 @@ describe('VerdictScreen public wording', () => {
     expect(markup).not.toContain('Traitor');
     expect(markup).not.toContain('Faithful');
   });
+
+  // Owner phone screenshot (27 October 2026): the revealed votes sat under
+  // "Tally so far" with no visible heading, reading as an orphan list.
+  it('gives the revealed votes a visible heading', () => {
+    const markup = renderToStaticMarkup(
+      <VerdictScreen
+        announcement={null}
+        ballots={{ a: 'b' }}
+        seats={[
+          { id: 'a', name: 'Alex' } as never,
+          { id: 'b', name: 'Sam' } as never,
+        ]}
+        showVoteReveal
+      />,
+    );
+
+    expect(markup).toMatch(/<h3[^>]*>Votes revealed<\/h3>/);
+    expect(markup).toContain('Alex voted to banish Sam.');
+  });
 });

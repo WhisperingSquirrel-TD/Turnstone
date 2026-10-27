@@ -2735,7 +2735,13 @@ function PlayerGame() {
         ) : null
       }
       onOpenNotes={
-        full && !isResuming && !phaseIsPrivate && !notesOpen
+        // The server only opens private screens for living seats; never offer
+        // a sheet that cannot load.
+        full &&
+        ownSeat?.status === 'alive' &&
+        !isResuming &&
+        !phaseIsPrivate &&
+        !notesOpen
           ? () => {
               setNotesStatus('');
               setNotesOpen(true);

@@ -66,3 +66,41 @@ test('on 320px phones the beta tag moves from the top bar into Menu', async ({
     page.getByTestId('game-status-menu').getByTestId('menu-beta-note'),
   ).toBeVisible();
 });
+
+// Owner phone screenshot (27 October 2026): on the role privacy screen the
+// beta tag sat below the wordmark because the wordmark's 44px touch box kept
+// its text at the top.
+test('the beta tag lines up with the wordmark on the privacy screen', async ({
+  page,
+}) => {
+  const gameId = 'beta-shield';
+  const view: FullView = {
+    ...createPublicView(gameId),
+    phase: 'DEAL',
+    deadline: null,
+  };
+  const envelope = () => ({
+    serverNow: Date.now(),
+    version: view.version,
+    view,
+  });
+  await installLiveSocketViewFixture(page, envelope);
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+  );
+  await page.route(`**/api/games/${gameId}/**`, (route) =>
+    route.fulfill({ json: envelope() }),
+  );
+  await page.goto(`/game/${gameId}?clips=off`);
+  const shield = page.locator('.privacy-shield');
+  await expect(shield).toHaveAttribute('open', '');
+  const text = await shield
+    .getByTestId('text-entry-brand')
+    .locator('span')
+    .first()
+    .boundingBox();
+  const tag = await shield.getByTestId('beta-tag').boundingBox();
+  expect(text && tag).toBeTruthy();
+  const middle = (box: { y: number; height: number }) => box.y + box.height / 2;
+  expect(Math.abs(middle(text!) - middle(tag!))).toBeLessThanOrEqual(2);
+});

@@ -730,8 +730,38 @@ a[href='#main']:focus {
   display: flex;
   min-height: 44px;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   cursor: pointer;
   color: var(--game-text);
+  list-style: none;
+}
+
+.game-help-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The flex summary drops the native arrow, so draw a chevron that turns. */
+.game-help-disclosure summary::after {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  margin-right: 0.25rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 150ms ease-out;
+}
+
+.game-help-disclosure[open] summary::after {
+  transform: rotate(-135deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-help-disclosure summary::after {
+    transition: none;
+  }
 }
 
 .game-help-disclosure__content {
@@ -1244,7 +1274,8 @@ body:has(.game-fullscreen-overlay) {
   flex-shrink: 0;
 }
 .game-fullscreen-overlay .entry-brand .oathstone-wordmark {
-  min-height: 44px;
+  min-height: 44px; /* Centre the text in the touch box so the beta tag lines up (D110). */
+  align-items: center;
 }
 .private-action-content {
   width: 100%;
@@ -1288,7 +1319,8 @@ body:has(.game-fullscreen-overlay) {
   background: var(--hearth);
 }
 .privacy-shield .entry-brand .oathstone-wordmark {
-  min-height: 44px;
+  min-height: 44px; /* Centre the text in the touch box so the beta tag lines up (D110). */
+  align-items: center;
 }
 .privacy-shield .entry-brand {
   left: 50%;

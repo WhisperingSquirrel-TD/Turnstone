@@ -92,7 +92,11 @@ export function VerdictScreen({
       )}
       {voteRows.length > 0 && (
         <section className="mt-6" aria-label={en.game.voteResults}>
-          <ul className="divide-y divide-stone" data-testid="list-vote-reveal">
+          <h3 className="text-lg text-candle">{en.game.voteResults}</h3>
+          <ul
+            className="mt-2 divide-y divide-stone"
+            data-testid="list-vote-reveal"
+          >
             {voteRows.map((row, index) => (
               <li
                 key={row.id}
