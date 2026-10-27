@@ -487,9 +487,19 @@ a[href='#main']:focus {
   text-align: left;
 }
 
-/* Report an issue (owner, 27 October 2026): a plain email link. */
-.game-status-menu__content > .game-menu-report {
+/* Report an issue (owner, 27 October 2026): a plain email link, sharing a
+   row with the beta tag that moves here below 360px. */
+.game-menu-feedback {
   display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.game-menu-report {
+  display: inline-flex;
+  min-height: 44px;
   align-items: center;
   color: var(--game-text);
   text-decoration: underline;

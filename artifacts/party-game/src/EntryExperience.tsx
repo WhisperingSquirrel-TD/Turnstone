@@ -679,6 +679,12 @@ export function EntryExperience({
               {en.publicSite.compareHeading}
             </Link>
             <a href={config.companyPageUrl}>About Oathstone</a>
+            <a
+              href={config.feedbackMailto}
+              data-testid="entry-menu-report-issue"
+            >
+              {en.app.reportIssue}
+            </a>
           </div>
         </details>
       </header>
@@ -1748,7 +1754,7 @@ export function EntryExperience({
             surface={gameTheme === 'night' ? 'dark' : 'light'}
             className="game-brand-footer"
             testId="brand-footer-entry"
-            reportLink
+            reportLink={screen === 'welcome'}
           />
         )}
       </main>
@@ -1884,7 +1890,6 @@ export function EntryExperience({
           surface={gameTheme === 'night' ? 'dark' : 'light'}
           className="game-brand-footer"
           testId="brand-footer-entry"
-          reportLink
         />
       )}
     </div>

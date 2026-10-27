@@ -143,3 +143,18 @@ test('during play, Report an issue is in the game Menu', async ({ page }) => {
   await expect(report).toBeVisible();
   await expect(report).toHaveAttribute('href', reportHref);
 });
+
+test('every entry screen offers Report an issue in its Menu', async ({
+  page,
+}) => {
+  await page.goto('/?entry=rehearsal');
+  const menu = page.locator('.entry-brand-menu');
+  await menu.locator('summary').click();
+  const report = menu.getByTestId('entry-menu-report-issue');
+  await expect(report).toBeVisible();
+  await expect(report).toHaveAttribute('href', reportHref);
+  // The flow footers stay one line: only the welcome footer carries the link.
+  await expect(
+    page.getByTestId('brand-footer-entry').getByTestId('report-issue-link'),
+  ).toHaveCount(0);
+});

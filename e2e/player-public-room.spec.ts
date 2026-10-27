@@ -94,7 +94,7 @@ test('practice Back and primary action clear the linked footer at phone sizes', 
     const dock = page.getByTestId('entry-action-dock');
     const footer = page.getByTestId('brand-footer-entry');
     await expect(footer).toBeVisible();
-    await expect(footer.getByRole('link')).toHaveAttribute(
+    await expect(footer.getByTestId('brand-footer-link')).toHaveAttribute(
       'href',
       'https://stackstoneconsulting.co.uk/',
     );

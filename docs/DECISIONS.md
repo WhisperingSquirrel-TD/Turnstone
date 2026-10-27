@@ -1895,12 +1895,16 @@ privacy or secrecy check changed.
 the player's own email app at
 `mailto:assistant@stackstoneconsulting.co.uk?subject=Oathstone%20feedback`
 (`config.feedbackMailto`). The game sends nothing itself and adds no game
-data, names or roles to the email. It appears in the footer beside the
-Stackstone credit on the entry and lobby screens (including the static first
-paint), and in the game Menu during play, where the fixed footer would
-otherwise grow to two lines on phones. The presenter (TV) screen has no link.
-The beta note now reads "Spotted a problem? Tap Report an issue." instead of
-"Tell your organiser", since organisers had no way to pass feedback on.
+data, names or roles to the email. Placement: beside the Stackstone credit in
+the welcome screen footer (and its static first paint), in the entry header
+Menu on every entry screen including the lobby, and in the game Menu during
+play, sharing a row with the beta tag that moves there below 360px. The fixed
+footers on flow, lobby and game screens stay one line: with the link they
+wrapped to two lines on phones, which the layout audit caught (Menu covered
+by the action bar at 320px; lobby Share button pushed below the first view at
+360px). The presenter (TV) screen has no link. The beta note now reads
+"Spotted a problem? Tap Report an issue." instead of "Tell your organiser",
+since organisers had no way to pass feedback on.
 
 **Consequence:** The Stackstone credit and mark are unchanged. Tests:
 `BrandFooter.test.tsx`, `tests/entry-host.test.ts`, `e2e/beta-release.spec.ts`.

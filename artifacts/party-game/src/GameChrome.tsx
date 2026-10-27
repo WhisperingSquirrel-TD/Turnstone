@@ -105,19 +105,21 @@ export function GameStatusBar({
           <details className="game-status-menu" data-testid="game-status-menu">
             <summary>{en.nav.menu}</summary>
             <div className="game-status-menu__content">
-              {showBeta && (
-                <p className="game-menu-beta" data-testid="menu-beta-note">
-                  <BetaTag />
-                  <span>{en.app.betaMenuNote}</span>
-                </p>
-              )}
-              <a
-                className="game-menu-report"
-                href={config.feedbackMailto}
-                data-testid="menu-report-issue"
-              >
-                {en.app.reportIssue}
-              </a>
+              {/* One row so the Menu keeps its height on 320px phones. */}
+              <p className="game-menu-feedback">
+                {showBeta && (
+                  <span className="game-menu-beta" data-testid="menu-beta-note">
+                    <BetaTag />
+                  </span>
+                )}
+                <a
+                  className="game-menu-report"
+                  href={config.feedbackMailto}
+                  data-testid="menu-report-issue"
+                >
+                  {en.app.reportIssue}
+                </a>
+              </p>
               {menuContent}
             </div>
           </details>
