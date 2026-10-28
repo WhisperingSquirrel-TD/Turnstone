@@ -1,5 +1,13 @@
 # Status for reviewer
 
+**Production migration: equivalent foreign key accepted.** Verify #351
+(`3097178`) green. Tom's run showed 0000 to 0012 present and 0013 "partly
+present": production has the seat-connection foreign key as
+`game_seat_connections_game_id_fkey` (Postgres default name, from a schema
+push) with the same definition, and 0 orphan rows. Foreign keys now also
+match by definition; a different definition is still refused. Tests first.
+Next: Tom re-runs with `OATHSTONE_RECORD_EXISTING_MIGRATIONS=yes`.
+
 **Production migration over existing tables.** Tom's re-run showed 42P07
 (`foundation_meta` already exists): production's tables were created outside
 the migration files, with no migration record. `db:migrate:production` now

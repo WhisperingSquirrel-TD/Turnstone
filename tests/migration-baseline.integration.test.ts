@@ -132,6 +132,39 @@ describe('production migration over unrecorded existing tables', () => {
     expect(result.output).not.toContain(baseUrl.password || 'no-password');
   }, 120_000);
 
+  it('accepts an equivalent foreign key under the default Postgres name', async () => {
+    // Production, 28 October 2026: game_seat_connections_game_id_fkey with
+    // the same definition as the committed game_seat_connections_game_id_games_id_fk.
+    const url = await databaseThrough(lastExisting);
+    await query(
+      url,
+      'alter table game_seat_connections rename constraint game_seat_connections_game_id_games_id_fk to game_seat_connections_game_id_fkey',
+    );
+    const result = await migrate(url, {
+      OATHSTONE_RECORD_EXISTING_MIGRATIONS: 'yes',
+    });
+    expect(result.output).toContain('Production migrations are up to date.');
+    expect(result.code).toBe(0);
+  }, 120_000);
+
+  it('refuses a foreign key with a different definition', async () => {
+    const url = await databaseThrough(lastExisting);
+    await query(
+      url,
+      'alter table game_seat_connections drop constraint game_seat_connections_game_id_games_id_fk',
+    );
+    await query(
+      url,
+      'alter table game_seat_connections add constraint game_seat_connections_game_id_fkey foreign key (game_id) references games(id)',
+    );
+    const result = await migrate(url, {
+      OATHSTONE_RECORD_EXISTING_MIGRATIONS: 'yes',
+    });
+    expect(result.code).not.toBe(0);
+    expect(result.output).toContain('partly');
+    expect(await recorded(url)).toBe(0);
+  }, 120_000);
+
   it('refuses to record a partly applied migration', async () => {
     const url = await databaseThrough(lastExisting);
     await query(url, 'drop index "game_seat_connections_game_seat_seen_idx"');

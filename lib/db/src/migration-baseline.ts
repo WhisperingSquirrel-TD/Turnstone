@@ -10,7 +10,8 @@ export type MigrationObject =
   | { kind: 'table'; name: string }
   | { kind: 'column'; table: string; name: string }
   | { kind: 'index'; name: string }
-  | { kind: 'constraint'; name: string };
+  | { kind: 'constraint'; name: string }
+  | { kind: 'constraint'; name: string; table: string; definition: string };
 
 export type Presence = 'all' | 'none' | 'partial';
 
@@ -28,9 +29,36 @@ export function migrationObjects(sql: string): MigrationObject[] {
     /CREATE (?:UNIQUE )?INDEX(?: IF NOT EXISTS)? "([^"]+)"/gi,
   ))
     objects.push({ kind: 'index', name: name! });
+  const foreignKeys = new Set<string>();
+  for (const [, table, name, definition] of sql.matchAll(
+    /ALTER TABLE "([^"]+)" ADD CONSTRAINT "([^"]+)" (FOREIGN KEY[^;]+)/gi,
+  )) {
+    foreignKeys.add(name!);
+    objects.push({
+      kind: 'constraint',
+      name: name!,
+      table: table!,
+      definition: normaliseConstraint(definition!),
+    });
+  }
   for (const [, name] of sql.matchAll(/CONSTRAINT "([^"]+)"/gi))
-    objects.push({ kind: 'constraint', name: name! });
+    if (!foreignKeys.has(name!))
+      objects.push({ kind: 'constraint', name: name! });
   return objects;
+}
+
+// A schema push can create the same foreign key under Postgres's default
+// name (for example `..._game_id_fkey`), so foreign keys also match by
+// definition. Postgres omits the default `ON UPDATE/DELETE NO ACTION`.
+export function normaliseConstraint(definition: string): string {
+  return definition
+    .toLowerCase()
+    .replaceAll('"', '')
+    .replaceAll('public.', '')
+    .replace(/\s+/g, '')
+    .replace(/;$/, '')
+    .replaceAll('onupdatenoaction', '')
+    .replaceAll('ondeletenoaction', '');
 }
 
 export function planBaseline(
@@ -66,7 +94,19 @@ async function isPresent(
 ): Promise<boolean> {
   const params =
     object.kind === 'column' ? [object.name, object.table] : [object.name];
-  return (await client.query(presenceQuery[object.kind], params)).rowCount! > 0;
+  if ((await client.query(presenceQuery[object.kind], params)).rowCount! > 0)
+    return true;
+  if (object.kind !== 'constraint' || !('definition' in object)) return false;
+  const { rows } = await client.query<{ definition: string }>(
+    `select pg_get_constraintdef(c.oid) as definition from pg_constraint c
+     join pg_class t on t.oid = c.conrelid
+     join pg_namespace n on n.oid = t.relnamespace
+     where n.nspname = 'public' and t.relname = $1 and c.contype = 'f'`,
+    [object.table],
+  );
+  return rows.some(
+    (row) => normaliseConstraint(row.definition) === object.definition,
+  );
 }
 
 function label(object: MigrationObject): string {

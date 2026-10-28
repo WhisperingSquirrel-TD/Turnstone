@@ -28,6 +28,18 @@ describe('migrationObjects', () => {
     });
   });
 
+  it('keeps the definition of a foreign key so an equivalent one can match', () => {
+    const objects = migrationObjects(
+      readFileSync('lib/db/migrations/0013_game_seat_connections.sql', 'utf8'),
+    );
+    expect(objects).toContainEqual({
+      kind: 'constraint',
+      name: 'game_seat_connections_game_id_games_id_fk',
+      table: 'game_seat_connections',
+      definition: 'foreignkey(game_id)referencesgames(id)ondeletecascade',
+    });
+  });
+
   it('finds something to check in every committed migration', () => {
     const journal = JSON.parse(
       readFileSync('lib/db/migrations/meta/_journal.json', 'utf8'),
