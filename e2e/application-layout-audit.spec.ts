@@ -402,9 +402,17 @@ for (const width of widths)
       await page.locator('header details').first().locator('summary').click();
       await audit('entry-menu');
       await page.locator('header details').first().locator('summary').click();
+      // Owner phone test (28 October 2026): Back from Join returns to start.
+      await page.getByTestId('button-join-game').click();
+      await expect(page.getByTestId('input-join-name')).toBeVisible();
+      await page.getByTestId('button-back-top').click();
+      await expect(page.getByTestId('button-create-game')).toBeVisible();
+      await audit('start-after-join-back');
       await go('/join');
       await expect(page.getByTestId('input-join-name')).toBeVisible();
       await audit('join-empty');
+      await page.getByTestId('input-join-code-1').focus();
+      await audit('join-code-focus');
       await page.getByTestId('input-join-name').fill('Morgan');
       for (let i = 0; i < 6; i++)
         await page.getByTestId(`input-join-code-${i + 1}`).fill('ABC234'[i]!);

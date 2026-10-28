@@ -48,6 +48,7 @@ export function GameStatusBar({
   cycle,
   remaining,
   showRemaining = true,
+  showConnection = true,
   connectionStatus,
   joinedLabel,
   onOpenNotes,
@@ -58,6 +59,8 @@ export function GameStatusBar({
   cycle: number;
   remaining: number;
   showRemaining?: boolean;
+  /** Off before a player has joined: there is no live game to report. */
+  showConnection?: boolean;
   connectionStatus: GameConnectionDisplayState;
   joinedLabel?: string;
   onOpenNotes?: () => void;
@@ -86,11 +89,13 @@ export function GameStatusBar({
             {joinedLabel ?? `${remaining} left`}
           </span>
         )}
-        <GameConnectionStatus
-          status={
-            connectionStatus === 'connected' ? 'online' : connectionStatus
-          }
-        />
+        {showConnection && (
+          <GameConnectionStatus
+            status={
+              connectionStatus === 'connected' ? 'online' : connectionStatus
+            }
+          />
+        )}
         {onOpenNotes && (
           <button
             className="quiet-action game-status-notes"

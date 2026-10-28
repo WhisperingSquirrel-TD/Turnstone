@@ -223,8 +223,7 @@
   background: var(--game-surface, var(--entry-hearth));
 }
 
-.entry-text-action,
-.entry-back-action {
+.entry-text-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -233,6 +232,48 @@
   border: 0;
   color: var(--entry-ash) !important;
   background: transparent;
+  text-decoration: underline;
+  text-decoration-color: var(--entry-stone);
+  text-underline-offset: 0.25em;
+}
+
+/* Back is a clear button, never a faint link (owner phone test, 28 October
+   2026). The top control repeats it where the eye starts. */
+.entry-back-action,
+.entry-top-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--entry-stone);
+  border-radius: 14px;
+  color: var(--entry-candle) !important;
+  background: transparent;
+  font-size: 17px;
+  text-decoration: none;
+}
+
+.entry-back-action::before,
+.entry-top-back::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-bottom: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.entry-top-back {
+  align-self: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+/* A quiet third choice on the start screen: no border (owner, 28 October). */
+.entry-choice-list .entry-quiet-choice {
+  border: 0;
   text-decoration: underline;
   text-decoration-color: var(--entry-stone);
   text-underline-offset: 0.25em;
@@ -309,6 +350,14 @@
   font-size: clamp(1.45rem, 6vw, 1.8rem) !important;
   text-align: center;
   text-transform: uppercase;
+  caret-color: var(--entry-gilt);
+}
+
+/* Mark the box that will take the next character. */
+.entry-code-input:focus {
+  border-color: var(--entry-gilt);
+  outline: 2px solid var(--entry-gilt);
+  outline-offset: 1px;
 }
 
 .entry-label {
@@ -537,6 +586,8 @@
 .entry-experience > .entry-inline-primary {
   width: min(100%, 480px);
   margin-inline: auto;
+  /* Keep the hint clear of a phone's gesture bar. */
+  padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
 }
 
 .entry-experience .entry-action-dock {
