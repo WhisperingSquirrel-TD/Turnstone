@@ -1,5 +1,16 @@
 # Status for reviewer
 
+**Production migration over existing tables.** Tom's re-run showed 42P07
+(`foundation_meta` already exists): production's tables were created outside
+the migration files, with no migration record. `db:migrate:production` now
+checks each committed migration's tables, columns, indexes and constraints.
+If 0000 to N are fully present and the rest absent, it stops and says so;
+with `OATHSTONE_RECORD_EXISTING_MIGRATIONS=yes` it records 0000 to N as
+applied (one transaction) and then applies the rest. A partly present or
+gapped migration is refused and nothing changes. Tests first (unit and
+integration on fresh databases). Next: Tom pulls and re-runs. Not started:
+the robots/sitemap/beta-copy brief (to be D119; D117 is clear-down).
+
 **Production migration report fixed.** Tom's first production
 `db:migrate:production` run connected but failed with "code unknown": the
 query layer wraps the Postgres error, so its code sat on `cause`. The script
