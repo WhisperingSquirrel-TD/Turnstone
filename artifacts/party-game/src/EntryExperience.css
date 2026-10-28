@@ -223,8 +223,7 @@
   background: var(--game-surface, var(--entry-hearth));
 }
 
-.entry-text-action,
-.entry-back-action {
+.entry-text-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -233,6 +232,48 @@
   border: 0;
   color: var(--entry-ash) !important;
   background: transparent;
+  text-decoration: underline;
+  text-decoration-color: var(--entry-stone);
+  text-underline-offset: 0.25em;
+}
+
+/* Back is a clear button, never a faint link (owner phone test, 28 October
+   2026). The top control repeats it where the eye starts. */
+.entry-back-action,
+.entry-top-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--entry-stone);
+  border-radius: 14px;
+  color: var(--entry-candle) !important;
+  background: transparent;
+  font-size: 17px;
+  text-decoration: none;
+}
+
+.entry-back-action::before,
+.entry-top-back::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-bottom: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.entry-top-back {
+  align-self: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+/* A quiet third choice on the start screen: no border (owner, 28 October). */
+.entry-choice-list .entry-quiet-choice {
+  border: 0;
   text-decoration: underline;
   text-decoration-color: var(--entry-stone);
   text-underline-offset: 0.25em;
@@ -309,6 +350,14 @@
   font-size: clamp(1.45rem, 6vw, 1.8rem) !important;
   text-align: center;
   text-transform: uppercase;
+  caret-color: var(--entry-gilt);
+}
+
+/* Mark the box that will take the next character. */
+.entry-code-input:focus {
+  border-color: var(--entry-gilt);
+  outline: 2px solid var(--entry-gilt);
+  outline-offset: 1px;
 }
 
 .entry-label {
@@ -537,6 +586,8 @@
 .entry-experience > .entry-inline-primary {
   width: min(100%, 480px);
   margin-inline: auto;
+  /* Keep the hint clear of a phone's gesture bar. */
+  padding-bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
 }
 
 .entry-experience .entry-action-dock {
@@ -548,22 +599,6 @@
   margin: 0;
   font-size: 13px;
   text-align: center;
-}
-
-.entry-experience--flow-footer {
-  padding-bottom: calc(var(--entry-measured-dock-height, 0px) + 1rem);
-}
-
-.entry-experience--flow-footer .entry-main {
-  padding-bottom: 1rem;
-}
-
-.entry-experience--flow-footer .game-brand-footer {
-  position: static;
-  z-index: auto;
-  inset: auto;
-  transform: none;
-  margin-top: 1rem;
 }
 
 .entry-experience.game-shell {
@@ -585,7 +620,9 @@
   overflow: auto;
   display: block;
   padding-top: 1rem;
-  padding-bottom: 1rem;
+  /* Clear space between the last control and the docked button above the
+     fixed credit (D118). */
+  padding-bottom: 1.5rem;
   scroll-padding-block: 1rem;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -1084,30 +1121,4 @@
 
 .entry-choice-list .entry-text-action {
   min-height: 56px;
-}
-
-/* The credit belongs at the foot of the page, not straight after short
-   content (owner phone screenshot, 27 October 2026). The main area scrolls,
-   so its children keep their natural height instead of shrinking. */
-.entry-experience.entry-experience--flow-footer .entry-main {
-  display: flex;
-  flex-direction: column;
-  row-gap: 1rem;
-}
-
-.entry-experience.entry-experience--flow-footer .entry-main > * {
-  flex: 0 0 auto;
-}
-
-.entry-experience.entry-experience--flow-footer
-  .entry-main
-  > .game-brand-footer {
-  margin-top: auto;
-  /* Clear the screen edge and gesture bar below the last link. */
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
-}
-
-.entry-experience.entry-experience--flow-footer:has(> .entry-screen-welcome),
-.entry-experience.entry-experience--flow-footer > .entry-screen-welcome {
-  padding-bottom: 0;
 }

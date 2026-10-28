@@ -4,7 +4,7 @@ import { createPublicView } from './support/public-view';
 import { installLiveSocketViewFixture } from './support/live-socket-view';
 
 const betaNote =
-  'Thanks for trying Oathstone early. Spotted a problem? Tap Report an issue.';
+  'Thanks for trying Oathstone early. Spotted a problem? Choose Report an issue in the Menu.';
 const reportHref =
   'mailto:assistant@stackstoneconsulting.co.uk?subject=Oathstone%20feedback';
 
@@ -107,18 +107,20 @@ test('the beta tag lines up with the wordmark on the privacy screen', async ({
   expect(Math.abs(middle(text!) - middle(tag!))).toBeLessThanOrEqual(2);
 });
 
-// Owner request (27 October 2026): "Tell your organiser" gave players no way
-// to send feedback, so everyone gets a Report an issue email link.
-test('the entry footer offers Report an issue to everyone', async ({
+// Owner decision (28 October 2026): Report an issue lives in the Menu on
+// every screen and never in the footer.
+test('the start screen footer is the credit only; Report an issue is in the Menu', async ({
   page,
 }) => {
   await page.goto('/');
   await expect(page.getByTestId('button-create-game')).toBeVisible();
-  const report = page.getByTestId('report-issue-link');
-  await expect(report).toHaveText('Report an issue');
-  await expect(report).toHaveAttribute('href', reportHref);
-  const box = await report.boundingBox();
-  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await expect(page.getByTestId('report-issue-link')).toHaveCount(0);
+  const menu = page.locator('.entry-brand-menu');
+  await menu.locator('summary').click();
+  await expect(menu.getByTestId('entry-menu-report-issue')).toHaveAttribute(
+    'href',
+    reportHref,
+  );
 });
 
 test('during play, Report an issue is in the game Menu', async ({ page }) => {
@@ -153,8 +155,5 @@ test('every entry screen offers Report an issue in its Menu', async ({
   const report = menu.getByTestId('entry-menu-report-issue');
   await expect(report).toBeVisible();
   await expect(report).toHaveAttribute('href', reportHref);
-  // The flow footers stay one line: only the welcome footer carries the link.
-  await expect(
-    page.getByTestId('brand-footer-entry').getByTestId('report-issue-link'),
-  ).toHaveCount(0);
+  await expect(page.getByTestId('report-issue-link')).toHaveCount(0);
 });

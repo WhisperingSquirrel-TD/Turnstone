@@ -41,10 +41,8 @@ it('prerenders one usable paper entry, not the former marketing home', () => {
 it('marks the static first-paint entry as a beta release', () => {
   const html = renderGameEntryHtml('/');
   expect(html).toContain('data-testid="beta-tag"');
+  expect(html).not.toContain('data-testid="report-issue-link"');
   expect(html).toContain(
-    'href="mailto:assistant@stackstoneconsulting.co.uk?subject=Oathstone%20feedback" data-testid="report-issue-link">Report an issue</a>',
-  );
-  expect(html).toContain(
-    'Thanks for trying Oathstone early. Spotted a problem? Tap Report an issue.',
+    'Thanks for trying Oathstone early. Spotted a problem? Choose Report an issue in the Menu.',
   );
 });

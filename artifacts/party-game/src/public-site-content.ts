@@ -92,8 +92,7 @@ export function renderGameEntryHtml(basePath = '/'): string {
       <a class="game-entry-about" href="${escapeHtml(config.companyPageUrl)}">About Oathstone</a>
       <p class="game-entry-beta"><span class="beta-tag" data-testid="beta-tag">${escapeHtml(en.app.beta)}</span> ${escapeHtml(en.entry.betaNote)}</p>
     </main>
-    ${renderStackstoneFooterLink(base)}
-    <a class="brand-report-link" href="${escapeHtml(config.feedbackMailto)}" data-testid="report-issue-link">${escapeHtml(en.app.reportIssue)}</a>`;
+    ${renderStackstoneFooterLink(base)}`;
 }
 
 function renderStackstoneFooterLink(basePath: string): string {

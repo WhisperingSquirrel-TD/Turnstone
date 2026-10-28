@@ -79,7 +79,9 @@ test('Join keeps its primary action clear of a focused mobile keyboard viewport'
         document.documentElement.clientWidth,
     ),
   ).toBe(true);
-  await expect(page.getByText('Live', { exact: true })).toBeVisible();
+  // Before joining there is no live game: no status dot, but going offline
+  // is still announced (owner phone test, 28 October 2026).
+  await expect(page.getByText('Live', { exact: true })).toHaveCount(0);
   await page.context().setOffline(true);
   await expect(page.getByText('Offline', { exact: true })).toBeVisible();
   await page.context().setOffline(false);

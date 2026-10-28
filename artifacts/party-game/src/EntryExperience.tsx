@@ -256,6 +256,16 @@ export interface EntryExperienceProps {
 
 const VALID_CODE = /^[A-HJ-NP-Z2-9]{6}$/;
 
+const topBackScreens = new Set<EntryScreen>([
+  'join-code',
+  'join-name',
+  'join-pin',
+  'create-name',
+  'create-count',
+  'create-organiser',
+  'rehearsal-setup',
+]);
+
 export function EntryExperience({
   copy,
   gameTheme: suppliedGameTheme,
@@ -384,6 +394,26 @@ export function EntryExperience({
     setDuplicateName(null);
     setRecoveringSeat(false);
     moveTo('welcome');
+  }
+
+  /** The previous step for each entry screen; the first step returns to start. */
+  function goBack() {
+    if (screen === 'join-code' || screen === 'join-wait') abandonJoin();
+    else if (screen === 'join-name') {
+      onInputChange('joinPin', '');
+      moveTo('join-code');
+    } else if (screen === 'join-pin') {
+      setRecoveringSeat(false);
+      onInputChange('joinPin', '');
+      moveTo('join-name');
+    } else if (screen === 'create-count') moveTo('create-name');
+    else if (screen === 'create-organiser') {
+      onInputChange('organiserPin', '');
+      moveTo('create-count');
+    } else if (screen === 'rehearsal-setup') {
+      onClearSensitiveValues();
+      moveTo('welcome');
+    } else moveTo('welcome');
   }
 
   function beginJoin() {
@@ -660,7 +690,7 @@ export function EntryExperience({
   return (
     <div
       data-game-theme={gameTheme}
-      className={`entry-experience game-shell${screen !== 'lobby' ? ' entry-experience--flow-footer' : ''}${options.largeText ? ' entry-large-text' : ''}`}
+      className={`entry-experience game-shell${options.largeText ? ' entry-large-text' : ''}`}
     >
       <header className="entry-brand" aria-label={copy.brandDescriptor}>
         <span className="entry-brand-title">
@@ -694,6 +724,16 @@ export function EntryExperience({
         id="entry-main"
         key={screen}
       >
+        {topBackScreens.has(screen) && !lateJoinMode && (
+          <button
+            className="entry-top-back"
+            data-testid="button-back-top"
+            type="button"
+            onClick={goBack}
+          >
+            {copy.back}
+          </button>
+        )}
         {((screen.startsWith('join-') && screen !== 'join-wait') ||
           (screen === 'lobby' && !lateJoinMode)) && (
           <div className="entry-stage-chrome">
@@ -702,6 +742,8 @@ export function EntryExperience({
               phase={screen === 'lobby' ? 'LOBBY' : 'JOIN'}
               cycle={1}
               remaining={screen === 'lobby' ? players.length : 0}
+              showRemaining={screen === 'lobby'}
+              showConnection={screen === 'lobby' || !browserOnline}
               joinedLabel={`${screen === 'lobby' ? players.length : 0} joined`}
               connectionStatus={browserOnline ? 'online' : 'offline'}
             />
@@ -740,7 +782,7 @@ export function EntryExperience({
                 {copy.createGame}
               </button>
               <button
-                className="entry-secondary-action"
+                className="entry-secondary-action entry-quiet-choice"
                 data-testid="button-practise-alone"
                 type="button"
                 onClick={() => moveTo('rehearsal-setup')}
@@ -809,9 +851,6 @@ export function EntryExperience({
                 }}
               >
                 <p className="entry-help">{copy.codeHelp}</p>
-                <label className="entry-label" htmlFor="entry-join-code">
-                  {copy.codeHeading}
-                </label>
                 <div
                   className="entry-code-fields"
                   role="group"
@@ -1017,17 +1056,7 @@ export function EntryExperience({
               className="entry-back-action"
               data-testid="button-back-entry"
               type="button"
-              onClick={() => {
-                if (screen === 'join-code') abandonJoin();
-                else if (screen === 'join-name') {
-                  onInputChange('joinPin', '');
-                  moveTo('join-code');
-                } else {
-                  setRecoveringSeat(false);
-                  onInputChange('joinPin', '');
-                  moveTo('join-name');
-                }
-              }}
+              onClick={goBack}
             >
               {copy.back}
             </button>
@@ -1137,9 +1166,7 @@ export function EntryExperience({
               className="entry-back-action"
               data-testid="button-back-entry"
               type="button"
-              onClick={() => {
-                moveTo('welcome');
-              }}
+              onClick={goBack}
             >
               {copy.back}
             </button>
@@ -1264,7 +1291,7 @@ export function EntryExperience({
               className="entry-back-action"
               data-testid="button-back-entry"
               type="button"
-              onClick={() => moveTo('create-name')}
+              onClick={goBack}
             >
               {copy.back}
             </button>
@@ -1287,6 +1314,7 @@ export function EntryExperience({
                 id="entry-organiser-name"
                 className="entry-field"
                 data-testid="input-organiser-name"
+                placeholder={copy.firstNamePlaceholder}
                 autoComplete="given-name"
                 minLength={2}
                 maxLength={20}
@@ -1431,10 +1459,7 @@ export function EntryExperience({
               className="entry-back-action"
               data-testid="button-back-entry"
               type="button"
-              onClick={() => {
-                onInputChange('organiserPin', '');
-                moveTo('create-count');
-              }}
+              onClick={goBack}
             >
               {copy.back}
             </button>
@@ -1739,23 +1764,11 @@ export function EntryExperience({
               className="entry-back-action"
               data-testid="button-back-entry"
               type="button"
-              onClick={() => {
-                onClearSensitiveValues();
-                moveTo('welcome');
-              }}
+              onClick={goBack}
             >
               {copy.back}
             </button>
           </section>
-        )}
-        {screen !== 'lobby' && (
-          <BrandFooter
-            context="game"
-            surface={gameTheme === 'night' ? 'dark' : 'light'}
-            className="game-brand-footer"
-            testId="brand-footer-entry"
-            reportLink={screen === 'welcome'}
-          />
         )}
       </main>
 
@@ -1884,14 +1897,14 @@ export function EntryExperience({
           {primaryHint}
         </div>
       )}
-      {screen === 'lobby' && (
-        <BrandFooter
-          context="game"
-          surface={gameTheme === 'night' ? 'dark' : 'light'}
-          className="game-brand-footer"
-          testId="brand-footer-entry"
-        />
-      )}
+      {/* Always the last line of the screen; Report an issue lives in the
+          Menu, never here (owner, 28 October 2026). */}
+      <BrandFooter
+        context="game"
+        surface={gameTheme === 'night' ? 'dark' : 'light'}
+        className="game-brand-footer"
+        testId="brand-footer-entry"
+      />
     </div>
   );
 }

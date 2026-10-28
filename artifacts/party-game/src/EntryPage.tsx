@@ -263,6 +263,7 @@ function initialScreen(
   if (mode === 'coordinate' || hasGameQuery) return 'lobby';
   if (mode === 'waiting') return 'join-wait';
   if (mode === 'join') return hasInviteFragment ? 'join-name' : 'join-code';
+  if (mode === 'play' && entryIntent === 'join') return 'join-code';
   if (mode === 'play' && entryIntent === 'create') return 'create-name';
   if (mode === 'play' && entryIntent === 'rehearsal') return 'rehearsal-setup';
   return 'welcome';
@@ -286,6 +287,42 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       entryIntent,
     ),
   );
+  // Join, Create and Practise each get a history entry on the home route, so
+  // the phone's back button returns to the start screen instead of leaving the
+  // site (owner phone test, 28 October 2026).
+  function changeScreen(next: EntryScreen) {
+    const flow = next.startsWith('create-')
+      ? 'create'
+      : next === 'rehearsal-setup'
+        ? 'rehearsal'
+        : next.startsWith('join-') && next !== 'join-wait'
+          ? 'join'
+          : null;
+    if (mode === 'play' && screen === 'welcome' && flow) {
+      setScreen(next);
+      navigate(
+        { pathname: location.pathname, search: `?entry=${flow}` },
+        { state: { fromStart: true } },
+      );
+      return;
+    }
+    if (next === 'welcome' && mode === 'play' && entryIntent) {
+      setScreen('welcome');
+      if ((location.state as { fromStart?: boolean } | null)?.fromStart)
+        navigate(-1);
+      else
+        navigate(
+          { pathname: location.pathname, search: '' },
+          { replace: true },
+        );
+      return;
+    }
+    if (next === 'welcome' && mode === 'join') {
+      navigate(config.routes.home);
+      return;
+    }
+    setScreen(next);
+  }
   const [inputs, setInputs] = useState<EntryExperienceInputs>({
     joinCodeEntry: '',
     joinName: '',
@@ -1080,7 +1117,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         }));
         setInviteToken(null);
       }}
-      onScreenChange={setScreen}
+      onScreenChange={changeScreen}
     />
   );
 }

@@ -1111,15 +1111,6 @@ button.player-tile {
   gap: 0.5rem;
 }
 
-.brand-report-link {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 .game-notes-sheet {
   position: fixed;
   z-index: 40;
