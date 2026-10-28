@@ -1,5 +1,21 @@
 # Status for reviewer
 
+**Game end date and automatic clear-down (D117) — pushed; Verify pending.**
+Creating a game now asks for "Last day of your game" (today up to six months
+ahead, UK dates); the organiser can change it in the Lobby; the join, Lobby
+and finished screens say when the game will be deleted (practice games show
+no date). An hourly job clears real games from 04:00 UK the day after the
+last day; practice games after 24 hours; an old link answers 410 with "This
+game has ended and been cleared." Migration 0014 adds the end date
+(backfilled to created date plus 30 days) and the deletion record. The job is
+dry-run by default (`OATHSTONE_CLEARDOWN_MODE`); production stays dry-run
+until Tom approves `delete`. Before publishing, Tom must run
+`db:migrate:production`. Tests first; audit adds `lobby-change-end-date` and
+`game-cleared`. Local: static checks green, 925 unit and integration tests
+(one deadline test failed once under a concurrent browser run, then passed
+3/3), browser suite 683 passed with one iPad `private-loading-recovery` run
+near its 30 s limit (also marginal on main locally; no timeout raised).
+
 **Verify #345 (`2cfb011`): green.** The quick-back fix holds on all four
 profiles. Next push (`e9ad6b8`) closes the recurring H1 SHADOW stall (#327,
 #343, #344): a tied night choice opens round 2 by itself, which could land
