@@ -2034,8 +2034,9 @@ in the organiser's Lobby, on the player join screen and on the finished screen.
   small batches, logs counts only (never names, roles or content), and prunes
   expired rate-limit windows (the limits themselves are unchanged).
 - `OATHSTONE_CLEARDOWN_MODE` is `dry-run` by default (counts only), `delete`
-  to delete, `off` as the kill switch. Production stays in dry-run until the
-  owner approves switching it on.
+  to delete, `off` as the kill switch. Owner approved `delete` for production
+  on 28 October 2026; Tom sets it in Replit himself (agents never change
+  production settings).
 
 **Tests:** `lib/shared` end-date rules, `tests/game-cleardown.integration.test.ts`,
 `tests/game-end-date-api.integration.test.ts`, `tests/clear-down-scheduler.test.ts`

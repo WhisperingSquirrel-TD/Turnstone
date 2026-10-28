@@ -11,7 +11,9 @@ lock, deletes one game per transaction (tombstone then the `games` row; the
 cascades remove the rest) and never runs while a deadline is in the future.
 
 `OATHSTONE_CLEARDOWN_MODE` defaults to `dry-run`. Never set production to
-`delete` without the owner's approval. Logs carry counts only.
+`delete` without the owner's approval. Owner approved `delete` for production
+on 28 October 2026; Tom sets it in Replit, agents never do. Logs carry counts
+only.
 
 Gotchas: any game-store mock must provide `readGameEndDate` and
 `readGameTombstone`, or routes answer 503. A missing game with a tombstone
