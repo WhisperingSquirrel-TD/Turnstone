@@ -1,5 +1,19 @@
 # Status for reviewer
 
+**Owner phone defects and footer rule (D118) — pushed; Verify pending.** From
+Tom's Pixel screenshots: Back on Join, Create and Practise is a clear 44 px
+button plus a top-left Back, and those flows get a history entry so the
+phone's back button returns to the start screen (it used to leave the site);
+the hint under Continue clears the gesture bar; no player count or status dot
+before joining (offline still shown); the code is labelled once with a visible
+focus mark; the organiser name field has a placeholder; "Practise alone" has
+no border. Owner decision D118: the credit is the fixed last line of every
+screen with the main button docked above it; "Report an issue" is only in the
+Menu. Tests first (`e2e/entry-navigation.spec.ts`); audit adds
+`start-after-join-back` and `join-code-focus`. Local: static checks, 890 unit
+tests, browser suite 656 passed / 0 failed (CI command), rehearsal 4/4. Next:
+game end date and clear-down (D117), being built separately.
+
 **One Lobby, one code (D116) — pushed; Verify pending.** Owner phone test:
 the Lobby code and QR changed whenever the organiser's Lobby reloaded, so a
 shared code or QR stopped working. The server now keeps the open Lobby code,
