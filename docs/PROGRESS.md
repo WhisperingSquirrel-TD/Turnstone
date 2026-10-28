@@ -1,6 +1,14 @@
 # Status for reviewer
 
-**Owner phone defects and footer rule (D118) — pushed; Verify pending.** From
+**Verify #343 (`f74664e`): red.** Two to three phone-back-button tests
+failed intermittently in CI (a different flow per profile; locally 192/192
+including a cold Vite cache). The tests now first assert the flow's own
+history entry (`?entry=…`) and report the address and history length if
+going back fails. rehearsal-live failed on the known intermittent H1 SHADOW
+second-step stall (seed h1-seed-6001: Review shown, Confirm never appears),
+also seen on #327; open item to root-cause.
+
+**Owner phone defects and footer rule (D118) — pushed.** From
 Tom's Pixel screenshots: Back on Join, Create and Practise is a clear 44 px
 button plus a top-left Back, and those flows get a history entry so the
 phone's back button returns to the start screen (it used to leave the site);

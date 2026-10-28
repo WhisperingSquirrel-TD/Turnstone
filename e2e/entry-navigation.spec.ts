@@ -15,7 +15,13 @@ async function start(page: Page) {
 }
 
 async function expectStart(page: Page) {
-  await expect(page.getByTestId('button-create-game')).toBeVisible();
+  const where = await page.evaluate(
+    () => `${location.href} (history ${history.length})`,
+  );
+  await expect(
+    page.getByTestId('button-create-game'),
+    `start screen at ${where}`,
+  ).toBeVisible();
   await expect(page.getByTestId('button-join-game')).toBeVisible();
   expect(new URL(page.url()).pathname).toBe('/');
 }
@@ -55,6 +61,8 @@ for (const [label, buttonId, readyId] of [
     await start(page);
     await page.getByTestId(buttonId).click();
     await expect(page.getByTestId(readyId)).toBeVisible();
+    // The flow must have its own history entry before going back.
+    await expect(page).toHaveURL(/\/\?entry=(join|create|rehearsal)$/);
     await page.goBack();
     await expectStart(page);
   });
