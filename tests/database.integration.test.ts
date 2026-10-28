@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import { db, pool } from '@workspace/db';
 import { io as socketIo, type Socket as ClientSocket } from 'socket.io-client';
 import { gameConfigSchema, eventSchema } from '../lib/shared/src';
+import { ukCalendarDate } from '../lib/shared/src/game-end-date';
 import { sql } from 'drizzle-orm';
 import { createApp } from '../artifacts/api-server/src/app';
 import { decide, evolve, replay, replayFrom } from '../lib/engine/src';
@@ -32,6 +33,7 @@ import {
   completeGameDeadline,
   releaseGameDeadline,
   countActiveGames,
+  readGameEndDate,
 } from '@workspace/db/game-store';
 import {
   consumeRateLimit,
@@ -295,6 +297,7 @@ it('creates a game with a hashed, game-scoped coordinator capability cookie', as
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: gameId,
         config: gameConfigSchema.parse({}),
         idempotencyKey: randomUUID(),
@@ -383,6 +386,7 @@ it('transfers coordinator capability once to an authenticated target seat', asyn
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: gameId,
         config: gameConfigSchema.parse({}),
         idempotencyKey: randomUUID(),
@@ -686,6 +690,7 @@ it('supports designated and majority logistics takeovers without exposing secret
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: gameId,
         config: gameConfigSchema.parse({
           basics: { coCoordinators: 1 },
@@ -3063,6 +3068,7 @@ it('creates and advances a game through authenticated HTTP with idempotent repla
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: gameId,
         idempotencyKey: 'http-create',
         config: gameConfigSchema.parse({}),
@@ -3082,6 +3088,7 @@ it('creates and advances a game through authenticated HTTP with idempotent repla
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: gameId,
         idempotencyKey: 'http-create',
         config: gameConfigSchema.parse({}),
@@ -4034,7 +4041,10 @@ it('creates a private invite and gives a joining guest a seat session', async ()
       .post('/api/join/name-check')
       .send({ shortCode: inviteResponse.body.shortCode, name: 'Guest One' })
       .expect(200);
-    expect(availableByCode.body).toEqual({ status: 'available' });
+    // Joiners are told the game's last day (D117).
+    const gameEndDate = await readGameEndDate(gameId);
+    expect(gameEndDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(availableByCode.body).toEqual({ status: 'available', gameEndDate });
     expect(rateLimitsUsed.slice(shortCodeRateLimitStart)).toEqual(
       expect.arrayContaining([40, 240]),
     );
@@ -4044,7 +4054,10 @@ it('creates a private invite and gives a joining guest a seat session', async ()
       .post('/api/join/name-check')
       .send({ gameId, inviteToken, name: 'Guest One' })
       .expect(200);
-    expect(availableByInvite.body).toEqual({ status: 'available' });
+    expect(availableByInvite.body).toEqual({
+      status: 'available',
+      gameEndDate,
+    });
     expect(rateLimitsUsed.slice(inviteRateLimitStart)).toEqual(
       expect.arrayContaining([40, 240]),
     );
@@ -4074,14 +4087,21 @@ it('creates a private invite and gives a joining guest a seat session', async ()
       .post('/api/join/name-check')
       .send({ gameId, inviteToken, name: 'gUEST   oNE' })
       .expect(200);
-    expect(duplicateByInvite.body).toEqual({ status: 'duplicate' });
-    expect(Object.keys(duplicateByInvite.body)).toEqual(['status']);
+    expect(duplicateByInvite.body).toEqual({
+      status: 'duplicate',
+      gameEndDate,
+    });
+    // Only the status and the game's last day (D117): no names or seats.
+    expect(Object.keys(duplicateByInvite.body)).toEqual([
+      'status',
+      'gameEndDate',
+    ]);
 
     const duplicateByCode = await request(app)
       .post('/api/join/name-check')
       .send({ shortCode: inviteResponse.body.shortCode, name: 'Guest One' })
       .expect(200);
-    expect(duplicateByCode.body).toEqual({ status: 'duplicate' });
+    expect(duplicateByCode.body).toEqual({ status: 'duplicate', gameEndDate });
 
     await request(app)
       .post('/api/join/name-check')
@@ -4090,7 +4110,7 @@ it('creates a private invite and gives a joining guest a seat session', async ()
         inviteToken,
         name: 'Practice player 1',
       })
-      .expect(200, { status: 'reserved' });
+      .expect(200, { status: 'reserved', gameEndDate });
 
     await request(app)
       .post(`/api/games/${gameId}/join`)
@@ -4272,15 +4292,16 @@ it('keeps the same Lobby code across repeated invite requests', async () => {
       .expect(201);
 
     expect(second.body.shortCode).toBe(first.body.shortCode);
+    const gameEndDate = await readGameEndDate(gameId);
     await request(app)
       .post('/api/join/name-check')
       .send({ shortCode: first.body.shortCode, name: 'Guest One' })
-      .expect(200, { status: 'available' });
+      .expect(200, { status: 'available', gameEndDate });
     const secondToken = new URL(second.body.joinUrl).hash.slice(1);
     await request(app)
       .post('/api/join/name-check')
       .send({ gameId, inviteToken: secondToken, name: 'Guest One' })
-      .expect(200, { status: 'available' });
+      .expect(200, { status: 'available', gameEndDate });
   } finally {
     await db.execute(sql`delete from games where id = ${gameId}`);
   }
@@ -4545,7 +4566,10 @@ it('allows 40 short-code join attempts from one IP and rate-limits excess attemp
     await request(app)
       .post('/api/join/name-check')
       .send({ shortCode: secondShortCode, name: 'Guest room B' })
-      .expect(200, { status: 'available' });
+      .expect(200, {
+        status: 'available',
+        gameEndDate: await readGameEndDate(secondGameId),
+      });
     await request(app)
       .post('/api/join')
       .send({
@@ -4683,6 +4707,7 @@ it('keeps game creation limited per IP after five games in one minute', async ()
         .post('/api/games')
         .send({
           type: 'CreateGame',
+          endDate: ukCalendarDate(Date.now()),
           id: gameId,
           idempotencyKey: `shared-ip-game-create-${index}`,
           config: gameConfigSchema.parse({}),
@@ -5184,6 +5209,7 @@ it('enforces the 80 per cent game-admission threshold without blocking existing 
   });
   const createPayload = (id: string, idempotencyKey: string) => ({
     type: 'CreateGame',
+    endDate: ukCalendarDate(Date.now()),
     id,
     idempotencyKey,
     config: gameConfigSchema.parse({}),
@@ -5243,6 +5269,7 @@ it('enforces viewer authorization and handles malformed or unconfigured guest re
   });
   const createCommand = {
     type: 'CreateGame',
+    endDate: ukCalendarDate(Date.now()),
     id: gameId,
     idempotencyKey: 'unauthorised-create',
     config: gameConfigSchema.parse({}),
@@ -5374,6 +5401,7 @@ it('applies rate limits before reading or mutating game data on every write rout
   });
   const createCommand = {
     type: 'CreateGame',
+    endDate: ukCalendarDate(Date.now()),
     id: gameId,
     idempotencyKey: 'rate-limited-create',
     config: gameConfigSchema.parse({}),
@@ -6357,6 +6385,7 @@ it.each([5, 40])(
     };
 
     let now = commands[0]!.now;
+    let gameEndDate: string | null = null;
     const serverRandom = scenarioRandom(seed);
     const staticFiles = await import('node:fs/promises');
     const { join } = await import('node:path');
@@ -6565,10 +6594,16 @@ it.each([5, 40])(
           commandType === 'CreateGame'
             ? '/api/games'
             : `/api/games/${gameId}/commands`;
+        // Real games carry a UK end date, here the scenario's own day (D117).
+        if (commandType === 'CreateGame') gameEndDate = ukCalendarDate(now);
+        const body =
+          commandType === 'CreateGame'
+            ? { ...entry.command, endDate: gameEndDate }
+            : entry.command;
         const response = await request(runtime.url)
           .post(path)
           .set({ ...browserHeaders, ...actorHeader })
-          .send(entry.command);
+          .send(body);
         expect(response.status).toBeGreaterThanOrEqual(200);
         expect(response.status).toBeLessThan(300);
         expect(response.headers['access-control-allow-origin']).toBe(
@@ -6585,6 +6620,7 @@ it.each([5, 40])(
             ? { kind: 'player' as const, seatId: entry.actor.seatId }
             : { kind: 'coordinator' as const };
         const expectedView = engine.viewFor(viewer, expected!);
+        expectedView.gameEndDate = gameEndDate;
         if (entry.actor.kind === 'coordinator') {
           expectedView.coordinatorUndo = await getGameUndoStatus(
             gameId,
@@ -6612,7 +6648,7 @@ it.each([5, 40])(
           const duplicate = await request(runtime.url)
             .post('/api/games')
             .set({ ...browserHeaders, 'x-test-coordinator': 'true' })
-            .send(entry.command);
+            .send(body);
           expect(duplicate.status).toBeGreaterThanOrEqual(200);
           expect(duplicate.status).toBeLessThan(300);
           expect(duplicate.body.version).toBe(response.body.version);

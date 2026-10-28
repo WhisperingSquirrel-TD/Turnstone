@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { ukCalendarDate } from '@workspace/shared/game-end-date';
 import { pool } from './index';
 
@@ -89,7 +90,7 @@ export async function runClearDown(
   }
 }
 
-type Client = Awaited<ReturnType<typeof pool.connect>>;
+type Client = PoolClient;
 
 async function runLocked(
   client: Client,

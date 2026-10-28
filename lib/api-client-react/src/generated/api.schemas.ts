@@ -666,6 +666,12 @@ export interface FullView {
   gameName?: string;
   /** @pattern ^[A-HJ-NP-Z2-9]{6}$ */
   lobbyCode?: string;
+  /**
+     * Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  gameEndDate?: string | null;
   version: number;
   phase: Phase;
   paused: boolean;
@@ -785,8 +791,26 @@ export interface GameCommandInput {
   idempotencyKey: string;
   /** For AcknowledgePrivate, true only after the player has finished viewing their role. */
   ready?: boolean;
+  /**
+     * For CreateGame, the last UK calendar day of the game (required for every real game; UK today to six months ahead). The game is deleted the day after.
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  endDate?: string;
   [key: string]: unknown;
  }
+
+export interface GameEndDateUpdateRequest {
+  /**
+     * New last UK calendar day, from UK today to six months ahead.
+     * @maxLength 10
+     */
+  endDate: string;
+}
+
+export interface GameEndDateUpdateResponse {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  gameEndDate: string;
+}
 
 export type PrivateViewRequestPurpose = typeof PrivateViewRequestPurpose[keyof typeof PrivateViewRequestPurpose];
 

@@ -43,6 +43,8 @@ export * from './fullViewProgress';
 export * from './fullViewPublicAnnouncement';
 export * from './fullViewVoteCircle';
 export * from './gameCommandInput';
+export * from './gameEndDateUpdateRequest';
+export * from './gameEndDateUpdateResponse';
 export * from './gameInviteResponse';
 export * from './gameViewResponse';
 export * from './guestJoinRequest';

@@ -548,6 +548,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+        '410':
+          description: The game has ended and been cleared (D117)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /games/{id}/end-date:
+    put:
+      operationId: updateGameEndDate
+      tags: [games]
+      summary: Move the game's last day (organiser only)
+      description: Requires the game-scoped coordinator capability. The new date must be from UK today to six months ahead; the game is deleted the day after it.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GameEndDateUpdateRequest'
+      responses:
+        '200':
+          description: End date saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameEndDateUpdateResponse'
+        '400':
+          description: Date in the past or more than six months ahead
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Valid game-scoped coordinator capability required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '410':
+          description: The game has ended and been cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /games/{id}/view:
     get:
       operationId: getGameView
@@ -570,6 +627,12 @@ paths:
                 $ref: '#/components/schemas/GameViewResponse'
         '404':
           description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '410':
+          description: The game has ended and been cleared (D117)
           content:
             application/json:
               schema:
@@ -877,7 +940,28 @@ components:
         ready:
           type: boolean
           description: For AcknowledgePrivate, true only after the player has finished viewing their role.
+        endDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: For CreateGame, the last UK calendar day of the game (required for every real game; UK today to six months ahead). The game is deleted the day after.
       additionalProperties: true
+    GameEndDateUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [endDate]
+      properties:
+        endDate:
+          type: string
+          maxLength: 10
+          description: New last UK calendar day, from UK today to six months ahead.
+    GameEndDateUpdateResponse:
+      type: object
+      additionalProperties: false
+      required: [gameEndDate]
+      properties:
+        gameEndDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
     PrivateViewRequest:
       type: object
       additionalProperties: false
@@ -1122,6 +1206,10 @@ components:
         lobbyCode:
           type: string
           pattern: '^[A-HJ-NP-Z2-9]{6}$'
+        gameEndDate:
+          type: [string, 'null']
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.
         version:
           type: integer
         phase:

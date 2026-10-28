@@ -148,17 +148,31 @@ const scheduler = createDeadlineScheduler({
   processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
   onError: () => logger.error('Deadline scheduler iteration failed'),
 });
+const { createClearDownScheduler } = await import('./clear-down-scheduler');
+const { runClearDown } = await import('@workspace/db/clear-down');
+const clearDown = createClearDownScheduler({
+  mode: environment.OATHSTONE_CLEARDOWN_MODE,
+  run: runClearDown,
+  log: (counts) => logger.info(counts, 'Game clear-down run'),
+  onError: () => logger.error('Game clear-down run failed'),
+});
 void startHttpService(
   server,
   environment.PORT,
   () => {
     logger.info({ port: environment.PORT }, 'Server listening');
     scheduler.start();
+    clearDown.start();
+    logger.info(
+      { mode: environment.OATHSTONE_CLEARDOWN_MODE },
+      'Game clear-down scheduled',
+    );
   },
   async () => {
     logger.error('Server failed to listen');
     process.exitCode = 1;
     try {
+      await clearDown.stop();
       await scheduler.stop();
       await realtime.close();
     } finally {
@@ -172,6 +186,7 @@ void startHttpService(
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.once(signal, () => {
     void (async () => {
+      await clearDown.stop();
       await scheduler.stop();
       await realtime.close();
       await pool.end();

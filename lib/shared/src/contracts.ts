@@ -7,6 +7,8 @@ import {
 } from './config';
 
 const id = z.string().min(1).max(128);
+// A UK calendar day; the server applies the end-date range (D117).
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const guestSeatName = z
   .string()
   .trim()
@@ -25,7 +27,12 @@ const command = <
   shape: S = {} as S,
 ) => envelope.extend({ type: z.literal(type), ...shape }).strict();
 export const commandSchema = z.union([
-  command('CreateGame', { id, config: gameConfigSchema }),
+  command('CreateGame', {
+    id,
+    config: gameConfigSchema,
+    // Required by the server for every real game (D117).
+    endDate: z.string().max(10).optional(),
+  }),
   command('JoinGame', {
     seatId: id,
     name: z
@@ -424,6 +431,8 @@ export const fullViewSchema = z
       .string()
       .regex(/^[A-HJ-NP-Z2-9]{6}$/)
       .optional(),
+    // Last UK day of a real game; deleted the day after. Null for practice.
+    gameEndDate: isoDate.nullable().optional(),
     version: z.number(),
     phase: phaseSchema,
     phaseStartedAt: z.number().int().nonnegative().optional(),
@@ -707,7 +716,14 @@ export const joinNameCheckRequestSchema = z.union([
 export const joinNameCheckResponseSchema = z
   .object({
     status: z.enum(['available', 'duplicate', 'reserved']),
+    gameEndDate: isoDate.nullable().optional(),
   })
+  .strict();
+export const gameEndDateUpdateRequestSchema = z
+  .object({ endDate: z.string().max(10) })
+  .strict();
+export const gameEndDateUpdateResponseSchema = z
+  .object({ gameEndDate: isoDate })
   .strict();
 export const seatRecoveryRequestSchema = z.union([
   z

@@ -350,7 +350,9 @@ describe('clear-down safety', () => {
         testOnlyGameIds: ids,
       }),
     ]);
-    expect(runs.reduce((total, run) => total + (run.deleted ?? 0), 0)).toBe(3);
+    expect(
+      runs.reduce((total, run) => total + (run.ran ? run.deleted : 0), 0),
+    ).toBe(3);
     for (const id of ids) {
       expect(await exists(id)).toBe(false);
       expect(await tombstone(id)).not.toBeNull();
