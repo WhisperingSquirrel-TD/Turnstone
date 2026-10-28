@@ -681,7 +681,17 @@ async function advanceAsOrganiser(
     outcome = await waitForAdvanceGate();
     if (await returnForTransition(outcome)) return;
     await expect(moveOn).toBeEnabled({ timeout: 1_000 });
-    await moveOn.click();
+    // Verify #327/#343/#344: a tied night choice opens the next round by
+    // itself, which can land between the enabled check and the tap. Follow
+    // the new step rather than tapping a button that now waits for it.
+    const tapped = await moveOn.click({ timeout: 2_000 }).then(
+      () => true,
+      () => false,
+    );
+    if (!tapped) {
+      if (await returnForTransition(await waitForAdvanceGate())) return;
+      await moveOn.click();
+    }
   } catch (error) {
     await reportAdvanceFailure(error);
   }
