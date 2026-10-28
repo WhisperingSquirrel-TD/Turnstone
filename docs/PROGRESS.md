@@ -1,5 +1,12 @@
 # Status for reviewer
 
+**Verify #348 (`81a6b29`): green.** D117 game end date and clear-down is
+complete on main. Owner approved production `OATHSTONE_CLEARDOWN_MODE=delete`
+(28 October 2026); Tom sets it in Replit after running
+`db:migrate:production`. Existing games backfill to created date plus 30
+days, so older real games clear at the first 04:00 UK run. Next: Tom
+re-syncs, migrates, sets the mode and publishes.
+
 **Verify #347 (`68f32c9`): red on server coverage only** (84.6% lines
 against 85%). The D117 end-date API tests exercise new `app.ts` code but were
 not in `test:server-coverage`. They now are; locally 154/154 pass and lines
