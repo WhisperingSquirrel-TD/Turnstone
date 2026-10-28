@@ -1,5 +1,14 @@
 # Status for reviewer
 
+**Verify #344 (`2bb74f1`): red; fix pushed.** The phone-back tests failed
+again on Pixel with the address back at `/` (history 3) but the flow still on
+screen. Root cause: under load React skipped rendering the intermediate
+`?entry=` location, so the router-driven effect never saw the change. The
+entry page now also follows the browser's `popstate` directly. Test first:
+"a quick back on a slow phone still shows the start screen" (Chromium CPU
+throttled 20x) failed before, 10/10 after. Static checks green. Next: confirm
+Verify green; check the #344 rehearsal-live failure (H1 SHADOW stall, open).
+
 **Verify #343 (`f74664e`): red.** Two to three phone-back-button tests
 failed intermittently in CI (a different flow per profile; locally 192/192
 including a cold Vite cache). The tests now first assert the flow's own
