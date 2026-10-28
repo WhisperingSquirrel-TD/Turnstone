@@ -11,7 +11,8 @@
     "./seat-access-store": "./src/seat-access-store.ts",
     "./presenter-access-store": "./src/presenter-access-store.ts",
     "./coordinator-access-store": "./src/coordinator-access-store.ts",
-    "./seat-presence-store": "./src/seat-presence-store.ts"
+    "./seat-presence-store": "./src/seat-presence-store.ts",
+    "./clear-down": "./src/clear-down.ts"
   },
   "scripts": {
     "push": "drizzle-kit push --config ./drizzle.config.ts",

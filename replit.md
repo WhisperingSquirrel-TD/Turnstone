@@ -22,6 +22,8 @@ Existing pnpm workspace retained: `artifacts/api-server` = requested apps/server
 
 `npm run verify:full` is honestly unavailable until Milestone 2. `npm run db:migrate:dev` explicitly applies committed development migrations; never run it in production. No production startup DDL. For production, the owner runs `pnpm run db:migrate:production` once per release with `OATHSTONE_CONFIRM_PRODUCTION_MIGRATION=apply` and the production `DATABASE_URL`; it is forward-only, safe to re-run, and never a startup or build hook (see `docs/LAUNCH.md`).
 
+Game clear-down (D117): the API server runs an in-process job hourly that deletes real games the day after their end date (from 04:00 UK) and practice games 24 hours after their last activity, leaving a tombstone (`lib/db/src/clear-down.ts`, `artifacts/api-server/src/clear-down-scheduler.ts`). `OATHSTONE_CLEARDOWN_MODE` is `dry-run` (default, counts only), `delete` or `off` (kill switch). Production stays in dry-run until the owner approves.
+
 Run services with their artifact-managed workflows. Node 24 LTS. Database and session secrets remain in workspace Secrets, never read out or stored in files.
 
 ## Standing scope rules

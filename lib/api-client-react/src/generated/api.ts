@@ -30,6 +30,8 @@ import type {
   CoordinatorTakeoverStatusResponse,
   CoordinatorTakeoverVoteInput,
   GameCommandInput,
+  GameEndDateUpdateRequest,
+  GameEndDateUpdateResponse,
   GameInviteResponse,
   GameViewResponse,
   GuestJoinRequest,
@@ -1636,6 +1638,96 @@ export function useGetCoordinatorView<TData = Awaited<ReturnType<typeof getCoord
 
 
 
+
+export const getUpdateGameEndDateUrl = (id: string,) => {
+
+
+
+
+  return `/api/games/${id}/end-date`
+}
+
+/**
+ * Requires the game-scoped coordinator capability. The new date must be from UK today to six months ahead; the game is deleted the day after it.
+ * @summary Move the game's last day (organiser only)
+ */
+export const updateGameEndDate = async (id: string,
+    gameEndDateUpdateRequest: GameEndDateUpdateRequest, options?: Parameters<typeof customFetch>[1]): Promise<GameEndDateUpdateResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<GameEndDateUpdateResponse>(getUpdateGameEndDateUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(gameEndDateUpdateRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateGameEndDateMutationKey = () => ['updateGameEndDate'] as const;
+
+export const getUpdateGameEndDateMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGameEndDate>>, TError,UpdateGameEndDateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateGameEndDate>>, TError,UpdateGameEndDateMutationVariables, TContext> => {
+
+const mutationKey = getUpdateGameEndDateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateGameEndDate>>, UpdateGameEndDateMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateGameEndDate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateGameEndDateMutationResult = NonNullable<Awaited<ReturnType<typeof updateGameEndDate>>>
+    export type UpdateGameEndDateMutationBody = BodyType<GameEndDateUpdateRequest>
+    export type UpdateGameEndDateMutationError = ErrorType<ApiError>
+    export type UpdateGameEndDateMutationVariables = {id: string;data: BodyType<GameEndDateUpdateRequest>}
+
+    /**
+ * @summary Move the game's last day (organiser only)
+ */
+export const useUpdateGameEndDate = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGameEndDate>>, TError,UpdateGameEndDateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateGameEndDate>>,
+        TError,
+        UpdateGameEndDateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateGameEndDateMutationOptions(options));
+    }
 
 export const getGetGameViewUrl = (id: string,) => {
 

@@ -16,5 +16,10 @@ export interface GameCommandInput {
   idempotencyKey: string;
   /** For AcknowledgePrivate, true only after the player has finished viewing their role. */
   ready?: boolean;
+  /**
+     * For CreateGame, the last UK calendar day of the game (required for every real game; UK today to six months ahead). The game is deleted the day after.
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  endDate?: string;
   [key: string]: unknown;
  }

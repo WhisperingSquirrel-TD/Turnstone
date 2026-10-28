@@ -9,6 +9,7 @@ import {
   type DeploymentMode,
 } from '../lib/security/src/deployment';
 import { entryFailureMessages, gameConfigSchema } from '../lib/shared/src';
+import { ukCalendarDate } from '../lib/shared/src/game-end-date';
 
 describe('health and readiness', () => {
   it('health is independent of database availability', async () => {
@@ -175,6 +176,7 @@ describe('health and readiness', () => {
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: 'auth-error-game',
         idempotencyKey: 'auth-error-request',
         config: gameConfigSchema.parse({}),
@@ -222,6 +224,7 @@ describe('health and readiness', () => {
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: 'busy-game',
         idempotencyKey: 'create-while-busy',
         config: gameConfigSchema.parse({}),
@@ -289,6 +292,7 @@ describe('health and readiness', () => {
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: 'coming-soon-game',
         idempotencyKey: 'coming-soon-game-request',
         config: gameConfigSchema.parse({}),
@@ -431,6 +435,7 @@ describe('health and readiness', () => {
       .set('X-CSRF-Token', token)
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: 'not-allowed-here',
         idempotencyKey: 'create-game-on-command-route',
         config: gameConfigSchema.parse({}),
@@ -469,6 +474,7 @@ describe('health and readiness', () => {
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: 'rate-limited-game',
         idempotencyKey: 'rate-limited-request',
         config: gameConfigSchema.parse({}),
@@ -497,6 +503,7 @@ describe('health and readiness', () => {
       .post('/api/games')
       .send({
         type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
         id: 'admission-limited-game',
         idempotencyKey: 'admission-limited-request',
         config: gameConfigSchema.parse({}),

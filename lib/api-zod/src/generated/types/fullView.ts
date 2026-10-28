@@ -49,6 +49,12 @@ export interface FullView {
   gameName?: string;
   /** @pattern ^[A-HJ-NP-Z2-9]{6}$ */
   lobbyCode?: string;
+  /**
+     * Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  gameEndDate?: string | null;
   version: number;
   phase: Phase;
   paused: boolean;

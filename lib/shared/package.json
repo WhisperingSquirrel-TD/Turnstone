@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./app-routes": "./src/app-routes.ts"
+    "./app-routes": "./src/app-routes.ts",
+    "./game-end-date": "./src/game-end-date.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"

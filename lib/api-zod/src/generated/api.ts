@@ -65,6 +65,7 @@ export const startRehearsalResponseViewTwoViewerSeatIdMax = 128;
 export const startRehearsalResponseViewTwoGameNameMax = 60;
 
 export const startRehearsalResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
+export const startRehearsalResponseViewTwoGameEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const startRehearsalResponseViewTwoCycleMin = 0;
 
 export const startRehearsalResponseViewTwoShadowRoundMin = 0;
@@ -190,6 +191,7 @@ export const StartRehearsalResponse = zod.object({
   "viewerSeatId": zod.string().min(1).max(startRehearsalResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(startRehearsalResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(startRehearsalResponseViewTwoLobbyCodeRegExp).optional(),
+  "gameEndDate": zod.string().regex(startRehearsalResponseViewTwoGameEndDateRegExp).nullish().describe('Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.'),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -455,12 +457,14 @@ export const StartRehearsalResponse = zod.object({
 
 export const createGameBodyIdempotencyKeyMax = 128;
 
+export const createGameBodyEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 
 
 export const CreateGameBody = zod.object({
   "type": zod.string().min(1),
   "idempotencyKey": zod.string().min(1).max(createGameBodyIdempotencyKeyMax),
-  "ready": zod.boolean().optional().describe('For AcknowledgePrivate, true only after the player has finished viewing their role.')
+  "ready": zod.boolean().optional().describe('For AcknowledgePrivate, true only after the player has finished viewing their role.'),
+  "endDate": zod.string().regex(createGameBodyEndDateRegExp).optional().describe('For CreateGame, the last UK calendar day of the game (required for every real game; UK today to six months ahead). The game is deleted the day after.')
 })
 
 export const createGameResponseServerNowMin = 0;
@@ -480,6 +484,7 @@ export const createGameResponseViewTwoViewerSeatIdMax = 128;
 export const createGameResponseViewTwoGameNameMax = 60;
 
 export const createGameResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
+export const createGameResponseViewTwoGameEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const createGameResponseViewTwoCycleMin = 0;
 
 export const createGameResponseViewTwoShadowRoundMin = 0;
@@ -605,6 +610,7 @@ export const CreateGameResponse = zod.object({
   "viewerSeatId": zod.string().min(1).max(createGameResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(createGameResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(createGameResponseViewTwoLobbyCodeRegExp).optional(),
+  "gameEndDate": zod.string().regex(createGameResponseViewTwoGameEndDateRegExp).nullish().describe('Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.'),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -1042,6 +1048,7 @@ export const getJoinRequestStatusResponseThreeGameViewTwoViewerSeatIdMax = 128;
 export const getJoinRequestStatusResponseThreeGameViewTwoGameNameMax = 60;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
+export const getJoinRequestStatusResponseThreeGameViewTwoGameEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const getJoinRequestStatusResponseThreeGameViewTwoCycleMin = 0;
 
 export const getJoinRequestStatusResponseThreeGameViewTwoShadowRoundMin = 0;
@@ -1173,6 +1180,7 @@ export const GetJoinRequestStatusResponse = zod.union([zod.object({
   "viewerSeatId": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(getJoinRequestStatusResponseThreeGameViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(getJoinRequestStatusResponseThreeGameViewTwoLobbyCodeRegExp).optional(),
+  "gameEndDate": zod.string().regex(getJoinRequestStatusResponseThreeGameViewTwoGameEndDateRegExp).nullish().describe('Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.'),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -1685,6 +1693,7 @@ export const getCoordinatorViewResponseViewTwoViewerSeatIdMax = 128;
 export const getCoordinatorViewResponseViewTwoGameNameMax = 60;
 
 export const getCoordinatorViewResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
+export const getCoordinatorViewResponseViewTwoGameEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const getCoordinatorViewResponseViewTwoCycleMin = 0;
 
 export const getCoordinatorViewResponseViewTwoShadowRoundMin = 0;
@@ -1810,6 +1819,7 @@ export const GetCoordinatorViewResponse = zod.object({
   "viewerSeatId": zod.string().min(1).max(getCoordinatorViewResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(getCoordinatorViewResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(getCoordinatorViewResponseViewTwoLobbyCodeRegExp).optional(),
+  "gameEndDate": zod.string().regex(getCoordinatorViewResponseViewTwoGameEndDateRegExp).nullish().describe('Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.'),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -2070,6 +2080,34 @@ export const GetCoordinatorViewResponse = zod.object({
 
 
 /**
+ * Requires the game-scoped coordinator capability. The new date must be from UK today to six months ahead; the game is deleted the day after it.
+ * @summary Move the game's last day (organiser only)
+ */
+export const updateGameEndDatePathIdMax = 128;
+
+
+
+export const UpdateGameEndDateParams = zod.object({
+  "id": zod.coerce.string().min(1).max(updateGameEndDatePathIdMax)
+})
+
+export const updateGameEndDateBodyEndDateMax = 10;
+
+
+
+export const UpdateGameEndDateBody = zod.object({
+  "endDate": zod.string().max(updateGameEndDateBodyEndDateMax).describe('New last UK calendar day, from UK today to six months ahead.')
+})
+
+export const updateGameEndDateResponseGameEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const UpdateGameEndDateResponse = zod.object({
+  "gameEndDate": zod.string().regex(updateGameEndDateResponseGameEndDateRegExp)
+})
+
+
+/**
  * @summary Get the public projection for the current viewer
  */
 export const getGameViewPathIdMax = 128;
@@ -2097,6 +2135,7 @@ export const getGameViewResponseViewTwoViewerSeatIdMax = 128;
 export const getGameViewResponseViewTwoGameNameMax = 60;
 
 export const getGameViewResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
+export const getGameViewResponseViewTwoGameEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const getGameViewResponseViewTwoCycleMin = 0;
 
 export const getGameViewResponseViewTwoShadowRoundMin = 0;
@@ -2222,6 +2261,7 @@ export const GetGameViewResponse = zod.object({
   "viewerSeatId": zod.string().min(1).max(getGameViewResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(getGameViewResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(getGameViewResponseViewTwoLobbyCodeRegExp).optional(),
+  "gameEndDate": zod.string().regex(getGameViewResponseViewTwoGameEndDateRegExp).nullish().describe('Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.'),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -2515,6 +2555,7 @@ export const revealPrivateViewResponseViewTwoViewerSeatIdMax = 128;
 export const revealPrivateViewResponseViewTwoGameNameMax = 60;
 
 export const revealPrivateViewResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
+export const revealPrivateViewResponseViewTwoGameEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const revealPrivateViewResponseViewTwoCycleMin = 0;
 
 export const revealPrivateViewResponseViewTwoShadowRoundMin = 0;
@@ -2640,6 +2681,7 @@ export const RevealPrivateViewResponse = zod.object({
   "viewerSeatId": zod.string().min(1).max(revealPrivateViewResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(revealPrivateViewResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(revealPrivateViewResponseViewTwoLobbyCodeRegExp).optional(),
+  "gameEndDate": zod.string().regex(revealPrivateViewResponseViewTwoGameEndDateRegExp).nullish().describe('Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.'),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),
@@ -2913,12 +2955,14 @@ export const SubmitGameCommandParams = zod.object({
 
 export const submitGameCommandBodyIdempotencyKeyMax = 128;
 
+export const submitGameCommandBodyEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 
 
 export const SubmitGameCommandBody = zod.object({
   "type": zod.string().min(1),
   "idempotencyKey": zod.string().min(1).max(submitGameCommandBodyIdempotencyKeyMax),
-  "ready": zod.boolean().optional().describe('For AcknowledgePrivate, true only after the player has finished viewing their role.')
+  "ready": zod.boolean().optional().describe('For AcknowledgePrivate, true only after the player has finished viewing their role.'),
+  "endDate": zod.string().regex(submitGameCommandBodyEndDateRegExp).optional().describe('For CreateGame, the last UK calendar day of the game (required for every real game; UK today to six months ahead). The game is deleted the day after.')
 })
 
 export const submitGameCommandResponseServerNowMin = 0;
@@ -2938,6 +2982,7 @@ export const submitGameCommandResponseViewTwoViewerSeatIdMax = 128;
 export const submitGameCommandResponseViewTwoGameNameMax = 60;
 
 export const submitGameCommandResponseViewTwoLobbyCodeRegExp = new RegExp('^[A-HJ-NP-Z2-9]{6}$');
+export const submitGameCommandResponseViewTwoGameEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const submitGameCommandResponseViewTwoCycleMin = 0;
 
 export const submitGameCommandResponseViewTwoShadowRoundMin = 0;
@@ -3063,6 +3108,7 @@ export const SubmitGameCommandResponse = zod.object({
   "viewerSeatId": zod.string().min(1).max(submitGameCommandResponseViewTwoViewerSeatIdMax).optional(),
   "gameName": zod.string().min(1).max(submitGameCommandResponseViewTwoGameNameMax).optional(),
   "lobbyCode": zod.string().regex(submitGameCommandResponseViewTwoLobbyCodeRegExp).optional(),
+  "gameEndDate": zod.string().regex(submitGameCommandResponseViewTwoGameEndDateRegExp).nullish().describe('Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.'),
   "version": zod.number().int(),
   "phase": zod.enum(['DRAFT', 'LOBBY', 'DEAL', 'MISSION', 'DEBATE', 'VOTE', 'VERDICT', 'SHADOW', 'DAWN', 'ENDGAME', 'FINAL_VOTE', 'FINAL_BANISH', 'FINISHED', 'ARCHIVED']),
   "paused": zod.boolean(),

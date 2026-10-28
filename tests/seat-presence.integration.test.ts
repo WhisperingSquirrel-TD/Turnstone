@@ -21,9 +21,13 @@ afterEach(async () => {
 async function createGame() {
   const id = randomUUID();
   gameIds.push(id);
-  await db
-    .insert(games)
-    .values({ id, config: {}, version: 0, status: 'active' });
+  await db.insert(games).values({
+    id,
+    config: {},
+    version: 0,
+    status: 'active',
+    gameEndDate: '2099-12-31',
+  });
   return id;
 }
 

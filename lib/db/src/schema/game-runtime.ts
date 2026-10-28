@@ -1,4 +1,7 @@
+import { sql } from 'drizzle-orm';
 import {
+  check,
+  date,
   index,
   integer,
   jsonb,
@@ -9,18 +12,47 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
-export const games = pgTable('games', {
-  id: text('id').primaryKey(),
-  config: jsonb('config').notNull(),
-  version: integer('version').notNull().default(0),
-  status: text('status').notNull().default('active'),
-  createdAt: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const games = pgTable(
+  'games',
+  {
+    id: text('id').primaryKey(),
+    config: jsonb('config').notNull(),
+    version: integer('version').notNull().default(0),
+    status: text('status').notNull().default('active'),
+    // Last UK calendar day of a real game; it is deleted the day after
+    // (D117). Practice games have none.
+    gameEndDate: date('game_end_date', { mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      'games_end_date_required_check',
+      sql`${table.gameEndDate} is not null or coalesce(${table.config} #>> '{rehearsal,enabled}', 'false') = 'true'`,
+    ),
+    index('games_end_date_idx').on(table.gameEndDate),
+  ],
+);
+
+/** What remains of a cleared game: no names, codes or game content (D117). */
+export const gameTombstones = pgTable(
+  'game_tombstones',
+  {
+    gameId: text('game_id').primaryKey(),
+    deletedOn: date('deleted_on', { mode: 'string' }).notNull(),
+    reason: text('reason').notNull(),
+  },
+  (table) => [
+    check(
+      'game_tombstones_reason_check',
+      sql`${table.reason} in ('end_date_passed', 'practice_inactive')`,
+    ),
+  ],
+);
 
 export const gameUndoWindows = pgTable('game_undo_windows', {
   gameId: text('game_id')

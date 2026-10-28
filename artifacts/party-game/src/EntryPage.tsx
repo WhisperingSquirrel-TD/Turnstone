@@ -34,6 +34,8 @@ import {
 import { config } from '@/config';
 import { apiUrl as buildApiUrl } from '@/api-url';
 import { en } from '@/locale/en-GB';
+import { ukCalendarDate } from '@workspace/shared/game-end-date';
+import { GameClearedNotice } from './GameChrome';
 import {
   EntryExperience,
   type EntryExperienceBusy,
@@ -328,6 +330,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     joinName: '',
     joinPin: '',
     createGameName: '',
+    createEndDate: ukCalendarDate(Date.now()),
     createPlayerCount: 15,
     createCoCoordinatorCount: 0,
     organiserName: '',
@@ -347,6 +350,8 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     number | null
   >(null);
   const [joinCode, setJoinCode] = useState('');
+  const [joinGameEndDate, setJoinGameEndDate] = useState<string | null>(null);
+  const [gameCleared, setGameCleared] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [invitationKind, setInvitationKind] = useState<'lobby' | 'late' | null>(
     null,
@@ -515,7 +520,9 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       baseIntervalMs: 5_000,
       maxIntervalMs: 120_000,
       onError: (error) => {
-        if (active)
+        if (active && error instanceof ApiRequestError && error.status === 410)
+          setGameCleared(true);
+        else if (active)
           setErrors((current) => ({
             ...current,
             approve:
@@ -619,6 +626,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         joinNameCheckResponseSchema,
         csrfToken,
       );
+      setJoinGameEndDate(result.gameEndDate ?? null);
       return result.status;
     } catch (error) {
       throw new EntryActionError(nameCheckFailureMessage(error));
@@ -691,6 +699,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
 
   async function createGame(data: {
     gameName: string;
+    endDate: string;
     playerCount: number;
     coCoordinatorCount: number;
     organiserName: string;
@@ -715,6 +724,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         id,
         idempotencyKey: crypto.randomUUID(),
         config: configValue,
+        endDate: data.endDate,
       });
       const created = await postJson(
         '/games',
@@ -1041,6 +1051,25 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
       </span>
     </Suspense>
   ) : null;
+  async function changeEndDate(endDate: string): Promise<void> {
+    if (!coordinatorGameId) throw new Error('coordinator-view-unavailable');
+    if (!csrfToken) throw new Error('security-not-ready');
+    const response = await fetch(
+      apiUrl(`/games/${encodeURIComponent(coordinatorGameId)}/end-date`),
+      {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ endDate }),
+      },
+    );
+    if (!response.ok) throw await createApiError(response);
+    await loadCoordinatorView(coordinatorGameId);
+  }
+  if (gameCleared) return <GameClearedNotice />;
   return (
     <EntryExperience
       copy={{
@@ -1049,6 +1078,12 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         brandGoldSuffix: config.wordmarkAccentSuffix,
       }}
       screen={screen}
+      gameEndDate={
+        screen === 'lobby'
+          ? (coordinatorView?.gameEndDate ?? null)
+          : joinGameEndDate
+      }
+      onChangeEndDate={coordinatorAuthorised ? changeEndDate : undefined}
       gameTheme={coordinatorView?.phase === 'SHADOW' ? 'night' : undefined}
       lateJoinMode={lateJoinMode}
       coordinatorPanel={coordinatorPanel}

@@ -40,6 +40,8 @@ vi.mock('@workspace/db/game-store', () => ({
   readGameEvents: async () => mockStore.events,
   readGameEventsAfter: async () => [],
   readGameUndoWindow: async () => null,
+  readGameEndDate: async () => '2026-12-31',
+  readGameTombstone: async () => null,
   readLatestGameSnapshot: async () => null,
 }));
 

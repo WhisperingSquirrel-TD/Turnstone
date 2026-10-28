@@ -25,6 +25,11 @@ const environmentSchema = z
       .regex(/^[a-z\d.-]+$/i)
       .optional(),
     MAX_ACTIVE_GAMES: z.coerce.number().int().min(1).optional(),
+    // Game clear-down (D117): dry-run until the owner approves deleting;
+    // 'off' is the kill switch.
+    OATHSTONE_CLEARDOWN_MODE: z
+      .enum(['off', 'dry-run', 'delete'])
+      .default('dry-run'),
   })
   .superRefine((environment, context) => {
     if (

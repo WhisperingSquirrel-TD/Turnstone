@@ -1,5 +1,9 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { config } from '@/config';
+import {
+  formatUkDate,
+  gameDeletionDate,
+} from '@workspace/shared/game-end-date';
 import { en } from '@/locale/en-GB';
 import type { GameConnectionState } from './game-socket';
 import { GameConnectionStatus } from './GameConnectionStatus';
@@ -441,5 +445,28 @@ export function PlayerTile({
     >
       {contents}
     </div>
+  );
+}
+
+/** Tells everyone when a real game is deleted (D117); practice games have none. */
+export function GameEndDateNotice({ endDate }: { endDate: string }) {
+  return (
+    <p className="game-end-date-notice" data-testid="end-date-notice">
+      {en.app.endDateNotice(formatUkDate(gameDeletionDate(endDate)))}
+    </p>
+  );
+}
+
+/** An old link to a game removed by the clear-down (D117): not an error. */
+export function GameClearedNotice() {
+  return (
+    <section className="game-cleared" aria-live="polite">
+      <p className="display text-2xl" data-testid="game-cleared">
+        {en.app.gameCleared}
+      </p>
+      <a className="quiet-action mt-6" href={config.routes.home}>
+        {en.notFound.back}
+      </a>
+    </section>
   );
 }

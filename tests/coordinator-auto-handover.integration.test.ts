@@ -39,9 +39,13 @@ async function setupCapability(input: {
   const gameId = randomUUID();
   const tokenHash = `token-hash-${randomUUID()}`;
   gameIds.push(gameId);
-  await db
-    .insert(games)
-    .values({ id: gameId, config: {}, version: 0, status: 'active' });
+  await db.insert(games).values({
+    id: gameId,
+    config: {},
+    version: 0,
+    status: 'active',
+    gameEndDate: '2099-12-31',
+  });
   await db.insert(gameCoordinatorCapabilities).values({
     gameId,
     tokenHash,

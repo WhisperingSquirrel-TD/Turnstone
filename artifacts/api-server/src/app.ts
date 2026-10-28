@@ -61,6 +61,9 @@ import {
   seatRecoveryRequestSchema,
   normalizeSeatName,
   shortCodeJoinRequestSchema,
+  checkGameEndDate,
+  gameEndDateUpdateRequestSchema,
+  gameEndDateUpdateResponseSchema,
 } from '@workspace/shared';
 import {
   decide,
@@ -284,6 +287,10 @@ async function projectState(state: State, viewer: Viewer) {
           disconnectedSeatIds,
           connectedSeatIds,
         });
+  if ('id' in view) {
+    const { readGameEndDate } = await import('@workspace/db/game-store');
+    view.gameEndDate = await readGameEndDate(state.id);
+  }
   if (viewer.kind === 'coordinator' && 'id' in view) {
     const { getGameUndoStatus } = await import('@workspace/db/game-store');
     view.coordinatorUndo = await getGameUndoStatus(
@@ -325,6 +332,20 @@ async function loadGameState(gameId: string): Promise<State | null> {
 
 function sendError(response: Response, status: number, error: string): void {
   response.status(status).json(apiErrorResponseSchema.parse({ error }));
+}
+
+export const gameClearedMessage = 'This game has ended and been cleared.';
+
+/** A cleared game answers 410 with a plain message; an unknown one 404 (D117). */
+async function sendMissingGame(
+  response: Response,
+  gameId: string,
+  notFoundMessage = 'Not found',
+): Promise<void> {
+  const { readGameTombstone } = await import('@workspace/db/game-store');
+  if (await readGameTombstone(gameId))
+    sendError(response, 410, gameClearedMessage);
+  else sendError(response, 404, notFoundMessage);
 }
 
 type ReadinessStatus = 'ready' | 'unavailable';
@@ -778,6 +799,15 @@ export function createApp(
         sendError(response, 400, 'Invalid request');
         return;
       }
+      // Every real game has a last day, UK today to six months ahead (D117).
+      const endDateCheck = checkGameEndDate(
+        parsed.data.endDate ?? '',
+        options.testOnlyNow?.() ?? Date.now(),
+      );
+      if (!endDateCheck.ok) {
+        sendError(response, 400, endDateCheck.message);
+        return;
+      }
       const viewer = await coordinatorViewerForRequest(request);
       const actor: Actor = { kind: 'coordinator' };
       if (!(await checkRateLimit(request, 'create-game', undefined, 5))) {
@@ -818,6 +848,7 @@ export function createApp(
         idempotencyKey: parsed.data.idempotencyKey,
         requestHash: requestHash(parsed.data),
         snapshot: { seq: initialState.version, state: initialState },
+        ...(parsed.data.endDate ? { endDate: parsed.data.endDate } : {}),
         coordinatorCapability: {
           tokenHash: createHash('sha256')
             .update(coordinatorToken)
@@ -1487,7 +1518,14 @@ export function createApp(
         : state.seats.some((seat) => normalizeSeatName(seat.name) === nameKey)
           ? 'duplicate'
           : 'available';
-      response.json(joinNameCheckResponseSchema.parse({ status }));
+      const { readGameEndDate } = await import('@workspace/db/game-store');
+      // Joiners are told when the game will be deleted (D117).
+      response.json(
+        joinNameCheckResponseSchema.parse({
+          status,
+          gameEndDate: await readGameEndDate(gameId),
+        }),
+      );
     } catch {
       sendError(response, 503, entryFailureMessages.nameCheckFailed);
     }
@@ -2843,6 +2881,55 @@ export function createApp(
       sendError(response, 503, 'Service unavailable');
     }
   });
+  // The organiser may move the end date later or earlier while the game
+  // exists, always within UK today to six months ahead (D117).
+  app.put('/api/games/:id/end-date', async (request, response) => {
+    try {
+      if (!hasValidCsrf(request)) {
+        sendError(response, 403, 'Invalid request');
+        return;
+      }
+      const viewer = await coordinatorViewerForRequest(request);
+      const actor = actorFor(viewer);
+      if (actor?.kind !== 'coordinator') {
+        sendError(response, 401, 'Authentication required');
+        return;
+      }
+      if (
+        !(await checkRateLimit(request, 'game-end-date', actorId(actor), 20))
+      ) {
+        sendError(response, 429, 'Too many requests');
+        return;
+      }
+      const parsed = gameEndDateUpdateRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        sendError(response, 400, 'Invalid request');
+        return;
+      }
+      const check = checkGameEndDate(
+        parsed.data.endDate,
+        options.testOnlyNow?.() ?? Date.now(),
+      );
+      if (!check.ok) {
+        sendError(response, 400, check.message);
+        return;
+      }
+      const gameId = request.params.id ?? '';
+      const { updateGameEndDate } = await import('@workspace/db/game-store');
+      if (!(await updateGameEndDate(gameId, parsed.data.endDate))) {
+        await sendMissingGame(response, gameId);
+        return;
+      }
+      await publishGame(gameId);
+      response.json(
+        gameEndDateUpdateResponseSchema.parse({
+          gameEndDate: parsed.data.endDate,
+        }),
+      );
+    } catch {
+      sendError(response, 503, 'Service unavailable');
+    }
+  });
   app.get('/api/games/:id/coordinator/view', async (request, response) => {
     try {
       const viewer = await coordinatorViewerForRequest(request);
@@ -2852,7 +2939,7 @@ export function createApp(
       }
       const state = await loadGameState(request.params.id ?? '');
       if (!state) {
-        sendError(response, 404, 'Not found');
+        await sendMissingGame(response, request.params.id ?? '');
         return;
       }
       // Resolve capability separately from the organiser's player seat.
@@ -2870,7 +2957,7 @@ export function createApp(
     try {
       const state = await loadGameState(request.params.id ?? '');
       if (!state) {
-        sendError(response, 404, 'Not found');
+        await sendMissingGame(response, request.params.id ?? '');
         return;
       }
       const viewer = await viewerForRequest(request);
@@ -2895,7 +2982,7 @@ export function createApp(
       const gameId = request.params.id ?? '';
       const state = await loadGameState(gameId);
       if (!state) {
-        sendError(response, 404, 'Not found');
+        await sendMissingGame(response, gameId);
         return;
       }
       const viewer = await viewerForRequest(request);
