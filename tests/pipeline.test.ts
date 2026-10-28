@@ -1,3 +1,4 @@
+import { renderRobotsTxt } from '../lib/security/src/deployment';
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
@@ -231,8 +232,9 @@ describe('owner-approved delivery policy', () => {
         rule.headers.some((header) => header.key === 'Cache-Control'),
     );
     expect(htmlCacheRule).toBeLessThan(assetCacheRule);
+    // D119: pre-launch robots lets agents read the public pages.
     expect(readFileSync('artifacts/party-game/public/robots.txt', 'utf8')).toBe(
-      'User-agent: *\nDisallow: /\n',
+      renderRobotsTxt({ preLaunchNoindex: true, comingSoonMode: false }),
     );
   });
   it('serves the built production HTML and preview routes with pre-launch headers', async () => {

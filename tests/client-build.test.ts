@@ -1,3 +1,5 @@
+import { renderRobotsTxt } from '../lib/security/src/deployment';
+
 import { afterEach, expect, it } from 'vitest';
 import {
   mkdtemp,
@@ -12,6 +14,9 @@ import { tmpdir } from 'node:os';
 import { brotliDecompressSync, gunzipSync } from 'node:zlib';
 import { prepareClientBuild } from '../artifacts/api-server/src/client-build';
 import { assertClientBuild } from '../artifacts/api-server/src/static-client';
+
+// D119: the pre-launch robots policy lets agents read the public pages.
+const preLaunchMode = { preLaunchNoindex: true, comingSoonMode: false };
 let root = '';
 afterEach(async () => {
   if (root) await rm(root, { recursive: true, force: true });
@@ -23,7 +28,7 @@ async function fixture(
   await mkdir(join(root, 'assets'));
   await writeFile(join(root, 'index.html'), html);
   await writeFile(join(root, 'app-shell.html'), html);
-  await writeFile(join(root, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
+  await writeFile(join(root, 'robots.txt'), renderRobotsTxt(preLaunchMode));
   await writeFile(
     join(root, 'assets/main-abcdef12.js'),
     'export const ready = true;',

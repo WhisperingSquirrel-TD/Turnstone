@@ -1,5 +1,8 @@
 import { config } from './config';
 import { en } from './locale/en-GB';
+import { publicSiteCopy } from './public-copy';
+
+export { publicSiteCopy };
 import {
   deploymentMode,
   shouldNoindexPath,
@@ -104,7 +107,19 @@ function renderPublicFooter(
   extra = '',
   includeIndependence = true,
 ): string {
-  return `<footer class="public-home-footer" data-testid="brand-footer-static">${renderStackstoneFooterLink(basePath)}${includeIndependence ? `<p class="public-independence">${escapeHtml(en.publicSite.independenceStatement)}</p>` : ''}${extra}</footer>`;
+  return `<footer class="public-home-footer" data-testid="brand-footer-static">${renderCrossLinks()}${renderStackstoneFooterLink(basePath)}${includeIndependence ? `<p class="public-independence">${escapeHtml(en.publicSite.independenceStatement)}</p>` : ''}${extra}</footer>`;
+}
+
+// The company page is the single indexable home; the game lives here (D119).
+function renderCrossLinks(): string {
+  return `<p class="public-cross-links" data-testid="public-cross-links"><a href="${escapeHtml(config.companyPageUrl)}">${escapeHtml(en.publicSite.fullDetails)}</a> · <a href="${escapeHtml(new URL('/', config.siteOrigin).href)}">${escapeHtml(en.publicSite.playHere)}</a></p>`;
+}
+
+function renderMissionsNotice(): string {
+  const notice = publicSiteCopy().missionsNotice;
+  return notice
+    ? `<p class="public-beta-note" data-testid="public-beta-note">${escapeHtml(notice)}</p>`
+    : '';
 }
 
 function renderFaqDetails(
@@ -237,7 +252,7 @@ export function structuredPublicData({
           {
             '@context': 'https://schema.org',
             '@type': 'FAQPage',
-            mainEntity: en.publicSite.faq.map((item) => ({
+            mainEntity: publicSiteCopy().faq.map((item) => ({
               '@type': 'Question',
               name: item.question,
               acceptedAnswer: {
@@ -266,19 +281,20 @@ export function renderPublicHomeHtml(
   const playUrl = `${base}play?entry=create`;
   const joinUrl = `${base}join`;
   const practiseUrl = `${base}play?entry=rehearsal`;
-  const steps = en.publicSite.howItWorks
+  const copy = publicSiteCopy();
+  const steps = copy.howItWorks
     .map(
       (step, index) =>
         `<li><h3>${index + 1}. ${escapeHtml(step.heading)}</h3><p>${escapeHtml(step.body)}</p></li>`,
     )
     .join('');
-  const formats = en.publicSite.formats
+  const formats = copy.formats
     .map(
       (format) =>
         `<article><h3>${escapeHtml(format.name)}</h3><p class="public-format-duration">${escapeHtml(format.duration)}</p><p>${escapeHtml(format.description)}</p></article>`,
     )
     .join('');
-  const questions = renderFaqDetails(en.publicSite.faq);
+  const questions = renderFaqDetails(copy.faq);
   const demo =
     options.staticOnly || comingSoon
       ? ''
@@ -315,6 +331,7 @@ export function renderPublicHomeHtml(
       <section class="public-home-section" aria-labelledby="public-how-heading">
         <h2 id="public-how-heading">${escapeHtml(en.publicSite.howItWorksHeading)}</h2>
         <ol class="public-home-steps">${steps}</ol>
+        ${renderMissionsNotice()}
       </section>
       <section class="public-home-section" aria-labelledby="public-formats-heading">
         <h2 id="public-formats-heading">${escapeHtml(en.publicSite.formatsHeading)}</h2>
@@ -343,7 +360,7 @@ export function renderPublicFaqHtml(
       <section class="public-home-section" aria-labelledby="public-faq-heading">
         <h1 id="public-faq-heading">${escapeHtml(en.publicSite.faqHeading)}</h1>
         <p class="public-home-answer">${escapeHtml(en.publicSite.answer(config.appName))}</p>
-        <div class="public-home-faq">${renderFaqDetails(en.publicSite.faq)}</div>
+        <div class="public-home-faq">${renderFaqDetails(publicSiteCopy().faq)}</div>
       </section>
       ${renderFactsBlock('public-faq-facts-heading')}
     </main>
@@ -375,7 +392,7 @@ export function renderPublicCompareHtml(
       </section>
       <section class="public-home-section" aria-labelledby="public-compare-faq-heading">
         <h2 id="public-compare-faq-heading">${escapeHtml(en.publicSite.faqHeading)}</h2>
-        <div class="public-home-faq">${renderFaqDetails(en.publicSite.faq.slice(-3))}</div>
+        <div class="public-home-faq">${renderFaqDetails(publicSiteCopy().faq.slice(-3))}</div>
       </section>
     </main>
   `;
@@ -403,8 +420,8 @@ export function renderPublicHowToPlayHtml(
   mode: DeploymentMode = deploymentMode,
 ): string {
   const base = normaliseBasePath(basePath);
-  const steps = en.publicSite.howItWorks
-    .map(
+  const steps = publicSiteCopy()
+    .howItWorks.map(
       (step, index) =>
         `<li><h2>${index + 1}. ${escapeHtml(step.heading)}</h2><p>${escapeHtml(step.body)}</p></li>`,
     )
@@ -416,6 +433,7 @@ export function renderPublicHowToPlayHtml(
         <h1 id="public-how-to-play-heading">${escapeHtml(en.publicSite.howToPlayHeading)}</h1>
         <p class="public-home-answer">${escapeHtml(en.publicSite.howToPlayDescription)}</p>
         <ol class="public-home-steps">${steps}</ol>
+        ${renderMissionsNotice()}
       </section>
     </main>
   `;
@@ -470,7 +488,8 @@ export function renderLlmsTxt(): string {
   const facts = getPublicFacts()
     .map((fact) => `- ${fact.label}: ${fact.value}`)
     .join('\n');
-  const questions = en.publicSite.faq
+  const copy = publicSiteCopy();
+  const questions = copy.faq
     .map((item) => `### ${item.question}\n${item.answer}`)
     .join('\n\n');
   const comparisons = en.publicSite.comparisonCategories
@@ -479,6 +498,10 @@ export function renderLlmsTxt(): string {
   return `# ${config.appName}
 
 ${en.publicSite.answer(config.appName)}
+${copy.missionsNotice ? `\n${en.publicSite.betaFaqGroupPlay} ${copy.missionsNotice}\n` : ''}
+## Links
+- ${en.publicSite.fullDetails}: ${config.companyPageUrl}
+- ${en.publicSite.playHere}: ${config.siteOrigin}
 
 ## Public pages
 ${pages}
@@ -487,7 +510,7 @@ ${pages}
 ${facts}
 
 ## Game formats
-${en.publicSite.formats.map((format) => `- ${format.name}: ${format.duration} — ${format.description}`).join('\n')}
+${copy.formats.map((format) => `- ${format.name}: ${format.duration} — ${format.description}`).join('\n')}
 
 ## Compare game formats
 ${comparisons}
@@ -645,12 +668,16 @@ export function renderPublicPageDocument({
     title,
     description,
     canonicalUrl:
-      canonicalUrl === undefined
-        ? new URL(
-            page === 'coming-soon' ? APP_ROUTE_PATHS.home : route,
-            config.siteOrigin,
-          ).href
-        : canonicalUrl,
+      // Pre-launch, the company page is the canonical public home (D119);
+      // coming-soon mode keeps each page canonical on the game domain.
+      canonicalUrl !== undefined
+        ? canonicalUrl
+        : mode.comingSoonMode
+          ? new URL(
+              page === 'coming-soon' ? APP_ROUTE_PATHS.home : route,
+              config.siteOrigin,
+            ).href
+          : config.companyPageUrl,
     basePath,
     stylesheetHrefs,
     fontPreloadHrefs,

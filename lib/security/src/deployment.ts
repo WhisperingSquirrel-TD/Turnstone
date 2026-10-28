@@ -79,15 +79,31 @@ export function renderRobotsTxt(
   mode: DeploymentMode = deploymentMode,
   sitemapUrl?: string,
 ): string {
-  if (!mode.comingSoonMode) return 'User-agent: *\nDisallow: /\n';
-  const rules = [
-    'Allow: /',
+  const closedRoutes = [
     ...APP_SHELL_ROUTE_BASES.map((route) => `Disallow: ${route}`),
     'Disallow: /api/',
     'Disallow: /socket.io/',
     'Disallow: /app-shell.html',
     'Disallow: /404.html',
   ];
+  if (!mode.comingSoonMode) {
+    // Pre-launch (D119): every page stays noindex, but agents may read the
+    // public pages and llms.txt. App routes, the API and any address with a
+    // query string (game codes, invites, recovery) stay closed. No sitemap,
+    // because noindex pages do not belong in one.
+    return [
+      'User-agent: *',
+      'Allow: /$',
+      ...PUBLIC_MARKETING_ROUTE_PATHS.filter((route) => route !== '/').map(
+        (route) => `Allow: ${route}`,
+      ),
+      'Allow: /llms.txt',
+      ...closedRoutes,
+      'Disallow: /*?',
+      '',
+    ].join('\n');
+  }
+  const rules = ['Allow: /', ...closedRoutes];
   const searchAgents = [
     'OAI-SearchBot',
     'GPTBot',

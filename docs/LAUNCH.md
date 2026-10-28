@@ -41,8 +41,14 @@ Clicks to a game, by route in:
 - **Typing the game address:** lands on the entry screen with the same three
   buttons.
 
-The game's canonical stays the company page and app routes stay noindex; the
-game's "About Oathstone" link returns to the company page. The company page is
+The game's canonical stays the company page: every public page on the game
+domain names `https://stackstoneconsulting.co.uk/oathstone` as canonical, and
+app routes carry no canonical. Every page and route stays noindex, but
+`robots.txt` lets agents read the public pages (`/`, `/about`,
+`/how-to-play`, `/faq`, `/compare`, `/llms.txt`) and keeps app routes, the
+API and any address with a query string closed. There is no sitemap. Public
+pages and `llms.txt` say "Full details" (the company page) and "Play" (the
+game) (D119). The game's "About Oathstone" link returns to the company page. The company page is
 **not** redirected to the game: it keeps search ranking and the updates
 sign-up.
 

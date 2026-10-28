@@ -201,6 +201,10 @@ it('builds public pages and an app fallback without scripts or game assets', asy
   expect(liveHome).toContain('Start a new game');
   expect(liveHome).toContain('Join a game');
   expect(liveHome).toContain('Practise alone first');
+  // D119: noindex pages do not belong in a sitemap.
+  await expect(
+    readFile(join(liveOutputDirectory, 'sitemap.xml'), 'utf8'),
+  ).rejects.toThrow();
 });
 
 it('rewrites every shared app route to the static coming-soon shell', async () => {

@@ -32,6 +32,11 @@ export const config = {
     onDark: 'brand/stackstone-icon-dark.svg',
   },
   socialLinks: [] as const,
+  /**
+   * Missions have no content in the beta (MISSIONS-REVIEW). One switch keeps
+   * them out of new games and out of the public copy (D119).
+   */
+  missionsAvailable: false as boolean,
   preLaunch: deploymentMode.preLaunchNoindex && !deploymentMode.comingSoonMode,
   organisation: {
     name: builder,

@@ -28,7 +28,7 @@ export async function assertClientBuild(
     throw new Error(
       activeDeploymentMode.comingSoonMode
         ? 'Built client robots policy does not match coming-soon mode'
-        : 'Built client must disallow pre-launch crawling',
+        : 'Built client robots policy does not match pre-launch mode',
     );
   }
   if (options.prepared) {

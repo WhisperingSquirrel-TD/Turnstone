@@ -35,3 +35,4 @@
 - [Short-timer public windows](short-timer-public-windows.md) — rehearsal phases last 15 s; extend before a deliberate move-on and pause before slow public-screen checks; never raise timers or timeouts.
 - [Static checks before push](static-checks-before-push.md) — run all five static-checks steps, including typecheck:tests for e2e and tests, before every push.
 - [Game clear-down](game-clear-down.md) — real games deleted the day after their UK last day, practice after 24 h idle; dry-run until the owner approves; mocks need readGameEndDate.
+- [Public copy and robots](public-copy-and-robots.md) — agents may read public pages but all stays noindex; no sitemap; use publicSiteCopy(), driven by config.missionsAvailable.

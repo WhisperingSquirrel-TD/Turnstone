@@ -151,7 +151,9 @@ export async function buildStaticPublicSite({
   await writeFile(join(output, 'app-shell.html'), appFallback, 'utf8');
   await writeFile(join(output, '404.html'), appFallback, 'utf8');
   await writeFile(join(output, 'llms.txt'), renderLlmsTxt(), 'utf8');
-  await writeFile(join(output, 'sitemap.xml'), renderSitemapXml(), 'utf8');
+  // Pre-launch pages are noindex, so there is no sitemap (D119).
+  if (deploymentMode.comingSoonMode)
+    await writeFile(join(output, 'sitemap.xml'), renderSitemapXml(), 'utf8');
   await writeFile(
     join(output, 'robots.txt'),
     renderRobotsTxt(

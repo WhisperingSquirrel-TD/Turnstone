@@ -94,6 +94,7 @@ import { voteCompletionMessage } from './vote-progress';
 import { CoordinatorTakeoverPanel } from './CoordinatorTakeoverPanel';
 import { apiUrl } from './api-url';
 import { en } from '@/locale/en-GB';
+import { publicSiteCopy } from '@/public-copy';
 import {
   attachGameView,
   type GameConnectionState,
@@ -576,7 +577,7 @@ function PublicFaq() {
             {en.publicSite.answer(config.appName)}
           </p>
           <div className="public-home-faq">
-            {en.publicSite.faq.map((item) => (
+            {publicSiteCopy().faq.map((item) => (
               <details key={item.question}>
                 <summary>{item.question}</summary>
                 <p>{item.answer}</p>
@@ -623,12 +624,14 @@ function PublicCompare() {
         >
           <h2 id="public-compare-faq-heading">{en.publicSite.faqHeading}</h2>
           <div className="public-home-faq">
-            {en.publicSite.faq.slice(-3).map((item) => (
-              <details key={item.question}>
-                <summary>{item.question}</summary>
-                <p>{item.answer}</p>
-              </details>
-            ))}
+            {publicSiteCopy()
+              .faq.slice(-3)
+              .map((item) => (
+                <details key={item.question}>
+                  <summary>{item.question}</summary>
+                  <p>{item.answer}</p>
+                </details>
+              ))}
           </div>
         </section>
       </div>

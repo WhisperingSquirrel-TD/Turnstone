@@ -1,3 +1,5 @@
+import { renderRobotsTxt } from '../lib/security/src/deployment';
+
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -6,6 +8,9 @@ import { brotliCompressSync, gzipSync } from 'node:zlib';
 import request from 'supertest';
 import { APP_SHELL_ROUTE_BASES } from '../lib/shared/src/app-routes';
 import { createApp } from '../artifacts/api-server/src/app';
+
+// D119: the pre-launch robots policy lets agents read the public pages.
+const preLaunchMode = { preLaunchNoindex: true, comingSoonMode: false };
 
 let directory: string;
 const script = 'window.oathstoneTest = true;';
@@ -26,7 +31,7 @@ beforeAll(async () => {
     'coming-soon/index.html': '<main>Coming soon</main>',
     'manifest.webmanifest': '{"name":"Oathstone"}',
     'sw.js': 'self.addEventListener("fetch", () => {});',
-    'robots.txt': 'User-agent: *\nDisallow: /\n',
+    'robots.txt': renderRobotsTxt(preLaunchMode),
     'assets/app-abcdef12.js': script,
   }))
     await writeFile(join(directory, name), text);
@@ -142,9 +147,14 @@ describe('single-origin production client', () => {
     expect(document.headers['content-security-policy']).not.toContain(
       "'unsafe-inline'",
     );
-    expect((await request(server).get('/robots.txt')).text).toContain(
-      'Disallow: /',
-    );
+    // D119: agents may read the public pages; app routes stay closed and
+    // there is no sitemap, because every page is noindex.
+    const robots = (await request(server).get('/robots.txt')).text;
+    expect(robots).toContain('Allow: /faq');
+    expect(robots).toContain('Disallow: /api/');
+    expect(robots).toContain('Disallow: /join');
+    expect(robots).not.toMatch(/^Disallow: \/$/m);
+    expect((await request(server).get('/sitemap.xml')).status).toBe(404);
     const csrf = await request(server).get('/api/csrf');
     const cookie = csrf.headers['set-cookie']?.[0] ?? '';
     expect(cookie).toMatch(/HttpOnly/);

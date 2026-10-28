@@ -233,6 +233,14 @@ export const en = {
         body: 'Traitors choose who to murder. The group banishes players, then decides when the game ends.',
       },
     ],
+    // Beta wording while missions are switched off (D119); the mission copy
+    // above returns when config.missionsAvailable is true.
+    betaGroupPlay: 'Discuss suspicions and vote together.',
+    betaFaqGroupPlay: 'Players discuss suspicions and vote together.',
+    betaQuickFormat: 'A fast game for one gathering, with short discussions.',
+    missionsComingSoon: 'Missions are coming soon.',
+    fullDetails: 'Full details',
+    playHere: 'Play',
     formatsHeading: 'Choose your format',
     formats: [
       {

@@ -229,7 +229,8 @@ export default defineConfig({
             );
             return;
           }
-          if (route === '/sitemap.xml') {
+          // Pre-launch pages are noindex, so there is no sitemap (D119).
+          if (route === '/sitemap.xml' && deploymentMode.comingSoonMode) {
             response.statusCode = 200;
             response.setHeader(
               'Content-Type',
@@ -341,10 +342,11 @@ export default defineConfig({
               new URL('/sitemap.xml', config.siteOrigin).href,
             ),
           );
-          writeFileSync(
-            path.join(publicOutputDirectory, 'sitemap.xml'),
-            renderSitemapXml(),
-          );
+          if (deploymentMode.comingSoonMode)
+            writeFileSync(
+              path.join(publicOutputDirectory, 'sitemap.xml'),
+              renderSitemapXml(),
+            );
           await buildStaticPublicSite({
             sourceDirectory: publicOutputDirectory,
             outputDirectory: staticPublicOutputPath,

@@ -2043,3 +2043,48 @@ in the organiser's Lobby, on the player join screen and on the finished screen.
 and `e2e/game-end-date.spec.ts` failed first. The layout audit adds
 `lobby-change-end-date` and `game-cleared`, and the Lobby and finished states
 now carry an end date.
+
+## D119 — Agents may read the game's public pages; still noindex (owner, 28 October 2026)
+
+**Context:** The beta runs at `oathstone.stackstoneconsulting.co.uk`; the
+company page `https://stackstoneconsulting.co.uk/oathstone` is the single
+indexable public home. Pre-launch `robots.txt` said `Disallow: /`, which
+stopped agents reading the game's public pages, while `sitemap.xml` and
+`llms.txt` advertised pages that robots blocked. Missions are switched off in
+the beta, but public copy still promised missions and a prize pot.
+
+**Choice:**
+
+- The same `PRE_LAUNCH_NOINDEX`/`COMING_SOON_MODE` setting controls this
+  (`renderRobotsTxt`). Pre-launch keeps `X-Robots-Tag: noindex, nofollow`
+  and meta robots noindex on every route, and `robots.txt` now allows `/`,
+  `/about`, `/how-to-play`, `/faq`, `/compare`, `/coming-soon` and
+  `/llms.txt`, and disallows every app route, `/api/`, `/socket.io/`,
+  `/app-shell.html`, `/404.html` and any address with a query string
+  (`/*?`: game codes, invites and recovery links). No headers, CSP, rate
+  limits or security settings change. Coming-soon mode is unchanged.
+- No `sitemap.xml` while pre-launch (noindex pages do not belong in one); it
+  returns with coming-soon mode.
+- Public pages name the company page as canonical; app routes have none.
+  Every public page footer and `llms.txt` say "Full details" (company page)
+  and "Play" (the game).
+- One switch, `config.missionsAvailable` (false in the beta), keeps missions
+  out of new games and out of public copy. `publicSiteCopy()` is the single
+  source for the FAQ, steps and formats: with missions off, FAQ 1 reads
+  "Players discuss suspicions and vote together.", the step reads "Discuss
+  suspicions and vote together.", the Quick format drops "simple missions",
+  and the home and how-to-play pages and `llms.txt` add "Missions are coming
+  soon." With missions on, the earlier copy returns. The other ten FAQ
+  answers are unchanged.
+
+**Not built:** `/api/public/v1/facts` does not exist yet (SPEC agent
+optimisation item 6), so it carries none of this; build it from the same
+sources when that work is scheduled.
+
+**Tests:** `tests/pre-launch-agent-reading.test.ts` (robots allow and
+disallow lists, no sitemap, noindex on every route, canonical and
+cross-links, exact eleven FAQ answers, no missions or prize pot on any
+public surface, missions-on copy restored) failed first. Production client:
+`/sitemap.xml` is 404 and robots lets agents read `/faq`. Browser:
+`e2e/public-pages.spec.ts` checks robots, sitemap, canonical, cross-links and
+beta copy; the static build writes no sitemap pre-launch.

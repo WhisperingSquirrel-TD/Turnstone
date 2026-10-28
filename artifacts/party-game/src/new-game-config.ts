@@ -1,4 +1,5 @@
 import { gameConfigSchema } from '@workspace/shared';
+import { config } from './config';
 
 export interface NewGameConfigInput {
   gameName: string;
@@ -22,6 +23,10 @@ export function buildNewGameConfig(input: NewGameConfigInput) {
     },
     // Missions have no content yet; games show a notice instead (MISSIONS-REVIEW).
     // The round table agrees the shield holder and the organiser records it (D109).
-    missions: { enabled: false, shields: 'public', allocation: 'coordinator' },
+    missions: {
+      enabled: config.missionsAvailable,
+      shields: 'public',
+      allocation: 'coordinator',
+    },
   });
 }

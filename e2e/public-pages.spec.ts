@@ -366,3 +366,36 @@ test('home and app first paint stay styled with JavaScript disabled', async ({
   ).toBe('none');
   expect(blockedScripts).toBeGreaterThan(0);
 });
+
+// D119: noindex everywhere, but agents may read the public pages. No
+// sitemap; every public page links to the company page and to the game;
+// missions are off in the beta.
+test('public pages are agent-readable, cross-linked and promise no missions', async ({
+  request,
+}) => {
+  const robots = await (await request.get('/robots.txt')).text();
+  expect(robots).toContain('Allow: /faq');
+  expect(robots).toContain('Allow: /llms.txt');
+  expect(robots).toContain('Disallow: /api/');
+  expect(robots).not.toMatch(/^Disallow: \/$/m);
+  expect(robots).not.toMatch(/sitemap/i);
+  const sitemap = await request.get('/sitemap.xml');
+  expect(sitemap.headers()['content-type'] ?? '').not.toContain('xml');
+
+  for (const route of ['/faq', '/compare', '/about', '/how-to-play']) {
+    const html = await (await request.get(route)).text();
+    expect(html, route).toContain(
+      '<link rel="canonical" href="https://stackstoneconsulting.co.uk/oathstone">',
+    );
+    expect(html, route).toContain('Full details');
+    expect(html.replaceAll('Missions are coming soon.', ''), route).not.toMatch(
+      /mission|prize pot/i,
+    );
+  }
+  const llms = await (await request.get('/llms.txt')).text();
+  expect(llms).toContain(
+    'Full details: https://stackstoneconsulting.co.uk/oathstone',
+  );
+  expect(llms).toContain('Play: https://oathstone.stackstoneconsulting.co.uk');
+  expect(llms).toContain('Players discuss suspicions and vote together.');
+});
