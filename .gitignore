@@ -66,3 +66,6 @@ Thumbs.db
 /attached_assets/seasons_1792389710823.json
 /attached_assets/task-decoys_1792389710861.json
 /attached_assets/traitor-tasks_1792389710910.json
+
+# Isolated workspaces for background Claude Code agents
+.claude/worktrees/
