@@ -54,6 +54,8 @@ import { config } from '@/config';
 import { RouteMetadata } from './RouteMetadata';
 import { BrandFooter, BrandSurfaceContext } from './BrandFooter';
 import {
+  GameClearedNotice,
+  GameEndDateNotice,
   GameBottomBar,
   BetaTag,
   GameHelpDisclosure,
@@ -2814,19 +2816,26 @@ function PlayerGame() {
             <span className="sr-only">{en.game.loading}</span>
           </div>
         )}
-        {!isResuming && gameQuery.isError && (
-          <div role="alert" className="border-l-2 border-gilt pl-5">
-            <h1 className="display text-3xl">{en.game.unavailableHeading}</h1>
-            <p className="mt-3 text-ash">{en.game.unavailableBody}</p>
-            <button
-              className="quiet-action mt-5"
-              type="button"
-              onClick={() => void gameQuery.refetch()}
-            >
-              {en.game.tryAgain}
-            </button>
-          </div>
-        )}
+        {!isResuming &&
+          gameQuery.isError &&
+          (gameQuery.error as { status?: number } | null)?.status === 410 && (
+            <GameClearedNotice />
+          )}
+        {!isResuming &&
+          gameQuery.isError &&
+          (gameQuery.error as { status?: number } | null)?.status !== 410 && (
+            <div role="alert" className="border-l-2 border-gilt pl-5">
+              <h1 className="display text-3xl">{en.game.unavailableHeading}</h1>
+              <p className="mt-3 text-ash">{en.game.unavailableBody}</p>
+              <button
+                className="quiet-action mt-5"
+                type="button"
+                onClick={() => void gameQuery.refetch()}
+              >
+                {en.game.tryAgain}
+              </button>
+            </div>
+          )}
         {!isResuming && visitor && (
           <div>
             <h1 className="display mt-3 text-4xl">
@@ -3073,6 +3082,11 @@ function PlayerGame() {
                 {en.game.playerOutcome(full.winner, ownSeat.role)}
               </p>
             )}
+            {full.phase === 'FINISHED' &&
+              !full.rehearsal &&
+              full.gameEndDate && (
+                <GameEndDateNotice endDate={full.gameEndDate} />
+              )}
             {full.phase === 'FINISHED' &&
               full.fairness &&
               full.fairness.murderSlots.length > 0 && (

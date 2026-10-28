@@ -47,7 +47,7 @@ Production static files use self-only executable scripts/styles, with first-pain
 
 The eight owner content sources are not uploaded, so the conditional content import/decoy change is skipped. Existing wording is not rewritten.
 
-An older development rehearsal snapshot fails cached replay while full canonical event replay succeeds. Preserve all data; do not silently expire or delete games. Fresh rehearsal and current restart tests pass, but historical-snapshot compatibility remains a separate non-blocking risk to record for review.
+An older development rehearsal snapshot fails cached replay while full canonical event replay succeeds. Preserve all data; do not silently expire or delete games. (Superseded for ended real games and idle practice games by D117.) Fresh rehearsal and current restart tests pass, but historical-snapshot compatibility remains a separate non-blocking risk to record for review.
 
 ## CI and hosting review — 13 October 2026
 
@@ -2001,3 +2001,44 @@ focus mark; "Practise alone" has no border.
 **Tests:** `e2e/entry-navigation.spec.ts` (all failed first); the practice
 footer-clearance test now asserts the docked button sits above the credit;
 the layout audit adds `start-after-join-back` and `join-code-focus`.
+
+## D117 — Game end date and automatic clear-down (owner, 28 October 2026)
+
+**Owner rule:** every real (non-practice) game has a required game end date,
+the last day of the game. The organiser cannot set it in the past or more than
+six months ahead. Everyone is told the game will be deleted after that date,
+and it is deleted the day after the end date. Practice games have no date; they
+are cleared 24 hours after their last activity.
+
+**Supersedes:** the earlier "Preserve all data; do not silently expire or
+delete games" ruling, for real games past their end date and idle practice
+games only. Nothing is deleted silently: the deletion day is stated on setup,
+in the organiser's Lobby, on the player join screen and on the finished screen.
+
+**Decisions taken for the owner (the owner can overturn any of them):**
+
+- Dates are UK calendar days (Europe/London). Setup defaults to today.
+- Deletion runs nightly from about 04:00 UK. The in-process job checks hourly
+  and only clears real games once the UK hour is 04 or later, so a game whose
+  last day is Tuesday is cleared on Wednesday from 04:00 UK.
+- The organiser can move the date later or earlier ("Change date" in the
+  Lobby, `PUT /api/games/:id/end-date`), capped at six months from today and
+  never in the past. Activity does not extend it.
+- Games created before this change are backfilled to their created date plus
+  30 days (migration 0014).
+- A game is never deleted on its end date, never while a phase deadline is
+  still in the future, and never in dry-run.
+- A tombstone keeps only the game id, the deleted date and the reason. An old
+  link answers 410 and shows "This game has ended and been cleared."
+- The job takes a Postgres advisory lock, deletes one game per transaction in
+  small batches, logs counts only (never names, roles or content), and prunes
+  expired rate-limit windows (the limits themselves are unchanged).
+- `OATHSTONE_CLEARDOWN_MODE` is `dry-run` by default (counts only), `delete`
+  to delete, `off` as the kill switch. Production stays in dry-run until the
+  owner approves switching it on.
+
+**Tests:** `lib/shared` end-date rules, `tests/game-cleardown.integration.test.ts`,
+`tests/game-end-date-api.integration.test.ts`, `tests/clear-down-scheduler.test.ts`
+and `e2e/game-end-date.spec.ts` failed first. The layout audit adds
+`lobby-change-end-date` and `game-cleared`, and the Lobby and finished states
+now carry an end date.

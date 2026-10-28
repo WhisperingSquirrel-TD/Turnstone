@@ -8,8 +8,11 @@ import {
   type LayoutFinding,
 } from './support/layout-audit';
 import type { FullView } from '../lib/shared/src/contracts';
+import { addDays, ukCalendarDate } from '../lib/shared/src/game-end-date';
 
 const widths = [320, 360, 390, 430] as const;
+// D117: real games carry a last day; the Lobby and finale state the deletion day.
+const auditEndDate = addDays(ukCalendarDate(Date.now()), 3);
 const phases = [
   'LOBBY',
   'DEAL',
@@ -451,6 +454,7 @@ for (const width of widths)
       view = {
         ...view,
         phase: 'LOBBY',
+        gameEndDate: auditEndDate,
         seats: createPublicView(gameId)
           .seats.filter((seat) => seat.status === 'alive')
           .slice(0, 1),
@@ -536,6 +540,10 @@ for (const width of widths)
         expect(qr.height).toBe(qr.width);
       }
       await audit('lobby-organiser');
+      await page.getByTestId('button-change-end-date').click();
+      await expect(page.getByTestId('button-save-end-date')).toBeVisible();
+      await audit('lobby-change-end-date');
+      await page.getByTestId('button-cancel-end-date').click();
 
       for (const phase of phases) {
         await room(phase);
@@ -645,7 +653,9 @@ for (const width of widths)
       await room('FINISHED', {
         winner: 'traitor',
         publicAnnouncement: { kind: 'finished', winner: 'traitor' },
+        gameEndDate: auditEndDate,
       });
+      await expect(page.getByTestId('end-date-notice')).toBeVisible();
       await audit('finished-other-public-result');
       await room('FINISHED', { rehearsal: true });
       await audit('practice-finale');
@@ -681,6 +691,15 @@ for (const width of widths)
         'Opening your private screen',
       );
       await audit('game-error');
+      await page.route('**/api/games/audit-cleared/**', (route) =>
+        route.fulfill({
+          status: 410,
+          json: { error: 'This game has ended and been cleared.' },
+        }),
+      );
+      await page.goto('/game/audit-cleared?clips=off');
+      await expect(page.getByTestId('game-cleared')).toBeVisible();
+      await audit('game-cleared');
       await mkdir('generated-artifacts/layout-audit', { recursive: true });
       await writeFile(
         `generated-artifacts/layout-audit/${info.project.name}-${width}-${palette}.json`,

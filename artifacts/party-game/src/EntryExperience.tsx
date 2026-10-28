@@ -10,10 +10,17 @@ import {
 } from 'react';
 import { Link } from 'react-router-dom';
 import { recommended } from '@workspace/shared';
+import {
+  checkGameEndDate,
+  latestGameEndDate,
+  parseIsoDate,
+  ukCalendarDate,
+} from '@workspace/shared/game-end-date';
 import { config } from './config';
 import { EntryActionError } from './entry-action-error';
 import {
   BetaTag,
+  GameEndDateNotice,
   GameStatusBar,
   PlayerTile,
   WhatIsHappeningCard,
@@ -40,6 +47,7 @@ export type EntryInputKey =
   | 'joinName'
   | 'joinPin'
   | 'createGameName'
+  | 'createEndDate'
   | 'createPlayerCount'
   | 'createCoCoordinatorCount'
   | 'organiserName'
@@ -53,6 +61,8 @@ export interface EntryExperienceInputs {
   joinName: string;
   joinPin: string;
   createGameName: string;
+  /** UK calendar day (YYYY-MM-DD): the last day of a real game (D117). */
+  createEndDate: string;
   createPlayerCount: number;
   createCoCoordinatorCount: number;
   organiserName: string;
@@ -232,8 +242,12 @@ export interface EntryExperienceProps {
     pin: string;
   }) => void | Promise<void>;
   onCheckJoinStatus: () => void | Promise<void>;
+  /** The real game's last day, shown in the Lobby and on joining (D117). */
+  gameEndDate?: string | null;
+  onChangeEndDate?: (endDate: string) => Promise<void>;
   onCreate: (data: {
     gameName: string;
+    endDate: string;
     playerCount: number;
     coCoordinatorCount: number;
     organiserName: string;
@@ -252,6 +266,98 @@ export interface EntryExperienceProps {
   onShare: (shareUrl: string) => void | Promise<void>;
   onClearSensitiveValues: () => void;
   onScreenChange?: (screen: EntryScreen) => void;
+}
+
+/** The organiser's Lobby: when the game is deleted, and a way to move it. */
+function LobbyEndDate({
+  endDate,
+  onChange,
+}: {
+  endDate: string;
+  onChange?: (endDate: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(endDate);
+  const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  return (
+    <section className="entry-end-date" aria-label={en.app.endDateSection}>
+      <GameEndDateNotice endDate={endDate} />
+      {onChange && !editing && (
+        <button
+          className="entry-secondary-action"
+          data-testid="button-change-end-date"
+          type="button"
+          onClick={() => {
+            setDraft(endDate);
+            setMessage('');
+            setEditing(true);
+          }}
+        >
+          {en.app.changeEndDate}
+        </button>
+      )}
+      {onChange && editing && (
+        <form
+          className="entry-form-area"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            const check = checkGameEndDate(draft, Date.now());
+            if (!check.ok) {
+              setMessage(check.message);
+              return;
+            }
+            setSaving(true);
+            void onChange(draft)
+              .then(() => setEditing(false))
+              .catch(() => setMessage(en.app.endDateSaveFailed))
+              .finally(() => setSaving(false));
+          }}
+        >
+          <label className="entry-label" htmlFor="entry-lobby-end-date">
+            {en.app.endDateLabel}
+          </label>
+          <input
+            id="entry-lobby-end-date"
+            className="entry-field"
+            type="date"
+            required
+            min={ukCalendarDate(Date.now())}
+            max={latestGameEndDate(Date.now())}
+            value={draft}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              setMessage('');
+            }}
+          />
+          {message && (
+            <p className="entry-error" role="alert">
+              {message}
+            </p>
+          )}
+          <div className="entry-end-date-actions">
+            <button
+              className="entry-secondary-action"
+              data-testid="button-save-end-date"
+              type="submit"
+              disabled={saving}
+            >
+              {en.app.saveEndDate}
+            </button>
+            <button
+              className="entry-back-action"
+              data-testid="button-cancel-end-date"
+              type="button"
+              onClick={() => setEditing(false)}
+            >
+              {en.app.cancelEndDate}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
 }
 
 const VALID_CODE = /^[A-HJ-NP-Z2-9]{6}$/;
@@ -293,6 +399,8 @@ export function EntryExperience({
   onRecover,
   onCheckJoinStatus,
   onCreate,
+  gameEndDate = null,
+  onChangeEndDate,
   onApproveJoiner,
   onStartGame,
   onCreateLateInvite,
@@ -558,6 +666,7 @@ export function EntryExperience({
     try {
       await onCreate({
         gameName: inputs.createGameName.trim() || defaultGameName,
+        endDate: inputs.createEndDate,
         playerCount: inputs.createPlayerCount,
         coCoordinatorCount: Math.max(
           0,
@@ -1018,6 +1127,7 @@ export function EntryExperience({
                 className="entry-form-area"
                 onSubmit={submitJoin}
               >
+                {gameEndDate && <GameEndDateNotice endDate={gameEndDate} />}
                 <label className="entry-label" htmlFor="entry-join-pin">
                   {copy.pinLabel}
                 </label>
@@ -1126,11 +1236,40 @@ export function EntryExperience({
             </h1>
             <form
               className="entry-form-area entry-create-form"
+              noValidate
               onSubmit={(event) => {
                 event.preventDefault();
+                const check = checkGameEndDate(
+                  inputs.createEndDate,
+                  Date.now(),
+                );
+                if (!check.ok) {
+                  setLocalError(check.message);
+                  return;
+                }
                 moveTo('create-count');
               }}
             >
+              <label className="entry-label" htmlFor="entry-end-date">
+                {en.app.endDateLabel}
+              </label>
+              <input
+                id="entry-end-date"
+                className="entry-field"
+                data-testid="input-end-date"
+                type="date"
+                required
+                min={ukCalendarDate(Date.now())}
+                max={latestGameEndDate(Date.now())}
+                value={inputs.createEndDate}
+                onChange={(event) => {
+                  onInputChange('createEndDate', event.target.value);
+                  setLocalError('');
+                }}
+              />
+              {parseIsoDate(inputs.createEndDate) && (
+                <GameEndDateNotice endDate={inputs.createEndDate} />
+              )}
               <label className="entry-label" htmlFor="entry-game-name">
                 {copy.gameNameLabel}
               </label>
@@ -1560,6 +1699,9 @@ export function EntryExperience({
                 )}
               </div>
             </div>
+            {!lateJoinMode && gameEndDate && (
+              <LobbyEndDate endDate={gameEndDate} onChange={onChangeEndDate} />
+            )}
 
             <div className="entry-rosters">
               <p className="entry-help" data-testid="text-lobby-player-count">

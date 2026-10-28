@@ -17,6 +17,15 @@ export const en = {
   app: {
     beta: 'Beta',
     reportIssue: 'Report an issue',
+    endDateLabel: 'Last day of your game',
+    endDateSection: 'When this game is deleted',
+    endDateNotice: (day: string) =>
+      `This game and everything in it will be deleted on ${day}.`,
+    changeEndDate: 'Change date',
+    saveEndDate: 'Save date',
+    cancelEndDate: 'Cancel',
+    endDateSaveFailed: 'The date could not be saved. Try again.',
+    gameCleared: 'This game has ended and been cleared.',
     securityUnavailable:
       'The secure connection could not be established. Check your connection, then try again.',
     tryAgain: 'Try again',

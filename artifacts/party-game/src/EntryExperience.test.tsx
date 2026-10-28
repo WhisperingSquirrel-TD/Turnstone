@@ -22,6 +22,7 @@ const inputs: EntryExperienceInputs = {
   joinName: '',
   joinPin: '',
   createGameName: '',
+  createEndDate: '2026-10-28',
   createPlayerCount: 15,
   createCoCoordinatorCount: 0,
   organiserName: '',
