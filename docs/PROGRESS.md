@@ -1,5 +1,10 @@
 # Status for reviewer
 
+**Verify #347 (`68f32c9`): red on server coverage only** (84.6% lines
+against 85%). The D117 end-date API tests exercise new `app.ts` code but were
+not in `test:server-coverage`. They now are; locally 154/154 pass and lines
+reach 86.0%. Threshold unchanged. Next: confirm Verify green.
+
 **Game end date and automatic clear-down (D117) — pushed; Verify pending.**
 Creating a game now asks for "Last day of your game" (today up to six months
 ahead, UK dates); the organiser can change it in the Lobby; the join, Lobby
