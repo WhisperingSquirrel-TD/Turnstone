@@ -9,8 +9,6 @@ interface BrandFooterProps {
   surface?: 'light' | 'dark';
   className?: string;
   testId?: string;
-  /** Adds the Report an issue email link beside the credit. */
-  reportLink?: boolean;
 }
 
 export function BrandFooter({
@@ -18,7 +16,6 @@ export function BrandFooter({
   surface,
   className = '',
   testId,
-  reportLink = false,
 }: BrandFooterProps) {
   const opensInNewTab = context === 'game';
   const inheritedSurface = useContext(BrandSurfaceContext);
@@ -48,15 +45,6 @@ export function BrandFooter({
           height="24"
         />
       </a>
-      {reportLink && (
-        <a
-          className="brand-report-link"
-          href={config.feedbackMailto}
-          data-testid="report-issue-link"
-        >
-          {en.app.reportIssue}
-        </a>
-      )}
     </footer>
   );
 }

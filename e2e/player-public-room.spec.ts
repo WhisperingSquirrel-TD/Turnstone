@@ -101,17 +101,17 @@ test('practice Back and primary action clear the linked footer at phone sizes', 
     await page
       .locator('main')
       .evaluate((main) => main.scrollTo(0, main.scrollHeight));
-    const back = await page
-      .getByRole('button', { name: 'Back', exact: true })
-      .boundingBox();
+    const back = await page.getByTestId('button-back-entry').boundingBox();
     const action = await dock.boundingBox();
     const credit = await footer.boundingBox();
     expect(
       back!.y + back!.height,
       `Back clear at ${width}`,
     ).toBeLessThanOrEqual(action!.y + 1);
-    expect(credit!.y + credit!.height).toBeLessThanOrEqual(action!.y + 1);
-    expect(action!.y + action!.height).toBeLessThanOrEqual(641);
+    // The credit is the last line, below the docked action (owner, 28 October
+    // 2026); neither covers the other and both stay on screen.
+    expect(action!.y + action!.height).toBeLessThanOrEqual(credit!.y + 1);
+    expect(credit!.y + credit!.height).toBeLessThanOrEqual(641);
     if (width === 390 && process.env.R7_IMPROVEMENTS_CAPTURE_SCREENS === '1') {
       await page.screenshot({
         path: 'docs/screens/round-7-improvements/practice-footer-clearance-390.jpg',

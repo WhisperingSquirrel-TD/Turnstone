@@ -601,22 +601,6 @@
   text-align: center;
 }
 
-.entry-experience--flow-footer {
-  padding-bottom: calc(var(--entry-measured-dock-height, 0px) + 1rem);
-}
-
-.entry-experience--flow-footer .entry-main {
-  padding-bottom: 1rem;
-}
-
-.entry-experience--flow-footer .game-brand-footer {
-  position: static;
-  z-index: auto;
-  inset: auto;
-  transform: none;
-  margin-top: 1rem;
-}
-
 .entry-experience.game-shell {
   height: var(--entry-visual-height, 100dvh);
   min-height: 0;
@@ -1135,30 +1119,4 @@
 
 .entry-choice-list .entry-text-action {
   min-height: 56px;
-}
-
-/* The credit belongs at the foot of the page, not straight after short
-   content (owner phone screenshot, 27 October 2026). The main area scrolls,
-   so its children keep their natural height instead of shrinking. */
-.entry-experience.entry-experience--flow-footer .entry-main {
-  display: flex;
-  flex-direction: column;
-  row-gap: 1rem;
-}
-
-.entry-experience.entry-experience--flow-footer .entry-main > * {
-  flex: 0 0 auto;
-}
-
-.entry-experience.entry-experience--flow-footer
-  .entry-main
-  > .game-brand-footer {
-  margin-top: auto;
-  /* Clear the screen edge and gesture bar below the last link. */
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
-}
-
-.entry-experience.entry-experience--flow-footer:has(> .entry-screen-welcome),
-.entry-experience.entry-experience--flow-footer > .entry-screen-welcome {
-  padding-bottom: 0;
 }

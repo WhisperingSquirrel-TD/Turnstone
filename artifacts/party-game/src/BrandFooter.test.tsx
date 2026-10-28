@@ -95,21 +95,4 @@ describe('official Stackstone footer marks', () => {
       );
     }
   });
-
-  // Owner request (27 October 2026): every player can report a problem.
-  it('offers a Report an issue email link beside the credit when asked', () => {
-    const markup = renderToStaticMarkup(
-      <BrandFooter context="game" reportLink />,
-    );
-    const anchors = markup.match(/<a\b[\s\S]*?<\/a>/g) ?? [];
-    expect(anchors).toHaveLength(2);
-    const report = anchors.find((anchor) =>
-      anchor.includes('data-testid="report-issue-link"'),
-    );
-    expect(report).toContain(
-      'href="mailto:assistant@stackstoneconsulting.co.uk?subject=Oathstone%20feedback"',
-    );
-    expect(report).toContain('>Report an issue</a>');
-    expect(report).not.toContain('target=');
-  });
 });

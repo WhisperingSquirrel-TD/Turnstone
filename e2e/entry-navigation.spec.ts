@@ -160,3 +160,34 @@ test('"Practise alone" has no border on the start screen', async ({ page }) => {
   const box = await practise.boundingBox();
   expect(box!.height).toBeGreaterThanOrEqual(44);
 });
+
+// Owner decision (28 October 2026): "made by Stackstone Consulting" is always
+// the last line of the screen, with any main button docked above it.
+for (const [label, buttonId, readyId] of [
+  ['start', null, 'button-create-game'],
+  ['Join', 'button-join-game', 'input-join-name'],
+  ['Create', 'button-create-game', 'input-game-name'],
+  ['Practise', 'button-practise-alone', 'input-rehearsal-name'],
+] as const) {
+  test(`${label}: the credit is the last line of the screen`, async ({
+    page,
+  }) => {
+    await start(page);
+    if (buttonId) await page.getByTestId(buttonId).click();
+    await expect(page.getByTestId(readyId)).toBeVisible();
+    const footer = page.getByTestId('brand-footer-entry');
+    const box = (await footer.boundingBox())!;
+    const viewport = page.viewportSize()!;
+    expect(Math.abs(box.y + box.height - viewport.height)).toBeLessThanOrEqual(
+      1,
+    );
+    await expect(footer.getByTestId('report-issue-link')).toHaveCount(0);
+    const action = page.locator(
+      '[data-testid="entry-action-dock"], .entry-inline-primary',
+    );
+    if (await action.count()) {
+      const actionBox = (await action.first().boundingBox())!;
+      expect(actionBox.y + actionBox.height).toBeLessThanOrEqual(box.y + 1);
+    }
+  });
+}

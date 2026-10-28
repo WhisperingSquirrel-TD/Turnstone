@@ -1980,3 +1980,24 @@ the Lobby closes or the game ends.
 **Tests:** `tests/database.integration.test.ts` ("keeps the same Lobby code
 across repeated invite requests") and `e2e/public-share-url.spec.ts` (Share
 equals the QR link, also after a reload) failed before the change.
+
+## D118 — Footer always last; Report an issue only in the Menu (owner, 28 October 2026)
+
+**Decision:** "made by Stackstone Consulting" is always the last line of every
+screen. On the entry screens (start, Join, Create, Practise, Lobby) it is
+fixed at the foot, with any main button docked above it, as on the game
+screens. "Report an issue" is never in the footer: it is in the entry header
+Menu and the game Menu on every screen. This supersedes D113's placement (the
+welcome footer link is removed, including from the static first paint). The
+beta note reads "Spotted a problem? Choose Report an issue in the Menu."
+
+**Also from the same phone test:** Back on Join, Create and Practise is a
+clear 44 px button plus a top-left Back; those flows get a history entry
+(`?entry=join|create|rehearsal`), so the phone's back button returns to the
+start screen; no player count or status dot shows before joining (going
+offline is still announced); the code boxes have one label and a visible
+focus mark; "Practise alone" has no border.
+
+**Tests:** `e2e/entry-navigation.spec.ts` (all failed first); the practice
+footer-clearance test now asserts the docked button sits above the credit;
+the layout audit adds `start-after-join-back` and `join-code-focus`.

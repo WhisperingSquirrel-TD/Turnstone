@@ -690,7 +690,7 @@ export function EntryExperience({
   return (
     <div
       data-game-theme={gameTheme}
-      className={`entry-experience game-shell${screen !== 'lobby' ? ' entry-experience--flow-footer' : ''}${options.largeText ? ' entry-large-text' : ''}`}
+      className={`entry-experience game-shell${options.largeText ? ' entry-large-text' : ''}`}
     >
       <header className="entry-brand" aria-label={copy.brandDescriptor}>
         <span className="entry-brand-title">
@@ -743,7 +743,7 @@ export function EntryExperience({
               cycle={1}
               remaining={screen === 'lobby' ? players.length : 0}
               showRemaining={screen === 'lobby'}
-              showConnection={screen === 'lobby'}
+              showConnection={screen === 'lobby' || !browserOnline}
               joinedLabel={`${screen === 'lobby' ? players.length : 0} joined`}
               connectionStatus={browserOnline ? 'online' : 'offline'}
             />
@@ -1770,15 +1770,6 @@ export function EntryExperience({
             </button>
           </section>
         )}
-        {screen !== 'lobby' && (
-          <BrandFooter
-            context="game"
-            surface={gameTheme === 'night' ? 'dark' : 'light'}
-            className="game-brand-footer"
-            testId="brand-footer-entry"
-            reportLink={screen === 'welcome'}
-          />
-        )}
       </main>
 
       {screen === 'join-code' && (
@@ -1906,14 +1897,14 @@ export function EntryExperience({
           {primaryHint}
         </div>
       )}
-      {screen === 'lobby' && (
-        <BrandFooter
-          context="game"
-          surface={gameTheme === 'night' ? 'dark' : 'light'}
-          className="game-brand-footer"
-          testId="brand-footer-entry"
-        />
-      )}
+      {/* Always the last line of the screen; Report an issue lives in the
+          Menu, never here (owner, 28 October 2026). */}
+      <BrandFooter
+        context="game"
+        surface={gameTheme === 'night' ? 'dark' : 'light'}
+        className="game-brand-footer"
+        testId="brand-footer-entry"
+      />
     </div>
   );
 }

@@ -394,7 +394,7 @@ export const en = {
     subtitle: 'A game of traitors and faithful.',
     welcomeDescription: 'Everyone plays. Even the host.',
     betaNote:
-      'Thanks for trying Oathstone early. Spotted a problem? Tap Report an issue.',
+      'Thanks for trying Oathstone early. Spotted a problem? Choose Report an issue in the Menu.',
     createGame: 'Create a new game',
     joinGame: 'Join a game',
     practiseAlone: 'Practise alone',
