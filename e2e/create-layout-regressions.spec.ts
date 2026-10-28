@@ -64,15 +64,16 @@ test('Create game stays pointer reachable outside the normal-flow credit scrollp
         oldLayering,
         corrected: hits(),
         position: getComputedStyle(footer).position,
+        // D118: the credit is the fixed last line, below the docked button.
         creditClear:
-          footer.getBoundingClientRect().bottom <=
-          button.getBoundingClientRect().top,
+          button.getBoundingClientRect().bottom <=
+          footer.getBoundingClientRect().top + 1,
       };
     });
     expect(result).toEqual({
       oldLayering: true,
       corrected: true,
-      position: 'static',
+      position: 'fixed',
       creditClear: true,
     });
   }
@@ -146,7 +147,7 @@ test('Create explains missing fields and docks only a complete form above a flow
     await page
       .getByTestId('brand-footer-entry')
       .evaluate((element) => getComputedStyle(element).position),
-  ).toBe('static');
+  ).toBe('fixed');
   await page.getByTestId('input-organiser-name').fill('Ava');
   await page.getByTestId('input-organiser-pin').fill('1234');
   await expect(create).toBeEnabled();
@@ -158,7 +159,8 @@ test('Create explains missing fields and docks only a complete form above a flow
     create.boundingBox(),
     page.getByTestId('brand-footer-entry').boundingBox(),
   ]);
-  expect(footer!.y + footer!.height).toBeLessThanOrEqual(button!.y);
+  // D118: the docked button sits above the credit, which is the last line.
+  expect(button!.y + button!.height).toBeLessThanOrEqual(footer!.y + 1);
 });
 
 test('Create describes self-paced sharing without promising an app-held order', async ({

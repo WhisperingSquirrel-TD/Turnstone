@@ -46,7 +46,8 @@ test('the root entry and public information pages are accessible and responsive'
   expect(faqCopy).toContain('vote together');
   await page.goto('/');
   await page.getByTestId('button-create-game').click();
-  await expect(page).toHaveURL(/\/$/);
+  // Create has a history entry so the phone's back button returns to start.
+  await expect(page).toHaveURL(/\/\?entry=create$/);
   await expect(
     page.getByRole('heading', { name: 'Name your game' }),
   ).toBeVisible();
