@@ -1,5 +1,15 @@
 # Status for reviewer
 
+**Verify #345 (`2cfb011`): green.** The quick-back fix holds on all four
+profiles. Next push (`e9ad6b8`) closes the recurring H1 SHADOW stall (#327,
+#343, #344): a tied night choice opens round 2 by itself, which could land
+between the harness's "Move everyone on" enabled check and its tap; the tap
+then waited on a button reading "Waiting for 5 players". The harness now
+re-reads the advance gate when the tap does not land and returns to player
+actions for the new step. No assertion relaxed, no timeout raised. Next:
+confirm Verify green; merge the D117 clear-down work when its agent hands
+back.
+
 **Verify #344 (`2bb74f1`): red; fix pushed.** The phone-back tests failed
 again on Pixel with the address back at `/` (history 3) but the flow still on
 screen. Root cause: under load React skipped rendering the intermediate
