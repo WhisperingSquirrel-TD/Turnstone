@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { describeMigrationFailure } from './migration-failure';
 
 // Explicit, one-off production migration for the owner to run after approval.
 // It is never a startup or build hook (no production startup DDL). The
@@ -23,12 +24,7 @@ try {
   });
   console.log('Production migrations are up to date.');
 } catch (error) {
-  // Report the failure class only; driver messages can echo connection details.
-  const code =
-    error && typeof error === 'object' && 'code' in error
-      ? String((error as { code: unknown }).code)
-      : 'unknown';
-  console.error(`Production migration failed (code ${code}).`);
+  console.error(describeMigrationFailure(error));
   process.exitCode = 1;
 } finally {
   await pool.end();

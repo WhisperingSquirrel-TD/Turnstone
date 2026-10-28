@@ -1,5 +1,13 @@
 # Status for reviewer
 
+**Production migration report fixed.** Tom's first production
+`db:migrate:production` run connected but failed with "code unknown": the
+query layer wraps the Postgres error, so its code sat on `cause`. The script
+now prints the Postgres code, reason and first line of the committed
+statement, with any connection address removed. Test first
+(`tests/migration-failure.test.ts`). Next: Tom pulls and re-runs to see the
+real cause. Verify #349 (`4cab29a`) green.
+
 **Verify #348 (`81a6b29`): green.** D117 game end date and clear-down is
 complete on main. Owner approved production `OATHSTONE_CLEARDOWN_MODE=delete`
 (28 October 2026); Tom sets it in Replit after running
