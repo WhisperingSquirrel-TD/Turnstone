@@ -1,7 +1,7 @@
 # Status for reviewer
 
-**D119 — agents may read the public pages; still noindex. Pushed; Verify
-pending.** Pre-launch `robots.txt` allows `/`, `/about`, `/how-to-play`,
+**D119 — agents may read the public pages; still noindex. Verify #353
+(`ecfc2f2`) green.** Pre-launch `robots.txt` allows `/`, `/about`, `/how-to-play`,
 `/faq`, `/compare`, `/coming-soon` and `/llms.txt`, and disallows app routes,
 `/api/`, `/socket.io/` and `/*?`; every route keeps noindex; no sitemap.
 Public pages are canonical to the company page and link "Full details" and
@@ -10,8 +10,8 @@ public copy via `publicSiteCopy()`; FAQ 1 now ends "Players discuss
 suspicions and vote together." and "Missions are coming soon." is added.
 Not built: `/api/public/v1/facts` (does not exist yet). Production: Tom ran
 the migration (0000-0013 recorded, 0014 applied) and set
-`OATHSTONE_CLEARDOWN_MODE=delete`. Verify #352 (`157baca`) green. Next:
-Verify green, then Tom republishes.
+`OATHSTONE_CLEARDOWN_MODE=delete`. Verify #352 (`157baca`) green. Next: Tom
+pulls main on Replit and republishes.
 
 **Production migration: equivalent foreign key accepted.** Verify #351
 (`3097178`) green. Tom's run showed 0000 to 0012 present and 0013 "partly
