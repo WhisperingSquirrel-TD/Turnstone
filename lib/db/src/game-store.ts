@@ -2,6 +2,11 @@ import { randomBytes } from 'node:crypto';
 import { and, asc, desc, eq, gt, isNull, lte, or } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { eventSchema, type Event } from '@workspace/shared';
+import {
+  addDays,
+  parseIsoDate,
+  ukCalendarDate,
+} from '@workspace/shared/game-end-date';
 import { db } from './index';
 import {
   gameDeadlines,
@@ -64,7 +69,14 @@ type CreateGameInput = Omit<IdempotencyInput, 'gameId'> & {
     tokenHash: string;
     expiresAt: Date;
   };
+  /** UK end date (YYYY-MM-DD) of a real game; the API always supplies it. */
+  endDate?: string;
 };
+
+/** Callers that omit the end date get the legacy backfill rule (D117). */
+function fallbackEndDate(createdAt: number): string {
+  return addDays(ukCalendarDate(createdAt), 30);
+}
 
 type AppendEventsInput = IdempotencyInput & {
   expectedVersion: number;
@@ -201,6 +213,8 @@ export async function createGameWithEvent(
   if (!event || event.type !== 'GameCreated' || event.seq !== 1)
     throw new Error('Initial game event must be GameCreated at sequence 1');
   validateSnapshot(input.snapshot, event.seq);
+  if (input.endDate !== undefined && !parseIsoDate(input.endDate))
+    throw new Error('Invalid game end date');
   const coordinatorCapability = input.coordinatorCapability
     ? insertGameCoordinatorCapabilitySchema.parse({
         gameId: event.id,
@@ -223,6 +237,9 @@ export async function createGameWithEvent(
         config: event.config,
         version: 1,
         status: 'active',
+        gameEndDate: event.config.rehearsal.enabled
+          ? null
+          : (input.endDate ?? fallbackEndDate(event.at)),
         createdAt: new Date(event.at),
         updatedAt: new Date(event.at),
       })
@@ -665,6 +682,48 @@ export async function releaseGameDeadline(
     )
     .returning({ id: gameDeadlines.id });
   return rows.length === 1;
+}
+
+export async function readGameEndDate(gameId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ endDate: games.gameEndDate })
+    .from(games)
+    .where(eq(games.id, gameId))
+    .limit(1);
+  return row?.endDate ?? null;
+}
+
+/**
+ * Moves a real game's end date. The caller validates the UK range (today to
+ * six months ahead); practice games have no end date and are never updated.
+ */
+export async function updateGameEndDate(
+  gameId: string,
+  endDate: string,
+): Promise<boolean> {
+  if (!parseIsoDate(endDate)) throw new Error('Invalid game end date');
+  const rows = await db
+    .update(games)
+    .set({ gameEndDate: endDate })
+    .where(
+      and(
+        eq(games.id, gameId),
+        sql`coalesce(${games.config} #>> '{rehearsal,enabled}', 'false') <> 'true'`,
+      ),
+    )
+    .returning({ id: games.id });
+  return rows.length === 1;
+}
+
+/** The clear-down reason for a game id, or null if it was never cleared. */
+export async function readGameTombstone(
+  gameId: string,
+): Promise<{ deletedOn: string } | null> {
+  const result = await db.execute(
+    sql`select deleted_on::text as deleted_on from game_tombstones where game_id = ${gameId}`,
+  );
+  const deletedOn = result.rows[0]?.deleted_on;
+  return typeof deletedOn === 'string' ? { deletedOn } : null;
 }
 
 export async function countActiveGames(): Promise<number> {
