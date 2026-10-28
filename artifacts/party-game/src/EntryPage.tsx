@@ -399,6 +399,27 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     );
   }, [entryIntent, mode, queryGameId]);
 
+  // A quick back or forward can land before the router renders the step in
+  // between, leaving the location unchanged as far as React can tell. Follow
+  // the browser's own history event so the screen always matches the address
+  // (Verify #343/#344, 28 October 2026).
+  useEffect(() => {
+    if (mode !== 'play') return;
+    const followHistory = () => {
+      const search = new URLSearchParams(window.location.search);
+      setScreen(
+        initialScreen(
+          mode,
+          Boolean(search.get('game')),
+          Boolean(window.location.hash),
+          search.get('entry'),
+        ),
+      );
+    };
+    window.addEventListener('popstate', followHistory);
+    return () => window.removeEventListener('popstate', followHistory);
+  }, [mode]);
+
   useEffect(() => {
     if (mode !== 'join' || !window.location.hash) return;
     const fragment = window.location.hash.slice(1);

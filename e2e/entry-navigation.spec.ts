@@ -199,3 +199,26 @@ for (const [label, buttonId, readyId] of [
     }
   });
 }
+
+// Verify #343/#344: on a slow phone, going back straight after choosing a
+// flow left the flow on screen at "/". The start screen must follow the
+// address on every back or forward step, however quickly it comes.
+test('a quick back on a slow phone still shows the start screen', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'CPU throttling needs Chromium');
+  await start(page);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 20 });
+  for (const buttonId of [
+    'button-join-game',
+    'button-create-game',
+    'button-practise-alone',
+  ]) {
+    await page.getByTestId(buttonId).click();
+    await page.goBack();
+    await expectStart(page);
+  }
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+});
