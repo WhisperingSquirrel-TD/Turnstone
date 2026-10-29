@@ -399,3 +399,51 @@ Before a game asks people to choose again or asks more than one question, every 
 - Never display “round 1” or “round 2” on a game screen. In the night-choice record, label these picks “First pick” and “Final pick”.
 
 Tests prove each explanation appears before its choice, is identical across roles, and does not expose who disagreed. They also verify the configured end rule and the absence of round-number copy throughout rehearsal.
+
+## 34. Organiser-governed timing and Contenders on a draw [Owner, 29 October 2026]
+
+**A. Discussion timers are a guide, not a lock.** Discussion steps are the
+day Conversation (DEBATE, including the round-table shield), the Contenders
+discussion (B), the post-verdict discussion (VERDICT, once every vote is
+revealed), Dawn, and any timed mission step. The organiser can, at any time:
+
+1. **Add time:** +5, +15 or +30 minutes, or a custom whole number of minutes
+   from 1 to 60 per press. The step's guide time moves by that amount; every
+   later step's guide time is set when that step starts, so the rest of the
+   day moves with it.
+2. **Move on now,** with one confirming tap, including during the first
+   Conversation. Discussion steps have no server minimum.
+
+Every seat then sees the same role-neutral notice, identical for Traitor and
+Faithful: "The organiser has added 15 minutes." or "The organiser has moved
+the table on." If the organiser does nothing, the step ends at its guide
+time as before. Practice games have no timers; the player moves on with Next
+step and no notice is shown.
+
+Action steps are never skipped or ended by time: role acknowledgement,
+voting, voting-circle reveals, banishment and night choices. They keep the
+Q6 rule (they close only when every living player has acted, or by Wait,
+Skip or Remove for an offline player) and the existing Move-on minimum.
+Adding time to them is allowed and forces nothing.
+
+**B. Contenders on a draw.** Rule setting "Contenders discussion on a draw",
+on by default for new games. When a regular banishment vote ends with two or
+more players tied for most votes:
+
+1. Every phone names the tied players (names only, never roles or vote
+   counts) and the table enters a Contenders discussion: guide 3 minutes,
+   free-form; the contenders defend themselves and others press them. Part A
+   applies.
+2. Then a re-vote between the tied players only, using the private vote and
+   the game's reveal style. Every living player votes.
+3. A second tie is settled by the existing tie rule. With "re-vote, then
+   random" the app picks the banished player at random and every phone says
+   the choice was made at random; there is no second Contenders step.
+4. No ballots in either vote: nobody is banished (section 30.2).
+
+With the setting off, a tie goes straight to the re-vote as before. The
+endgame banishment keeps C6 unchanged (straight re-vote, then random).
+Ballots from the tied vote are never revealed. Screens, copy and timing are
+identical for every role; no seat can derive an unrevealed vote from the
+page, API, socket events, timing, logs or errors. Practice bots say nothing
+in discussions.

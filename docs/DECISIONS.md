@@ -2088,3 +2088,89 @@ public surface, missions-on copy restored) failed first. Production client:
 `/sitemap.xml` is 404 and robots lets agents read `/faq`. Browser:
 `e2e/public-pages.spec.ts` checks robots, sitemap, canonical, cross-links and
 beta copy; the static build writes no sitemap pre-launch.
+
+## D120 — Organiser-governed timing and Contenders on a draw (owner, 29 October 2026)
+
+**Owner approval:** Tom, 29 October 2026, as a rule change (SPEC section 34;
+section 3 untouched). **Dropped:** the self-paced voting-circle rewrite
+("I've shared my vote", "N still to share", a Voting circle setting) and any
+speaking-order control. The in-room circle stays as built: private votes, the
+server fixes the result and reveal order at close, each speaker reveals their
+own vote, the result follows the last reveal. Discussions are free-form.
+
+**What already existed (reused):**
+
+- `ExtendPhase{minutes}` (1, 5, 15) moved the deadline and SHADOW end and
+  logged `schedule_shift`. Widened to 1 to 60 whole minutes; the console
+  offers +5, +15, +30 and a custom amount.
+- `AdvancePhase` by the organiser already had no minimum on discussion
+  steps (`getMinimumAdvanceAt` covers only DEAL, VOTE, FINAL_BANISH,
+  FINAL_VOTE and SHADOW) and the Q6 `PENDING_ACTIONS` guard on action steps.
+  Unchanged.
+- Each step's deadline is set from the time it starts (`enter()`), so
+  adding time or moving on early shifts every later step by construction.
+  The planner (`planSchedule`) is a pre-game estimate, not a live
+  timetable; nothing at runtime reads it, so it needs no change. Tested on
+  the engine instead (see Tests).
+- Tie handling: first tie emitted `VoteClosed{revote:true, candidates}` and
+  re-entered VOTE; second tie used `tieRule` (`revote-random` picks with
+  `chooseSeat`, `revote-none` banishes nobody). Reused; Contenders is a new
+  step `CONTENDERS` between them.
+
+**Choices made (simplest within the rules):**
+
+- New phase `CONTENDERS` (guide 3 minutes) between the tied VOTE and the
+  re-vote; it applies to regular votes only. FINAL_BANISH keeps C6 exactly.
+- Setting `roundTable.contendersOnDraw`. The schema default is `false` so
+  games replayed from older events keep their old rule; new games set it on
+  explicitly (`buildNewGameConfig`), as the owner asked.
+- Second tie with `revote-none` keeps today's "nobody banished"; the random
+  announcement appears only when the app actually chose at random.
+- Notices: a single `organiserNotice` (`added_time` with minutes, or
+  `moved_on`) in the shared view, set only by an organiser action, replaced
+  by the next one and cleared by a deadline-driven step change. Not shown in
+  practice games (no timers; the player is the one moving on).
+- Custom add-time cap: 60 minutes per press.
+
+- The move-on notice rides on the step change itself (`PhaseChanged.movedOn`)
+  rather than a separate event, so event versions, and the scenario bots
+  that read them, are unchanged for every game without an early move-on.
+- The console asks once before ending MISSION, DEBATE, CONTENDERS or DAWN
+  early ("End this discussion and move everyone on now?"). VERDICT is not
+  confirmed: its Move-on also steps through vote reveals, and the voting
+  circle still refuses to close before every speaker has revealed.
+- Practice games turn the rule on, matching new games; bots say nothing in
+  Contenders and the player moves on with Next step.
+- D13 bound: seven rule steps per cycle, eight when the rule is on (one
+  Contenders step per cycle at most). Unchanged with the rule off.
+
+**Changed existing tests (intended behaviour change):**
+
+- `CoordinatorConsole.test.tsx`: add-time buttons are now +5, +15, +30 and a
+  custom amount (the +1 button is gone).
+- `tests/scenario-ci-sharding.test.ts` and
+  `tests/scenario-planning-performance.test.ts`: the new rule factor
+  (`roundTable.contendersOnDraw`, off and on) changes the pinned scenario
+  counts (three-way 788 to 846, high-seat 792 to 790 in 198/198/197/197
+  shards), oracle totals (201749 to 213473, 60995 to 63349) and their hashes.
+- `e2e/create-layout-regressions.spec.ts`: voting-circle description copy.
+- `e2e/rehearsal-live.spec.ts`: the forced practice tie now passes through
+  the Contenders step (names checked, no choices, no notice) before the
+  re-vote.
+- `scripts/src/scenarios/simulate.ts`: D13 bound as above.
+  No secrecy, role-neutral, geometry or privacy test was weakened, skipped or
+  removed, and no timeout was raised.
+
+**Tests:** `tests/contenders.test.ts` (draw of two and three, re-vote between
+contenders only, second tie at random with the announcement and no second
+Contenders step, zero ballots, setting off, schema default, C6, reconnect and
+organiser takeover, no ballot reaches any seat in any reveal style, defaults),
+`tests/organiser-timing.test.ts` (add time limits, move on from DEBATE,
+CONTENDERS and DAWN at 0 s, mid-step and after the guide time with the same
+notice for both roles, first Conversation, later times shift, deadline
+advance clears the notice, action steps cannot be skipped or time-forced,
+practice has no notice, plus a fast-check property over mixed add-time and
+move-on sequences), the reference model, scenario factor, rehearsal bots,
+console, layout audit (`contenders`, `revote-after-contenders`,
+`verdict-random`) and the full practice run. Screens:
+`docs/screens/round-7-contenders/`.

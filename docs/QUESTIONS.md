@@ -372,17 +372,13 @@ unchanged. `pnpm audit --audit-level high` reports 0 high and 0 critical
 findings; the complete local `pnpm run verify` passes. GitHub Verify is pending
 the next push.
 
-## Voting-circle copy versus server order — BACKLOG for the later voting-circle brief
+## Voting-circle copy versus server order (RESOLVED, 29 October 2026, D120)
 
-Owner direction, 25 October 2026: the approved circle is self-paced; each player
-says their vote and presses their own sharing button. The Create description now
-reads: “Each player says who they voted for and why, then presses a button to
-show their vote.”
-
-The current engine still calls `shuffledVoters` when closing a circle ballot and
-stores that reveal order. This batch intentionally changes no engine behaviour.
-Align the order and its remaining instructions only under the later
-voting-circle brief; do not infer approval to alter it from this copy fix.
+The owner dropped the self-paced circle. The app sets the reveal order when
+the vote closes (`shuffledVoters`); the table talks in any order. The copy
+now matches the server: each player votes in private, the app sets the order,
+and each player presses their button to show their vote when their turn
+comes. No speaking-order control is built.
 
 ## Automatic layout audit — normal scroll boundaries (RESOLVED, 25 October 2026)
 
