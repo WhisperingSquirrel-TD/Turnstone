@@ -721,6 +721,8 @@ function explanationKeyForPhase(
       return 'mission';
     case 'DEBATE':
       return 'conversation';
+    case 'CONTENDERS':
+      return 'contenders';
     case 'VOTE':
       return 'vote';
     case 'VERDICT':
@@ -2621,6 +2623,14 @@ function PlayerGame() {
       phase={full.phase}
       shadowRound={full.shadowRound}
       revote={full.revote}
+      contenderNames={
+        full.phase === 'CONTENDERS'
+          ? full.voteCandidates.flatMap((id) => {
+              const name = full.seats.find((seat) => seat.id === id)?.name;
+              return name ? [name] : [];
+            })
+          : []
+      }
       progress={full.progress}
       context={{
         phase: full.phase,
@@ -2871,9 +2881,39 @@ function PlayerGame() {
                 {phaseLabel(full.phase)}
               </h1>
             )}
+            {full.organiserNotice && (
+              <p
+                className="mb-3 border-l-2 border-gilt pl-3 text-base text-candle"
+                data-testid="organiser-notice"
+                role="status"
+                key={full.organiserNotice.seq}
+              >
+                {full.organiserNotice.kind === 'moved_on'
+                  ? en.game.organiserMovedOn
+                  : en.game.organiserAddedTime(full.organiserNotice.minutes)}
+              </p>
+            )}
             <WhatIsHappeningCard accent={Boolean(full.revote)}>
               {gameAnnouncement}
             </WhatIsHappeningCard>
+            {full.phase === 'CONTENDERS' && (
+              <section
+                className="mb-4"
+                aria-labelledby="contenders-heading"
+                data-testid="contenders-list"
+              >
+                <h2 id="contenders-heading" className="text-sm text-ash">
+                  {en.game.contendersListLabel}
+                </h2>
+                <ul className="mt-2 divide-y divide-stone border-y border-stone">
+                  {full.voteCandidates.map((id) => (
+                    <li key={id} className="py-3 text-lg text-candle">
+                      {full.seats.find((seat) => seat.id === id)?.name}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             {watchingRehearsal && (
               <RehearsalWatchCommentary phase={full.phase} />
             )}

@@ -7,6 +7,7 @@ export interface NewGameConfigInput {
   coCoordinatorCount: number;
   presenterEnabled: boolean;
   revealStyle?: 'speaker-circle' | 'one-by-one';
+  contendersOnDraw?: boolean;
 }
 
 export function buildNewGameConfig(input: NewGameConfigInput) {
@@ -20,6 +21,9 @@ export function buildNewGameConfig(input: NewGameConfigInput) {
     presenter: { enabled: input.presenterEnabled },
     roundTable: {
       revealStyle: input.revealStyle ?? 'speaker-circle',
+      // D120: on by default for new games; the schema default stays off so
+      // older games replay with their original rule.
+      contendersOnDraw: input.contendersOnDraw ?? true,
     },
     // Missions have no content yet; games show a notice instead (MISSIONS-REVIEW).
     // The round table agrees the shield holder and the organiser records it (D109).

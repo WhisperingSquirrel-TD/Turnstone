@@ -11,7 +11,7 @@ export type CoordinatorCommand =
   | { type: 'AdvancePhase' }
   | { type: 'Pause' }
   | { type: 'Resume' }
-  | { type: 'ExtendPhase'; minutes: 1 | 5 | 15 }
+  | { type: 'ExtendPhase'; minutes: number }
   | { type: 'MarkDeparted'; seatId: string }
   | { type: 'SkipPendingAction'; seatId: string }
   | { type: 'UndoPendingActionSkip'; seatId: string }
@@ -72,13 +72,35 @@ function formatPublicUpdate(entry: FullView['publicLog'][number]): string {
   return en.game.publicLogFinished(entry.winner);
 }
 
-export function getCoordinatorMoveConfirmation(progress: {
-  done: number;
-  total: number;
-}): string | null {
+// D120: discussion steps end early only after one confirming tap. VERDICT is
+// left out: its Move-on also steps through vote reveals.
+const confirmedDiscussionSteps = new Set<FullView['phase']>([
+  'MISSION',
+  'DEBATE',
+  'CONTENDERS',
+  'DAWN',
+]);
+
+export function getCoordinatorMoveConfirmation(
+  progress: {
+    done: number;
+    total: number;
+  },
+  phase?: FullView['phase'],
+): string | null {
   const unfinished = Math.max(0, progress.total - progress.done);
-  if (unfinished === 0) return null;
+  if (unfinished === 0)
+    return phase && confirmedDiscussionSteps.has(phase)
+      ? en.game.organiserConfirmMoveOnNow
+      : null;
   return en.coordinator.moveConfirmation(unfinished);
+}
+
+/** D120: a custom add-time amount, accepted only as 1 to 60 whole minutes. */
+export function parseCustomMinutes(value: string): number | null {
+  if (!/^\d{1,2}$/.test(value.trim())) return null;
+  const minutes = Number(value.trim());
+  return minutes >= 1 && minutes <= 60 ? minutes : null;
 }
 
 export function getCoordinatorEndConfirmation(): string {
@@ -95,6 +117,7 @@ export function formatCoordinatorPhase(
     DEAL: 'Role reveal',
     MISSION: 'Mission',
     DEBATE: 'The conversation',
+    CONTENDERS: 'The contenders',
     VOTE: revote ? 'The re-vote' : 'The vote',
     VERDICT: 'The verdict',
     SHADOW: 'Night',
@@ -198,6 +221,7 @@ export function CoordinatorConsole({
   );
   const { localNow, offsetMs: serverClockOffsetMs } = clockSample;
   const [confirmMove, setConfirmMove] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState('');
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [departingSeatId, setDepartingSeatId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -274,7 +298,9 @@ export function CoordinatorConsole({
             localNow,
             serverClockOffsetMs,
           );
-  const movePrompt = getCoordinatorMoveConfirmation(view.progress);
+  const movePrompt = getCoordinatorMoveConfirmation(view.progress, view.phase);
+  const discussionConfirmation =
+    movePrompt === en.game.organiserConfirmMoveOnNow;
 
   async function run(command: CoordinatorCommand): Promise<boolean> {
     if (busy) return false;
@@ -698,20 +724,60 @@ export function CoordinatorConsole({
             role="group"
             aria-label={en.coordinator.extend}
           >
-            {([1, 5, 15] as const).map((minutes) => (
+            <div className="grid grid-cols-3 gap-2">
+              {([5, 15, 30] as const).map((minutes) => (
+                <button
+                  className="entry-secondary-action"
+                  data-testid={`button-extend-${minutes}`}
+                  type="button"
+                  key={minutes}
+                  aria-label={en.coordinator.addMinutes(minutes)}
+                  disabled={busy || view.paused || view.deadline === null}
+                  onClick={() => void run({ type: 'ExtendPhase', minutes })}
+                >
+                  {en.game.organiserAddMinutes(minutes)}
+                </button>
+              ))}
+            </div>
+            <form
+              className="grid grid-cols-[1fr_auto] items-end gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const minutes = parseCustomMinutes(customMinutes);
+                if (minutes === null) return;
+                void run({ type: 'ExtendPhase', minutes }).then((done) => {
+                  if (done) setCustomMinutes('');
+                });
+              }}
+            >
+              <label className="grid gap-1 text-sm text-ash">
+                {en.game.organiserCustomMinutes}
+                <input
+                  className="entry-field"
+                  data-testid="input-extend-custom"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={2}
+                  value={customMinutes}
+                  onChange={(event) =>
+                    setCustomMinutes(event.target.value.replace(/\D/g, ''))
+                  }
+                />
+              </label>
               <button
                 className="entry-secondary-action"
-                data-testid={`button-extend-${minutes}`}
-                type="button"
-                key={minutes}
-                disabled={busy || view.paused || view.deadline === null}
-                onClick={() => void run({ type: 'ExtendPhase', minutes })}
+                data-testid="button-extend-custom"
+                type="submit"
+                disabled={
+                  busy ||
+                  view.paused ||
+                  view.deadline === null ||
+                  parseCustomMinutes(customMinutes) === null
+                }
               >
-                {minutes === 1
-                  ? en.coordinator.addMinute
-                  : en.coordinator.addMinutes(minutes)}
+                {en.game.organiserAddCustom}
               </button>
-            ))}
+            </form>
           </div>
           <button
             className="entry-primary-action"
@@ -783,7 +849,9 @@ export function CoordinatorConsole({
               if (await run({ type: 'AdvancePhase' })) setConfirmMove(false);
             }}
           >
-            {en.coordinator.moveAnyway}
+            {discussionConfirmation
+              ? en.game.organiserMoveOnNow
+              : en.coordinator.moveAnyway}
           </button>
           <button
             className="entry-secondary-action"

@@ -11,6 +11,7 @@ type GameStepAnnouncementProps = {
   phase: string;
   shadowRound: number;
   revote?: boolean;
+  contenderNames?: string[];
   progress?: { done: number; total: number };
   context?: CommentaryContext;
   coachingTip?: string;
@@ -24,6 +25,7 @@ export function GameStepAnnouncement({
   phase,
   shadowRound,
   revote = false,
+  contenderNames = [],
   progress,
   context,
   coachingTip,
@@ -33,6 +35,12 @@ export function GameStepAnnouncement({
 
   if (phase === 'DEAL') {
     message = en.game.dealAnnouncement;
+  } else if (phase === 'CONTENDERS') {
+    // D120: names only, never roles or vote counts; the same for every seat.
+    message =
+      contenderNames.length > 1
+        ? `${en.game.contendersIntro(contenderNames)} ${en.game.contendersBody}`
+        : en.game.contendersBody;
   } else if (revote && (phase === 'VOTE' || phase === 'FINAL_BANISH')) {
     message = en.game.revoteReason;
   } else if (phase === 'SHADOW') {

@@ -12,6 +12,7 @@ type Phase =
   | 'DEAL'
   | 'MISSION'
   | 'DEBATE'
+  | 'CONTENDERS'
   | 'VOTE'
   | 'VERDICT'
   | 'SHADOW'
@@ -26,6 +27,7 @@ const rehearsalCardByPhase: Partial<Record<Phase, string>> = {
   DEAL: 'Keep your screen covered while you reveal your role.',
   MISSION: 'Work as a group on the challenge.',
   DEBATE: 'Share what you have noticed before the vote.',
+  CONTENDERS: 'Hear the tied players out, then vote again.',
   VOTE: 'Choose your suspect privately.',
   VERDICT: 'Watch the votes and result appear for everyone.',
   SHADOW: 'Make your choice while the screen is shielded.',
@@ -38,6 +40,7 @@ const rehearsalCardByPhase: Partial<Record<Phase, string>> = {
 
 const rehearsalWatchMessageByPhase: Partial<Record<Phase, string>> = {
   DEBATE: 'The remaining players are talking it over now.',
+  CONTENDERS: 'The contenders are making their case now.',
   VOTE: 'The remaining players are voting now.',
   VERDICT: 'The remaining players are seeing the result now.',
   SHADOW: 'The remaining players are making their private night choices now.',
@@ -1519,10 +1522,30 @@ test('plays a full rehearsal from the player screen with no presenter or refresh
           ).filter((source): source is string => source !== null),
         );
       expect(brokenImages, `broken image during ${phase}`).toEqual([]);
-      if (['DEBATE', 'VERDICT', 'DAWN'].includes(phase)) {
+      if (['DEBATE', 'CONTENDERS', 'VERDICT', 'DAWN'].includes(phase)) {
         await expect(
           page.getByText(/players have completed this part/),
         ).toHaveCount(0);
+      }
+      if (phase === 'CONTENDERS') {
+        // D120: the draw names the tied players only; bots say nothing.
+        const contendersView = await latestSynchronizedServerPhase(
+          page,
+          activeGameId,
+        );
+        expect(contendersView.revote).toBe(true);
+        expect([...(contendersView.voteCandidates ?? [])].sort()).toEqual(
+          expectedTieCandidateIds,
+        );
+        const contenderNames = (contendersView.voteCandidates ?? []).map(
+          (seatId) =>
+            contendersView.seats.find((seat) => seat.id === seatId)?.name,
+        );
+        await expect(
+          page.getByTestId('contenders-list').getByRole('listitem'),
+        ).toHaveText(contenderNames as string[]);
+        await expect(page.getByTestId('private-choice-list')).toHaveCount(0);
+        await expect(page.getByTestId('organiser-notice')).toHaveCount(0);
       }
       if (phase === 'DEBATE') {
         const help = page

@@ -166,6 +166,8 @@ export interface EntryExperienceCopy {
   speakerCircleDescription: string;
   automaticRevealLabel: string;
   automaticRevealDescription: string;
+  contendersToggleLabel: string;
+  contendersToggleDescription: string;
   presenterToggleLabel: string;
   presenterToggleDescription: string;
   createButton: string;
@@ -254,6 +256,7 @@ export interface EntryExperienceProps {
     organiserPin: string;
     presenterEnabled: boolean;
     revealStyle: 'speaker-circle' | 'one-by-one';
+    contendersOnDraw: boolean;
   }) => void | Promise<void>;
   onApproveJoiner: (joinerId: string) => void | Promise<void>;
   onStartGame: () => void | Promise<void>;
@@ -418,6 +421,7 @@ export function EntryExperience({
   const [revealStyle, setRevealStyle] = useState<
     'speaker-circle' | 'one-by-one'
   >('speaker-circle');
+  const [contendersOnDraw, setContendersOnDraw] = useState(true);
   const [duplicateName, setDuplicateName] = useState<string | null>(null);
   const [recoveringSeat, setRecoveringSeat] = useState(false);
   const [browserOnline, setBrowserOnline] = useState(
@@ -676,10 +680,12 @@ export function EntryExperience({
         organiserPin,
         presenterEnabled,
         revealStyle,
+        contendersOnDraw,
       });
       onInputChange('organiserPin', '');
       setPresenterEnabled(false);
       setRevealStyle('speaker-circle');
+      setContendersOnDraw(true);
       onClearSensitiveValues();
       moveTo('lobby');
     } catch {
@@ -1547,6 +1553,28 @@ export function EntryExperience({
                   </span>
                 </label>
               </fieldset>
+              <label
+                className="entry-presenter-option"
+                htmlFor="entry-contenders-on-draw"
+              >
+                <input
+                  id="entry-contenders-on-draw"
+                  data-testid="toggle-contenders"
+                  type="checkbox"
+                  checked={contendersOnDraw}
+                  onChange={(event) =>
+                    setContendersOnDraw(event.target.checked)
+                  }
+                />
+                <span>
+                  <span className="entry-label">
+                    {copy.contendersToggleLabel}
+                  </span>
+                  <span className="entry-help">
+                    {copy.contendersToggleDescription}
+                  </span>
+                </span>
+              </label>
               <div
                 className={
                   createReady ? 'entry-action-dock' : 'entry-inline-primary'

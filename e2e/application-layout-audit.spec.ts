@@ -262,9 +262,11 @@ for (const width of widths)
           (!process.env.R7_AUDIT_STATES ||
             process.env.R7_AUDIT_STATES.split(',').includes(name))
         ) {
-          await mkdir('docs/screens/round-7-audit', { recursive: true });
+          const captureDir =
+            process.env.R7_AUDIT_DIR ?? 'docs/screens/round-7-audit';
+          await mkdir(captureDir, { recursive: true });
           const image = await page.screenshot({
-            path: `docs/screens/round-7-audit/${name}-${width}-${palette}.jpg`,
+            path: `${captureDir}/${name}-${width}-${palette}.jpg`,
             type: 'jpeg',
             quality: 40,
             fullPage: true,
@@ -650,6 +652,42 @@ for (const width of widths)
         publicAnnouncement: { kind: 'no_votes', cycle: 2 },
       });
       await audit('verdict-no-banishment');
+      // D120: Contenders on a draw and organiser timing notices.
+      await room('CONTENDERS', {
+        revote: true,
+        voteCandidates: ['seat-jamie', 'seat-sam'],
+        organiserNotice: { kind: 'added_time', minutes: 15, seq: 40 },
+      });
+      await expect(page.getByTestId('contenders-list')).toBeVisible();
+      await expect(page.getByTestId('organiser-notice')).toHaveText(
+        'The organiser has added 15 minutes.',
+      );
+      await audit('contenders');
+      await room('VOTE', {
+        revote: true,
+        voteCandidates: ['seat-jamie', 'seat-sam'],
+        organiserNotice: { kind: 'moved_on', seq: 41 },
+      });
+      await expect(page.getByTestId('organiser-notice')).toHaveText(
+        'The organiser has moved the table on.',
+      );
+      await audit('revote-after-contenders');
+      await room('VERDICT', {
+        publicAnnouncement: {
+          kind: 'verdict',
+          cycle: 2,
+          seat: { id: 'seat-jamie', name: 'Jamie', role: 'faithful' },
+          chosenAtRandom: true,
+        },
+        ballots: {
+          'seat-morgan': 'seat-jamie',
+          'seat-sam': 'seat-jamie',
+          'seat-jamie': 'seat-sam',
+          'seat-drew': 'seat-sam',
+        },
+      });
+      await expect(page.getByTestId('verdict-random')).toBeVisible();
+      await audit('verdict-random');
       await room('FINISHED', {
         winner: 'traitor',
         publicAnnouncement: { kind: 'finished', winner: 'traitor' },

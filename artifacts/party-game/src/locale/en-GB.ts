@@ -147,7 +147,7 @@ export const en = {
     resume: 'Resume game',
     extend: 'Extend time',
     addMinute: 'Add 1 minute',
-    addMinutes: (minutes: 5 | 15) => `Add ${minutes} minutes`,
+    addMinutes: (minutes: number) => `Add ${minutes} minutes`,
     endEarly: 'End game early',
     moveConfirmation: (unfinished: number) =>
       unfinished === 1
@@ -474,7 +474,7 @@ export const en = {
     votingStyleLabel: 'How should votes be revealed?',
     speakerCircleLabel: 'In-room voting circle (recommended)',
     speakerCircleDescription:
-      'Each player says who they voted for and why, then presses a button to show their vote.',
+      'Everyone votes in private. The app sets the order; when it is your turn, say who you chose and why, then press your button to show your vote.',
     missingNameAndPin: 'Enter your first name and a 4-digit PIN.',
     missingNameAndCode: 'Enter your first name and the game code.',
     missingCode: 'Enter the 6-character game code.',
@@ -485,6 +485,9 @@ export const en = {
       `Waiting for ${count} more ${count === 1 ? 'player' : 'players'}.`,
     automaticRevealLabel: 'Automatic reveal',
     automaticRevealDescription: 'Use this for video-call or multi-day games.',
+    contendersToggleLabel: 'Contenders discussion on a draw',
+    contendersToggleDescription:
+      'If a vote is tied, the tied players get 3 minutes to make their case, then everyone votes again between them.',
     presenterToggleLabel: 'Use an optional TV presenter screen',
     presenterToggleDescription:
       'Shows public updates on a shared display. Everyone can still use their own phone.',
@@ -584,6 +587,7 @@ export const en = {
       DEAL: 'Private roles',
       MISSION: 'The mission',
       DEBATE: 'The conversation',
+      CONTENDERS: 'The contenders',
       VOTE: 'Make your vote',
       VERDICT: 'The verdict',
       SHADOW: 'A choice in the dark',
@@ -755,6 +759,7 @@ export const en = {
     nextRehearsalStep: 'Next step',
     rehearsalWatch: {
       DEBATE: 'The remaining players are talking it over now.',
+      CONTENDERS: 'The contenders are making their case now.',
       VOTE: 'The remaining players are voting now.',
       VERDICT: 'The remaining players are seeing the result now.',
       SHADOW:
@@ -772,6 +777,7 @@ export const en = {
       start: 'Your practice game',
       role: 'Your role',
       conversation: 'The conversation',
+      contenders: 'The contenders',
       mission: 'The mission',
       vote: 'The vote',
       verdict: 'The verdict',
@@ -787,6 +793,7 @@ export const en = {
       start: 'You control the pace of this practice game.',
       role: 'Keep your role secret.',
       conversation: 'In a real game, people argue their case out loud now.',
+      contenders: 'In a real game, the contenders defend themselves out loud.',
       mission: 'In a real game, everyone works together.',
       vote: 'In a real game, explain the evidence behind your choice.',
       verdict:
@@ -832,6 +839,8 @@ export const en = {
       role: 'Everyone is secretly dealt a role: Traitor or Faithful. Shield your screen, then hold the seal to see yours. Let go and it hides.',
       conversation:
         'Everyone talks it over. Who is acting suspiciously, and why? In a real game this lasts as long as the organiser sets.',
+      contenders:
+        'The vote was a draw. The tied players defend themselves and anyone can press them. Then everyone votes again, between them only.',
       mission:
         'Work together to complete the mission. Your organiser records the result and any prize earned.',
       vote: 'Everyone secretly votes for the player they think is a Traitor. Votes are revealed one by one once everyone has voted.',
@@ -855,6 +864,7 @@ export const en = {
         'A practice game with computer players. Try each step at your own pace.',
       role: 'Keep your screen covered while you reveal your role.',
       conversation: 'Share what you have noticed before the vote.',
+      contenders: 'Hear the tied players out, then vote again.',
       mission: 'Work as a group on the challenge.',
       vote: 'Choose your suspect privately.',
       verdict: 'Watch the votes and result appear for everyone.',
@@ -903,6 +913,26 @@ export const en = {
       return `Tied players: ${tiedNames}.`;
     },
     revoteReason: 'Tied vote. Choose again among the tied players.',
+    contendersIntro: (names: string[]) => {
+      const tiedNames =
+        names.length === 2
+          ? `${names[0]} and ${names[1]}`
+          : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+      return `The vote was a draw between ${tiedNames}.`;
+    },
+    contendersBody:
+      'They make their case and anyone can press them. Talk in any order. Then everyone votes again, between them only.',
+    contendersListLabel: 'Contenders',
+    verdictChosenAtRandom: 'It was a draw again, so the app chose at random.',
+    organiserMovedOn: 'The organiser has moved the table on.',
+    organiserAddedTime: (minutes: number) =>
+      `The organiser has added ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
+    organiserAddTime: 'Add time',
+    organiserAddMinutes: (minutes: number) => `+${minutes} min`,
+    organiserCustomMinutes: 'Minutes to add (1 to 60)',
+    organiserAddCustom: 'Add',
+    organiserMoveOnNow: 'Move on now',
+    organiserConfirmMoveOnNow: 'End this discussion and move everyone on now?',
     shadowTraitorPrompt: 'Who will the Traitors take tonight?',
     shadowFaithfulPrompt: 'Who do you think the Traitors will take tonight?',
     firstChoice: 'First choice',

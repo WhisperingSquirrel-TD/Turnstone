@@ -169,7 +169,7 @@ test('Create describes self-paced sharing without promising an app-held order', 
   await nameAndPin(page);
   await expect(
     page.getByText(
-      'Each player says who they voted for and why, then presses a button to show their vote.',
+      'Everyone votes in private. The app sets the order; when it is your turn, say who you chose and why, then press your button to show your vote.',
       { exact: true },
     ),
   ).toBeVisible();

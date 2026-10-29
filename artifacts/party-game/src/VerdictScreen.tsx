@@ -6,7 +6,8 @@ type VerdictSeat = {
 };
 
 type VerdictAnnouncement =
-  { kind: 'verdict'; seat: VerdictSeat } | { kind: 'no_votes'; cycle: number };
+  | { kind: 'verdict'; seat: VerdictSeat; chosenAtRandom?: true }
+  | { kind: 'no_votes'; cycle: number };
 
 type VoteSeat = {
   id: string;
@@ -133,6 +134,11 @@ export function VerdictScreen({
               announcement.seat.role,
             )}
           </h1>
+          {announcement.chosenAtRandom && (
+            <p className="mt-2 text-base text-ash" data-testid="verdict-random">
+              {en.game.verdictChosenAtRandom}
+            </p>
+          )}
         </section>
       )}
       {announcement && aliveCount !== undefined && (

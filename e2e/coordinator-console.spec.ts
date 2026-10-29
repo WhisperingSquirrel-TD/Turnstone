@@ -802,3 +802,106 @@ test('the organiser console records the round table’s shield choice (D109)', a
   );
   await expect(panel).toHaveCount(0);
 });
+
+test('organiser adds time and moves Contenders on after one confirming tap (D120)', async ({
+  page,
+}, info) => {
+  const gameId = 'coordinator-console-test';
+  let view = {
+    ...createView(),
+    phase: 'CONTENDERS',
+    revote: true,
+    voteCandidates: ['seat-jamie', 'seat-sam'],
+    progress: { done: 0, total: 0 },
+    actionStatus: { waiting: 0, total: 0 },
+    coordinatorSkippedSeats: [],
+    coordinatorUndo: null,
+  } as FullView;
+  const commands: Array<Record<string, unknown>> = [];
+  await page.route('**/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'screen-test-token' } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/view`, (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    }),
+  );
+  await page.route(`**/games/${gameId}/join-requests`, (route) =>
+    route.fulfill({ json: { requests: [] } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/delegates`, (route) =>
+    route.fulfill({ json: { limit: 1, seatIds: [] } }),
+  );
+  await page.route(`**/games/${gameId}/coordinator/presence`, (route) =>
+    route.fulfill({ json: { status: 'online' } }),
+  );
+  await page.route(`**/games/${gameId}/commands`, async (route) => {
+    const command = route.request().postDataJSON() as Record<string, unknown>;
+    commands.push(command);
+    view = {
+      ...view,
+      version: view.version + 1,
+      ...(command.type === 'ExtendPhase' && typeof command.minutes === 'number'
+        ? { deadline: (view.deadline ?? Date.now()) + command.minutes * 60_000 }
+        : {}),
+      ...(command.type === 'AdvancePhase' ? { phase: 'VOTE' } : {}),
+    } as FullView;
+    await route.fulfill({
+      json: { serverNow: Date.now(), version: view.version, view },
+    });
+  });
+  await page.route('**/socket.io/**', (route) => route.abort());
+  await page.goto(`/coordinate/${gameId}`);
+  const consoleRoot = page.getByTestId('coordinator-console');
+  await expect(page.getByTestId('coordinator-current-step')).toHaveText(
+    'The contenders',
+  );
+  for (const minutes of [5, 15, 30])
+    await expect(page.getByTestId(`button-extend-${minutes}`)).toBeEnabled();
+  await page.getByTestId('button-extend-30').click();
+  await expect
+    .poll(() => commands.at(-1))
+    .toMatchObject({
+      type: 'ExtendPhase',
+      minutes: 30,
+    });
+  const custom = page.getByTestId('input-extend-custom');
+  await custom.fill('61');
+  await expect(page.getByTestId('button-extend-custom')).toBeDisabled();
+  await custom.fill('7');
+  await page.getByTestId('button-extend-custom').click();
+  await expect
+    .poll(() => commands.at(-1))
+    .toMatchObject({
+      type: 'ExtendPhase',
+      minutes: 7,
+    });
+  await expect(custom).toHaveValue('');
+
+  // Move on from a discussion: never time-locked, but asks once.
+  const moveOn = page.getByTestId('button-coordinator-move-on');
+  await expect(moveOn).toBeEnabled();
+  await moveOn.click();
+  await expect(
+    consoleRoot.getByText('End this discussion and move everyone on now?'),
+  ).toBeVisible();
+  expect(commands.some((command) => command.type === 'AdvancePhase')).toBe(
+    false,
+  );
+  if (process.env.R7_AUDIT_DIR && info.project.name === 'Pixel') {
+    for (const width of [320, 390, 430]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.screenshot({
+        path: `${process.env.R7_AUDIT_DIR}/organiser-move-on-confirm-${width}.jpg`,
+        type: 'jpeg',
+        quality: 40,
+        fullPage: true,
+      });
+    }
+  }
+  await page.getByRole('button', { name: 'Move on now', exact: true }).click();
+  await expect.poll(() => commands.at(-1)?.type).toBe('AdvancePhase');
+  await expect(page.getByTestId('coordinator-current-step')).toHaveText(
+    'The re-vote',
+  );
+});

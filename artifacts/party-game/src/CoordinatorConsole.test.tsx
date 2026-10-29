@@ -5,6 +5,7 @@ import {
   formatCoordinatorCountdown,
   getCoordinatorEndConfirmation,
   getCoordinatorMoveConfirmation,
+  parseCustomMinutes,
   type CoordinatorConsoleView,
 } from './CoordinatorConsole';
 import { en } from './locale/en-GB';
@@ -51,9 +52,11 @@ describe('CoordinatorConsole', () => {
     expect(html).toMatch(/Time left: 0:(?:29|30)/);
     expect(html.replaceAll('<!-- -->', '')).toContain('3 of 8 done');
     expect(html).toContain('Pause game');
-    expect(html).toContain('Add 1 minute');
+    // D120: +5, +15, +30 and a custom amount replace the earlier +1.
     expect(html).toContain('Add 5 minutes');
     expect(html).toContain('Add 15 minutes');
+    expect(html).toContain('Add 30 minutes');
+    expect(html).toContain('data-testid="input-extend-custom"');
     expect(html).toContain('Move everyone on');
     expect(html).toContain('End game early');
     expect(html).not.toContain('Practice player');
@@ -299,6 +302,27 @@ describe('CoordinatorConsole', () => {
       "1 player hasn't finished. Move everyone on anyway?",
     );
     expect(getCoordinatorMoveConfirmation({ done: 8, total: 8 })).toBeNull();
+  });
+
+  it('asks once before ending a discussion step early (D120)', () => {
+    for (const phase of ['MISSION', 'DEBATE', 'CONTENDERS', 'DAWN'] as const)
+      expect(getCoordinatorMoveConfirmation({ done: 0, total: 0 }, phase)).toBe(
+        'End this discussion and move everyone on now?',
+      );
+    expect(
+      getCoordinatorMoveConfirmation({ done: 0, total: 0 }, 'VERDICT'),
+    ).toBeNull();
+    expect(getCoordinatorMoveConfirmation({ done: 3, total: 8 }, 'VOTE')).toBe(
+      "5 players haven't finished. Move everyone on anyway?",
+    );
+  });
+
+  it('accepts a custom add-time amount of 1 to 60 whole minutes only', () => {
+    expect(parseCustomMinutes('1')).toBe(1);
+    expect(parseCustomMinutes(' 45 ')).toBe(45);
+    expect(parseCustomMinutes('60')).toBe(60);
+    for (const value of ['', '0', '61', '2.5', '-5', 'ten', '100'])
+      expect(parseCustomMinutes(value)).toBeNull();
   });
 
   it('requires a separate confirmation before ending the game early', () => {
