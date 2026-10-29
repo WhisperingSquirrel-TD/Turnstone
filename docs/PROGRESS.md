@@ -1,7 +1,7 @@
 # Status for reviewer
 
 **Phase 2 (D120) — Contenders on a draw and organiser-governed timing:
-pushed; Verify pending.** Phase 1 is complete: Verify #355 (`5d8c8d1`) and
+Verify #357 (`2e83156`) GREEN; this status push is the second run.** Phase 1 is complete: Verify #355 (`5d8c8d1`) and
 #356 (`490789c`) green consecutively after the recovery-test split.
 Phase 2: SPEC section 34 and D120 (owner approval; self-paced circle and
 speaking order dropped; what existed and was reused). Engine: new step
@@ -17,7 +17,7 @@ before code). Local: types, lint, format, build, 836+ unit, property,
 scenario sample 0 failures in 2628 games, full practice run, layout audit
 16/16 (Pixel, desktop), console e2e 14/14. Changed tests listed in D120.
 Screens: `docs/screens/round-7-contenders/`.
-Next: Verify green twice, then stop and report to Tom.
+Next: second green run on this push, then report to Tom.
 
 **Phase 1, stabilise Verify: Verify #355 (`5d8c8d1`) GREEN; this status push is the second run.** #354 (`f6d02bb`,
 docs only) failed in the iPad WebKit browser job. Its job log could not be
