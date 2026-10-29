@@ -38,7 +38,7 @@ export default defineConfig({
     'disconnected-player-live.spec.ts',
   ],
   outputDir: 'generated-artifacts/playwright-rehearsal',
-  reporter: [['list']],
+  reporter: [['list'], ...(process.env.CI ? ([['github']] as const) : [])],
   workers: 1,
   timeout: 90_000,
   expect: { timeout: 5_000 },

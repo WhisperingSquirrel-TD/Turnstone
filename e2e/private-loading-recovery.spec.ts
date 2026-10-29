@@ -73,40 +73,43 @@ test('owner regression: Practice Day 1 Talk never strands a private-screen place
   await expect(page.locator('[data-phase="DEBATE"] h1')).toBeVisible();
 });
 
-test('owner regression: current steps survive reload, screen return and slow state fetches', async ({
-  page,
-}) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  const gameId = 'phase-return-recovery';
-  let view = createPublicView(gameId);
-  const envelope = () => ({
-    serverNow: Date.now(),
-    version: view.version,
-    view,
-  });
-  await installLiveSocketViewFixture(page, envelope);
-  await page.route('**/api/csrf', (route) =>
-    route.fulfill({ json: { csrfToken: 'test-csrf' } }),
-  );
-  await page.route(`**/api/games/${gameId}/**`, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 120));
-    await route.fulfill({ json: envelope() });
-  });
-  for (const phase of [
-    'LOBBY',
-    'DEAL',
-    'MISSION',
-    'DEBATE',
-    'VOTE',
-    'VERDICT',
-    'SHADOW',
-    'DAWN',
-    'ENDGAME',
-    'FINAL_VOTE',
-    'FINAL_BANISH',
-    'FINISHED',
-  ] as const) {
-    view = { ...view, phase, version: view.version + 1 };
+// One test per step: each pays two full page loads through the dev server, so
+// a single test looping all twelve steps sat near its 30 s limit on WebKit and
+// failed intermittently in CI (Verify #354). Assertions are unchanged.
+for (const phase of [
+  'LOBBY',
+  'DEAL',
+  'MISSION',
+  'DEBATE',
+  'VOTE',
+  'VERDICT',
+  'SHADOW',
+  'DAWN',
+  'ENDGAME',
+  'FINAL_VOTE',
+  'FINAL_BANISH',
+  'FINISHED',
+] as const) {
+  test(`owner regression: the ${phase} step survives reload, screen return and slow state fetches`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const gameId = 'phase-return-recovery';
+    const initial = createPublicView(gameId);
+    const view = { ...initial, phase, version: initial.version + 1 };
+    const envelope = () => ({
+      serverNow: Date.now(),
+      version: view.version,
+      view,
+    });
+    await installLiveSocketViewFixture(page, envelope);
+    await page.route('**/api/csrf', (route) =>
+      route.fulfill({ json: { csrfToken: 'test-csrf' } }),
+    );
+    await page.route(`**/api/games/${gameId}/**`, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      await route.fulfill({ json: envelope() });
+    });
     await page.goto(`/game/${gameId}?clips=off`);
     await expect(page.locator(`[data-phase="${phase}"]`)).toBeAttached();
     await page.reload();
@@ -119,5 +122,5 @@ test('owner regression: current steps survive reload, screen return and slow sta
     await expect(
       page.getByText('Opening your private screen…', { exact: true }),
     ).toHaveCount(0);
-  }
-});
+  });
+}

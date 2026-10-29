@@ -30,6 +30,17 @@ describe('owner-approved delivery policy', () => {
       'TEST_API_PROXY_TARGET: `http://127.0.0.1:${csrfTestPort}`',
     );
   });
+  it('reports browser failures as GitHub annotations in CI', () => {
+    // Job logs can be unreachable from review sessions; annotations are not.
+    for (const file of [
+      'playwright.config.ts',
+      'playwright.rehearsal.config.ts',
+    ]) {
+      expect(readFileSync(file, 'utf8')).toContain(
+        "...(process.env.CI ? ([['github']] as const) : [])",
+      );
+    }
+  });
   it('blocks inclusive freeze dates except exact security-tagged commits', () => {
     const dates = [{ start: '2026-12-24', end: '2026-12-26' }];
     expect(canPromote(dates, 'regular commit', '2026-12-24')).toBe(false);
