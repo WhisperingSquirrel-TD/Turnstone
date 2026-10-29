@@ -1,6 +1,6 @@
 # Status for reviewer
 
-**Phase 1, stabilise Verify: fix pushed; Verify pending.** #354 (`f6d02bb`,
+**Phase 1, stabilise Verify: Verify #355 (`5d8c8d1`) GREEN; this status push is the second run.** #354 (`f6d02bb`,
 docs only) failed in the iPad WebKit browser job. Its job log could not be
 read from this session (GitHub serves logs from a blob host the network
 policy blocks), so the diagnosis is local. `private-loading-recovery.spec.ts`
@@ -16,7 +16,7 @@ first in `tests/pipeline.test.ts`). Release entry added to `docs/RELEASES.md`
 (`ecfc2f2`, #353; rollback `157baca`, #352) and LAUNCH steps 1, 3-6, 8, 10,
 11 and 16 marked done. Not recorded anywhere, so left unticked: 2 (device
 test), 7 (spend caps), 9 and 12 (smoke tests), 13-15 (company site).
-Next: two consecutive green Verify runs, then Phase 2 (Contenders on a draw,
+Next: a second consecutive green run on this push, then Phase 2 (Contenders on a draw,
 organiser-governed timing).
 
 **D119 — agents may read the public pages; still noindex. Verify #353
