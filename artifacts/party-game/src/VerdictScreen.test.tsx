@@ -50,4 +50,25 @@ describe('VerdictScreen public wording', () => {
     expect(markup).toMatch(/<h3[^>]*>Votes revealed<\/h3>/);
     expect(markup).toContain('Alex voted to banish Sam.');
   });
+
+  it('says a random pick beside, never inside, the shared announcement (D120)', () => {
+    const markup = renderToStaticMarkup(
+      <VerdictScreen
+        announcement={{
+          kind: 'verdict',
+          seat: { name: 'Jordan', role: 'traitor' },
+          chosenAtRandom: true,
+        }}
+      />,
+    );
+    const shared = markup.match(
+      /<section[^>]*data-testid="shared-announcement"[^>]*>([\s\S]*?)<\/section>/,
+    );
+    expect(shared?.[1]?.replace(/<[^>]+>/g, '')).toBe(
+      'Jordan has been banished. They were Traitor.',
+    );
+    expect(markup).toContain(
+      'It was a draw again, so the app chose at random.',
+    );
+  });
 });

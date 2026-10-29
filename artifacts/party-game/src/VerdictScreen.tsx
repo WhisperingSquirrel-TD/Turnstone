@@ -134,12 +134,16 @@ export function VerdictScreen({
               announcement.seat.role,
             )}
           </h1>
-          {announcement.chosenAtRandom && (
-            <p className="mt-2 text-base text-ash" data-testid="verdict-random">
-              {en.game.verdictChosenAtRandom}
-            </p>
-          )}
         </section>
+      )}
+      {announcement?.kind === 'verdict' && announcement.chosenAtRandom && (
+        // Outside the shared announcement so its wording stays exact.
+        <p
+          className="-mt-3 mb-6 text-base text-ash"
+          data-testid="verdict-random"
+        >
+          {en.game.verdictChosenAtRandom}
+        </p>
       )}
       {announcement && aliveCount !== undefined && (
         <div className={animateReveal ? 'verdict-result mt-3' : 'mt-3'}>
