@@ -75,16 +75,16 @@ sign-up.
    `git checkout main`, `git reset --hard origin/main`. Confirm
    `git log -1` is the released commit and `git status` is clean. The
    release must include D115 (the Reserved VM deployment configuration); the
-   first publish, on `ec2a883`, crash-looped without it.
+   first publish, on `ec2a883`, crash-looped without it. _Done (recorded 29 October 2026; game live on the domain)._
 2. **Device test.** Tom's solo run in `docs/MANUAL_TESTS.md` ("Beta solo
    play-through") on the preview, if not already done on this commit.
 3. **Production database.** Create it in Replit; its connection string is
-   the deployment's `DATABASE_URL` _(Replit shows this)_.
+   the deployment's `DATABASE_URL` _(Replit shows this)_. _Done (recorded 29 October 2026; game live on the domain)._
 4. **Create the tables** from the Replit shell with the production
    connection string:
    `OATHSTONE_CONFIRM_PRODUCTION_MIGRATION=apply DATABASE_URL=<production URL> pnpm run db:migrate:production`.
    Expect "Production migrations are up to date." Never run
-   `db:migrate:dev` against production.
+   `db:migrate:dev` against production. _Done (recorded 29 October 2026; game live on the domain)._
 5. **Deployment settings.** Publishing → **Reserved VM** (not Autoscale or
    Static). Recommended size for Halloween week: 1 vCPU / 4 GiB (Replit shows
    the price; 0.5 vCPU / 2 GiB is the cheaper pilot). The committed `.replit`
@@ -94,7 +94,7 @@ sign-up.
    ("Oathstone", "Oathstone API") or their own commands instead, stop: that is
    the configuration that failed (D115). Do not set a deployment `PORT`: the
    server uses the platform's `PORT` if set, otherwise 5000. `/healthz` and
-   `/readyz` are the health paths.
+   `/readyz` are the health paths. _Done (recorded 29 October 2026; game live on the domain)._
 6. **Production secrets, first publish** (Publishing → Secrets):
    `DATABASE_URL`; `SESSION_SECRET` and `PIN_PEPPER` (new random values);
    `PIN_PEPPER_VERSION` = `1`; `MAX_ACTIVE_GAMES` = `10`;
@@ -103,10 +103,10 @@ sign-up.
    requests only from `APP_BASE_URL`, and invite links use
    `PUBLIC_BASE_URL`, fixed at build time; so the first publish uses the
    replit.app address and is switched in step 11. Leave
-   `PRE_LAUNCH_NOINDEX` and `COMING_SOON_MODE` unset.
+   `PRE_LAUNCH_NOINDEX` and `COMING_SOON_MODE` unset. _Done (recorded 29 October 2026; game live on the domain)._
 7. **Spending.** Account usage cap plus a separate VM budget (the cap does not
    limit the VM's fixed charge).
-8. **Publish** (Tom confirms the displayed charge first).
+8. **Publish** (Tom confirms the displayed charge first). _Done (recorded 29 October 2026; game live on the domain)._
 9. **Smoke test on the replit.app address:** `/healthz` and `/readyz` return
    200; entry shows "Beta" and "Report an issue"; on two devices create a
    game, join, start, give the round-table shield and play to a result.
@@ -118,12 +118,12 @@ sign-up.
     record. At 123-reg (DNS for `stackstoneconsulting.co.uk`), after recording
     the existing records, add exactly those two records for the `oathstone`
     host. Wait until Replit shows the domain verified with HTTPS (minutes to a
-    few hours). Keep the TXT record for certificate renewals.
+    few hours). Keep the TXT record for certificate renewals. _Done (recorded 29 October 2026; game live on the domain)._
 11. **Switch the game to its domain.** Set `APP_BASE_URL` and
     `PUBLIC_BASE_URL` to `https://oathstone.stackstoneconsulting.co.uk` and
     republish (this rebuilds, so invite links and QR codes use the domain).
     Games created on the replit.app address in step 9 were tests; do not
-    share them.
+    share them. _Done (recorded 29 October 2026; game live on the domain)._
 12. **Smoke test on the domain:** repeat step 9; check the Lobby Share link
     and QR are the same `https://oathstone.stackstoneconsulting.co.uk/join#code=…`
     link, and that reloading the organiser's Lobby keeps the same code (D116).
@@ -158,7 +158,7 @@ sign-up.
 ### 6. After release
 
 16. Record the release in `docs/RELEASES.md` (commit, Verify run, date) and a
-    status block in `docs/PROGRESS.md`.
+    status block in `docs/PROGRESS.md`. _Done 29 October 2026._
 17. **Rollback.** Game: republish the previous green commit from
     `docs/RELEASES.md`; games in progress survive a restart (events are in
     PostgreSQL). Company page: Replit checkpoint rollback, then republish.

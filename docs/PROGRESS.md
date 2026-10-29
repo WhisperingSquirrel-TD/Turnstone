@@ -1,5 +1,24 @@
 # Status for reviewer
 
+**Phase 1, stabilise Verify: fix pushed; Verify pending.** #354 (`f6d02bb`,
+docs only) failed in the iPad WebKit browser job. Its job log could not be
+read from this session (GitHub serves logs from a blob host the network
+policy blocks), so the diagnosis is local. `private-loading-recovery.spec.ts`
+"current steps survive reload..." looped all twelve steps in one test: 24
+full page loads through the Vite dev server, each waiting on the lazy route
+chunk before its delayed state fetch. Measured 27-28 s of its 30 s budget
+even on desktop Chromium; WebKit on a busy runner tips it over, so it fails
+intermittently on unchanged code. Fix: one test per step with the same body
+and assertions (each now under 3 s); no timeout or assertion changed. CI now
+also adds Playwright's `github` reporter so browser failures appear as
+check-run annotations, readable through the API when logs are not (test
+first in `tests/pipeline.test.ts`). Release entry added to `docs/RELEASES.md`
+(`ecfc2f2`, #353; rollback `157baca`, #352) and LAUNCH steps 1, 3-6, 8, 10,
+11 and 16 marked done. Not recorded anywhere, so left unticked: 2 (device
+test), 7 (spend caps), 9 and 12 (smoke tests), 13-15 (company site).
+Next: two consecutive green Verify runs, then Phase 2 (Contenders on a draw,
+organiser-governed timing).
+
 **D119 — agents may read the public pages; still noindex. Verify #353
 (`ecfc2f2`) green.** Pre-launch `robots.txt` allows `/`, `/about`, `/how-to-play`,
 `/faq`, `/compare`, `/coming-soon` and `/llms.txt`, and disallows app routes,

@@ -29,3 +29,15 @@ An unchanged-commit rerun can pass without any test or timeout changes.
 **How to apply:** Distinguish dependency-install delays from actual test
 timeouts. Do not count cancellation as green or weaken limits; retain evidence
 and use a bounded rerun when infrastructure delay is confirmed.
+
+Browser jobs use Playwright's `github` reporter in CI, so each failing test
+appears as a check-run annotation (`/check-runs/<job id>/annotations`) even
+when the job log host is unreachable.
+
+**Why:** Verify #354's log could not be downloaded from a Claude Code cloud
+session (blob log host blocked), leaving only "exit code 1".
+
+**How to apply:** Read annotations first; keep the `github` reporter in both
+Playwright configs (`tests/pipeline.test.ts` requires it). Keep each browser
+test to a few full page loads: under the Vite dev server one load costs about
+1 s on Chromium and more on WebKit, so a loop of 24 loads sat at its 30 s limit.
