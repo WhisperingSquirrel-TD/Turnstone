@@ -1,5 +1,24 @@
 # Status for reviewer
 
+**Phase 2 (D120) — Contenders on a draw and organiser-governed timing:
+pushed; Verify pending.** Phase 1 is complete: Verify #355 (`5d8c8d1`) and
+#356 (`490789c`) green consecutively after the recovery-test split.
+Phase 2: SPEC section 34 and D120 (owner approval; self-paced circle and
+speaking order dropped; what existed and was reused). Engine: new step
+`CONTENDERS` (guide 3 min) between a regular tied vote and its re-vote,
+behind `roundTable.contendersOnDraw` (schema default off for replay, on for
+new and practice games); second tie uses the tie rule and announces a random
+pick; C6 unchanged. `ExtendPhase` takes 1 to 60 minutes; a role-neutral
+`organiserNotice` reaches every seat after add time or an organiser move-on
+from a discussion step; action steps keep Q6 and the minimum. Console: +5,
++15, +30, custom, and one confirming tap before ending a discussion. Tests
+first (`tests/contenders.test.ts`, `tests/organiser-timing.test.ts`, failing
+before code). Local: types, lint, format, build, 836+ unit, property,
+scenario sample 0 failures in 2628 games, full practice run, layout audit
+16/16 (Pixel, desktop), console e2e 14/14. Changed tests listed in D120.
+Screens: `docs/screens/round-7-contenders/`.
+Next: Verify green twice, then stop and report to Tom.
+
 **Phase 1, stabilise Verify: Verify #355 (`5d8c8d1`) GREEN; this status push is the second run.** #354 (`f6d02bb`,
 docs only) failed in the iPad WebKit browser job. Its job log could not be
 read from this session (GitHub serves logs from a blob host the network
