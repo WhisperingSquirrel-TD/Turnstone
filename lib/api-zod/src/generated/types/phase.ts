@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type Phase = typeof Phase[keyof typeof Phase];
-
+export type Phase = (typeof Phase)[keyof typeof Phase];
 
 export const Phase = {
   DRAFT: 'DRAFT',
@@ -15,6 +14,7 @@ export const Phase = {
   DEAL: 'DEAL',
   MISSION: 'MISSION',
   DEBATE: 'DEBATE',
+  CONTENDERS: 'CONTENDERS',
   VOTE: 'VOTE',
   VERDICT: 'VERDICT',
   SHADOW: 'SHADOW',

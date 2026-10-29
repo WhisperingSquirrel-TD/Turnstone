@@ -14,6 +14,7 @@ import type { FullViewCoordinatorRestorableSeatsItem } from './fullViewCoordinat
 import type { FullViewCoordinatorSkippedSeatsItem } from './fullViewCoordinatorSkippedSeatsItem';
 import type { FullViewCoordinatorUndo } from './fullViewCoordinatorUndo';
 import type { FullViewEndRule } from './fullViewEndRule';
+import type { FullViewOrganiserNotice } from './fullViewOrganiserNotice';
 import type { FullViewProgress } from './fullViewProgress';
 import type { FullViewPublicAnnouncement } from './fullViewPublicAnnouncement';
 import type { FullViewVoteCircle } from './fullViewVoteCircle';
@@ -25,35 +26,35 @@ import type { SeatView } from './seatView';
 
 export interface FullView {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   id: string;
   canAdvancePhase: boolean;
   /**
-     * Server timestamp after which an organiser may advance the current phase.
-     * @minimum 0
-     * @nullable
-     */
+   * Server timestamp after which an organiser may advance the current phase.
+   * @minimum 0
+   * @nullable
+   */
   coordinatorMinimumAdvanceAt?: number | null;
   coordinatorUndo: FullViewCoordinatorUndo;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   viewerSeatId?: string;
   /**
-     * @minLength 1
-     * @maxLength 60
-     */
+   * @minLength 1
+   * @maxLength 60
+   */
   gameName?: string;
   /** @pattern ^[A-HJ-NP-Z2-9]{6}$ */
   lobbyCode?: string;
   /**
-     * Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.
-     * @nullable
-     * @pattern ^\d{4}-\d{2}-\d{2}$
-     */
+   * Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
   gameEndDate?: string | null;
   version: number;
   phase: Phase;
@@ -65,19 +66,19 @@ export interface FullView {
   cycle: number;
   revote: boolean;
   /**
-     * @minimum 0
-     * @maximum 2
-     */
+   * @minimum 0
+   * @maximum 2
+   */
   shadowRound: number;
   /**
-     * @minimum 0
-     * @maximum 2
-     */
+   * @minimum 0
+   * @maximum 2
+   */
   shadowSlot: number;
   /**
-     * @minimum 0
-     * @maximum 2
-     */
+   * @minimum 0
+   * @maximum 2
+   */
   murderSlots: number;
   endRule: FullViewEndRule;
   missionsEnabled: boolean;
@@ -96,25 +97,26 @@ export interface FullView {
   coordinatorRestorableSeats?: FullViewCoordinatorRestorableSeatsItem[];
   coordinatorSkippedSeats?: FullViewCoordinatorSkippedSeatsItem[];
   /**
-     * @maxItems 40
-     * @items.minLength 1
-     * @items.maxLength 128
-     */
+   * @maxItems 40
+   * @items.minLength 1
+   * @items.maxLength 128
+   */
   votedSeatIds: string[];
   /**
-     * @items.minLength 1
-     * @items.maxLength 128
-     */
+   * @items.minLength 1
+   * @items.maxLength 128
+   */
   voteCandidates: string[];
   ballots: FullViewBallots;
   voteCircle?: FullViewVoteCircle;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   ownVoteTargetId?: string;
   winner: Role | null;
   publicAnnouncement: FullViewPublicAnnouncement;
+  organiserNotice?: FullViewOrganiserNotice;
   private: PrivateView | null;
   publicLog: PublicLogEntry[];
   coordinatorAlerts: CoordinatorAlert[];

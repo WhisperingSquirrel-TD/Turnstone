@@ -115,6 +115,7 @@ export const RULE_FACTORS: readonly ParameterFactor[] = [
   pathFactor('roundTable.changeVote', [false, true]),
   pathFactor('roundTable.revealStyle', ['one-by-one', 'all', 'anonymous']),
   pathFactor('roundTable.tieRule', ['revote-random', 'revote-none']),
+  pathFactor('roundTable.contendersOnDraw', [false, true]),
   pathFactor('roundTable.revealRole', ['always', 'not-endgame', 'never']),
   pathFactor('roundTable.banishments', [1, 2]),
   pathFactor('missions.enabled', [false, true]),

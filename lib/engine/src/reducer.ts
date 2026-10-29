@@ -86,6 +86,8 @@ export function evolve(previous: State | null, input: unknown): State {
       taskMurderCancelledCycles: [],
       publicLog: [],
       publicAnnouncement: null,
+      organiserNotice: null,
+      verdictAtRandom: false,
       coordinatorAlerts: [],
     };
   }
@@ -100,6 +102,8 @@ export function evolve(previous: State | null, input: unknown): State {
     skippedActions: previous.skippedActions ?? [],
     disconnectedRemovals: previous.disconnectedRemovals ?? [],
     hiddenRoleSeatIds: previous.hiddenRoleSeatIds ?? [],
+    organiserNotice: previous.organiserNotice ?? null,
+    verdictAtRandom: previous.verdictAtRandom ?? false,
   };
   switch (event.type) {
     case 'SeatJoined':
@@ -178,6 +182,9 @@ export function evolve(previous: State | null, input: unknown): State {
         state.revealed = [];
       }
       state.phase = event.phase;
+      state.organiserNotice = event.movedOn
+        ? { kind: 'moved_on', seq: event.seq }
+        : null;
       state.readySeats = [];
       state.skippedActions = [];
       state.disconnectedRemovals = state.disconnectedRemovals.map(
@@ -197,6 +204,7 @@ export function evolve(previous: State | null, input: unknown): State {
         state.revealed = [];
         state.target = null;
         if (!state.revote) state.candidates = [];
+        state.verdictAtRandom = false;
         state.firstVoteOccurred = true;
       }
       if (
@@ -322,6 +330,9 @@ export function evolve(previous: State | null, input: unknown): State {
         event.context ??
         (previous.phase === 'FINAL_BANISH' ? 'final' : 'cycle');
       state.revealed = [];
+      break;
+    case 'RandomChoiceRecorded':
+      if (event.purpose !== 'murder-target') state.verdictAtRandom = true;
       break;
     case 'VoteSkipped':
       if (previous.phase !== 'VOTE')
@@ -487,6 +498,9 @@ export function evolve(previous: State | null, input: unknown): State {
           kind: 'verdict',
           cycle: previous.cycle,
           seatId: event.seatId,
+          ...(previous.verdictAtRandom
+            ? { chosenAtRandom: true as const }
+            : {}),
         };
         state.publicLog = [
           ...state.publicLog,
@@ -687,6 +701,11 @@ export function evolve(previous: State | null, input: unknown): State {
       state.deadline = event.deadline;
       state.shadowEndAt = event.shadowEndAt;
       if (addedMs > 0) {
+        state.organiserNotice = {
+          kind: 'added_time',
+          minutes: Math.round(addedMs / 60_000),
+          seq: event.seq,
+        };
         state.publicLog = [
           ...state.publicLog,
           {
@@ -831,6 +850,8 @@ function normalizeSnapshot(snapshot: State): State {
       (legacy.disconnectedRemovals as
         State['disconnectedRemovals'] | undefined) ?? [],
     hiddenRoleSeatIds: (legacy.hiddenRoleSeatIds as string[] | undefined) ?? [],
+    organiserNotice: snapshot.organiserNotice ?? null,
+    verdictAtRandom: snapshot.verdictAtRandom ?? false,
   };
 }
 

@@ -5,8 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-export type ReadinessStatusStatus = typeof ReadinessStatusStatus[keyof typeof ReadinessStatusStatus];
-
+export type ReadinessStatusStatus =
+  (typeof ReadinessStatusStatus)[keyof typeof ReadinessStatusStatus];
 
 export const ReadinessStatusStatus = {
   ready: 'ready',
@@ -17,8 +17,8 @@ export interface ReadinessStatus {
   status: ReadinessStatusStatus;
 }
 
-export type HealthStatusStatus = typeof HealthStatusStatus[keyof typeof HealthStatusStatus];
-
+export type HealthStatusStatus =
+  (typeof HealthStatusStatus)[keyof typeof HealthStatusStatus];
 
 export const HealthStatusStatus = {
   ok: 'ok',
@@ -30,14 +30,14 @@ export interface HealthStatus {
 
 export interface ApiError {
   /**
-     * @minLength 1
-     * @maxLength 80
-     */
+   * @minLength 1
+   * @maxLength 80
+   */
   error: string;
 }
 
-export type RehearsalInputSpeed = typeof RehearsalInputSpeed[keyof typeof RehearsalInputSpeed];
-
+export type RehearsalInputSpeed =
+  (typeof RehearsalInputSpeed)[keyof typeof RehearsalInputSpeed];
 
 export const RehearsalInputSpeed = {
   fast: 'fast',
@@ -46,24 +46,24 @@ export const RehearsalInputSpeed = {
 
 export interface RehearsalInput {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   gameId: string;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   idempotencyKey: string;
   /**
-     * @minLength 2
-     * @maxLength 20
-     */
+   * @minLength 2
+   * @maxLength 20
+   */
   name: string;
   /**
-     * @minimum 6
-     * @maximum 15
-     */
+   * @minimum 6
+   * @maximum 15
+   */
   playerCount: number;
   speed: RehearsalInputSpeed;
 }
@@ -72,56 +72,58 @@ export interface GuestJoinRequest {
   /** @pattern ^[A-Za-z0-9_-]{43}$ */
   inviteToken: string;
   /**
-     * @minLength 2
-     * @maxLength 20
-     */
+   * @minLength 2
+   * @maxLength 20
+   */
   name: string;
   /** @pattern ^\d{4,6}$ */
   pin: string;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   idempotencyKey: string;
 }
 
 export interface GameInviteResponse {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   gameId: string;
   joinUrl: string;
   /** @pattern ^[A-HJ-NP-Z2-9]{6}$ */
   shortCode: string;
 }
 
-export interface LateGameInviteInput { [key: string]: unknown }
+export interface LateGameInviteInput {
+  [key: string]: unknown;
+}
 
 export interface LateGameInviteResponse {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   gameId: string;
   joinUrl: string;
 }
 
 export type PendingJoinRequestsResponseRequestsItem = {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   id: string;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   seatId: string;
   /**
-     * @minLength 2
-     * @maxLength 20
-     */
+   * @minLength 2
+   * @maxLength 20
+   */
   name: string;
   /** @minimum 0 */
   createdAt: number;
@@ -131,8 +133,8 @@ export interface PendingJoinRequestsResponse {
   requests: PendingJoinRequestsResponseRequestsItem[];
 }
 
-export type JoinRequestDecisionInputDecision = typeof JoinRequestDecisionInputDecision[keyof typeof JoinRequestDecisionInputDecision];
-
+export type JoinRequestDecisionInputDecision =
+  (typeof JoinRequestDecisionInputDecision)[keyof typeof JoinRequestDecisionInputDecision];
 
 export const JoinRequestDecisionInputDecision = {
   approve: 'approve',
@@ -145,8 +147,8 @@ export interface JoinRequestDecisionInput {
   expectedVersion: number;
 }
 
-export type JoinRequestDecisionResponseStatus = typeof JoinRequestDecisionResponseStatus[keyof typeof JoinRequestDecisionResponseStatus];
-
+export type JoinRequestDecisionResponseStatus =
+  (typeof JoinRequestDecisionResponseStatus)[keyof typeof JoinRequestDecisionResponseStatus];
 
 export const JoinRequestDecisionResponseStatus = {
   approved: 'approved',
@@ -156,14 +158,13 @@ export const JoinRequestDecisionResponseStatus = {
 export interface JoinRequestDecisionResponse {
   status: JoinRequestDecisionResponseStatus;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   seatId: string;
 }
 
-export type Phase = typeof Phase[keyof typeof Phase];
-
+export type Phase = (typeof Phase)[keyof typeof Phase];
 
 export const Phase = {
   DRAFT: 'DRAFT',
@@ -171,6 +172,7 @@ export const Phase = {
   DEAL: 'DEAL',
   MISSION: 'MISSION',
   DEBATE: 'DEBATE',
+  CONTENDERS: 'CONTENDERS',
   VOTE: 'VOTE',
   VERDICT: 'VERDICT',
   SHADOW: 'SHADOW',
@@ -190,16 +192,16 @@ export interface VisitorView {
   seatCount: number;
 }
 
-export type FullViewEndRule = typeof FullViewEndRule[keyof typeof FullViewEndRule];
-
+export type FullViewEndRule =
+  (typeof FullViewEndRule)[keyof typeof FullViewEndRule];
 
 export const FullViewEndRule = {
   unanimous: 'unanimous',
   majority: 'majority',
 } as const;
 
-export type SeatViewStatus = typeof SeatViewStatus[keyof typeof SeatViewStatus];
-
+export type SeatViewStatus =
+  (typeof SeatViewStatus)[keyof typeof SeatViewStatus];
 
 export const SeatViewStatus = {
   alive: 'alive',
@@ -208,8 +210,7 @@ export const SeatViewStatus = {
   departed: 'departed',
 } as const;
 
-export type Role = typeof Role[keyof typeof Role];
-
+export type Role = (typeof Role)[keyof typeof Role];
 
 export const Role = {
   traitor: 'traitor',
@@ -218,9 +219,9 @@ export const Role = {
 
 export interface SeatView {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   id: string;
   name: string;
   status: SeatViewStatus;
@@ -228,32 +229,32 @@ export interface SeatView {
   role?: Role;
 }
 
-export type PrivateViewChoiceSlotsItemSlot = typeof PrivateViewChoiceSlotsItemSlot[keyof typeof PrivateViewChoiceSlotsItemSlot];
-
+export type PrivateViewChoiceSlotsItemSlot =
+  (typeof PrivateViewChoiceSlotsItemSlot)[keyof typeof PrivateViewChoiceSlotsItemSlot];
 
 export const PrivateViewChoiceSlotsItemSlot = {
   NUMBER_1: 1,
   NUMBER_2: 2,
 } as const;
 
-export type PrivateViewChoiceSlotsItemRound = typeof PrivateViewChoiceSlotsItemRound[keyof typeof PrivateViewChoiceSlotsItemRound];
-
+export type PrivateViewChoiceSlotsItemRound =
+  (typeof PrivateViewChoiceSlotsItemRound)[keyof typeof PrivateViewChoiceSlotsItemRound];
 
 export const PrivateViewChoiceSlotsItemRound = {
   NUMBER_1: 1,
   NUMBER_2: 2,
 } as const;
 
-export type PrivateViewTaskKind = typeof PrivateViewTaskKind[keyof typeof PrivateViewTaskKind];
-
+export type PrivateViewTaskKind =
+  (typeof PrivateViewTaskKind)[keyof typeof PrivateViewTaskKind];
 
 export const PrivateViewTaskKind = {
   task: 'task',
   decoy: 'decoy',
 } as const;
 
-export type PrivateViewTaskReport = typeof PrivateViewTaskReport[keyof typeof PrivateViewTaskReport] | null;
-
+export type PrivateViewTaskReport =
+  (typeof PrivateViewTaskReport)[keyof typeof PrivateViewTaskReport] | null;
 
 export const PrivateViewTaskReport = {
   assigned: 'assigned',
@@ -273,7 +274,7 @@ export type PrivateViewOptionsItem = {
   name: string;
 };
 
-export type PrivateViewChoices = {[key: string]: string};
+export type PrivateViewChoices = { [key: string]: string };
 
 export type PrivateViewChoiceSlotsItemPicksItem = {
   seatId: string;
@@ -311,140 +312,155 @@ export interface PrivateView {
   minimumDurationMs: number;
 }
 
-export type PublicLogEntry = {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'seat_pin_reset';
-  seatId: string;
-  name: string;
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'device_recovered';
-  seatId: string;
-  name: string;
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'dawn';
-  victims: {
-  id: string;
-  name: string;
-}[];
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'no_votes';
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'banishment';
-  seat: {
-  id: string;
-  name: string;
-};
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'shield_given';
-  seats: {
-  id: string;
-  name: string;
-}[];
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'seat_left_disconnected';
-  reason: 'disconnected';
-  seat: {
-  id: string;
-  name: string;
-};
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'seat_reinstated';
-  seat: {
-  id: string;
-  name: string;
-};
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'coordinator_role_moved';
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'phase_action_skipped';
-  phase: Phase;
-  reason: 'disconnected';
-  seat: {
-  id: string;
-  name: string;
-};
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'phase_action_skip_undone';
-  phase: Phase;
-  seat: {
-  id: string;
-  name: string;
-};
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'seat_departed';
-  seat: {
-  id: string;
-  name: string;
-};
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'schedule_shift';
-  /** @minimum 1 */
-  minutes: number;
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'coordinator_undo';
-} | {
-  /** @minimum 1 */
-  seq: number;
-  /** @minimum 0 */
-  at: number;
-  action: 'finished';
-  winner: Role;
-};
+export type PublicLogEntry =
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'seat_pin_reset';
+      seatId: string;
+      name: string;
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'device_recovered';
+      seatId: string;
+      name: string;
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'dawn';
+      victims: {
+        id: string;
+        name: string;
+      }[];
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'no_votes';
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'banishment';
+      seat: {
+        id: string;
+        name: string;
+      };
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'shield_given';
+      seats: {
+        id: string;
+        name: string;
+      }[];
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'seat_left_disconnected';
+      reason: 'disconnected';
+      seat: {
+        id: string;
+        name: string;
+      };
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'seat_reinstated';
+      seat: {
+        id: string;
+        name: string;
+      };
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'coordinator_role_moved';
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'phase_action_skipped';
+      phase: Phase;
+      reason: 'disconnected';
+      seat: {
+        id: string;
+        name: string;
+      };
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'phase_action_skip_undone';
+      phase: Phase;
+      seat: {
+        id: string;
+        name: string;
+      };
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'seat_departed';
+      seat: {
+        id: string;
+        name: string;
+      };
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'schedule_shift';
+      /** @minimum 1 */
+      minutes: number;
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'coordinator_undo';
+    }
+  | {
+      /** @minimum 1 */
+      seq: number;
+      /** @minimum 0 */
+      at: number;
+      action: 'finished';
+      winner: Role;
+    };
 
 export interface CoordinatorAlert {
   /** @minimum 1 */
@@ -458,8 +474,8 @@ export interface CoordinatorAlert {
   lockedUntil: number;
 }
 
-export type FairnessViewTasksItemReport = typeof FairnessViewTasksItemReport[keyof typeof FairnessViewTasksItemReport];
-
+export type FairnessViewTasksItemReport =
+  (typeof FairnessViewTasksItemReport)[keyof typeof FairnessViewTasksItemReport];
 
 export const FairnessViewTasksItemReport = {
   assigned: 'assigned',
@@ -468,24 +484,24 @@ export const FairnessViewTasksItemReport = {
   void: 'void',
 } as const;
 
-export type FairnessViewMurderSlotsItemSlot = typeof FairnessViewMurderSlotsItemSlot[keyof typeof FairnessViewMurderSlotsItemSlot];
-
+export type FairnessViewMurderSlotsItemSlot =
+  (typeof FairnessViewMurderSlotsItemSlot)[keyof typeof FairnessViewMurderSlotsItemSlot];
 
 export const FairnessViewMurderSlotsItemSlot = {
   NUMBER_1: 1,
   NUMBER_2: 2,
 } as const;
 
-export type FairnessViewMurderSlotsItemPicksItemRound = typeof FairnessViewMurderSlotsItemPicksItemRound[keyof typeof FairnessViewMurderSlotsItemPicksItemRound];
-
+export type FairnessViewMurderSlotsItemPicksItemRound =
+  (typeof FairnessViewMurderSlotsItemPicksItemRound)[keyof typeof FairnessViewMurderSlotsItemPicksItemRound];
 
 export const FairnessViewMurderSlotsItemPicksItemRound = {
   NUMBER_1: 1,
   NUMBER_2: 2,
 } as const;
 
-export type FairnessViewMurderSlotsItemOutcome = typeof FairnessViewMurderSlotsItemOutcome[keyof typeof FairnessViewMurderSlotsItemOutcome];
-
+export type FairnessViewMurderSlotsItemOutcome =
+  (typeof FairnessViewMurderSlotsItemOutcome)[keyof typeof FairnessViewMurderSlotsItemOutcome];
 
 export const FairnessViewMurderSlotsItemOutcome = {
   murdered: 'murdered',
@@ -495,7 +511,7 @@ export const FairnessViewMurderSlotsItemOutcome = {
   'game-ended': 'game-ended',
 } as const;
 
-export type FairnessViewRoles = {[key: string]: Role};
+export type FairnessViewRoles = { [key: string]: Role };
 
 export type FairnessViewTasksItem = {
   seatId: string;
@@ -569,9 +585,9 @@ export type FullViewActionStatus = {
 
 export type FullViewCoordinatorPendingSeatsItem = {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   id: string;
   name: string;
   disconnected: boolean;
@@ -579,98 +595,122 @@ export type FullViewCoordinatorPendingSeatsItem = {
 
 export type FullViewCoordinatorRestorableSeatsItem = {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   id: string;
   name: string;
 };
 
 export type FullViewCoordinatorSkippedSeatsItem = {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   id: string;
   name: string;
 };
 
-export type FullViewBallots = {[key: string]: string};
+export type FullViewBallots = { [key: string]: string };
 
 export type FullViewVoteCircle = {
   /**
-     * @minLength 1
-     * @maxLength 128
-     * @nullable
-     */
+   * @minLength 1
+   * @maxLength 128
+   * @nullable
+   */
   speakerSeatId: string | null;
 };
 
-export type FullViewPublicAnnouncement = {
-  kind: 'dawn';
-  /** @minimum 0 */
-  cycle: number;
-  victims: {
-  /**
-     * @minLength 1
-     * @maxLength 128
-     */
-  id: string;
-  name: string;
-}[];
-} | {
-  kind: 'verdict';
-  /** @minimum 0 */
-  cycle: number;
-  seat: {
-  /**
-     * @minLength 1
-     * @maxLength 128
-     */
-  id: string;
-  name: string;
-  role?: Role;
-};
-} | {
-  kind: 'no_votes';
-  /** @minimum 0 */
-  cycle: number;
-} | {
-  kind: 'finished';
-  winner: Role;
-} | null;
+export type FullViewPublicAnnouncement =
+  | {
+      kind: 'dawn';
+      /** @minimum 0 */
+      cycle: number;
+      victims: {
+        /**
+         * @minLength 1
+         * @maxLength 128
+         */
+        id: string;
+        name: string;
+      }[];
+    }
+  | {
+      kind: 'verdict';
+      /** @minimum 0 */
+      cycle: number;
+      seat: {
+        /**
+         * @minLength 1
+         * @maxLength 128
+         */
+        id: string;
+        name: string;
+        role?: Role;
+      };
+      chosenAtRandom?: true;
+    }
+  | {
+      kind: 'no_votes';
+      /** @minimum 0 */
+      cycle: number;
+    }
+  | {
+      kind: 'finished';
+      winner: Role;
+    }
+  | null;
+
+export type FullViewOrganiserNotice =
+  | {
+      kind: 'added_time';
+      /**
+       * @minimum 1
+       * @maximum 60
+       */
+      minutes: number;
+      /** @minimum 1 */
+      seq: number;
+    }
+  | {
+      kind: 'moved_on';
+      /** @minimum 1 */
+      seq: number;
+    }
+  | null;
 
 export interface FullView {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   id: string;
   canAdvancePhase: boolean;
   /**
-     * Server timestamp after which an organiser may advance the current phase.
-     * @minimum 0
-     * @nullable
-     */
+   * Server timestamp after which an organiser may advance the current phase.
+   * @minimum 0
+   * @nullable
+   */
   coordinatorMinimumAdvanceAt?: number | null;
   coordinatorUndo: FullViewCoordinatorUndo;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   viewerSeatId?: string;
   /**
-     * @minLength 1
-     * @maxLength 60
-     */
+   * @minLength 1
+   * @maxLength 60
+   */
   gameName?: string;
   /** @pattern ^[A-HJ-NP-Z2-9]{6}$ */
   lobbyCode?: string;
   /**
-     * Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.
-     * @nullable
-     * @pattern ^\d{4}-\d{2}-\d{2}$
-     */
+   * Last UK calendar day of a real game; the game is deleted the day after. Null for practice games.
+   * @nullable
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
   gameEndDate?: string | null;
   version: number;
   phase: Phase;
@@ -682,19 +722,19 @@ export interface FullView {
   cycle: number;
   revote: boolean;
   /**
-     * @minimum 0
-     * @maximum 2
-     */
+   * @minimum 0
+   * @maximum 2
+   */
   shadowRound: number;
   /**
-     * @minimum 0
-     * @maximum 2
-     */
+   * @minimum 0
+   * @maximum 2
+   */
   shadowSlot: number;
   /**
-     * @minimum 0
-     * @maximum 2
-     */
+   * @minimum 0
+   * @maximum 2
+   */
   murderSlots: number;
   endRule: FullViewEndRule;
   missionsEnabled: boolean;
@@ -713,25 +753,26 @@ export interface FullView {
   coordinatorRestorableSeats?: FullViewCoordinatorRestorableSeatsItem[];
   coordinatorSkippedSeats?: FullViewCoordinatorSkippedSeatsItem[];
   /**
-     * @maxItems 40
-     * @items.minLength 1
-     * @items.maxLength 128
-     */
+   * @maxItems 40
+   * @items.minLength 1
+   * @items.maxLength 128
+   */
   votedSeatIds: string[];
   /**
-     * @items.minLength 1
-     * @items.maxLength 128
-     */
+   * @items.minLength 1
+   * @items.maxLength 128
+   */
   voteCandidates: string[];
   ballots: FullViewBallots;
   voteCircle?: FullViewVoteCircle;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   ownVoteTargetId?: string;
   winner: Role | null;
   publicAnnouncement: FullViewPublicAnnouncement;
+  organiserNotice?: FullViewOrganiserNotice;
   private: PrivateView | null;
   publicLog: PublicLogEntry[];
   coordinatorAlerts: CoordinatorAlert[];
@@ -746,37 +787,40 @@ export interface GameViewResponse {
   view: VisitorView | FullView;
 }
 
-export type JoinRequestStatusResponse = {
-  status: 'pending';
-} | {
-  status: 'rejected';
-} | {
-  status: 'approved';
-  game: GameViewResponse;
-};
+export type JoinRequestStatusResponse =
+  | {
+      status: 'pending';
+    }
+  | {
+      status: 'rejected';
+    }
+  | {
+      status: 'approved';
+      game: GameViewResponse;
+    };
 
 export interface JoinRequestInput {
   /** @pattern ^[A-HJ-NP-Z2-9]{6}$ */
   shortCode: string;
   /**
-     * @minLength 2
-     * @maxLength 20
-     */
+   * @minLength 2
+   * @maxLength 20
+   */
   name: string;
   /** @pattern ^\d{4,6}$ */
   pin: string;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   idempotencyKey: string;
 }
 
 export interface JoinRequestResponse {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   requestId: string;
   status: 'pending';
 }
@@ -785,25 +829,25 @@ export interface GameCommandInput {
   /** @minLength 1 */
   type: string;
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   idempotencyKey: string;
   /** For AcknowledgePrivate, true only after the player has finished viewing their role. */
   ready?: boolean;
   /**
-     * For CreateGame, the last UK calendar day of the game (required for every real game; UK today to six months ahead). The game is deleted the day after.
-     * @pattern ^\d{4}-\d{2}-\d{2}$
-     */
+   * For CreateGame, the last UK calendar day of the game (required for every real game; UK today to six months ahead). The game is deleted the day after.
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
   endDate?: string;
   [key: string]: unknown;
- }
+}
 
 export interface GameEndDateUpdateRequest {
   /**
-     * New last UK calendar day, from UK today to six months ahead.
-     * @maxLength 10
-     */
+   * New last UK calendar day, from UK today to six months ahead.
+   * @maxLength 10
+   */
   endDate: string;
 }
 
@@ -812,8 +856,8 @@ export interface GameEndDateUpdateResponse {
   gameEndDate: string;
 }
 
-export type PrivateViewRequestPurpose = typeof PrivateViewRequestPurpose[keyof typeof PrivateViewRequestPurpose];
-
+export type PrivateViewRequestPurpose =
+  (typeof PrivateViewRequestPurpose)[keyof typeof PrivateViewRequestPurpose];
 
 export const PrivateViewRequestPurpose = {
   phase: 'phase',
@@ -826,34 +870,35 @@ export interface PrivateViewRequest {
 
 export interface CoordinatorDelegatesInput {
   /**
-     * @maxItems 3
-     * @items.minLength 1
-     * @items.maxLength 128
-     */
+   * @maxItems 3
+   * @items.minLength 1
+   * @items.maxLength 128
+   */
   seatIds: string[];
 }
 
 export interface CoordinatorDelegatesResponse {
   /**
-     * @minimum 0
-     * @maximum 3
-     */
+   * @minimum 0
+   * @maximum 3
+   */
   limit: number;
   /**
-     * @maxItems 3
-     * @items.minLength 1
-     * @items.maxLength 128
-     */
+   * @maxItems 3
+   * @items.minLength 1
+   * @items.maxLength 128
+   */
   seatIds: string[];
 }
 
 export const CoordinatorPresenceResponseValue = {
   status: 'online',
 } as const;
-export type CoordinatorPresenceResponse = typeof CoordinatorPresenceResponseValue;
+export type CoordinatorPresenceResponse =
+  typeof CoordinatorPresenceResponseValue;
 
-export type CoordinatorTakeoverRequestResponseStatus = typeof CoordinatorTakeoverRequestResponseStatus[keyof typeof CoordinatorTakeoverRequestResponseStatus];
-
+export type CoordinatorTakeoverRequestResponseStatus =
+  (typeof CoordinatorTakeoverRequestResponseStatus)[keyof typeof CoordinatorTakeoverRequestResponseStatus];
 
 export const CoordinatorTakeoverRequestResponseStatus = {
   pending: 'pending',
@@ -863,40 +908,41 @@ export const CoordinatorTakeoverRequestResponseStatus = {
 
 export interface CoordinatorTakeoverRequestResponse {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   requestId: string;
   status: CoordinatorTakeoverRequestResponseStatus;
 }
 
 export interface CoordinatorTakeoverVoteInput {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   requestId: string;
   approve: boolean;
 }
 
 export interface CoordinatorTakeoverClaimInput {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   requestId?: string;
 }
 
-export type CoordinatorTakeoverStatusResponseMode = typeof CoordinatorTakeoverStatusResponseMode[keyof typeof CoordinatorTakeoverStatusResponseMode] | null;
-
+export type CoordinatorTakeoverStatusResponseMode =
+  | (typeof CoordinatorTakeoverStatusResponseMode)[keyof typeof CoordinatorTakeoverStatusResponseMode]
+  | null;
 
 export const CoordinatorTakeoverStatusResponseMode = {
   'co-coordinator': 'co-coordinator',
   majority: 'majority',
 } as const;
 
-export type CoordinatorTakeoverStatusResponseRequestStatus = typeof CoordinatorTakeoverStatusResponseRequestStatus[keyof typeof CoordinatorTakeoverStatusResponseRequestStatus];
-
+export type CoordinatorTakeoverStatusResponseRequestStatus =
+  (typeof CoordinatorTakeoverStatusResponseRequestStatus)[keyof typeof CoordinatorTakeoverStatusResponseRequestStatus];
 
 export const CoordinatorTakeoverStatusResponseRequestStatus = {
   pending: 'pending',
@@ -905,9 +951,9 @@ export const CoordinatorTakeoverStatusResponseRequestStatus = {
 
 export type CoordinatorTakeoverStatusResponseRequest = {
   /**
-     * @minLength 1
-     * @maxLength 128
-     */
+   * @minLength 1
+   * @maxLength 128
+   */
   id: string;
   requesterName: string;
   status: CoordinatorTakeoverStatusResponseRequestStatus;
@@ -934,5 +980,5 @@ export interface CoordinatorTakeoverStatusResponse {
 export const CoordinatorTakeoverClaimResponseValue = {
   status: 'transferred',
 } as const;
-export type CoordinatorTakeoverClaimResponse = typeof CoordinatorTakeoverClaimResponseValue;
-
+export type CoordinatorTakeoverClaimResponse =
+  typeof CoordinatorTakeoverClaimResponseValue;

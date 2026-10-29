@@ -26,11 +26,11 @@ it('uses a collision-free numeric key for every three-factor/value tuple', () =>
 
 it('retains every independently validated three-way oracle tuple and its diagnostic ordering', () => {
   const result = verifyThreeWayCoverage([]);
-  expect(result.total).toBe(201749);
-  expect(result.uncovered).toHaveLength(201749);
+  expect(result.total).toBe(213473);
+  expect(result.uncovered).toHaveLength(213473);
   expect(
     createHash('sha256').update(JSON.stringify(result)).digest('hex'),
-  ).toBe('18cc33917530714a782bde6c3ffb56b27d035e0c63ec0602ebf0427e06d5fff1');
+  ).toBe('1be044859c1c02847676abc2cda645c2edba0e5b2130cd3ce46449d4d640bcfa');
 }, 30_000);
 
 it('validates each high-seat pair once while retaining the entire independent uncovered oracle', () => {
@@ -54,8 +54,8 @@ it('validates each high-seat pair once while retaining the entire independent un
   } finally {
     parse.mockRestore();
   }
-  expect(result!.total).toBe(60995);
+  expect(result!.total).toBe(63349);
   expect(
     createHash('sha256').update(JSON.stringify(result!)).digest('hex'),
-  ).toBe('f1804700f2d3cf1ffc8009d11e92af8eb91dfee6d290f49c4828e1acd3ca0e00');
+  ).toBe('15092da241dc3fd2cdaeae8e87fc674962c7f73af8e020da959850927d153c3d');
 }, 30_000);

@@ -580,8 +580,11 @@ export function runCompleteGame(
   const finalState = game.state!;
   if (finalState.phase !== 'FINISHED')
     throw new Error(`Scenario did not terminate (seed ${options.seed})`);
+  // D13 counts seven rule steps per cycle; D120 adds one Contenders step
+  // per cycle when a draw is discussed before its re-vote.
+  const stepsPerCycle = finalState.config.roundTable.contendersOnDraw ? 8 : 7;
   const maximumRuleSteps =
-    1 + finalState.maxCycles * 7 + Math.max(0, count - 2);
+    1 + finalState.maxCycles * stepsPerCycle + Math.max(0, count - 2);
   if (finalState.steps > maximumRuleSteps)
     throw new Error(
       `Scenario exceeded its D13 rule-step bound (seed ${options.seed})`,

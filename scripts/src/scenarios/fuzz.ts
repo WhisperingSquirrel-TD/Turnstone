@@ -56,6 +56,7 @@ export function runFuzzBatch(options: FuzzBatchOptions): FuzzBatchSummary {
       tasks: { enabled: false },
       roundTable: {
         tieRule: ['revote-random', 'revote-none'][random(2)],
+        contendersOnDraw: Boolean(random(2)),
         banishments: 1,
       },
       endgame: {

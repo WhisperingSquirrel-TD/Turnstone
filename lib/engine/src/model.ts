@@ -7,6 +7,7 @@ export type Phase =
   | 'DEAL'
   | 'MISSION'
   | 'DEBATE'
+  | 'CONTENDERS'
   | 'VOTE'
   | 'VERDICT'
   | 'SHADOW'
@@ -222,10 +223,22 @@ export type State = {
   )[];
   publicAnnouncement:
     | { kind: 'dawn'; cycle: number; victimIds: string[] }
-    | { kind: 'verdict'; cycle: number; seatId: string }
+    | {
+        kind: 'verdict';
+        cycle: number;
+        seatId: string;
+        chosenAtRandom?: true;
+      }
     | { kind: 'no_votes'; cycle: number }
     | { kind: 'finished'; winner: Role }
     | null;
+  /** D120: role-neutral notice of the organiser's latest timing action. */
+  organiserNotice:
+    | { kind: 'added_time'; minutes: number; seq: number }
+    | { kind: 'moved_on'; seq: number }
+    | null;
+  /** The current ballot's winner was drawn at random after a second tie. */
+  verdictAtRandom: boolean;
   coordinatorAlerts: {
     seq: number;
     at: number;

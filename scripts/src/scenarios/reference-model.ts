@@ -106,6 +106,7 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
   let currentVotes = new Map<string, string>();
   let voteCandidates: string[] = [];
   let revote = false;
+  let afterTie: string | null = null;
   let pendingBanishment: string | null = null;
   let shadowChoices = new Map<string, { choice: string; seq: number }>();
   const shadowPickHistory: ShadowPick[] = [];
@@ -440,6 +441,17 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
               'Reference: dawn began before every murder slot was resolved',
             );
         }
+        // D120: a regular draw is discussed by the contenders before the
+        // re-vote when the rule is on; the endgame keeps a straight re-vote.
+        if (afterTie !== null && event.phase !== afterTie)
+          throw new Error(
+            `Reference: a draw led to ${event.phase} instead of ${afterTie}`,
+          );
+        if (phase === 'CONTENDERS' && event.phase !== 'VOTE')
+          throw new Error('Reference: Contenders did not lead to the re-vote');
+        if (event.phase === 'CONTENDERS' && afterTie !== 'CONTENDERS')
+          throw new Error('Reference: Contenders opened without a draw');
+        afterTie = null;
         phase = event.phase;
         cycle = event.cycle;
         if (event.phase === 'SHADOW') {
@@ -567,6 +579,11 @@ export function referenceReplay(events: readonly Event[]): ReferenceResult {
             );
           throw new Error('Reference: vote result did not match tally');
         }
+        if (isFirstTie)
+          afterTie =
+            phase === 'VOTE' && config.roundTable.contendersOnDraw
+              ? 'CONTENDERS'
+              : phase;
         pendingBanishment = event.target;
         revote = event.revote;
         voteCandidates = event.candidates;

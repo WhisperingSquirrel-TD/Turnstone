@@ -21,7 +21,7 @@ it('partitions the complete sample into disjoint scenario suites', () => {
   const suites = fullSampleSuites!;
 
   expect(suites.map((suite) => suite.name)).toEqual(SCENARIO_SUITE_NAMES);
-  expect(suites.map((suite) => suite.jobs.length)).toEqual([942, 788, 792, 0]);
+  expect(suites.map((suite) => suite.jobs.length)).toEqual([942, 846, 790, 0]);
   expect(suites.map((suite) => suite.fuzzGames)).toEqual([0, 0, 0, 32]);
   expect(suites.map((suite) => suite.goldenScenarios.length)).toEqual([
     0, 0, 0, 18,
@@ -40,9 +40,9 @@ it('partitions the complete sample into disjoint scenario suites', () => {
       createHash('sha256').update(JSON.stringify(suite.jobs)).digest('hex'),
     ),
   ).toEqual([
-    '18fde28b60ddc7e97d5877f07a9909933379a7a41a183535f8d4869f0fa1ff99',
-    'b25c0fdd7f7b1db1904b29cbb13a5a9ea0e3f2e76fd3389b8a04b3b63c3e2612',
-    'c1fdff1d438be54848a7a071552048142ee6541931b45756679ae56f1c2f8060',
+    '6fa3a17887bff2cd9f4ff5a727bf45e2a34f3778c06578561b576c650ebb4efe',
+    '36ae5df7820a9ff97ada5c41d31d2928618ea4ab32851fc4ee84bca5c7515331',
+    '9655572acf3c54f0b9189be1fe63ad570c50e398bcc916e6c1f8883ccc1d4032',
     '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
   ]);
 }, 120_000);
@@ -64,7 +64,7 @@ it('balances the high-seat sample across four disjoint workload shards', () => {
   const shards = partitionScenarioJobs(fullSuite.jobs, 4);
   const configuredShard = partitionScenarioPlan([fullSuite], 0, 4)[0]!;
 
-  expect(shards.map((shard) => shard.length)).toEqual([198, 198, 198, 198]);
+  expect(shards.map((shard) => shard.length)).toEqual([198, 198, 197, 197]);
   expect(
     shards
       .flatMap((shard) => shard)

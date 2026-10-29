@@ -1006,6 +1006,8 @@ export function createApp(
           debateMinutes: speed === 'fast' ? 2 : 15,
           voteMinutes: speed === 'fast' ? 1 : 3,
           tieRule: 'revote-random',
+          // D120: practice matches a new game; bots say nothing in it.
+          contendersOnDraw: true,
           revealStyle: 'speaker-circle',
           revealRole: 'always',
         },

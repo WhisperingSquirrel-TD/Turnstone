@@ -71,7 +71,8 @@ export const commandSchema = z.union([
   }),
   command('SubmitEndgameVote', { choice: z.enum(['end', 'continue']) }),
   command('ExtendPhase', {
-    minutes: z.union([z.literal(1), z.literal(5), z.literal(15)]),
+    // D120: +5, +15, +30 or a custom whole number, capped per press.
+    minutes: z.number().int().min(1).max(60),
   }),
   command('EndGameEarly'),
   command('UndoCoordinatorAction'),
@@ -112,6 +113,8 @@ export const eventSchema = z.discriminatedUnion('type', [
     deadline: z.number().nullable(),
     shadowEndAt: z.number().nullable().default(null),
     cycle: z.number().int().nonnegative(),
+    // D120: the organiser ended a discussion step early.
+    movedOn: z.literal(true).optional(),
   }),
   event('RolesDealt', {
     roles: z.record(z.string(), roleSchema),
@@ -533,6 +536,7 @@ export const fullViewSchema = z
                 role: roleSchema.optional(),
               })
               .strict(),
+            chosenAtRandom: z.literal(true).optional(),
           })
           .strict(),
         z
@@ -549,6 +553,24 @@ export const fullViewSchema = z
           .strict(),
       ])
       .nullable(),
+    organiserNotice: z
+      .discriminatedUnion('kind', [
+        z
+          .object({
+            kind: z.literal('added_time'),
+            minutes: z.number().int().min(1).max(60),
+            seq: z.number().int().positive(),
+          })
+          .strict(),
+        z
+          .object({
+            kind: z.literal('moved_on'),
+            seq: z.number().int().positive(),
+          })
+          .strict(),
+      ])
+      .nullable()
+      .optional(),
     private: privateViewSchema.nullable(),
     publicLog: z.array(publicLogEntrySchema),
     coordinatorAlerts: z.array(

@@ -50,6 +50,14 @@ const cycle: Phase[] = [
 ];
 const error = (code: string): Result => ({ ok: false, code });
 
+const discussionSteps = new Set<Phase>([
+  'MISSION',
+  'DEBATE',
+  'CONTENDERS',
+  'VERDICT',
+  'DAWN',
+]);
+
 export function decide(
   initial: State | null,
   input: unknown,
@@ -271,6 +279,7 @@ export function decide(
             ? 20
             : 1440,
       DEBATE: c.roundTable.debateMinutes,
+      CONTENDERS: 3,
       VOTE: c.roundTable.voteMinutes,
       FINAL_BANISH: c.roundTable.voteMinutes,
       VERDICT: c.schedule.format === 'quick' ? 2 : 5,
@@ -285,11 +294,18 @@ export function decide(
     };
     return ctx.testOnlyPhaseDurationMs ?? (value[phase] ?? 1) * 60_000;
   };
+  let organiserMove = false;
   const enter = (phase: Phase, nextCycle = state!.cycle) => {
     const phaseDuration = state!.config.rehearsal.enabled
       ? null
       : duration(phase);
+    // D120: tell every seat, in the same words, that the organiser ended a
+    // discussion step early. Deadline-driven steps and practice games say
+    // nothing; action steps never reach here before every player has acted.
+    const movedOn = organiserMove && phase !== state!.phase;
+    organiserMove = false;
     emit('PhaseChanged', {
+      ...(movedOn ? { movedOn: true } : {}),
       phase,
       deadline: ['DRAFT', 'LOBBY'].includes(phase)
         ? null
@@ -744,6 +760,10 @@ export function decide(
     case 'UndoCoordinatorAction':
       return error('UNDO_REQUIRES_SERVER');
     case 'AdvancePhase': {
+      organiserMove =
+        ctx.actor.kind === 'coordinator' &&
+        discussionSteps.has(state.phase) &&
+        !state.config.rehearsal.enabled;
       const minimumAdvanceAt = getMinimumAdvanceAt(state);
       if (minimumAdvanceAt !== null && ctx.now < minimumAdvanceAt)
         return error('TOO_EARLY');
@@ -771,6 +791,10 @@ export function decide(
       if (state.phase === 'LOBBY') return error('USE_START_GAME');
       if (state.phase === 'DEAL') {
         enter(state.config.missions.enabled ? 'MISSION' : 'DEBATE', 1);
+        break;
+      }
+      if (state.phase === 'CONTENDERS') {
+        enter('VOTE');
         break;
       }
       if (state.phase === 'VOTE' || state.phase === 'FINAL_BANISH') {
@@ -805,7 +829,13 @@ export function decide(
             context: voteContext,
             revealOrder: [],
           });
-          enter(state.phase);
+          // D120: a regular vote's draw is discussed before the re-vote;
+          // the endgame banishment keeps C6's straight re-vote.
+          enter(
+            state.phase === 'VOTE' && state.config.roundTable.contendersOnDraw
+              ? 'CONTENDERS'
+              : state.phase,
+          );
           break;
         }
         const target =

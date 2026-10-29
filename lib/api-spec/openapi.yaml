@@ -1390,6 +1390,8 @@ components:
                       type: string
                     role:
                       $ref: '#/components/schemas/Role'
+                chosenAtRandom:
+                  const: true
             - type: object
               additionalProperties: false
               required: [kind, cycle]
@@ -1407,6 +1409,31 @@ components:
                   const: finished
                 winner:
                   $ref: '#/components/schemas/Role'
+            - type: 'null'
+        organiserNotice:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [kind, minutes, seq]
+              properties:
+                kind:
+                  const: added_time
+                minutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 60
+                seq:
+                  type: integer
+                  minimum: 1
+            - type: object
+              additionalProperties: false
+              required: [kind, seq]
+              properties:
+                kind:
+                  const: moved_on
+                seq:
+                  type: integer
+                  minimum: 1
             - type: 'null'
         private:
           oneOf:
@@ -1801,6 +1828,7 @@ components:
         - DEAL
         - MISSION
         - DEBATE
+        - CONTENDERS
         - VOTE
         - VERDICT
         - SHADOW

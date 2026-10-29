@@ -60,6 +60,7 @@ export const VIEW_ALLOW_LIST = [
   'ownVoteTargetId',
   'winner',
   'publicAnnouncement',
+  'organiserNotice',
   'private',
   'publicLog',
   'coordinatorUndo',
@@ -276,6 +277,7 @@ export function viewFor(
         name: seat.name,
         ...(seat.publicRole && seat.role ? { role: seat.role } : {}),
       },
+      ...(announcement.chosenAtRandom ? { chosenAtRandom: true as const } : {}),
     };
   } else if (announcement?.kind === 'finished') {
     publicAnnouncement = {
@@ -431,6 +433,7 @@ export function viewFor(
       : {}),
     winner: presenter ? null : state.winner,
     publicAnnouncement,
+    organiserNotice: state.organiserNotice ?? null,
     publicLog: publicLogSources.map((entry) => {
       if (
         entry.action === 'seat_pin_reset' ||

@@ -39,6 +39,7 @@ export * from './fullViewCoordinatorRestorableSeatsItem';
 export * from './fullViewCoordinatorSkippedSeatsItem';
 export * from './fullViewCoordinatorUndo';
 export * from './fullViewEndRule';
+export * from './fullViewOrganiserNotice';
 export * from './fullViewProgress';
 export * from './fullViewPublicAnnouncement';
 export * from './fullViewVoteCircle';

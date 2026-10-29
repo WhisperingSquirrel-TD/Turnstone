@@ -34,6 +34,7 @@ export const phaseSchema = z.enum([
   'DEAL',
   'MISSION',
   'DEBATE',
+  'CONTENDERS',
   'VOTE',
   'VERDICT',
   'SHADOW',
@@ -107,6 +108,9 @@ export const gameConfigSchema = z
         tieRule: z
           .enum(['revote-random', 'revote-none'])
           .default('revote-random'),
+        // D120: off in the schema so older games replay unchanged; new games
+        // switch it on explicitly in buildNewGameConfig.
+        contendersOnDraw: z.boolean().default(false),
         revealRole: z
           .enum(['always', 'not-endgame', 'never'])
           .default('not-endgame'),
