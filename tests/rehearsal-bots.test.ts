@@ -235,6 +235,21 @@ describe('server rehearsal bot policy', () => {
     ).toBe(true);
   });
 
+  it('says and does nothing during a Contenders discussion (D120)', async () => {
+    const { nextRehearsalBotCommand } = await loadBotPolicy();
+    const game = rehearsalGame();
+    const state = {
+      ...game.state,
+      phase: 'CONTENDERS' as const,
+      cycle: 1,
+      revote: true,
+      candidates: ['s2', 's3'],
+      votes: {},
+    };
+    for (const botSeatId of game.state.config.rehearsal.botSeatIds)
+      expect(nextRehearsalBotCommand(state, botSeatId)).toBeNull();
+  });
+
   it('keeps endgame re-vote bot choices inside the tied finalists', async () => {
     const { nextRehearsalBotCommand } = await loadBotPolicy();
     const game = rehearsalGame();
