@@ -251,11 +251,14 @@ test('presenter shows the public verdict without exposing private ballots or a d
     }),
   );
   await page.route('**/presenter/pair', async (route) => {
+    // Stamp the two-minute deadline when the server answers, not before the
+    // page loads: slow WebKit loads otherwise used up seconds of it (#358).
+    const serverNow = Date.now();
     const result = presenterPairResponseSchema.parse({
       game: {
-        serverNow: Date.now(),
+        serverNow,
         version: publicView.version,
-        view: publicView,
+        view: { ...publicView, deadline: serverNow + 120_000 },
       },
     });
     await route.fulfill({ json: result });
@@ -265,6 +268,7 @@ test('presenter shows the public verdict without exposing private ballots or a d
   await page.goto(`/tv/${gameId}`);
   await page.getByLabel('Presenter pairing code').fill(pairingCode);
   await page.getByRole('button', { name: 'Pair this screen' }).click();
+  await expect(page.getByTestId('presenter-countdown')).toHaveText(/1:59|2:00/);
 
   await expect(
     page.getByText('Sam has been banished. They were Faithful.', {
@@ -277,7 +281,6 @@ test('presenter shows the public verdict without exposing private ballots or a d
   await expect(
     page.getByText('The schedule has been shifted by 5 minutes.'),
   ).toBeVisible();
-  await expect(page.getByTestId('presenter-countdown')).toHaveText(/1:59|2:00/);
   await expect(page.getByText('private-ballot-seat')).toHaveCount(0);
   await expect(page.getByText(/Prize pot:/)).toHaveCount(0);
   expect(
