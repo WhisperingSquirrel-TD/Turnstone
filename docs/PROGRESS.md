@@ -1,5 +1,17 @@
 # Status for reviewer
 
+**D120 follow-up — Verify #358 (`2609411`, docs only) RED; fixes pushed.**
+Failure annotations (now readable through the API) showed two causes.
+(1) Mine: in the practice run a re-vote tied again, and the new "chosen at
+random" line sat inside `shared-announcement`, changing its exact wording.
+It now sits beside the announcement; `VerdictScreen.test.tsx` failed first.
+#357 passed only because its practice run had no second tie.
+(2) iPhone `presenter-pairing.spec.ts`: the test fixed a two-minute deadline
+before the page loaded, so slow WebKit loads used up seconds of it. The
+deadline and server time are now stamped when the pairing response is sent
+and the countdown is checked first; the assertion is unchanged.
+Next: Verify green twice, then report to Tom.
+
 **Phase 2 (D120) — Contenders on a draw and organiser-governed timing:
 Verify #357 (`2e83156`) GREEN; this status push is the second run.** Phase 1 is complete: Verify #355 (`5d8c8d1`) and
 #356 (`490789c`) green consecutively after the recovery-test split.
