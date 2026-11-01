@@ -2213,3 +2213,20 @@ spacing.
 - Test: `e2e/layout-audit.spec.ts` (rule reports 0px, passes 8px, ignores a
   segmented control); with the CSS fix removed the full audit reports the
   owner's exact case.
+
+**D122 follow-up (owner, 1 November 2026).**
+
+- One Back per screen: where the top Back shows (join, create and practice
+  setup), the bottom Back is not rendered; late-join mode keeps the bottom
+  one because it has no top Back. `e2e/entry-navigation.spec.ts` checks one
+  Back on each of these screens.
+- First paint matches the app: the static entry served before the app loads
+  now uses the welcome screen's markup, classes and stylesheet (links in place
+  of buttons), follows a dark phone before the app loads, and reserves the
+  footer's height. `e2e/entry-first-paint.spec.ts` requires every element
+  within 2px of the app's welcome at 320, 390 and 430px. Owner saw the old
+  layout flash first.
+- Unexpected server failures (25 catch-all 503 replies) now report the route
+  and a safe code (Postgres SQLSTATE or error class, never the message) to
+  the server log (`tests/http.test.ts`). A preview database missing
+  migration 0014 had answered 503 with nothing logged.

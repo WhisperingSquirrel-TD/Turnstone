@@ -71,11 +71,21 @@ sign-up.
 
 ### 3. OathstoneGame deploy (Replit, Reserved VM)
 
-1. **Sync.** In the OathstoneGame workspace: `git fetch origin main`,
+1. **Sync.** First run `git status` and `git log --oneline origin/main..HEAD`
+   in the OathstoneGame workspace. Replit records publishing settings in
+   `.replit` (for example `OATHSTONE_CLEARDOWN_MODE` and the port mapping) and
+   commits them itself; if either command shows changes, keep them (copy the
+   `.replit` lines back after the reset) rather than discarding them. Then
+   `git fetch origin main`,
    `git checkout main`, `git reset --hard origin/main`. Confirm
    `git log -1` is the released commit and `git status` is clean. The
    release must include D115 (the Reserved VM deployment configuration); the
-   first publish, on `ec2a883`, crash-looped without it. _Done (recorded 29 October 2026; game live on the domain)._
+   first publish, on `ec2a883`, crash-looped without it. A reset does not run
+   `scripts/post-merge.sh`, so the workspace's development database is not
+   updated: apply any new files in `lib/db/migrations` to the development
+   `DATABASE_URL` with `psql -v ON_ERROR_STOP=1 --single-transaction -f …`
+   before using the preview (1 November 2026: the preview could not create
+   games until 0014 was applied). _Done (recorded 29 October 2026; game live on the domain)._
 2. **Device test.** Tom's solo run in `docs/MANUAL_TESTS.md` ("Beta solo
    play-through") on the preview, if not already done on this commit.
 3. **Production database.** Create it in Replit; its connection string is

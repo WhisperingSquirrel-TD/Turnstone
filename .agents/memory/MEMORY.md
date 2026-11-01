@@ -38,3 +38,4 @@
 - [Public copy and robots](public-copy-and-robots.md) — agents may read public pages but all stays noindex; no sitemap; use publicSiteCopy(), driven by config.missionsAvailable.
 - [Scenario version coupling](scenario-version-coupling.md) — bots read the event version; an extra event on an existing path changes goldens.
 - [Control spacing audit](control-spacing-audit.md) — separate controls need 8px; overlap checks alone let touching buttons pass (D122).
+- [First-paint parity](first-paint-parity.md) — the static entry uses the app welcome's markup and CSS; a reset skips the dev database update.
