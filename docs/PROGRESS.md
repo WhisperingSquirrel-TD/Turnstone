@@ -1,5 +1,20 @@
 # Status for reviewer
 
+**D122 follow-up — pushed; Verify pending.** Verify #365 (`70e2b10`) was
+green. Owner preview checks found: two Back buttons (now one per screen,
+top); the first-paint entry jumping to the app welcome (it now uses the
+welcome's markup, classes and stylesheet, follows a dark phone, and stays
+until the app draws more than its loading line; `e2e/entry-first-paint.spec.ts`
+compares both within 2px); a silent 503 (25 catch-all failures now log the
+route and a safe code). Root cause of the preview's failed create: the
+workspace reset skipped `scripts/post-merge.sh`, so its dev database lacked
+migration 0014; Tom applied it with psql. LAUNCH step 1 now says to check
+`git status` first and apply new migrations to the dev database. `.replit`
+on main now keeps clear-down mode and the port mappings (owner-approved).
+Local: static checks, build, 842 unit, Chromium browser suite 382 passed.
+Next: Verify green, then Tom pulls (`git status` first), restarts the
+preview, checks, and publishes.
+
 **D121 parity choice and D122 control spacing — pushed; Verify pending.**
 Verify #364 (`42f3204`) was green after #363, so main was stable before this.
 D121 (owner): Create options now include "Traitors win on equal numbers"
