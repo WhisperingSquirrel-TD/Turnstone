@@ -8,7 +8,8 @@ session cannot reach, so they are now part of the thrown error and appear in
 the check-run annotation. Assertion unchanged. Replit (read-only check, now
 allowed in CLAUDE.md): the live app still serves the 28 October D119 release;
 Contenders is not yet published.
-Next: if it recurs, root-cause it from the annotation; otherwise two greens.
+Verify #363 (`2a14463`) GREEN. Next: second green on this push; if the
+SHADOW test recurs, root-cause it from the annotation.
 
 **D120 follow-up — Verify #358 (`2609411`, docs only) RED; fixes in `844b4ba`, Verify #359 and #360 (`3d6cc06`) GREEN consecutively. Phase 2 complete.**
 Failure annotations (now readable through the API) showed two causes.
