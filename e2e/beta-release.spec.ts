@@ -150,6 +150,8 @@ test('every entry screen offers Report an issue in its Menu', async ({
   page,
 }) => {
   await page.goto('/?entry=rehearsal');
+  // Open the app's Menu, not the first-paint stand-in's (D122 follow-up).
+  await expect(page.locator('#static-home')).toHaveCount(0);
   const menu = page.locator('.entry-brand-menu');
   await menu.locator('summary').click();
   const report = menu.getByTestId('entry-menu-report-issue');

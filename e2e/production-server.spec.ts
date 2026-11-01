@@ -75,6 +75,12 @@ test.describe('built client through the real Node server', () => {
       page.getByText('Join a game', { exact: true }),
       JSON.stringify(violations),
     ).toBeVisible({ timeout: 5_000 });
+    // The first-paint stand-in links look the same; the app has hydrated
+    // only once it has replaced them (D122 follow-up).
+    await expect(
+      page.locator('#static-home'),
+      JSON.stringify(violations),
+    ).toHaveCount(0, { timeout: 5_000 });
     await page.getByText('Join a game', { exact: true }).click();
     await expect(
       page.getByRole('heading', { name: en.entry.codeHeading, exact: true }),
