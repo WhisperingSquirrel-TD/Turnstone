@@ -65,10 +65,7 @@ export function PrivateChoiceControls({
 
   return (
     <>
-      <div
-        className={`mt-3 grid ${orderedVoteProgressRows ? 'gap-1' : 'gap-2'}`}
-        data-testid="private-choice-list"
-      >
+      <div className="mt-3 grid gap-2" data-testid="private-choice-list">
         {orderedVoteProgressRows
           ? orderedVoteProgressRows.map((row) => {
               const choice = choiceById.get(row.id);

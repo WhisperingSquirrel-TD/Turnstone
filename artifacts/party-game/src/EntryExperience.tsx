@@ -975,6 +975,7 @@ export function EntryExperience({
                 <p className="entry-help">{copy.codeHelp}</p>
                 <div
                   className="entry-code-fields"
+                  data-control-segment
                   role="group"
                   aria-label={copy.codeHeading}
                 >

@@ -1141,3 +1141,20 @@
 .entry-option-help[open] > .entry-help {
   padding-bottom: 0.5rem;
 }
+
+/* Owner, 1 November 2026: separate controls keep at least 8px apart. The
+   Back action's auto margin collapses to nothing on short screens. */
+.entry-panel > :has(+ .entry-back-action),
+.entry-panel > :has(+ .entry-error + .entry-back-action) {
+  margin-bottom: 1rem;
+}
+
+.entry-panel > .entry-back-action {
+  margin-bottom: 0.75rem;
+}
+
+.entry-end-date-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

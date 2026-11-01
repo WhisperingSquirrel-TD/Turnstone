@@ -318,6 +318,7 @@
   right: 0;
   z-index: 10;
   display: grid;
+  gap: 0.5rem;
   min-width: min(17rem, calc(100vw - 2rem));
   padding: 0.5rem;
   border: 1px solid var(--stone);
