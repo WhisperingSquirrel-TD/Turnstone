@@ -3721,7 +3721,10 @@ for (const phase of ['DEAL', 'VOTE', 'SHADOW'] as const) {
               slot: node.getAttribute('data-shadow-slot'),
             })),
           );
-        console.error('SHADOW return public diagnostics', {
+        // In the error itself so CI annotations carry it when job logs are
+        // unreachable (Verify #303, #362). Public attributes and allowlisted
+        // command types only.
+        const diagnostics = {
           publicStep,
           recoveryVisible: await page
             .getByTestId('private-screen-recovery')
@@ -3730,8 +3733,11 @@ for (const phase of ['DEAL', 'VOTE', 'SHADOW'] as const) {
             .getByRole('dialog', { name: 'Shield your screen' })
             .isVisible(),
           network: recoveryNetwork,
-        });
-        throw error;
+        };
+        throw new Error(
+          `SHADOW return public diagnostics: ${JSON.stringify(diagnostics)}`,
+          { cause: error },
+        );
       }
     } else {
       await expect(page.getByTestId('player-game')).toBeVisible();
