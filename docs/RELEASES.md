@@ -17,6 +17,13 @@ Production is live at https://oathstone.stackstoneconsulting.co.uk (owner-publis
 
 ## Releases
 
+- **1 November 2026: Contenders, organiser timing, parity choice and spacing
+  (D120 to D122).** Release commit `96f4d65`; [Verify #367, run 41345843675](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/41345843675),
+  **Success**. Tom pulled main (workspace clean, `.replit` identical to main),
+  published from Replit and tested on his phone; Replit reports the
+  deployment live at https://oathstone.stackstoneconsulting.co.uk. No
+  production migration was needed. Rollback commit: `ecfc2f2` (the 28 October
+  release, Verify #353).
 - **28 October 2026: October beta (D119).** Release commit `ecfc2f2` (code
   identical to `dac10e8`); [Verify #353, run 40721439014](https://github.com/WhisperingSquirrel-TD/Turnstone/actions/runs/40721439014),
   **Success**. Tom published from Replit after pulling main; production

@@ -1,5 +1,15 @@
 # Status for reviewer
 
+**Released 1 November 2026: `96f4d65` (Verify #367 green) is live.** Tom
+pulled main (clean workspace, `.replit` matching main), published and tested
+on his phone; Replit (read-only check) reports the deployment live on the
+domain. Release recorded in `docs/RELEASES.md`; rollback `ecfc2f2`.
+Includes D120 (Contenders on a draw, organiser timing), D121 (parity choice
+at setup), D122 (8px control spacing, one Back per screen, first paint
+matching the app, logged server failures) and `.replit` settings on main.
+Next: none queued; held briefs (calm pass, moments, batches C and D) await
+Tom.
+
 **D122 follow-up — Verify #366 (`2c97d95`) RED on WebKit; fix pushed.**
 Two tests used the first-paint stand-in before the app took over (WebKit
 loads more slowly): one opened its Menu, one followed its Join link. Both
