@@ -1,5 +1,8 @@
 # Status for reviewer
 
+**Verify #369 (`fa2bc34`) GREEN.** Main is green after the #368 H1 night
+race fix. Nothing queued; held briefs await Tom.
+
 **Verify #368 (`4dcadd9`, docs only) RED: H1 night race; harness fixed.**
 A tied night opened round 2 just as the organiser tapped Move everyone on, so
 the console rightly asked to move the players who had not yet chosen; the
