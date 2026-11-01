@@ -101,7 +101,9 @@ test('practice Back and primary action clear the linked footer at phone sizes', 
     await page
       .locator('main')
       .evaluate((main) => main.scrollTo(0, main.scrollHeight));
-    const back = await page.getByTestId('button-back-entry').boundingBox();
+    // One Back per screen: practice shows it at the top (D122 follow-up).
+    await expect(page.getByTestId('button-back-entry')).toHaveCount(0);
+    const back = await page.getByTestId('button-back-top').boundingBox();
     const action = await dock.boundingBox();
     const credit = await footer.boundingBox();
     expect(

@@ -784,6 +784,9 @@ export function EntryExperience({
       {primaryHintText}
     </p>
   ) : null;
+  // Owner, 1 November 2026: one Back per screen. The top Back replaces the
+  // bottom one wherever it is shown.
+  const topBackShown = topBackScreens.has(screen) && !lateJoinMode;
   const actionPlacement = (ready: boolean) => ({
     className: ready ? 'entry-action-dock' : 'entry-inline-primary',
     'data-testid': ready ? 'entry-action-dock' : undefined,
@@ -846,7 +849,7 @@ export function EntryExperience({
         id="entry-main"
         key={screen}
       >
-        {topBackScreens.has(screen) && !lateJoinMode && (
+        {topBackShown && (
           <button
             className="entry-top-back"
             data-testid="button-back-top"
@@ -1176,14 +1179,16 @@ export function EntryExperience({
                 {visibleError}
               </p>
             )}
-            <button
-              className="entry-back-action"
-              data-testid="button-back-entry"
-              type="button"
-              onClick={goBack}
-            >
-              {copy.back}
-            </button>
+            {!topBackShown && (
+              <button
+                className="entry-back-action"
+                data-testid="button-back-entry"
+                type="button"
+                onClick={goBack}
+              >
+                {copy.back}
+              </button>
+            )}
           </section>
         )}
 
@@ -1315,14 +1320,16 @@ export function EntryExperience({
                 {visibleError}
               </p>
             )}
-            <button
-              className="entry-back-action"
-              data-testid="button-back-entry"
-              type="button"
-              onClick={goBack}
-            >
-              {copy.back}
-            </button>
+            {!topBackShown && (
+              <button
+                className="entry-back-action"
+                data-testid="button-back-entry"
+                type="button"
+                onClick={goBack}
+              >
+                {copy.back}
+              </button>
+            )}
           </section>
         )}
 
@@ -1440,14 +1447,16 @@ export function EntryExperience({
                 {visibleError}
               </p>
             )}
-            <button
-              className="entry-back-action"
-              data-testid="button-back-entry"
-              type="button"
-              onClick={goBack}
-            >
-              {copy.back}
-            </button>
+            {!topBackShown && (
+              <button
+                className="entry-back-action"
+                data-testid="button-back-entry"
+                type="button"
+                onClick={goBack}
+              >
+                {copy.back}
+              </button>
+            )}
           </section>
         )}
 
@@ -1652,14 +1661,16 @@ export function EntryExperience({
                 {visibleError}
               </p>
             )}
-            <button
-              className="entry-back-action"
-              data-testid="button-back-entry"
-              type="button"
-              onClick={goBack}
-            >
-              {copy.back}
-            </button>
+            {!topBackShown && (
+              <button
+                className="entry-back-action"
+                data-testid="button-back-entry"
+                type="button"
+                onClick={goBack}
+              >
+                {copy.back}
+              </button>
+            )}
           </section>
         )}
 
@@ -1960,14 +1971,16 @@ export function EntryExperience({
                 </p>
               )}
             </form>
-            <button
-              className="entry-back-action"
-              data-testid="button-back-entry"
-              type="button"
-              onClick={goBack}
-            >
-              {copy.back}
-            </button>
+            {!topBackShown && (
+              <button
+                className="entry-back-action"
+                data-testid="button-back-entry"
+                type="button"
+                onClick={goBack}
+              >
+                {copy.back}
+              </button>
+            )}
           </section>
         )}
       </main>

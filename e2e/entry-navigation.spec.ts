@@ -68,24 +68,34 @@ for (const [label, buttonId, readyId] of [
   });
 }
 
-test('Join and Create: the lower Back is a 44 px button that returns to start', async ({
+// D122 follow-up (owner, 1 November 2026): one Back per screen, at the top.
+test('Join and Create show a single 44 px Back that returns to start', async ({
   page,
 }) => {
   await start(page);
   await page.getByTestId('button-join-game').click();
   await expect(page.getByTestId('input-join-name')).toBeVisible();
-  const back = page.getByTestId('button-back-entry');
+  await expect(page.getByRole('button', { name: 'Back' })).toHaveCount(1);
+  const back = page.getByTestId('button-back-top');
   const box = await back.boundingBox();
   expect(box!.height).toBeGreaterThanOrEqual(44);
   await expect(back).toHaveCSS('text-decoration-line', 'none');
   await back.click();
   await expectStart(page);
-  await page.getByTestId('button-create-game').click();
-  await expect(page.getByTestId('input-game-name')).toBeVisible();
-  await expect(page.getByTestId('button-back-entry')).toHaveCSS(
-    'text-decoration-line',
-    'none',
-  );
+  for (const [buttonId, readyId] of [
+    ['button-create-game', 'input-game-name'],
+    ['button-practise-alone', 'input-rehearsal-name'],
+  ] as const) {
+    await page.getByTestId(buttonId).click();
+    await expect(page.getByTestId(readyId)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back' })).toHaveCount(1);
+    await expect(page.getByTestId('button-back-top')).toHaveCSS(
+      'text-decoration-line',
+      'none',
+    );
+    await page.getByTestId('button-back-top').click();
+    await expectStart(page);
+  }
 });
 
 test('the join hint under Continue keeps clear of the bottom edge', async ({
