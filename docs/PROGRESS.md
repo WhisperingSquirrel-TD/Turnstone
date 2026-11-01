@@ -1,5 +1,12 @@
 # Status for reviewer
 
+**Verify #368 (`4dcadd9`, docs only) RED: H1 night race; harness fixed.**
+A tied night opened round 2 just as the organiser tapped Move everyone on, so
+the console rightly asked to move the players who had not yet chosen; the
+harness expected no prompt. It now presses Cancel and follows the new step,
+and still fails if the prompt appears without a new step. No product change.
+H1 seed 6001 passes locally.
+
 **Released 1 November 2026: `96f4d65` (Verify #367 green) is live.** Tom
 pulled main (clean workspace, `.replit` matching main), published and tested
 on his phone; Replit (read-only check) reports the deployment live on the
