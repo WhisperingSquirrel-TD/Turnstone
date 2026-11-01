@@ -237,3 +237,21 @@ test('unresolved game header and recovery controls fit every phone width', async
     }
   }
 });
+
+test('owner regression: separate controls closer than 8px are reported, segmented controls are not', async ({
+  page,
+}) => {
+  const markup = (gap: number) =>
+    `<meta name="viewport" content="width=device-width, initial-scale=1"><div style="display:grid;gap:${gap}px;width:300px"><button id="continue" style="height:56px">Continue</button><button id="back" style="width:90px;height:48px">Back</button></div><div data-control-segment style="display:flex;margin-top:24px"><input aria-label="1" style="width:44px;height:56px;margin:0"><input aria-label="2" style="width:44px;height:56px;margin:0"></div>`;
+  await page.setContent(markup(0));
+  const tight = await inspectVisibleLayout(page, 'touching-back');
+  expect(
+    tight.filter((finding) => finding.kind === 'control-spacing-under-8'),
+  ).toEqual([expect.objectContaining({ selectors: ['#continue', '#back'] })]);
+  await page.setContent(markup(8));
+  expect(
+    (await inspectVisibleLayout(page, 'spaced-back')).filter(
+      (finding) => finding.kind === 'control-spacing-under-8',
+    ),
+  ).toEqual([]);
+});

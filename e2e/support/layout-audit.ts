@@ -264,6 +264,95 @@ export async function inspectVisibleLayout(
       }
       boxes.push({ element, rect });
     }
+    // Owner, 1 November 2026: separate controls need visible space between
+    // them (a Back button touched Continue on a phone). Fixed bars are
+    // checked separately; a control nested in another is one target.
+    const minimumControlGap = 8;
+    const scrollClipped = (element: Element) => {
+      const rect = element.getBoundingClientRect();
+      for (
+        let node = element.parentElement;
+        node && node !== document.documentElement;
+        node = node.parentElement
+      ) {
+        if (!['auto', 'scroll'].includes(getComputedStyle(node).overflowY))
+          continue;
+        const bounds = node.getBoundingClientRect();
+        if (rect.top < bounds.top - 0.5 || rect.bottom > bounds.bottom + 0.5)
+          return true;
+      }
+      return false;
+    };
+    // Controls on either side of a scrolling area's edge move apart as the
+    // page scrolls, so their gap is not a fixed spacing.
+    const scroller = (element: Element): Element | null => {
+      for (
+        let node = element.parentElement;
+        node && node !== document.documentElement;
+        node = node.parentElement
+      )
+        if (
+          ['auto', 'scroll'].includes(getComputedStyle(node).overflowY) &&
+          node.scrollHeight > node.clientHeight + 1
+        )
+          return node;
+      return null;
+    };
+    const fixedLayer = (element: Element): Element | null => {
+      for (
+        let node: Element | null = element;
+        node;
+        node = node.parentElement
+      ) {
+        const position = getComputedStyle(node).position;
+        if (position === 'fixed' || position === 'sticky') return node;
+      }
+      return null;
+    };
+    const spaced = controls
+      .filter((element) => !element.closest('[data-layout-audit-skip]'))
+      .map((element) => ({ element, rect: element.getBoundingClientRect() }));
+    for (let index = 0; index < spaced.length; index++) {
+      const a = spaced[index]!;
+      for (const b of spaced.slice(index + 1)) {
+        if (a.element.contains(b.element) || b.element.contains(a.element))
+          continue;
+        // One segmented control (tabs, the six code boxes) is a single target.
+        const segment = (element: Element) =>
+          element.closest('[role="tablist"], [data-control-segment]');
+        if (segment(a.element) && segment(a.element) === segment(b.element))
+          continue;
+        // Scrolling content passing a fixed bar is covered by the fixed-bar
+        // checks; compare only controls in the same layer, and skip a control
+        // cut by a scroll edge (it scrolls clear, as the overlap check allows).
+        if (fixedLayer(a.element) !== fixedLayer(b.element)) continue;
+        if (scrollClipped(a.element) || scrollClipped(b.element)) continue;
+        if (scroller(a.element) !== scroller(b.element)) continue;
+        const xOverlap =
+          Math.min(a.rect.right, b.rect.right) -
+          Math.max(a.rect.left, b.rect.left);
+        const yOverlap =
+          Math.min(a.rect.bottom, b.rect.bottom) -
+          Math.max(a.rect.top, b.rect.top);
+        const verticalGap = Math.max(
+          b.rect.top - a.rect.bottom,
+          a.rect.top - b.rect.bottom,
+        );
+        const horizontalGap = Math.max(
+          b.rect.left - a.rect.right,
+          a.rect.left - b.rect.right,
+        );
+        if (
+          (xOverlap > 0.5 &&
+            verticalGap > -0.5 &&
+            verticalGap < minimumControlGap - 0.5) ||
+          (yOverlap > 0.5 &&
+            horizontalGap > -0.5 &&
+            horizontalGap < minimumControlGap - 0.5)
+        )
+          add('control-spacing-under-8', a.element, b.element);
+      }
+    }
     const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const node = walker.currentNode;
