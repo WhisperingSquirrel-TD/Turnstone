@@ -408,6 +408,9 @@ test('the 375×667 phone viewport keeps home copy and actions on-screen', async 
 
   await page.setViewportSize({ width: 375, height: 667 });
   await page.goto('/');
+  // The first-paint entry shares the welcome's layout but uses links; measure
+  // the app's buttons once it has taken over (D122 follow-up).
+  await expect(page.getByTestId('button-create-game')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
   const entryBounds = await page.locator('.entry-experience').boundingBox();

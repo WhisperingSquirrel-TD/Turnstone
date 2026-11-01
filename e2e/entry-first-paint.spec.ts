@@ -124,3 +124,25 @@ test('first-paint entry follows a dark phone before the app loads', async ({
     await context.close();
   }
 });
+
+test('first-paint entry stays until the app draws more than its loading line', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'Pixel', 'Hand-over is checked once.');
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'a'.repeat(43) } }),
+  );
+  // Hold the welcome screen's code: the app can only show its loading line.
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route('**/src/EntryPage.tsx*', async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto('/');
+  await expect(page.locator('#root main[role="status"]')).toBeAttached();
+  await expect(page.locator('#static-home')).toBeVisible();
+  release();
+  await expect(page.getByTestId('button-create-game')).toBeVisible();
+  await expect(page.locator('#static-home')).toHaveCount(0);
+});

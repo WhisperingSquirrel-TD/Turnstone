@@ -66,8 +66,27 @@ if (isStaticPublicPage) {
       import('react-dom/client'),
       import('./App'),
     ]);
-    document.getElementById('static-home')?.remove();
-    createRoot(document.getElementById('root')!).render(<App />);
+    const root = document.getElementById('root')!;
+    const staticHome = document.getElementById('static-home');
+    if (staticHome) {
+      // Keep the first-paint entry until the app draws more than its loading
+      // line, so nothing flashes in between (owner, 1 November). The observer
+      // runs before the next paint, so the two never show together.
+      const reveal = () => {
+        observer.disconnect();
+        window.clearTimeout(fallback);
+        staticHome.remove();
+      };
+      const observer = new MutationObserver(() => {
+        const first = root.firstElementChild;
+        const loadingOnly =
+          root.childElementCount === 1 && first?.matches('main[role="status"]');
+        if (first && !loadingOnly) reveal();
+      });
+      observer.observe(root, { childList: true, subtree: true });
+      const fallback = window.setTimeout(reveal, 10_000);
+    }
+    createRoot(root).render(<App />);
 
     if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       const workerUrl = new URL(
