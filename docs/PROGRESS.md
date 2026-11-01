@@ -1,5 +1,15 @@
 # Status for reviewer
 
+**Verify #362 (`feb038f`, CLAUDE.md only) RED: intermittent iPhone SHADOW
+return-notice test.** Same symptom as #303: after "I'm shielded" the choice
+list did not appear (`e2e/player-public-room.spec.ts`). Unchanged code; cause
+not yet proven. Its failure diagnostics went only to the job log, which this
+session cannot reach, so they are now part of the thrown error and appear in
+the check-run annotation. Assertion unchanged. Replit (read-only check, now
+allowed in CLAUDE.md): the live app still serves the 28 October D119 release;
+Contenders is not yet published.
+Next: if it recurs, root-cause it from the annotation; otherwise two greens.
+
 **D120 follow-up — Verify #358 (`2609411`, docs only) RED; fixes in `844b4ba`, Verify #359 and #360 (`3d6cc06`) GREEN consecutively. Phase 2 complete.**
 Failure annotations (now readable through the API) showed two causes.
 (1) Mine: in the practice run a re-vote tied again, and the new "chosen at
