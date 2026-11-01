@@ -113,6 +113,9 @@ type RateLimitRejectionDiagnostic = Readonly<{
 
 export type AppOptions = {
   clientDirectory?: string;
+  /** Receives the route and a safe error code for unexpected failures; never
+   * the message, body or any player data. */
+  reportUnexpectedError?: (report: { route: string; code: string }) => void;
   resolveViewer?: (request: Request) => Viewer | Promise<Viewer>;
   resolveCoordinatorViewer?: (request: Request) => Viewer | Promise<Viewer>;
   /** Test-only deterministic clock; the production server never supplies it. */
@@ -330,6 +333,17 @@ async function loadGameState(gameId: string): Promise<State | null> {
   return replayFrom(snapshot.state as State, events);
 }
 
+/** A Postgres SQLSTATE (on the error or its cause) or the error's class name. */
+export function safeErrorCode(error: unknown): string {
+  for (const candidate of [error, (error as { cause?: unknown })?.cause]) {
+    const code = (candidate as { code?: unknown } | null)?.code;
+    if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) return code;
+  }
+  return error instanceof Error && /^[A-Za-z]{1,40}$/.test(error.name)
+    ? error.name
+    : 'unknown';
+}
+
 function sendError(response: Response, status: number, error: string): void {
   response.status(status).json(apiErrorResponseSchema.parse({ error }));
 }
@@ -395,6 +409,16 @@ export function createApp(
   const readReadinessStatus = createReadinessStatusReader(probeDatabase);
   app.disable('x-powered-by');
   const activeDeploymentMode = options.deploymentMode ?? deploymentMode;
+  const reportUnexpected = (request: Request, error: unknown) => {
+    try {
+      options.reportUnexpectedError?.({
+        route: `${request.method} ${request.route?.path ?? 'unknown'}`,
+        code: safeErrorCode(error),
+      });
+    } catch {
+      // Reporting must never change the response.
+    }
+  };
   app.use(security(activeDeploymentMode));
   if (options.clientDirectory) app.use(staticClient(options.clientDirectory));
   app.use(
@@ -894,7 +918,8 @@ export function createApp(
             stored.duplicate ? viewer : { kind: 'coordinator' },
           ),
         );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -1136,7 +1161,8 @@ export function createApp(
           seatId: humanSeatId,
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -1211,7 +1237,8 @@ export function createApp(
       response
         .status(201)
         .json(gameInviteResponseSchema.parse({ gameId, joinUrl, shortCode }));
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -1280,7 +1307,8 @@ export function createApp(
       response
         .status(201)
         .json(lateGameInviteResponseSchema.parse({ gameId, joinUrl }));
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -1555,7 +1583,8 @@ export function createApp(
         await import('@workspace/db/seat-access-store');
       const requests = await listPendingGameJoinRequests(gameId);
       response.json(pendingJoinRequestsResponseSchema.parse({ requests }));
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -1686,7 +1715,8 @@ export function createApp(
         }
         await publishGame(gameId);
         response.json({ status: 'approved', seatId: joinRequest.seatId });
-      } catch {
+      } catch (error) {
+        reportUnexpected(request, error);
         sendError(response, 503, 'Service unavailable');
       }
     },
@@ -1779,7 +1809,8 @@ export function createApp(
         game,
       });
       response.json(status);
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2156,7 +2187,8 @@ export function createApp(
       response
         .status(previous?.duplicate ? 200 : 201)
         .json(await projectState(current, { kind: 'player', seatId }));
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2224,7 +2256,8 @@ export function createApp(
       response
         .status(201)
         .json(coordinatorHandoffResponseSchema.parse({ code }));
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2299,7 +2332,8 @@ export function createApp(
           status: 'transferred',
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2324,7 +2358,8 @@ export function createApp(
           seatIds: await listCoordinatorDelegates(gameId),
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2411,7 +2446,8 @@ export function createApp(
           seatIds: parsed.data.seatIds,
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2463,7 +2499,8 @@ export function createApp(
       response.json(
         HeartbeatCoordinatorPresenceResponse.parse({ status: 'online' }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2590,7 +2627,8 @@ export function createApp(
             : null,
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2667,7 +2705,8 @@ export function createApp(
           status: record.request?.status,
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2732,7 +2771,8 @@ export function createApp(
           status,
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2879,7 +2919,8 @@ export function createApp(
       response.json(
         ClaimCoordinatorTakeoverResponse.parse({ status: 'transferred' }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2928,7 +2969,8 @@ export function createApp(
           gameEndDate: parsed.data.endDate,
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2951,7 +2993,8 @@ export function createApp(
           await projectState(state, { kind: 'coordinator' }),
         ),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -2964,7 +3007,8 @@ export function createApp(
       }
       const viewer = await viewerForRequest(request);
       response.json(await projectState(state, viewer));
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -3034,7 +3078,8 @@ export function createApp(
           reveal: true,
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -3078,7 +3123,8 @@ export function createApp(
       response
         .status(201)
         .json(presenterPairingResponseSchema.parse({ code, expiresAt }));
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -3141,7 +3187,8 @@ export function createApp(
           game: await projectState(state, { kind: 'presenter' }),
         }),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });
@@ -3208,7 +3255,8 @@ export function createApp(
           return;
         }
         response.json(await projectState(nextState, viewer));
-      } catch {
+      } catch (error) {
+        reportUnexpected(request, error);
         sendError(response, 503, 'Service unavailable');
       }
     },
@@ -3514,7 +3562,8 @@ export function createApp(
         return;
       }
       response.json(await projectState(current, viewer));
-    } catch {
+    } catch (error) {
+      reportUnexpected(request, error);
       sendError(response, 503, 'Service unavailable');
     }
   });

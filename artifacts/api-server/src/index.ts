@@ -112,6 +112,9 @@ const app = createApp(
       ? {}
       : { testOnlyPhaseDurationMs }),
     processRehearsalGame: (gameId) => rehearsalBots.processGame(gameId),
+    // Route and safe code only, so a failing request is diagnosable (D122).
+    reportUnexpectedError: (report) =>
+      logger.error(report, 'Request failed unexpectedly'),
     ...(environment.NODE_ENV === 'test'
       ? {
           testOnlyRateLimitDiagnostics: true,

@@ -214,6 +214,37 @@ describe('health and readiness', () => {
     expect(response.body).toEqual({ error: 'Invalid request' });
   });
 
+  it('reports an unexpected create failure by route and code only', async () => {
+    // A dev database missing a migration answered 503 with nothing logged
+    // (owner preview, 1 November 2026).
+    const reports: unknown[] = [];
+    const failure = Object.assign(
+      new Error('column "game_end_date" secret detail'),
+      { code: '42703' },
+    );
+    const app = createApp(async () => {}, {
+      resolveViewer: () => ({ kind: 'coordinator' }),
+      maxActiveGames: 10,
+      countActiveGames: async () => {
+        throw failure;
+      },
+      reportUnexpectedError: (report) => reports.push(report),
+    });
+    const response = await request(app)
+      .post('/api/games')
+      .send({
+        type: 'CreateGame',
+        endDate: ukCalendarDate(Date.now()),
+        id: 'failing-game',
+        idempotencyKey: 'create-failing',
+        config: gameConfigSchema.parse({}),
+      });
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ error: 'Service unavailable' });
+    expect(reports).toEqual([{ route: 'POST /api/games', code: '42703' }]);
+    expect(JSON.stringify(reports)).not.toContain('secret');
+  });
+
   it('rejects new games above 80 percent of measured capacity', async () => {
     const app = createApp(async () => {}, {
       resolveViewer: () => ({ kind: 'coordinator' }),
