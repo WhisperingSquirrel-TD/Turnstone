@@ -1,5 +1,20 @@
 # Status for reviewer
 
+**D121 parity choice and D122 control spacing — pushed; Verify pending.**
+Verify #364 (`42f3204`) was green after #363, so main was stable before this.
+D121 (owner): Create options now include "Traitors win on equal numbers"
+(on by default) with a one-line summary and a closed "What's this?" holding
+the 8-player worked example; the choice reaches `endgame.parity`.
+D122 (owner phone screenshot, Back touching Continue): the layout audit now
+fails any two separate controls under 8px apart. It found and we fixed Back
+on create, join and practice screens, vote/re-vote/final tiles (4px to 8px),
+Menu links, Save/Cancel and Check status/Leave. With the fix removed the
+audit reports the owner's exact case. Local: static checks, 841 unit, layout
+audit 16/16 (Pixel, desktop), Chromium browser suite 377 passed.
+Screens: `docs/screens/round-7-spacing/`, `docs/screens/round-7-contenders/`.
+Not yet published: the live app still runs the 28 October release.
+Next: Verify green twice.
+
 **Verify #362 (`feb038f`, CLAUDE.md only) RED: intermittent iPhone SHADOW
 return-notice test.** Same symptom as #303: after "I'm shielded" the choice
 list did not appear (`e2e/player-public-room.spec.ts`). Unchanged code; cause
