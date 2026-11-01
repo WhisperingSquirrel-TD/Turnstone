@@ -337,7 +337,8 @@ test('home and app first paint stay styled with JavaScript disabled', async ({
       .evaluate((element) => getComputedStyle(element).fontFamily),
   ).toContain('Playfair Display');
   const entryCopyGap = await rootEntry
-    .locator('.game-entry-static > p')
+    // The first paint now uses the app welcome's markup (D122 follow-up).
+    .locator('.game-entry-static .entry-welcome-copy > p')
     .first()
     .evaluate((paragraph) => {
       const heading = paragraph.previousElementSibling;

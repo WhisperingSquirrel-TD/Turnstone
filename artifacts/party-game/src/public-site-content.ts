@@ -80,22 +80,49 @@ function renderPublicHeader(
   `;
 }
 
-/** The game host is a play surface; public information documents stay separate. */
+/** The game host is a play surface; public information documents stay separate.
+ * Owner, 1 November 2026: the first paint uses the app welcome's markup and
+ * classes, with links in place of buttons, so nothing moves when the app
+ * takes over (e2e/entry-first-paint.spec.ts). */
 export function renderGameEntryHtml(basePath = '/'): string {
   const base = normaliseBasePath(basePath);
-  return `${renderPublicHeader(base)}
-    <main id="main" class="game-entry-static">
-      <h1>${escapeHtml(config.appName)}</h1>
-      <p>${escapeHtml(en.entry.welcomeDescription)}</p>
-      <nav aria-label="${escapeHtml(config.appName)}">
-        <a href="${escapeHtml(`${base}join`)}">${escapeHtml(en.entry.joinGame)}</a>
-        <a href="${escapeHtml(`${base}?entry=create`)}">${escapeHtml(en.entry.createGame)}</a>
-        <a href="${escapeHtml(`${base}?entry=rehearsal`)}">${escapeHtml(en.entry.practiseAlone)}</a>
-      </nav>
-      <a class="game-entry-about" href="${escapeHtml(config.companyPageUrl)}">About Oathstone</a>
-      <p class="game-entry-beta"><span class="beta-tag" data-testid="beta-tag">${escapeHtml(en.app.beta)}</span> ${escapeHtml(en.entry.betaNote)}</p>
+  const firstPart = config.appName.slice(
+    0,
+    -config.wordmarkAccentSuffix.length,
+  );
+  const wordmark = `<span>${escapeHtml(firstPart)}</span><span class="entry-gilt">${escapeHtml(config.wordmarkAccentSuffix)}</span>`;
+  return `<div data-game-theme="day" class="entry-experience game-shell">
+    <header class="entry-brand" aria-label="${escapeHtml(config.appName)}">
+      <span class="entry-brand-title"><span class="entry-wordmark" data-testid="text-entry-brand">${wordmark}</span><span class="beta-tag" data-testid="beta-tag">${escapeHtml(en.app.beta)}</span></span>
+      <details class="public-home-menu entry-brand-menu">
+        <summary>${escapeHtml(en.nav.menu)}</summary>
+        <div>
+          <a href="${escapeHtml(base)}">${escapeHtml(en.nav.home)}</a>
+          <a href="${escapeHtml(`${base}faq`)}">${escapeHtml(en.publicSite.faqHeading)}</a>
+          <a href="${escapeHtml(`${base}compare`)}">${escapeHtml(en.publicSite.compareHeading)}</a>
+          <a href="${escapeHtml(config.companyPageUrl)}">About Oathstone</a>
+          <a href="${escapeHtml(config.feedbackMailto)}" data-testid="entry-menu-report-issue">${escapeHtml(en.app.reportIssue)}</a>
+        </div>
+      </details>
+    </header>
+    <main id="main" class="entry-main entry-screen-welcome game-entry-static">
+      <section class="entry-welcome" aria-labelledby="entry-title">
+        <div class="entry-welcome-copy">
+          <h1 id="entry-title" class="entry-display">${wordmark}</h1>
+          <p class="entry-subtitle">${escapeHtml(config.tagline)}</p>
+          <p class="entry-description">${escapeHtml(en.entry.welcomeDescription)}</p>
+        </div>
+        <nav class="entry-choice-list" aria-label="${escapeHtml(config.appName)}">
+          <a class="entry-primary-action" href="${escapeHtml(`${base}join`)}">${escapeHtml(en.entry.joinGame)}</a>
+          <a class="entry-secondary-action" href="${escapeHtml(`${base}?entry=create`)}">${escapeHtml(en.entry.createGame)}</a>
+          <a class="entry-secondary-action entry-quiet-choice" href="${escapeHtml(`${base}?entry=rehearsal`)}">${escapeHtml(en.entry.practiseAlone)}</a>
+        </nav>
+        <a class="entry-about-link" href="${escapeHtml(config.companyPageUrl)}">About Oathstone</a>
+        <p class="entry-beta-note">${escapeHtml(en.entry.betaNote)}</p>
+      </section>
     </main>
-    ${renderStackstoneFooterLink(base)}`;
+    <footer class="brand-credit game-brand-footer" data-testid="brand-footer-entry"><a class="brand-credit-link" href="${escapeHtml(config.organisation.url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(en.app.brandLink)}"><small>${escapeHtml(config.byline)}</small><img class="brand-mark-small" src="${escapeHtml(`${base}${config.stackstoneIcons.onLight}`)}" alt="Stackstone Consulting" width="24" height="24"></a></footer>
+  </div>`;
 }
 
 function renderStackstoneFooterLink(basePath: string): string {

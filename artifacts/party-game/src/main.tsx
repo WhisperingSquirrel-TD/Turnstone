@@ -40,6 +40,27 @@ if (isStaticPublicPage) {
   phoneTheme.addEventListener('change', updateTheme);
   window.addEventListener('storage', updateTheme);
 } else {
+  // The first-paint entry matches the app welcome, theme included, so a
+  // dark phone does not flash light while the app loads (owner, 1 November).
+  const firstPaintEntry = document.querySelector(
+    '#static-home > .entry-experience',
+  );
+  if (firstPaintEntry) {
+    let preference: 'system' | 'light' | 'dark' = 'system';
+    try {
+      preference = readDisplayPreference(window.localStorage);
+    } catch {
+      // The entry remains usable without device storage.
+    }
+    firstPaintEntry.setAttribute(
+      'data-game-theme',
+      gameThemeForPhase(
+        undefined,
+        preference,
+        window.matchMedia('(prefers-color-scheme: dark)').matches,
+      ),
+    );
+  }
   void (async () => {
     const [{ createRoot }, { default: App }] = await Promise.all([
       import('react-dom/client'),

@@ -100,7 +100,7 @@ test.describe('built client through the real Node server', () => {
           'rgb(46, 43, 41)',
         );
         if (path === '/') {
-          const paperHeading = plain.locator('.game-entry-static > h1');
+          const paperHeading = plain.locator('.game-entry-static h1');
           await expect(paperHeading).toHaveText('Oathstone');
           await expect(paperHeading).toHaveCSS(
             'font-family',

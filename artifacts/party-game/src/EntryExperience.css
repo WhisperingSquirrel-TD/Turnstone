@@ -170,6 +170,16 @@
   cursor: pointer;
 }
 
+/* The static first-paint entry uses links where the app uses buttons; give
+   them the same box so nothing moves when the app takes over. */
+.entry-experience a:is(.entry-primary-action, .entry-secondary-action) {
+  font: inherit;
+}
+
+.entry-experience a.entry-secondary-action {
+  min-height: 48px;
+}
+
 .entry-experience button:disabled {
   cursor: not-allowed;
   color: var(--entry-ash) !important;
