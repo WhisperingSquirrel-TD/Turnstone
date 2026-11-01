@@ -2230,3 +2230,10 @@ spacing.
   and a safe code (Postgres SQLSTATE or error class, never the message) to
   the server log (`tests/http.test.ts`). A preview database missing
   migration 0014 had answered 503 with nothing logged.
+
+**D122 follow-up, `.replit` (owner, 1 November 2026).** Tom approved keeping
+Replit's recorded settings on main so a workspace pull cannot drop them:
+`[userenv.shared] OATHSTONE_CLEARDOWN_MODE = "delete"` (his D117 approval)
+and the port mappings 8080 to 8080 and 22814 to 80. No secret is in
+`.replit`; `tests/deployment-config.test.ts` checks these lines and that no
+secret-looking key appears.

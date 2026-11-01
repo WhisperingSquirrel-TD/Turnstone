@@ -35,6 +35,24 @@ function artifactManifests(): string[] {
 }
 
 describe('production deployment configuration', () => {
+  // Tom, 1 November 2026: a workspace reset dropped settings Replit had
+  // recorded in .replit; they now live on main so a pull keeps them.
+  it('keeps the owner-approved clear-down mode and Replit port mappings', () => {
+    expect(replit).toMatch(
+      /^\[userenv\.shared\]\nOATHSTONE_CLEARDOWN_MODE = "delete"$/m,
+    );
+    expect(replit).toMatch(
+      /^\[\[ports\]\]\nlocalPort = 22814\nexternalPort = 80$/m,
+    );
+    expect(replit).toMatch(
+      /^\[\[ports\]\]\nlocalPort = 8080\nexternalPort = 8080$/m,
+    );
+    // No secret ever belongs in .replit.
+    expect(replit).not.toMatch(
+      /(SECRET|PEPPER|PASSWORD|TOKEN|DATABASE_URL)\s*=/,
+    );
+  });
+
   it('deploys one Reserved VM process with the release plan commands', () => {
     const deployment = deploymentSection();
     expect(deployment).toMatch(/^deploymentTarget\s*=\s*"gce"\s*$/m);
