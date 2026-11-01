@@ -2174,3 +2174,19 @@ move-on sequences), the reference model, scenario factor, rehearsal bots,
 console, layout audit (`contenders`, `revote-after-contenders`,
 `verdict-random`) and the full practice run. Screens:
 `docs/screens/round-7-contenders/`.
+
+## D121 — Parity win explained and chosen at setup (owner, 1 November 2026)
+
+Tom: explain parity to the organiser at setup, clearly and with an example,
+and let them choose; the default stays as it is (on).
+
+- Create options gain "Traitors win on equal numbers" (checked by default),
+  a one-line summary of on and off, and a "What's this?" (closed by default)
+  with the worked example: 8 left, 3 Traitors and 5 Faithful; a banishment
+  leaves 3 against 4, a murder leaves 3 against 3 and the Traitors win; with
+  it off the game carries on to the finale.
+- `buildNewGameConfig` passes the choice to `endgame.parity`; the schema
+  default (true) and practice games are unchanged. No engine change.
+- Tests first: `tests/parity-choice.test.ts`,
+  `e2e/create-presenter-option.spec.ts`; layout audit state
+  `create-parity-help`.

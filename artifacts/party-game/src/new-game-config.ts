@@ -8,6 +8,7 @@ export interface NewGameConfigInput {
   presenterEnabled: boolean;
   revealStyle?: 'speaker-circle' | 'one-by-one';
   contendersOnDraw?: boolean;
+  parityWin?: boolean;
 }
 
 export function buildNewGameConfig(input: NewGameConfigInput) {
@@ -25,6 +26,8 @@ export function buildNewGameConfig(input: NewGameConfigInput) {
       // older games replay with their original rule.
       contendersOnDraw: input.contendersOnDraw ?? true,
     },
+    // D121: the organiser chooses at setup; on by default.
+    endgame: { parity: input.parityWin ?? true },
     // Missions have no content yet; games show a notice instead (MISSIONS-REVIEW).
     // The round table agrees the shield holder and the organiser records it (D109).
     missions: {

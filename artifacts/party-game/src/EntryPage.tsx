@@ -707,6 +707,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     presenterEnabled: boolean;
     revealStyle: 'speaker-circle' | 'one-by-one';
     contendersOnDraw: boolean;
+    parityWin: boolean;
   }): Promise<void> {
     setErrors({});
     setBusy((current) => ({ ...current, create: true }));
@@ -720,6 +721,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         presenterEnabled: data.presenterEnabled,
         revealStyle: data.revealStyle,
         contendersOnDraw: data.contendersOnDraw,
+        parityWin: data.parityWin,
       });
       const command = commandSchema.parse({
         type: 'CreateGame',

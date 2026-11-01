@@ -166,6 +166,9 @@ export interface EntryExperienceCopy {
   speakerCircleDescription: string;
   automaticRevealLabel: string;
   automaticRevealDescription: string;
+  parityToggleLabel: string;
+  parityToggleDescription: string;
+  parityHelp: string;
   contendersToggleLabel: string;
   contendersToggleDescription: string;
   presenterToggleLabel: string;
@@ -257,6 +260,7 @@ export interface EntryExperienceProps {
     presenterEnabled: boolean;
     revealStyle: 'speaker-circle' | 'one-by-one';
     contendersOnDraw: boolean;
+    parityWin: boolean;
   }) => void | Promise<void>;
   onApproveJoiner: (joinerId: string) => void | Promise<void>;
   onStartGame: () => void | Promise<void>;
@@ -422,6 +426,7 @@ export function EntryExperience({
     'speaker-circle' | 'one-by-one'
   >('speaker-circle');
   const [contendersOnDraw, setContendersOnDraw] = useState(true);
+  const [parityWin, setParityWin] = useState(true);
   const [duplicateName, setDuplicateName] = useState<string | null>(null);
   const [recoveringSeat, setRecoveringSeat] = useState(false);
   const [browserOnline, setBrowserOnline] = useState(
@@ -681,11 +686,13 @@ export function EntryExperience({
         presenterEnabled,
         revealStyle,
         contendersOnDraw,
+        parityWin,
       });
       onInputChange('organiserPin', '');
       setPresenterEnabled(false);
       setRevealStyle('speaker-circle');
       setContendersOnDraw(true);
+      setParityWin(true);
       onClearSensitiveValues();
       moveTo('lobby');
     } catch {
@@ -1575,6 +1582,28 @@ export function EntryExperience({
                   </span>
                 </span>
               </label>
+              <label
+                className="entry-presenter-option"
+                htmlFor="entry-parity-win"
+              >
+                <input
+                  id="entry-parity-win"
+                  data-testid="toggle-parity"
+                  type="checkbox"
+                  checked={parityWin}
+                  onChange={(event) => setParityWin(event.target.checked)}
+                />
+                <span>
+                  <span className="entry-label">{copy.parityToggleLabel}</span>
+                  <span className="entry-help">
+                    {copy.parityToggleDescription}
+                  </span>
+                </span>
+              </label>
+              <details className="entry-option-help" data-testid="parity-help">
+                <summary>What&apos;s this?</summary>
+                <p className="entry-help">{copy.parityHelp}</p>
+              </details>
               <div
                 className={
                   createReady ? 'entry-action-dock' : 'entry-inline-primary'

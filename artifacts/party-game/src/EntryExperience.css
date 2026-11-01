@@ -1122,3 +1122,22 @@
 .entry-choice-list .entry-text-action {
   min-height: 56px;
 }
+
+/* D121: setup explanations stay closed until asked for. */
+.entry-option-help {
+  margin: -0.4rem 0 0.4rem calc(44px + 0.75rem);
+}
+
+.entry-option-help summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  cursor: pointer;
+  color: var(--game-text, var(--entry-candle));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.entry-option-help[open] > .entry-help {
+  padding-bottom: 0.5rem;
+}

@@ -445,6 +445,13 @@ for (const width of widths)
       await audit('create-checkbox-unchecked');
       await page.getByTestId('toggle-presenter').check();
       await audit('create-checkbox-checked');
+      // D121: the parity explanation opens on request, with its example.
+      await page.getByTestId('parity-help').locator('summary').click();
+      await expect(
+        page.getByTestId('parity-help').getByText(/3 Traitors and 5 Faithful/),
+      ).toBeVisible();
+      await audit('create-parity-help');
+      await page.getByTestId('parity-help').locator('summary').click();
       await page.getByTestId('input-organiser-name').fill('Morgan');
       await page.getByTestId('input-organiser-pin').fill('1234');
       await audit('create-complete');

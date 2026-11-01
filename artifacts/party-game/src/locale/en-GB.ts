@@ -485,6 +485,11 @@ export const en = {
       `Waiting for ${count} more ${count === 1 ? 'player' : 'players'}.`,
     automaticRevealLabel: 'Automatic reveal',
     automaticRevealDescription: 'Use this for video-call or multi-day games.',
+    parityToggleLabel: 'Traitors win on equal numbers',
+    parityToggleDescription:
+      'On: the Traitors win as soon as they equal or outnumber the Faithful. Off: they must survive to the finale, as on the TV show.',
+    parityHelp:
+      'Once the Traitors are as many as the Faithful, they can no longer be outvoted. Example: 8 players are left, 3 Traitors and 5 Faithful. The table banishes a Faithful, leaving 3 against 4, so play goes on. That night the Traitors take another, leaving 3 against 3, and the Traitors win at once. With this off, the game carries on to the finale, where the remaining players choose to end the game or banish again.',
     contendersToggleLabel: 'Contenders discussion on a draw',
     contendersToggleDescription:
       'If a vote is tied, the tied players get 3 minutes to make their case, then everyone votes again between them.',
