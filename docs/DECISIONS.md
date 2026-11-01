@@ -2190,3 +2190,26 @@ and let them choose; the default stays as it is (on).
 - Tests first: `tests/parity-choice.test.ts`,
   `e2e/create-presenter-option.spec.ts`; layout audit state
   `create-parity-help`.
+
+## D122 — Minimum 8px between separate controls (owner, 1 November 2026)
+
+Tom sent a phone screenshot: on "Name your game" the bottom Back button
+touched Continue. He asked for every mobile screen to be checked for
+spacing.
+
+- New layout-audit rule `control-spacing-under-8`: any two separate visible
+  controls (buttons, links, fields, summaries, tabs) in the same layer must
+  be at least 8px apart, side by side or stacked. Not compared: a control
+  nested in another; controls inside one segmented control (`role=tablist`,
+  or `data-control-segment` on the six join-code boxes, which cannot be both
+  44px wide and 8px apart at 320px); a scrolling control against a fixed
+  bar (covered by the fixed-bar checks); controls on either side of a
+  scrolling area's edge, whose gap changes as the page scrolls.
+- The rule found, and these are fixed: Back touching the control above it
+  on create, join and practice screens (its auto margin collapsed to 0);
+  vote, re-vote and final-banishment choice tiles 4px apart (now 8px);
+  Menu links touching; Save and Cancel touching (change end date); Check
+  status touching Leave (join wait).
+- Test: `e2e/layout-audit.spec.ts` (rule reports 0px, passes 8px, ignores a
+  segmented control); with the CSS fix removed the full audit reports the
+  owner's exact case.

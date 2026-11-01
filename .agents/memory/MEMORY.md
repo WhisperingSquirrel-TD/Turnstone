@@ -37,3 +37,4 @@
 - [Game clear-down](game-clear-down.md) — real games deleted the day after their UK last day, practice after 24 h idle; dry-run until the owner approves; mocks need readGameEndDate.
 - [Public copy and robots](public-copy-and-robots.md) — agents may read public pages but all stays noindex; no sitemap; use publicSiteCopy(), driven by config.missionsAvailable.
 - [Scenario version coupling](scenario-version-coupling.md) — bots read the event version; an extra event on an existing path changes goldens.
+- [Control spacing audit](control-spacing-audit.md) — separate controls need 8px; overlap checks alone let touching buttons pass (D122).
