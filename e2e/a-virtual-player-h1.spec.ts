@@ -712,7 +712,25 @@ async function advanceAsOrganiser(
       await moveAnyway.click();
     }
   } else {
-    await expect(moveAnyway).toBeHidden({ timeout: 1_000 });
+    // Verify #368: the tap can land just as a tied night opens its next round
+    // by itself; the console then rightly asks to move the players who have
+    // not yet chosen in that round. An organiser keeps waiting (Cancel) and
+    // the players act. Without a new step, the prompt is still a failure.
+    const unexpectedPrompt = await moveAnyway
+      .waitFor({ state: 'visible', timeout: 1_000 })
+      .then(
+        () => true,
+        () => false,
+      );
+    if (unexpectedPrompt) {
+      await coordinatorPage
+        .getByRole('button', { name: 'Cancel', exact: true })
+        .click();
+      if (await returnToActionsForChangedStep()) return;
+      throw new Error(
+        'Move everyone on asked to move unfinished players, but no new step had begun.',
+      );
+    }
   }
 
   for (let index = 0; index < playerPages.length; index += 1) {
