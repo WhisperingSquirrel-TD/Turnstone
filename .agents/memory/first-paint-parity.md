@@ -18,3 +18,9 @@ passing rather than widening its tolerance.
 A workspace `git reset --hard` skips `scripts/post-merge.sh`, so the
 preview's development database can miss new migrations; apply new files in
 `lib/db/migrations` with psql before testing the preview (see LAUNCH step 1).
+
+Tests that interact with an entry screen right after `goto` must wait for
+`#static-home` to be gone (or for an app-only test id such as
+`button-create-game`): the stand-in shares the welcome's look and some test
+ids, and on slower WebKit a test can otherwise open the stand-in's Menu or
+follow its links (Verify #366).

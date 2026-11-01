@@ -1,6 +1,9 @@
 # Status for reviewer
 
-**D122 follow-up — pushed; Verify pending.** Verify #365 (`70e2b10`) was
+**D122 follow-up — Verify #366 (`2c97d95`) RED on WebKit; fix pushed.**
+Two tests used the first-paint stand-in before the app took over (WebKit
+loads more slowly): one opened its Menu, one followed its Join link. Both
+now wait for the takeover; no product change. Verify #365 (`70e2b10`) was
 green. Owner preview checks found: two Back buttons (now one per screen,
 top); the first-paint entry jumping to the app welcome (it now uses the
 welcome's markup, classes and stylesheet, follows a dark phone, and stays
