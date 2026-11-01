@@ -22,6 +22,7 @@ Oathstone is a free browser-based hidden-traitor party game by Stackstone Consul
 ## Hard limits
 
 - Never publish, deploy, change DNS or domains, change production secrets, widen permissions or enable any paid option. Tom publishes from Replit himself.
+- Replit connector: read-only use is allowed to check what is published (Tom, 1 November 2026): resolve the app, `get_publish_status`, `list_app_files`, `read_app_file`. Never call `update_app_using_prompt`, `publish_app` or any other tool that changes the app.
 - Never print, log or commit secret values. Never invent DNS values.
 - No changes to docs/SPEC.md section 3, rate limits, or any game rule beyond the approved voting circle and organiser-governed discussions (docs/QUESTIONS.md and docs/DECISIONS.md hold the wording).
 - Never read or write HubSpot. Send nothing externally.
