@@ -1,4 +1,5 @@
 import { createHmac, randomUUID } from 'node:crypto';
+import { formatUkDate } from '@workspace/shared/game-end-date';
 
 /** What leaves the server when a real game is created (D123): no names,
  * PINs, codes, game ids or anything a player typed. */
@@ -11,6 +12,39 @@ export type GameCreatedSummary = {
   contendersOnDraw: boolean;
   parityWin: boolean;
 };
+
+const revealStyleNames: Record<GameCreatedSummary['revealStyle'], string> = {
+  'speaker-circle': 'in-room voting circle',
+  'one-by-one': 'automatic reveal',
+  all: 'all votes at once',
+  anonymous: 'anonymous votes',
+};
+
+/** Discord webhooks accept only their own message shape (owner's Discord
+ * channel, 2 November 2026); mentions are disabled. */
+function isDiscordWebhook(url: string): boolean {
+  const { hostname, pathname } = new URL(url);
+  return (
+    [
+      'discord.com',
+      'discordapp.com',
+      'ptb.discord.com',
+      'canary.discord.com',
+    ].includes(hostname) && pathname.startsWith('/api/webhooks/')
+  );
+}
+
+function discordMessage(summary: GameCreatedSummary): string {
+  const parts = [
+    `${summary.playerCount} players`,
+    summary.lastDay ? `last day ${formatUkDate(summary.lastDay)}` : null,
+    `${summary.format} format`,
+    revealStyleNames[summary.revealStyle],
+    `Contenders ${summary.contendersOnDraw ? 'on' : 'off'}`,
+    `parity win ${summary.parityWin ? 'on' : 'off'}`,
+  ].filter(Boolean);
+  return `New Oathstone game: ${parts.join(', ')}.`;
+}
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -29,11 +63,12 @@ export function createGameCreatedNotifier(options: {
   const newId = options.newId ?? randomUUID;
   return async (summary) => {
     if (!url) return;
-    const body = JSON.stringify({
-      type: 'game.created',
-      id: newId(),
-      ...summary,
-    });
+    const body = isDiscordWebhook(url)
+      ? JSON.stringify({
+          content: discordMessage(summary),
+          allowed_mentions: { parse: [] },
+        })
+      : JSON.stringify({ type: 'game.created', id: newId(), ...summary });
     const timestamp = String(Math.floor(Date.now() / 1000));
     const headers: Record<string, string> = {
       'content-type': 'application/json',

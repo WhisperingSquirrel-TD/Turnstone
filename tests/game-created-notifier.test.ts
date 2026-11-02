@@ -47,6 +47,23 @@ describe('game-created webhook', () => {
     );
   });
 
+  it('posts a readable Discord message to a Discord webhook', async () => {
+    const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+    await createGameCreatedNotifier({
+      url: 'https://discord.com/api/webhooks/123/test-only-token',
+      fetchImpl,
+    })(summary);
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(JSON.parse(String(init.body))).toEqual({
+      content:
+        'New Oathstone game: 15 players, last day Friday 25 December 2026, day format, in-room voting circle, Contenders on, parity win on.',
+      allowed_mentions: { parse: [] },
+    });
+  });
+
   it('does nothing when no webhook is configured', async () => {
     const fetchImpl = vi.fn();
     await createGameCreatedNotifier({ fetchImpl })(summary);
