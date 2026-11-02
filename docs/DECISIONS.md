@@ -2265,3 +2265,9 @@ eight. The admission control itself (SPEC 20, peak-day protection) stays:
 it protects games in progress. Recommended production value 1000 until a
 measured capacity replaces it (PLAN). Tom sets it; nobody else changes
 production settings. Not yet done: counting only recently active games.
+
+**D123 addendum (owner, 2 November 2026).** Tom wants the notices in a
+Discord channel. Discord webhooks accept only their own message shape, so a
+Discord webhook address receives one readable line ("New Oathstone game: 15
+players, last day …, day format, in-room voting circle, Contenders on, parity
+win on.") with mentions disabled; other addresses keep the signed JSON.

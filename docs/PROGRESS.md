@@ -1,5 +1,11 @@
 # Status for reviewer
 
+**D123 Discord format — pushed; Verify pending.** Verify #371 (`e1a4269`)
+was green for the webhook. Tom wants notices in a Discord channel; a Discord
+webhook address now receives one readable line (mentions disabled), other
+addresses keep the signed JSON. Test first. Local: static checks, 849 unit.
+Next: Verify green; Tom sets the secrets, pulls and publishes.
+
 **D123 game-created webhook — pushed; Verify pending.** Verify #370
 (`ea993c2`) was green. Owner asked for an agent notice when a user creates a
 game (webhook chosen): signed JSON with no personal data, background, 5 s
