@@ -107,7 +107,8 @@ sign-up.
    `/readyz` are the health paths. _Done (recorded 29 October 2026; game live on the domain)._
 6. **Production secrets, first publish** (Publishing → Secrets):
    `DATABASE_URL`; `SESSION_SECRET` and `PIN_PEPPER` (new random values);
-   `PIN_PEPPER_VERSION` = `1`; `MAX_ACTIVE_GAMES` = `10`;
+   `PIN_PEPPER_VERSION` = `1`; `MAX_ACTIVE_GAMES` = `1000` (was a
+   placeholder `10`; see D123);
    `APP_BASE_URL` and `PUBLIC_BASE_URL` = the deployment's own
    `https://….replit.app` address _(Replit shows this)_. The game accepts
    requests only from `APP_BASE_URL`, and invite links use

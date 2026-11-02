@@ -1,5 +1,15 @@
 # Status for reviewer
 
+**D123 game-created webhook — pushed; Verify pending.** Verify #370
+(`ea993c2`) was green. Owner asked for an agent notice when a user creates a
+game (webhook chosen): signed JSON with no personal data, background, 5 s
+timeout, off until `OATHSTONE_NOTIFY_WEBHOOK_URL` is set. Tests first
+(notifier, environment, database integration). Local: static checks, 848
+unit, 98 integration. Owner also asked why the game limit is 10: it was a
+placeholder; recommended 1000 now (Tom sets it), measured value later.
+Next: Verify green; Tom sets the two webhook secrets and `MAX_ACTIVE_GAMES`,
+pulls and publishes.
+
 **Verify #369 (`fa2bc34`) GREEN.** Main is green after the #368 H1 night
 race fix. Nothing queued; held briefs await Tom.
 

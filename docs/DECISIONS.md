@@ -2237,3 +2237,31 @@ Replit's recorded settings on main so a workspace pull cannot drop them:
 and the port mappings 8080 to 8080 and 22814 to 80. No secret is in
 `.replit`; `tests/deployment-config.test.ts` checks these lines and that no
 secret-looking key appears.
+
+## D123 — Game-created webhook; game limit sized for marketing (owner, 2 November 2026)
+
+**Webhook.** Tom asked to be notified, through his agent, when a user creates
+a game, and chose a webhook. This is the one approved exception to "send
+nothing externally".
+
+- Sent once per new real game (not practice, not a repeated create), in the
+  background with a 5-second timeout and no redirects; it can never delay
+  or fail game creation. Failures are logged by reason only.
+- Off unless `OATHSTONE_NOTIFY_WEBHOOK_URL` (https only) is set as a
+  production secret; `OATHSTONE_NOTIFY_WEBHOOK_SECRET` (32+ characters) adds
+  an HMAC-SHA256 signature over `timestamp.body` in `x-oathstone-signature`,
+  with `x-oathstone-timestamp`, so the receiver can reject forgeries and
+  replays.
+- Body: event type, a random event id, created time, player count, last
+  day, format, reveal style, Contenders and parity settings. Never names,
+  PINs, game codes, game ids or anything a player typed.
+- Tests: `tests/game-created-notifier.test.ts`, `tests/env.test.ts`,
+  `tests/database.integration.test.ts` (one notice per new game, none on a
+  repeat, creation not delayed by a webhook that never answers).
+
+**Game limit.** `MAX_ACTIVE_GAMES` = 10 was a launch placeholder; with
+"active" including abandoned games it could refuse new organisers after
+eight. The admission control itself (SPEC 20, peak-day protection) stays:
+it protects games in progress. Recommended production value 1000 until a
+measured capacity replaces it (PLAN). Tom sets it; nobody else changes
+production settings. Not yet done: counting only recently active games.

@@ -24,6 +24,8 @@ Existing pnpm workspace retained: `artifacts/api-server` = requested apps/server
 
 Game clear-down (D117): the API server runs an in-process job hourly that deletes real games the day after their end date (from 04:00 UK) and practice games 24 hours after their last activity, leaving a tombstone (`lib/db/src/clear-down.ts`, `artifacts/api-server/src/clear-down-scheduler.ts`). `OATHSTONE_CLEARDOWN_MODE` is `dry-run` (default, counts only), `delete` or `off` (kill switch). The owner approved `delete` for production on 28 October 2026 (set by Tom in Replit).
 
+Game-created webhook (D123): when a real game (not practice) is created, the API server POSTs a small signed JSON notice in the background (`artifacts/api-server/src/game-created-notifier.ts`). It is off unless the production secret `OATHSTONE_NOTIFY_WEBHOOK_URL` (https only) is set; `OATHSTONE_NOTIFY_WEBHOOK_SECRET` (32+ characters) signs it. The body is `{type: "game.created", id, createdAt, playerCount, lastDay, format, revealStyle, contendersOnDraw, parityWin}`: no names, PINs, codes or game ids. Headers: `x-oathstone-timestamp` (Unix seconds) and `x-oathstone-signature: sha256=<hex HMAC-SHA256 of "timestamp.body">`. Failures never affect game creation and are logged without the address.
+
 Run services with their artifact-managed workflows. Node 24 LTS. Database and session secrets remain in workspace Secrets, never read out or stored in files.
 
 ## Standing scope rules
