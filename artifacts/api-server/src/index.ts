@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { createApp } from './app';
 import { parseEnvironment } from './config/env';
 import { logger } from './lib/logger';
+import { createGameCreatedNotifier } from './game-created-notifier';
 import { createServerAppOptions } from './server-options';
 import { fileURLToPath } from 'node:url';
 import { assertClientBuild } from './static-client';
@@ -115,6 +116,14 @@ const app = createApp(
     // Route and safe code only, so a failing request is diagnosable (D122).
     reportUnexpectedError: (report) =>
       logger.error(report, 'Request failed unexpectedly'),
+    // D123: owner-approved notice of each new real game, signed, no
+    // personal data; off unless the webhook secret is set.
+    onGameCreated: createGameCreatedNotifier({
+      url: environment.OATHSTONE_NOTIFY_WEBHOOK_URL,
+      secret: environment.OATHSTONE_NOTIFY_WEBHOOK_SECRET,
+      onFailure: (failure) =>
+        logger.warn(failure, 'Game-created notification failed'),
+    }),
     ...(environment.NODE_ENV === 'test'
       ? {
           testOnlyRateLimitDiagnostics: true,

@@ -30,6 +30,13 @@ const environmentSchema = z
     OATHSTONE_CLEARDOWN_MODE: z
       .enum(['off', 'dry-run', 'delete'])
       .default('dry-run'),
+    // D123: optional signed webhook when a real game is created.
+    OATHSTONE_NOTIFY_WEBHOOK_URL: z
+      .string()
+      .url()
+      .refine((value) => new URL(value).protocol === 'https:')
+      .optional(),
+    OATHSTONE_NOTIFY_WEBHOOK_SECRET: z.string().min(32).optional(),
   })
   .superRefine((environment, context) => {
     if (

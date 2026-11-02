@@ -33,6 +33,32 @@ describe('environment validation', () => {
       }),
     ).toThrow('MAX_ACTIVE_GAMES');
   });
+  it('accepts an optional https game-created webhook (D123)', () => {
+    expect(
+      parseEnvironment(valid).OATHSTONE_NOTIFY_WEBHOOK_URL,
+    ).toBeUndefined();
+    const configured = parseEnvironment({
+      ...valid,
+      OATHSTONE_NOTIFY_WEBHOOK_URL: 'https://hooks.example.test/oathstone',
+      OATHSTONE_NOTIFY_WEBHOOK_SECRET: 'x'.repeat(32),
+    });
+    expect(configured.OATHSTONE_NOTIFY_WEBHOOK_URL).toBe(
+      'https://hooks.example.test/oathstone',
+    );
+    expect(() =>
+      parseEnvironment({
+        ...valid,
+        OATHSTONE_NOTIFY_WEBHOOK_URL: 'http://hooks.example.test/oathstone',
+      }),
+    ).toThrow('OATHSTONE_NOTIFY_WEBHOOK_URL');
+    expect(() =>
+      parseEnvironment({
+        ...valid,
+        OATHSTONE_NOTIFY_WEBHOOK_URL: 'https://hooks.example.test/oathstone',
+        OATHSTONE_NOTIFY_WEBHOOK_SECRET: 'short',
+      }),
+    ).toThrow('OATHSTONE_NOTIFY_WEBHOOK_SECRET');
+  });
   it('requires explicit coming-soon mode before allowing public crawling', () => {
     expect(() =>
       parseEnvironment({

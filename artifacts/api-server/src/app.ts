@@ -6,6 +6,7 @@ import {
   randomUUID,
   timingSafeEqual,
 } from 'node:crypto';
+import type { GameCreatedSummary } from './game-created-notifier';
 import express, {
   type Express,
   type NextFunction,
@@ -116,6 +117,8 @@ export type AppOptions = {
   /** Receives the route and a safe error code for unexpected failures; never
    * the message, body or any player data. */
   reportUnexpectedError?: (report: { route: string; code: string }) => void;
+  /** D123: told once per new real game; never awaited by the request. */
+  onGameCreated?: (summary: GameCreatedSummary) => unknown;
   resolveViewer?: (request: Request) => Viewer | Promise<Viewer>;
   resolveCoordinatorViewer?: (request: Request) => Viewer | Promise<Viewer>;
   /** Test-only deterministic clock; the production server never supplies it. */
@@ -898,6 +901,24 @@ export function createApp(
         return;
       }
       await publishGame(parsed.data.id);
+      if (!stored.duplicate && options.onGameCreated) {
+        const config = parsed.data.config;
+        try {
+          void Promise.resolve(
+            options.onGameCreated({
+              createdAt: new Date(now).toISOString(),
+              playerCount: config.players.count,
+              lastDay: parsed.data.endDate ?? null,
+              format: config.schedule.format,
+              revealStyle: config.roundTable.revealStyle,
+              contendersOnDraw: config.roundTable.contendersOnDraw,
+              parityWin: config.endgame.parity,
+            }),
+          ).catch(() => undefined);
+        } catch {
+          // A notification must never affect game creation.
+        }
+      }
       if (!stored.duplicate)
         response.cookie(
           cookieNameForCoordinatorGame(parsed.data.id),

@@ -269,6 +269,48 @@ it('serves a capability-authorised blind console view without changing player or
   }
 });
 
+it('announces each new real game once, without delaying creation (D123)', async () => {
+  const gameId = randomUUID();
+  const idempotencyKey = randomUUID();
+  const created: unknown[] = [];
+  const app = createApp(
+    async () => {
+      await db.execute(sql`select version from foundation_meta where id = 1`);
+    },
+    {
+      onGameCreated: (summary) => {
+        created.push(summary);
+        return new Promise(() => undefined); // a webhook that never answers
+      },
+    },
+  );
+  const endDate = ukCalendarDate(Date.now());
+  const body = {
+    type: 'CreateGame',
+    endDate,
+    id: gameId,
+    idempotencyKey,
+    config: gameConfigSchema.parse({
+      players: { count: 12 },
+      roundTable: { contendersOnDraw: true },
+    }),
+  };
+  const first = await request(app).post('/api/games').send(body);
+  expect(first.status).toBe(201);
+  const repeat = await request(app).post('/api/games').send(body);
+  expect(repeat.status).not.toBe(201);
+  expect(created).toEqual([
+    expect.objectContaining({
+      playerCount: 12,
+      lastDay: endDate,
+      contendersOnDraw: true,
+    }),
+  ]);
+  const text = JSON.stringify(created);
+  for (const secretish of [gameId, idempotencyKey])
+    expect(text).not.toContain(secretish);
+});
+
 it('creates a game with a hashed, game-scoped coordinator capability cookie', async () => {
   const gameId = randomUUID();
   const resolveCoordinator = createCoordinatorViewerResolver({
