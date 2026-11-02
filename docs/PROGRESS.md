@@ -1,6 +1,10 @@
 # Status for reviewer
 
-**D123 Discord format — pushed; Verify pending.** Verify #371 (`e1a4269`)
+**`.replit` keeps `MAX_ACTIVE_GAMES` = 1000 — pushed; Verify pending.**
+Tom set the limit as a Replit configuration; it is now on main so a pull
+keeps it. Verify #372 (`2322401`) was green for the Discord format.
+
+**D123 Discord format.** Verify #371 (`e1a4269`)
 was green for the webhook. Tom wants notices in a Discord channel; a Discord
 webhook address now receives one readable line (mentions disabled), other
 addresses keep the signed JSON. Test first. Local: static checks, 849 unit.

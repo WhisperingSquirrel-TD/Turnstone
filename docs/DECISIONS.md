@@ -2271,3 +2271,8 @@ Discord channel. Discord webhooks accept only their own message shape, so a
 Discord webhook address receives one readable line ("New Oathstone game: 15
 players, last day …, day format, in-room voting circle, Contenders on, parity
 win on.") with mentions disabled; other addresses keep the signed JSON.
+
+**D123 addendum, game limit (owner, 2 November 2026).** Tom set
+`MAX_ACTIVE_GAMES` = 1000 as a Replit configuration, which Replit records in
+`.replit`; it is now on main beside the clear-down mode so a workspace pull
+keeps it (`tests/deployment-config.test.ts`).

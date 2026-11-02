@@ -99,6 +99,7 @@ packages = ["alsa-lib", "at-spi2-atk", "atk", "cairo", "cups", "dbus", "enchant"
 
 [userenv.shared]
 OATHSTONE_CLEARDOWN_MODE = "delete"
+MAX_ACTIVE_GAMES = "1000"
 
 [[ports]]
 localPort = 8080

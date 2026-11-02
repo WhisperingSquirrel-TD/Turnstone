@@ -39,7 +39,7 @@ describe('production deployment configuration', () => {
   // recorded in .replit; they now live on main so a pull keeps them.
   it('keeps the owner-approved clear-down mode and Replit port mappings', () => {
     expect(replit).toMatch(
-      /^\[userenv\.shared\]\nOATHSTONE_CLEARDOWN_MODE = "delete"$/m,
+      /^\[userenv\.shared\]\nOATHSTONE_CLEARDOWN_MODE = "delete"\nMAX_ACTIVE_GAMES = "1000"$/m,
     );
     expect(replit).toMatch(
       /^\[\[ports\]\]\nlocalPort = 22814\nexternalPort = 80$/m,
