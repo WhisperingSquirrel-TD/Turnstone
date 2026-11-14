@@ -143,8 +143,12 @@ test('a failed PIN recovery gives a clear next step', async ({
   await page
     .getByRole('button', { name: "Yes, that's me", exact: true })
     .click();
-  await page.getByLabel('4-digit PIN', { exact: true }).fill('1234');
-  await page.getByRole('button', { name: 'Join', exact: true }).click();
+  await page
+    .getByLabel('Your existing 4-digit PIN', { exact: true })
+    .fill('1234');
+  await page
+    .getByRole('button', { name: 'Re-enter game', exact: true })
+    .click();
 
   await expect(page.getByRole('alert')).toHaveText(RECOVERY_FAILED);
 });
@@ -225,8 +229,12 @@ test('a generic recovery refusal still gives a specific next step', async ({
   await page
     .getByRole('button', { name: "Yes, that's me", exact: true })
     .click();
-  await page.getByLabel('4-digit PIN', { exact: true }).fill('1234');
-  await page.getByRole('button', { name: 'Join', exact: true }).click();
+  await page
+    .getByLabel('Your existing 4-digit PIN', { exact: true })
+    .fill('1234');
+  await page
+    .getByRole('button', { name: 'Re-enter game', exact: true })
+    .click();
 
   await expect(page.getByRole('alert')).toHaveText(RECOVERY_FAILED);
 });
@@ -244,8 +252,12 @@ test('a network failure during recovery gives a clear next step', async ({
   await page
     .getByRole('button', { name: "Yes, that's me", exact: true })
     .click();
-  await page.getByLabel('4-digit PIN', { exact: true }).fill('1234');
-  await page.getByRole('button', { name: 'Join', exact: true }).click();
+  await page
+    .getByLabel('Your existing 4-digit PIN', { exact: true })
+    .fill('1234');
+  await page
+    .getByRole('button', { name: 'Re-enter game', exact: true })
+    .click();
 
   await expect(page.getByRole('alert')).toHaveText(RECOVERY_NETWORK);
 });

@@ -129,8 +129,12 @@ test('duplicate name can recover the existing seat with its PIN', async ({
   await page
     .getByRole('button', { name: "Yes, that's me", exact: true })
     .click();
-  await page.getByLabel('4-digit PIN', { exact: true }).fill('1234');
-  await page.getByRole('button', { name: 'Join', exact: true }).click();
+  await page
+    .getByLabel('Your existing 4-digit PIN', { exact: true })
+    .fill('1234');
+  await page
+    .getByRole('button', { name: 'Re-enter game', exact: true })
+    .click();
   await expect(page).toHaveURL(/\/game\/recovered-game$/);
 });
 
