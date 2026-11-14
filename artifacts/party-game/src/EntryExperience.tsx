@@ -139,6 +139,14 @@ export interface EntryExperienceCopy {
   pinHeading: string;
   pinLabel: string;
   pinHint: string;
+  reenterWithPin: string;
+  reenterWithCode: string;
+  reenterHeading: string;
+  reenterPinLabel: string;
+  reenterPinHint: string;
+  reenterButton: string;
+  reenterPending: string;
+  continueToPin: string;
   joinButton: string;
   joinPending: string;
   waitingHeading: (organiser: string) => string;
@@ -555,6 +563,28 @@ export function EntryExperience({
     );
   }
 
+  function beginSeatRecovery() {
+    if (!VALID_CODE.test(inputs.joinCodeEntry.trim().toUpperCase())) {
+      setLocalError(copy.codeError);
+      return;
+    }
+    if (inputs.joinName.trim().length < 2) {
+      setLocalError(copy.nameError);
+      return;
+    }
+    setDuplicateName(null);
+    setRecoveringSeat(true);
+    onInputChange('joinPin', '');
+    moveTo('join-pin');
+  }
+
+  function beginSeatRecoveryFromInvite() {
+    setDuplicateName(null);
+    setRecoveringSeat(true);
+    onInputChange('joinPin', '');
+    moveTo('join-code');
+  }
+
   function updateCode(value: string) {
     const clean = value
       .toUpperCase()
@@ -812,7 +842,9 @@ export function EntryExperience({
         : screen === 'join-name'
           ? copy.nameHeading
           : screen === 'join-pin'
-            ? copy.pinHeading
+            ? recoveringSeat
+              ? copy.reenterHeading
+              : copy.pinHeading
             : screen === 'join-wait'
               ? copy.waitingHeading(organiserDisplayName)
               : screen === 'create-name'
@@ -985,6 +1017,12 @@ export function EntryExperience({
                     setLocalError(copy.nameError);
                     return;
                   }
+                  if (recoveringSeat) {
+                    setLocalError('');
+                    onInputChange('joinPin', '');
+                    moveTo('join-pin');
+                    return;
+                  }
                   void checkJoinName();
                 }}
               >
@@ -1031,6 +1069,14 @@ export function EntryExperience({
                     setLocalError('');
                   }}
                 />
+                <button
+                  className="entry-secondary-action"
+                  data-testid="button-reenter-seat"
+                  type="button"
+                  onClick={beginSeatRecovery}
+                >
+                  {copy.reenterWithPin}
+                </button>
                 {duplicateName && (
                   <div
                     className="entry-duplicate-choice"
@@ -1125,6 +1171,14 @@ export function EntryExperience({
                     </label>
                   </fieldset>
                 )}
+                <button
+                  className="entry-secondary-action"
+                  data-testid="button-reenter-seat-from-invite"
+                  type="button"
+                  onClick={beginSeatRecoveryFromInvite}
+                >
+                  {copy.reenterWithCode}
+                </button>
                 {duplicateName ? (
                   <div
                     className="entry-form-area"
@@ -1159,7 +1213,7 @@ export function EntryExperience({
               >
                 {gameEndDate && <GameEndDateNotice endDate={gameEndDate} />}
                 <label className="entry-label" htmlFor="entry-join-pin">
-                  {copy.pinLabel}
+                  {recoveringSeat ? copy.reenterPinLabel : copy.pinLabel}
                 </label>
                 <input
                   id="entry-join-pin"
@@ -1179,7 +1233,9 @@ export function EntryExperience({
                     )
                   }
                 />
-                <p className="entry-help">{copy.pinHint}</p>
+                <p className="entry-help">
+                  {recoveringSeat ? copy.reenterPinHint : copy.pinHint}
+                </p>
               </form>
             )}
 
@@ -2070,7 +2126,11 @@ export function EntryExperience({
               }
             }}
           >
-            {duplicateName ? copy.duplicateNameYes : copy.continue}
+            {duplicateName
+              ? copy.duplicateNameYes
+              : recoveringSeat
+                ? copy.continueToPin
+                : copy.continue}
           </button>
           {primaryHint}
         </div>
@@ -2133,7 +2193,13 @@ export function EntryExperience({
             form="entry-join-pin-form"
             disabled={busy.join || !/^\d{4}$/.test(inputs.joinPin)}
           >
-            {busy.join ? copy.joinPending : copy.joinButton}
+            {recoveringSeat
+              ? busy.join
+                ? copy.reenterPending
+                : copy.reenterButton
+              : busy.join
+                ? copy.joinPending
+                : copy.joinButton}
           </button>
           {primaryHint}
         </div>

@@ -133,3 +133,119 @@ test('duplicate name can recover the existing seat with its PIN', async ({
   await page.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(page).toHaveURL(/\/game\/recovered-game$/);
 });
+
+test('a returning player can recover after the normal Join path refuses the code', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'Returning-seat recovery runs on phone profiles',
+  );
+  let nameCheckCalls = 0;
+  await page.route('**/api/join/name-check', async (route) => {
+    nameCheckCalls += 1;
+    await route.fulfill({
+      status: 409,
+      json: { error: 'The game is not accepting new players.' },
+    });
+  });
+  await page.route('**/api/recover', async (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      shortCode: 'ABC234',
+      name: 'Alex',
+      pin: '1234',
+    });
+    await route.fulfill({
+      json: {
+        serverNow: Date.now(),
+        version: 4,
+        view: recoveredView,
+      },
+    });
+  });
+  await page.route('**/api/games/recovered-game/view', (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: 4, view: recoveredView },
+    }),
+  );
+
+  await page.setViewportSize({ width: 320, height: 640 });
+  await enterJoinName(page);
+  await expect(page.getByRole('alert')).toBeVisible();
+  const reenter = page.getByTestId('button-reenter-seat');
+  await expect(reenter).toBeVisible();
+  const reenterBounds = await reenter.boundingBox();
+  expect(reenterBounds?.height).toBeGreaterThanOrEqual(44);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await reenter.click();
+  await expect(page.getByTestId('input-join-pin')).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Re-enter your game' }),
+  ).toBeVisible();
+  await page.getByLabel('Your existing 4-digit PIN').fill('1234');
+  await page
+    .getByRole('button', { name: 'Re-enter game', exact: true })
+    .click();
+
+  await expect(page).toHaveURL(/\/game\/recovered-game$/);
+  expect(nameCheckCalls).toBe(1);
+});
+
+test('an invitation link offers code-based recovery without checking new-seat eligibility', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !['Pixel', 'iPhone'].includes(testInfo.project.name),
+    'Invitation recovery runs on phone profiles',
+  );
+  let nameChecks = 0;
+  await page.route('**/api/csrf', (route) =>
+    route.fulfill({ json: { csrfToken: 'c'.repeat(43) } }),
+  );
+  await page.route('**/api/join/name-check', (route) => {
+    nameChecks += 1;
+    return route.fulfill({
+      status: 409,
+      json: { error: 'Not accepting joins.' },
+    });
+  });
+  await page.route('**/api/recover', async (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      shortCode: 'ABC234',
+      name: 'Alex',
+      pin: '1234',
+    });
+    await route.fulfill({
+      json: { serverNow: Date.now(), version: 4, view: recoveredView },
+    });
+  });
+  await page.route('**/api/games/recovered-game/view', (route) =>
+    route.fulfill({
+      json: { serverNow: Date.now(), version: 4, view: recoveredView },
+    }),
+  );
+
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto(`/join/recovered-game#${'t'.repeat(43)}`);
+  await page.getByLabel('Your first name', { exact: true }).fill('Alex');
+  await page.getByTestId('button-reenter-seat-from-invite').click();
+  const codeBoxes = page.getByRole('textbox', {
+    name: /Game code character/,
+  });
+  for (let index = 0; index < 6; index += 1) {
+    await codeBoxes.nth(index).fill('ABC234'[index]!);
+  }
+  await expect(page.getByTestId('input-join-name')).toHaveValue('Alex');
+  await page.getByRole('button', { name: 'Continue to PIN' }).click();
+  await page.getByLabel('Your existing 4-digit PIN').fill('1234');
+  await page
+    .getByRole('button', { name: 'Re-enter game', exact: true })
+    .click();
+
+  await expect(page).toHaveURL(/\/game\/recovered-game$/);
+  expect(nameChecks).toBe(0);
+});

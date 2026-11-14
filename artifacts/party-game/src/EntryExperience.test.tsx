@@ -157,6 +157,8 @@ describe('Stage 2A entry screens', () => {
     expect(html).toContain('data-testid="input-join-code-1"');
     expect(html).toContain('data-testid="input-join-code-6"');
     expect(html).toContain('data-testid="input-join-name"');
+    expect(html).toContain('data-testid="button-reenter-seat"');
+    expect(html).toContain('Re-enter with your PIN');
     expect(html).toContain('class="entry-inline-primary"');
     expect(html).not.toContain('data-testid="entry-action-dock"');
     expect(html).toContain(en.entry.missingNameAndCode);

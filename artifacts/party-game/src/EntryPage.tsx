@@ -638,12 +638,17 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     name: string;
     pin: string;
   }): Promise<void> {
+    const shortCode = data.shortCode.trim().toUpperCase();
+    const recoveryLocator =
+      shortCode.length === 6
+        ? { shortCode }
+        : inviteToken && inviteGameId
+          ? { gameId: inviteGameId, inviteToken }
+          : { shortCode };
     const recovered = await recoverSeat({
       apiOrigin: config.apiOrigin,
       csrfToken,
-      ...(inviteToken && inviteGameId
-        ? { gameId: inviteGameId, inviteToken }
-        : { shortCode: data.shortCode }),
+      ...recoveryLocator,
       name: data.name,
       pin: data.pin,
     });

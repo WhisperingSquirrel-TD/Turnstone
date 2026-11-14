@@ -442,6 +442,14 @@ export const en = {
     pinLabel: '4-digit PIN',
     pinHint:
       'This is your private 4-digit PIN, not the game code. You’ll only need it if you change phones.',
+    reenterWithPin: 'Already have a seat? Re-enter with your PIN',
+    reenterWithCode: 'Already playing? Re-enter with your game code',
+    reenterHeading: 'Re-enter your game',
+    reenterPinLabel: 'Your existing 4-digit PIN',
+    reenterPinHint: 'Use the same private PIN you chose when you first joined.',
+    reenterButton: 'Re-enter game',
+    reenterPending: 'Re-entering…',
+    continueToPin: 'Continue to PIN',
     joinButton: 'Join',
     joinPending: 'Sending request…',
     waitingHeading: (organiser: string) =>
