@@ -6,20 +6,21 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type FullViewOrganiserNotice =
-  | {
-      kind: 'added_time';
-      /**
-       * @minimum 1
-       * @maximum 60
-       */
-      minutes: number;
-      /** @minimum 1 */
-      seq: number;
-    }
-  | {
-      kind: 'moved_on';
-      /** @minimum 1 */
-      seq: number;
-    }
-  | null;
+export type FullViewOrganiserNotice = {
+  kind: 'added_time';
+  /**
+     * @minimum 1
+     * @maximum 60
+     */
+  minutes: number;
+  /** @minimum 1 */
+  seq: number;
+} | {
+  kind: 'moved_on';
+  /** @minimum 1 */
+  seq: number;
+} | {
+  kind: 'timer_ended';
+  /** @minimum 1 */
+  seq: number;
+} | null;

@@ -4839,6 +4839,22 @@ test('Dawn, verdict, vote reveal and results appear on the phone without a prese
 
   currentView = {
     ...currentView,
+    phase: 'DEBATE',
+    publicLog: [
+      ...currentView.publicLog,
+      { seq: 14, at: Date.now(), action: 'phase_advanced' },
+    ],
+  };
+  await page.reload();
+  await expect(page.getByTestId('public-log-entry-14')).toHaveText(
+    'The timer ended. The game moved on.',
+  );
+  await expect(page.getByTestId('while-away-card')).toContainText(
+    'The timer ended. The game moved on.',
+  );
+
+  currentView = {
+    ...currentView,
     phase: 'FINISHED',
     winner: 'faithful',
     publicAnnouncement: { kind: 'finished', winner: 'faithful' },

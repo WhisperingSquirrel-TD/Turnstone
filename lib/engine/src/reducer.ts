@@ -182,9 +182,21 @@ export function evolve(previous: State | null, input: unknown): State {
         state.revealed = [];
       }
       state.phase = event.phase;
-      state.organiserNotice = event.movedOn
-        ? { kind: 'moved_on', seq: event.seq }
-        : null;
+      state.organiserNotice = event.deadlineElapsed
+        ? { kind: 'timer_ended', seq: event.seq }
+        : event.movedOn
+          ? { kind: 'moved_on', seq: event.seq }
+          : null;
+      if (event.deadlineElapsed) {
+        state.publicLog = [
+          ...state.publicLog,
+          {
+            seq: event.seq,
+            at: event.at,
+            action: 'phase_advanced',
+          },
+        ];
+      }
       state.readySeats = [];
       state.skippedActions = [];
       state.disconnectedRemovals = state.disconnectedRemovals.map(

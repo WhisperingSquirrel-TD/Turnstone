@@ -295,6 +295,7 @@ export function decide(
     return ctx.testOnlyPhaseDurationMs ?? (value[phase] ?? 1) * 60_000;
   };
   let organiserMove = false;
+  let deadlineElapsed = false;
   const enter = (phase: Phase, nextCycle = state!.cycle) => {
     const phaseDuration = state!.config.rehearsal.enabled
       ? null
@@ -306,6 +307,7 @@ export function decide(
     organiserMove = false;
     emit('PhaseChanged', {
       ...(movedOn ? { movedOn: true } : {}),
+      ...(deadlineElapsed ? { deadlineElapsed: true } : {}),
       phase,
       deadline: ['DRAFT', 'LOBBY'].includes(phase)
         ? null
@@ -328,6 +330,7 @@ export function decide(
         checkWin();
       } else checkWin();
     }
+    deadlineElapsed = false;
   };
   const remove = (
     seatId: string,
@@ -764,6 +767,11 @@ export function decide(
         ctx.actor.kind === 'coordinator' &&
         discussionSteps.has(state.phase) &&
         !state.config.rehearsal.enabled;
+      deadlineElapsed =
+        ctx.actor.kind === 'system' &&
+        !state.config.rehearsal.enabled &&
+        state.deadline !== null &&
+        ctx.now >= state.deadline;
       const minimumAdvanceAt = getMinimumAdvanceAt(state);
       if (minimumAdvanceAt !== null && ctx.now < minimumAdvanceAt)
         return error('TOO_EARLY');

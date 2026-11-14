@@ -108,14 +108,28 @@ describe('organiser-governed timing (D120)', () => {
     );
   });
 
-  it('clears the notice when a step ends at its guide time, with no notice of its own', () => {
+  it('announces deadline-driven moves to every role without an organiser notice', () => {
     const g = started();
     advance(g, 'DEBATE');
     command(g, { type: 'ExtendPhase', minutes: 5 });
     g.context.now = g.state.deadline! + 1;
     command(g, { type: 'AdvancePhase' }, true, { kind: 'system' });
     expect(g.state.phase).toBe('VOTE');
-    expect(sharedNotices(g)).toBeNull();
+    expect(sharedNotices(g)).toEqual({
+      kind: 'timer_ended',
+      seq: g.state.version,
+    });
+    const expected = {
+      seq: g.state.version,
+      at: g.context.now,
+      action: 'phase_advanced',
+    };
+    expect(g.state.publicLog.at(-1)).toEqual(expected);
+    for (const seat of g.state.seats) {
+      expect(
+        viewFor({ kind: 'player', seatId: seat.id }, g.state).publicLog,
+      ).toContainEqual(expected);
+    }
   });
 
   it('never skips or time-forces action steps: votes, circle reveals and night choices', () => {

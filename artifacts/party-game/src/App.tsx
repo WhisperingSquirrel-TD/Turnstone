@@ -770,6 +770,7 @@ function publicLogMessage(entry: FullView['publicLog'][number]): string {
     return en.game.publicLogPhaseActionSkipUndone(entry.seat.name);
   if (entry.action === 'schedule_shift')
     return en.game.publicLogScheduleShift(entry.minutes);
+  if (entry.action === 'phase_advanced') return en.game.publicLogPhaseAdvanced;
   if (entry.action === 'coordinator_undo')
     return en.game.publicLogCoordinatorUndo;
   return en.game.publicLogFinished(entry.winner);
@@ -2890,7 +2891,9 @@ function PlayerGame() {
               >
                 {full.organiserNotice.kind === 'moved_on'
                   ? en.game.organiserMovedOn
-                  : en.game.organiserAddedTime(full.organiserNotice.minutes)}
+                  : full.organiserNotice.kind === 'timer_ended'
+                    ? en.game.timerEndedNotice
+                    : en.game.organiserAddedTime(full.organiserNotice.minutes)}
               </p>
             )}
             <WhatIsHappeningCard accent={Boolean(full.revote)}>

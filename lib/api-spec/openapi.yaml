@@ -1434,6 +1434,15 @@ components:
                 seq:
                   type: integer
                   minimum: 1
+            - type: object
+              additionalProperties: false
+              required: [kind, seq]
+              properties:
+                kind:
+                  const: timer_ended
+                seq:
+                  type: integer
+                  minimum: 1
             - type: 'null'
         private:
           oneOf:
@@ -1719,6 +1728,13 @@ components:
             at: { type: integer, minimum: 0 }
             action: { type: string, const: schedule_shift }
             minutes: { type: integer, minimum: 1 }
+        - type: object
+          additionalProperties: false
+          required: [seq, at, action]
+          properties:
+            seq: { type: integer, minimum: 1 }
+            at: { type: integer, minimum: 0 }
+            action: { type: string, const: phase_advanced }
         - type: object
           additionalProperties: false
           required: [seq, at, action]

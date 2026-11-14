@@ -206,6 +206,11 @@ export type State = {
     | {
         seq: number;
         at: number;
+        action: 'phase_advanced';
+      }
+    | {
+        seq: number;
+        at: number;
         action: 'coordinator_undo';
       }
     | {
@@ -236,6 +241,7 @@ export type State = {
   organiserNotice:
     | { kind: 'added_time'; minutes: number; seq: number }
     | { kind: 'moved_on'; seq: number }
+    | { kind: 'timer_ended'; seq: number }
     | null;
   /** The current ballot's winner was drawn at random after a second tie. */
   verdictAtRandom: boolean;

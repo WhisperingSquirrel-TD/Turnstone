@@ -472,6 +472,18 @@ export const en = {
     organiserNameLabel: 'Your first name',
     organiserPinLabel: 'Choose a 4-digit PIN',
     votingStyleLabel: 'How should votes be revealed?',
+    timingHeading: 'How long should the game take?',
+    timingDefaultLabel: 'Use the recommended default',
+    timingDefaultDescription:
+      'Day pace: Deal 10 minutes, Talk 15 minutes, Vote 3 minutes and Night 15 minutes.',
+    timingQuickLabel: 'Quick game',
+    timingQuickDescription:
+      'Quick pace: Deal 3 minutes, Talk 6 minutes, Vote 2 minutes and Night 2 minutes.',
+    timingMultiDayLabel: 'Multi-day game',
+    timingMultiDayDescription:
+      'Long pace: Deal 12 hours, Talk 30 minutes, Vote 10 minutes and Night 8 hours.',
+    timingAdvanceNotice:
+      'Timed phases advance automatically when the timer ends. The organiser can move on sooner where allowed.',
     speakerCircleLabel: 'In-room voting circle (recommended)',
     speakerCircleDescription:
       'Everyone votes in private. The app sets the order; when it is your turn, say who you chose and why, then press your button to show your vote.',
@@ -735,6 +747,8 @@ export const en = {
       `${name}’s pending action was restored.`,
     publicLogScheduleShift: (minutes: number) =>
       `The schedule has been shifted by ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
+    publicLogPhaseAdvanced: 'The timer ended. The game moved on.',
+    timerEndedNotice: 'Time is up. The game has moved on.',
     publicLogCoordinatorUndo: 'The coordinator reversed the last action.',
     publicLogFinished: publicGameResult,
     rehearseAgain: 'Practise again',

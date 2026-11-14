@@ -115,6 +115,7 @@ export const eventSchema = z.discriminatedUnion('type', [
     cycle: z.number().int().nonnegative(),
     // D120: the organiser ended a discussion step early.
     movedOn: z.literal(true).optional(),
+    deadlineElapsed: z.literal(true).optional(),
   }),
   event('RolesDealt', {
     roles: z.record(z.string(), roleSchema),
@@ -407,6 +408,13 @@ const publicLogEntrySchema = z.discriminatedUnion('action', [
     .object({
       seq: z.number().int().positive(),
       at: z.number().int().nonnegative(),
+      action: z.literal('phase_advanced'),
+    })
+    .strict(),
+  z
+    .object({
+      seq: z.number().int().positive(),
+      at: z.number().int().nonnegative(),
       action: z.literal('coordinator_undo'),
     })
     .strict(),
@@ -565,6 +573,12 @@ export const fullViewSchema = z
         z
           .object({
             kind: z.literal('moved_on'),
+            seq: z.number().int().positive(),
+          })
+          .strict(),
+        z
+          .object({
+            kind: z.literal('timer_ended'),
             seq: z.number().int().positive(),
           })
           .strict(),

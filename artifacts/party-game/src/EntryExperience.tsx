@@ -26,6 +26,7 @@ import {
   WhatIsHappeningCard,
 } from './GameChrome';
 import { en } from './locale/en-GB';
+import type { GameTimingPreset } from './new-game-config';
 import { BrandFooter } from './BrandFooter';
 import { useDisplayTheme } from './use-display-theme';
 import './EntryExperience.css';
@@ -162,6 +163,14 @@ export interface EntryExperienceCopy {
   organiserNameLabel: string;
   organiserPinLabel: string;
   votingStyleLabel: string;
+  timingHeading: string;
+  timingDefaultLabel: string;
+  timingDefaultDescription: string;
+  timingQuickLabel: string;
+  timingQuickDescription: string;
+  timingMultiDayLabel: string;
+  timingMultiDayDescription: string;
+  timingAdvanceNotice: string;
   speakerCircleLabel: string;
   speakerCircleDescription: string;
   automaticRevealLabel: string;
@@ -261,6 +270,7 @@ export interface EntryExperienceProps {
     revealStyle: 'speaker-circle' | 'one-by-one';
     contendersOnDraw: boolean;
     parityWin: boolean;
+    timingPreset: GameTimingPreset;
   }) => void | Promise<void>;
   onApproveJoiner: (joinerId: string) => void | Promise<void>;
   onStartGame: () => void | Promise<void>;
@@ -427,6 +437,7 @@ export function EntryExperience({
   >('speaker-circle');
   const [contendersOnDraw, setContendersOnDraw] = useState(true);
   const [parityWin, setParityWin] = useState(true);
+  const [timingPreset, setTimingPreset] = useState<GameTimingPreset>('default');
   const [duplicateName, setDuplicateName] = useState<string | null>(null);
   const [recoveringSeat, setRecoveringSeat] = useState(false);
   const [browserOnline, setBrowserOnline] = useState(
@@ -687,12 +698,14 @@ export function EntryExperience({
         revealStyle,
         contendersOnDraw,
         parityWin,
+        timingPreset,
       });
       onInputChange('organiserPin', '');
       setPresenterEnabled(false);
       setRevealStyle('speaker-circle');
       setContendersOnDraw(true);
       setParityWin(true);
+      setTimingPreset('default');
       onClearSensitiveValues();
       moveTo('lobby');
     } catch {
@@ -1569,6 +1582,47 @@ export function EntryExperience({
                     </span>
                   </span>
                 </label>
+              </fieldset>
+              <fieldset
+                className="entry-voting-style"
+                data-testid="timing-options"
+              >
+                <legend className="entry-label">{copy.timingHeading}</legend>
+                {(
+                  [
+                    [
+                      'default',
+                      copy.timingDefaultLabel,
+                      copy.timingDefaultDescription,
+                    ],
+                    [
+                      'quick',
+                      copy.timingQuickLabel,
+                      copy.timingQuickDescription,
+                    ],
+                    [
+                      'multi-day',
+                      copy.timingMultiDayLabel,
+                      copy.timingMultiDayDescription,
+                    ],
+                  ] as const
+                ).map(([value, label, description]) => (
+                  <label className="entry-presenter-option" key={value}>
+                    <input
+                      data-testid={`timing-preset-${value}`}
+                      type="radio"
+                      name="game-timing-preset"
+                      value={value}
+                      checked={timingPreset === value}
+                      onChange={() => setTimingPreset(value)}
+                    />
+                    <span>
+                      <span className="entry-label">{label}</span>
+                      <span className="entry-help">{description}</span>
+                    </span>
+                  </label>
+                ))}
+                <p className="entry-help">{copy.timingAdvanceNotice}</p>
               </fieldset>
               <label
                 className="entry-presenter-option"

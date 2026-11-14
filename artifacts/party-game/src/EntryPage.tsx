@@ -53,7 +53,7 @@ import {
   previewShareWarning,
 } from './lobby-code-url';
 import { recoverSeat } from './recovery-client';
-import { buildNewGameConfig } from './new-game-config';
+import { buildNewGameConfig, type GameTimingPreset } from './new-game-config';
 import { createAdaptivePoller } from './polling-backoff';
 import {
   EntryActionError,
@@ -708,6 +708,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
     revealStyle: 'speaker-circle' | 'one-by-one';
     contendersOnDraw: boolean;
     parityWin: boolean;
+    timingPreset: GameTimingPreset;
   }): Promise<void> {
     setErrors({});
     setBusy((current) => ({ ...current, create: true }));
@@ -722,6 +723,7 @@ export function EntryPage({ mode, csrfToken }: EntryPageProps) {
         revealStyle: data.revealStyle,
         contendersOnDraw: data.contendersOnDraw,
         parityWin: data.parityWin,
+        timingPreset: data.timingPreset,
       });
       const command = commandSchema.parse({
         type: 'CreateGame',

@@ -66,7 +66,12 @@ it('compiles the public environment setting into the browser bundle and validate
 });
 
 function renderEntry(
-  screen: 'join-code' | 'lobby' | 'join-wait' | 'rehearsal-setup',
+  screen:
+    | 'join-code'
+    | 'lobby'
+    | 'join-wait'
+    | 'rehearsal-setup'
+    | 'create-organiser',
   gameTheme: 'day' | 'night' = 'day',
   errors: EntryExperienceErrors = {},
   inputOverrides: Partial<EntryExperienceInputs> = {},
@@ -229,6 +234,18 @@ describe('Stage 2A entry screens', () => {
     expect(nameInputIndex).toBeGreaterThanOrEqual(0);
     expect(errorIndex).toBeGreaterThan(nameInputIndex);
     expect(formEndIndex).toBeGreaterThan(errorIndex);
+  });
+
+  it('shows the default timing and available rough presets before game creation', () => {
+    const html = renderEntry('create-organiser');
+
+    expect(html).toContain('data-testid="timing-preset-default"');
+    expect(html).toContain('checked=""');
+    expect(html).toContain('data-testid="timing-preset-quick"');
+    expect(html).toContain('data-testid="timing-preset-multi-day"');
+    expect(html).toContain('Deal 10 minutes');
+    expect(html).toContain('Talk 15 minutes');
+    expect(html).toContain('Timed phases advance automatically');
   });
 
   it('uses the selected public day or night theme on entry screens', () => {

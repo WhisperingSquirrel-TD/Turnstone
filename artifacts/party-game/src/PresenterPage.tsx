@@ -109,6 +109,7 @@ function publicUpdate(entry: FullView['publicLog'][number]): string {
     return en.game.publicLogPhaseActionSkipUndone(entry.seat.name);
   if (entry.action === 'schedule_shift')
     return en.game.publicLogScheduleShift(entry.minutes);
+  if (entry.action === 'phase_advanced') return en.game.publicLogPhaseAdvanced;
   if (entry.action === 'coordinator_undo')
     return en.game.publicLogCoordinatorUndo;
   return en.presenter.gameComplete;

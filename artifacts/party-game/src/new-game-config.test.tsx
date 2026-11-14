@@ -80,4 +80,54 @@ describe('buildNewGameConfig', () => {
     expect(config.missions.shields).toBe('public');
     expect(config.missions.allocation).toBe('coordinator');
   });
+
+  it('keeps the current Day timing as the explicit default', () => {
+    const config = buildNewGameConfig({
+      gameName: 'Friday game',
+      playerCount: 8,
+      coCoordinatorCount: 0,
+      presenterEnabled: false,
+    });
+
+    expect(config.schedule).toMatchObject({
+      format: 'day',
+      advancement: 'hybrid',
+    });
+    expect(config.roundTable).toMatchObject({
+      debateMinutes: 15,
+      voteMinutes: 3,
+    });
+  });
+
+  it('applies the selected quick timing preset to game phases', () => {
+    const config = buildNewGameConfig({
+      gameName: 'Friday game',
+      playerCount: 8,
+      coCoordinatorCount: 0,
+      presenterEnabled: false,
+      timingPreset: 'quick',
+    });
+
+    expect(config.schedule.format).toBe('quick');
+    expect(config.roundTable).toMatchObject({
+      debateMinutes: 6,
+      voteMinutes: 2,
+    });
+  });
+
+  it('applies the selected multi-day timing preset to game phases', () => {
+    const config = buildNewGameConfig({
+      gameName: 'Friday game',
+      playerCount: 8,
+      coCoordinatorCount: 0,
+      presenterEnabled: false,
+      timingPreset: 'multi-day',
+    });
+
+    expect(config.schedule.format).toBe('multi-day');
+    expect(config.roundTable).toMatchObject({
+      debateMinutes: 30,
+      voteMinutes: 10,
+    });
+  });
 });

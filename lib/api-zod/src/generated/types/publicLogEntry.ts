@@ -133,6 +133,12 @@ export type PublicLogEntry = {
   seq: number;
   /** @minimum 0 */
   at: number;
+  action: 'phase_advanced';
+} | {
+  /** @minimum 1 */
+  seq: number;
+  /** @minimum 0 */
+  at: number;
   action: 'coordinator_undo';
 } | {
   /** @minimum 1 */

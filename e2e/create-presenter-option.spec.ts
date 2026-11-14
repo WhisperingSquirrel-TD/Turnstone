@@ -16,6 +16,18 @@ test('presenter screen is off by default and can be opted into at game creation'
   await expect(presenterToggle).not.toBeChecked();
   await presenterToggle.check();
   await expect(presenterToggle).toBeChecked();
+
+  const defaultTiming = page.getByTestId('timing-preset-default');
+  await expect(defaultTiming).toBeChecked();
+  const quickTiming = page.getByTestId('timing-preset-quick');
+  await quickTiming.check();
+  await expect(quickTiming).toBeChecked();
+  await expect(defaultTiming).not.toBeChecked();
+  await expect(
+    page.getByText(
+      'Quick pace: Deal 3 minutes, Talk 6 minutes, Vote 2 minutes and Night 2 minutes.',
+    ),
+  ).toBeVisible();
 });
 
 test('organiser sees the parity rule explained with an example and can switch it off (D121)', async ({
